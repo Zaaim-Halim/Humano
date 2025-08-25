@@ -19,6 +19,7 @@ import java.util.UUID;
  * </ul>
  */
 @Entity
+@Table(name = "organization")
 public class Organization extends AbstractAuditingEntity<UUID> {
     @Id
     @GeneratedValue(generator = "UUID")

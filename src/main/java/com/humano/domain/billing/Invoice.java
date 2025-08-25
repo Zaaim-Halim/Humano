@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
+@Table(name = "invoice")
 public class Invoice extends AbstractAuditingEntity<UUID> {
     @Id
     @GeneratedValue(generator = "UUID")

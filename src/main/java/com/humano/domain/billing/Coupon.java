@@ -1,10 +1,7 @@
 package com.humano.domain.billing;
 
 import com.humano.domain.AbstractAuditingEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
 
@@ -12,6 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
+@Table(name = "coupon")
 public class Coupon extends AbstractAuditingEntity<UUID> {
     @Id
     @GeneratedValue(generator = "UUID")

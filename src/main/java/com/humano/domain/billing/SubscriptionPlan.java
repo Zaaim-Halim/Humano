@@ -5,7 +5,9 @@ import com.humano.domain.enumeration.billing.SubscriptionType;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -23,6 +25,7 @@ import java.util.UUID;
  * </ul>
  */
 @Entity
+@Table(name = "subscription_plan")
 public class SubscriptionPlan extends AbstractAuditingEntity<UUID> {
     @Id
     @GeneratedValue(generator = "UUID")
@@ -39,7 +42,7 @@ public class SubscriptionPlan extends AbstractAuditingEntity<UUID> {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "subscription_plan_id")
-    private List<Feature> features;
+    private Set<Feature> features = new HashSet<>();
 
     public UUID getId() { return id; }
 
