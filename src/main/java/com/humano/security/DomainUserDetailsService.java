@@ -57,14 +57,14 @@ public class DomainUserDetailsService implements UserDetailsService {
 
     public static class UserWithId extends org.springframework.security.core.userdetails.User {
 
-        private final Long id;
+        private final UUID id;
 
-        public UserWithId(String login, String password, Collection<? extends GrantedAuthority> authorities, Long id) {
+        public UserWithId(String login, String password, Collection<? extends GrantedAuthority> authorities, UUID id) {
             super(login, password, authorities);
             this.id = id;
         }
 
-        public Long getId() {
+        public UUID getId() {
             return id;
         }
 

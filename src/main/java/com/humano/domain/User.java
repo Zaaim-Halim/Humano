@@ -12,21 +12,26 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
+
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.GenericGenerator;
 
 /**
  * A user.
  */
 @Entity
-@Table(name = "jhi_user")
-public class User extends AbstractAuditingEntity<Long> implements Serializable {
+@Table(name = "user")
+public class User extends AbstractAuditingEntity<UUID> implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "id", nullable = false, updatable = false)
+    private UUID id;
 
     @NotNull
     @Pattern(regexp = Constants.LOGIN_REGEX)
@@ -92,11 +97,11 @@ public class User extends AbstractAuditingEntity<Long> implements Serializable {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "user")
     private Set<PersistentToken> persistentTokens = new HashSet<>();
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
