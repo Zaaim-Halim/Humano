@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
+@Table(name = "subscription")
 public class Subscription extends AbstractAuditingEntity<UUID> {
     @Id
     @GeneratedValue(generator = "UUID")

@@ -6,6 +6,7 @@ import com.humano.domain.billing.SubscriptionPlan;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
@@ -26,6 +27,7 @@ import java.util.UUID;
  * </ul>
  */
 @Entity
+@Table(name = "tenant")
 public class Tenant extends AbstractAuditingEntity<UUID> {
     @Id
     @GeneratedValue(generator = "UUID")
@@ -61,7 +63,7 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
     private SubscriptionPlan subscriptionPlan;
 
     @OneToMany(mappedBy = "tenant")
-    private Set<Organization> organizations;
+    private Set<Organization> organizations = new HashSet<>();
 
     @Override
     public UUID getId() {

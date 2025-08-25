@@ -16,6 +16,7 @@ import java.util.UUID;
  * </ul>
  */
 @Entity
+@Table(name = "feature")
 public class Feature extends AbstractAuditingEntity<UUID> {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
