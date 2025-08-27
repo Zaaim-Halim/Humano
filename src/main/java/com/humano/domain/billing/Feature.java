@@ -2,6 +2,7 @@ package com.humano.domain.billing;
 
 import com.humano.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
+
 import java.util.UUID;
 
 /**
@@ -30,7 +31,9 @@ public class Feature extends AbstractAuditingEntity<UUID> {
     private String description;
 
     // Getters and Setters
-    public UUID getId() { return id; }
+    public UUID getId() {
+        return id;
+    }
 
     public void setId(UUID id) {
         this.id = id;

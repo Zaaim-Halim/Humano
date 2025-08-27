@@ -22,7 +22,9 @@ public class Currency extends AbstractAuditingEntity<UUID> {
     private String symbol; // e.g., "€", "$"
 
     @Override
-    public UUID getId() { return id; }
+    public UUID getId() {
+        return id;
+    }
     // Getters and setters can be added as needed
 }
 

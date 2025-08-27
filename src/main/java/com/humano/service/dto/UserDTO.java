@@ -1,6 +1,7 @@
 package com.humano.service.dto;
 
 import com.humano.domain.User;
+
 import java.io.Serializable;
 import java.util.Objects;
 

@@ -4,9 +4,9 @@ import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.billing.SubscriptionType;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
+
 import java.math.BigDecimal;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -44,6 +44,8 @@ public class SubscriptionPlan extends AbstractAuditingEntity<UUID> {
     @JoinColumn(name = "subscription_plan_id")
     private Set<Feature> features = new HashSet<>();
 
-    public UUID getId() { return id; }
+    public UUID getId() {
+        return id;
+    }
 
 }

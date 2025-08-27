@@ -1,6 +1,5 @@
 package com.humano.config;
 
-import java.sql.SQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -16,8 +15,10 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import tech.jhipster.config.JHipsterConstants;
 import tech.jhipster.config.h2.H2ConfigurationHelper;
 
+import java.sql.SQLException;
+
 @Configuration
-@EnableJpaRepositories({ "com.humano.repository" })
+@EnableJpaRepositories({"com.humano.repository"})
 @EnableJpaAuditing(auditorAwareRef = "springSecurityAuditorAware")
 @EnableTransactionManagement
 @EnableConfigurationProperties(H2ConsoleProperties.class)

@@ -4,7 +4,6 @@ import com.humano.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
-
 import java.time.Instant;
 import java.util.UUID;
 

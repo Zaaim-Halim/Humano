@@ -4,7 +4,6 @@ import com.humano.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
-import java.io.Serializable;
 import java.util.UUID;
 
 /**
@@ -34,7 +33,9 @@ public class Organization extends AbstractAuditingEntity<UUID> {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
-    public UUID getId() { return id; }
+    public UUID getId() {
+        return id;
+    }
 
     // getters and setters
 }

@@ -19,7 +19,9 @@ public class Country extends AbstractAuditingEntity<UUID> {
     private String name; // e.g., "Albania"
 
     @Override
-    public UUID getId() { return id; }
+    public UUID getId() {
+        return id;
+    }
     // Getters and setters can be added as needed
 }
 

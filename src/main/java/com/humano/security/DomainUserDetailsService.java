@@ -3,7 +3,6 @@ package com.humano.security;
 import com.humano.domain.Authority;
 import com.humano.domain.User;
 import com.humano.repository.UserRepository;
-import java.util.*;
 import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +13,10 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collection;
+import java.util.Locale;
+import java.util.UUID;
 
 /**
  * Authenticate a user from the database.
@@ -64,6 +67,15 @@ public class DomainUserDetailsService implements UserDetailsService {
             this.id = id;
         }
 
+        public static UserWithId fromUser(User user) {
+            return new UserWithId(
+                user.getLogin(),
+                user.getPassword(),
+                user.getAuthorities().stream().map(Authority::getName).map(SimpleGrantedAuthority::new).toList(),
+                user.getId()
+            );
+        }
+
         public UUID getId() {
             return id;
         }
@@ -76,15 +88,6 @@ public class DomainUserDetailsService implements UserDetailsService {
         @Override
         public int hashCode() {
             return super.hashCode();
-        }
-
-        public static UserWithId fromUser(User user) {
-            return new UserWithId(
-                user.getLogin(),
-                user.getPassword(),
-                user.getAuthorities().stream().map(Authority::getName).map(SimpleGrantedAuthority::new).toList(),
-                user.getId()
-            );
         }
     }
 }

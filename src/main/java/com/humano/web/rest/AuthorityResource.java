@@ -4,10 +4,6 @@ import com.humano.domain.Authority;
 import com.humano.repository.AuthorityRepository;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.ResponseUtil;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * REST controller for managing {@link com.humano.domain.Authority}.
@@ -29,11 +30,9 @@ public class AuthorityResource {
     private static final Logger LOG = LoggerFactory.getLogger(AuthorityResource.class);
 
     private static final String ENTITY_NAME = "adminAuthority";
-
+    private final AuthorityRepository authorityRepository;
     @Value("${jhipster.clientApp.name}")
     private String applicationName;
-
-    private final AuthorityRepository authorityRepository;
 
     public AuthorityResource(AuthorityRepository authorityRepository) {
         this.authorityRepository = authorityRepository;

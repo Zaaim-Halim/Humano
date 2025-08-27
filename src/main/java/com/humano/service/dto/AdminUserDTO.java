@@ -3,7 +3,11 @@ package com.humano.service.dto;
 import com.humano.config.Constants;
 import com.humano.domain.Authority;
 import com.humano.domain.User;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.Set;

@@ -9,20 +9,24 @@ import com.humano.service.MailService;
 import com.humano.service.UserService;
 import com.humano.service.dto.AdminUserDTO;
 import com.humano.service.dto.PasswordChangeDTO;
-import com.humano.web.rest.errors.*;
+import com.humano.web.rest.errors.EmailAlreadyUsedException;
+import com.humano.web.rest.errors.InvalidPasswordException;
+import com.humano.web.rest.errors.LoginAlreadyUsedException;
 import com.humano.web.rest.vm.KeyAndPasswordVM;
 import com.humano.web.rest.vm.ManagedUserVM;
 import jakarta.validation.Valid;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.security.Principal;
-import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.security.Principal;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * REST controller for managing the current user's account.
@@ -31,21 +35,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api")
 public class AccountResource {
 
-    private static class AccountResourceException extends RuntimeException {
-
-        private AccountResourceException(String message) {
-            super(message);
-        }
-    }
-
     private static final Logger LOG = LoggerFactory.getLogger(AccountResource.class);
-
     private final UserRepository userRepository;
-
     private final UserService userService;
-
     private final MailService mailService;
-
     private final PersistentTokenRepository persistentTokenRepository;
 
     public AccountResource(
@@ -60,11 +53,19 @@ public class AccountResource {
         this.persistentTokenRepository = persistentTokenRepository;
     }
 
+    private static boolean isPasswordLengthInvalid(String password) {
+        return (
+            StringUtils.isEmpty(password) ||
+                password.length() < ManagedUserVM.PASSWORD_MIN_LENGTH ||
+                password.length() > ManagedUserVM.PASSWORD_MAX_LENGTH
+        );
+    }
+
     /**
      * {@code POST  /register} : register the user.
      *
      * @param managedUserVM the managed user View Model.
-     * @throws InvalidPasswordException {@code 400 (Bad Request)} if the password is incorrect.
+     * @throws InvalidPasswordException  {@code 400 (Bad Request)} if the password is incorrect.
      * @throws EmailAlreadyUsedException {@code 400 (Bad Request)} if the email is already used.
      * @throws LoginAlreadyUsedException {@code 400 (Bad Request)} if the login is already used.
      */
@@ -123,7 +124,7 @@ public class AccountResource {
      *
      * @param userDTO the current user information.
      * @throws EmailAlreadyUsedException {@code 400 (Bad Request)} if the email is already used.
-     * @throws RuntimeException {@code 500 (Internal Server Error)} if the user login wasn't found.
+     * @throws RuntimeException          {@code 500 (Internal Server Error)} if the user login wasn't found.
      */
     @PostMapping("/account")
     public void saveAccount(@Valid @RequestBody AdminUserDTO userDTO) {
@@ -179,16 +180,16 @@ public class AccountResource {
 
     /**
      * {@code DELETE  /account/sessions?series={series}} : invalidate an existing session.
-     *
+     * <p>
      * - You can only delete your own sessions, not any other user's session
      * - If you delete one of your existing sessions, and that you are currently logged in on that session, you will
-     *   still be able to use that session, until you quit your browser: it does not work in real time (there is
-     *   no API for that), it only removes the "remember me" cookie
+     * still be able to use that session, until you quit your browser: it does not work in real time (there is
+     * no API for that), it only removes the "remember me" cookie
      * - This is also true if you invalidate your current session: you will still be able to use it until you close
-     *   your browser or that the session times out. But automatic login (the "remember me" cookie) will not work
-     *   anymore.
-     *   There is an API to invalidate the current session, but there is no API to check which session uses which
-     *   cookie.
+     * your browser or that the session times out. But automatic login (the "remember me" cookie) will not work
+     * anymore.
+     * There is an API to invalidate the current session, but there is no API to check which session uses which
+     * cookie.
      *
      * @param series the series of an existing session.
      * @throws IllegalArgumentException if the series couldn't be URL decoded.
@@ -230,7 +231,7 @@ public class AccountResource {
      *
      * @param keyAndPassword the generated key and the new password.
      * @throws InvalidPasswordException {@code 400 (Bad Request)} if the password is incorrect.
-     * @throws RuntimeException {@code 500 (Internal Server Error)} if the password could not be reset.
+     * @throws RuntimeException         {@code 500 (Internal Server Error)} if the password could not be reset.
      */
     @PostMapping(path = "/account/reset-password/finish")
     public void finishPasswordReset(@RequestBody KeyAndPasswordVM keyAndPassword) {
@@ -244,11 +245,10 @@ public class AccountResource {
         }
     }
 
-    private static boolean isPasswordLengthInvalid(String password) {
-        return (
-            StringUtils.isEmpty(password) ||
-            password.length() < ManagedUserVM.PASSWORD_MIN_LENGTH ||
-            password.length() > ManagedUserVM.PASSWORD_MAX_LENGTH
-        );
+    private static class AccountResourceException extends RuntimeException {
+
+        private AccountResourceException(String message) {
+            super(message);
+        }
     }
 }

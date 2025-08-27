@@ -1,15 +1,7 @@
 package com.humano.web.rest.errors;
 
-import static org.springframework.core.annotation.AnnotatedElementUtils.findMergedAnnotation;
-
 import com.humano.service.errors.UsernameAlreadyUsedException;
 import jakarta.servlet.http.HttpServletRequest;
-import java.net.URI;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +31,11 @@ import tech.jhipster.web.rest.errors.ProblemDetailWithCause;
 import tech.jhipster.web.rest.errors.ProblemDetailWithCause.ProblemDetailWithCauseBuilder;
 import tech.jhipster.web.util.HeaderUtil;
 
+import java.net.URI;
+import java.util.*;
+
+import static org.springframework.core.annotation.AnnotatedElementUtils.findMergedAnnotation;
+
 /**
  * Controller advice to translate the server side exceptions to client-friendly json structures.
  * The error response follows RFC7807 - Problem Details for HTTP APIs (https://tools.ietf.org/html/rfc7807).
@@ -52,11 +49,9 @@ public class ExceptionTranslator extends ResponseEntityExceptionHandler {
     private static final boolean CASUAL_CHAIN_ENABLED = false;
 
     private static final Logger LOG = LoggerFactory.getLogger(ExceptionTranslator.class);
-
+    private final Environment env;
     @Value("${jhipster.clientApp.name}")
     private String applicationName;
-
-    private final Environment env;
 
     public ExceptionTranslator(Environment env) {
         this.env = env;
@@ -78,7 +73,7 @@ public class ExceptionTranslator extends ResponseEntityExceptionHandler {
         HttpStatusCode statusCode,
         WebRequest request
     ) {
-        body = body == null ? wrapAndCustomizeProblem((Throwable) ex, (NativeWebRequest) request) : body;
+        body = body == null ? wrapAndCustomizeProblem(ex, (NativeWebRequest) request) : body;
         return super.handleExceptionInternal(ex, body, headers, statusCode, request);
     }
 
@@ -89,10 +84,12 @@ public class ExceptionTranslator extends ResponseEntityExceptionHandler {
     private ProblemDetailWithCause getProblemDetailWithCause(Throwable ex) {
         if (ex instanceof UsernameAlreadyUsedException) return (ProblemDetailWithCause) new LoginAlreadyUsedException()
             .getBody();
-        if (ex instanceof com.humano.service.errors.EmailAlreadyUsedException) return (ProblemDetailWithCause) new EmailAlreadyUsedException()
-            .getBody();
-        if (ex instanceof com.humano.service.errors.InvalidPasswordException) return (ProblemDetailWithCause) new InvalidPasswordException()
-            .getBody();
+        if (ex instanceof com.humano.service.errors.EmailAlreadyUsedException)
+            return (ProblemDetailWithCause) new EmailAlreadyUsedException()
+                .getBody();
+        if (ex instanceof com.humano.service.errors.InvalidPasswordException)
+            return (ProblemDetailWithCause) new InvalidPasswordException()
+                .getBody();
 
         if (
             ex instanceof ErrorResponseException exp && exp.getBody() instanceof ProblemDetailWithCause problemDetailWithCause
@@ -103,7 +100,8 @@ public class ExceptionTranslator extends ResponseEntityExceptionHandler {
     protected ProblemDetailWithCause customizeProblem(ProblemDetailWithCause problem, Throwable err, NativeWebRequest request) {
         if (problem.getStatus() <= 0) problem.setStatus(toStatus(err));
 
-        if (problem.getType() == null || problem.getType().equals(URI.create("about:blank"))) problem.setType(getMappedType(err));
+        if (problem.getType() == null || problem.getType().equals(URI.create("about:blank")))
+            problem.setType(getMappedType(err));
 
         // higher precedence to Custom/ResponseStatus types
         String title = extractTitle(err, problem.getStatus());
@@ -123,11 +121,12 @@ public class ExceptionTranslator extends ResponseEntityExceptionHandler {
             getMappedMessageKey(err) != null ? getMappedMessageKey(err) : "error.http." + problem.getStatus()
         );
 
-        if (problemProperties == null || !problemProperties.containsKey(PATH_KEY)) problem.setProperty(PATH_KEY, getPathValue(request));
+        if (problemProperties == null || !problemProperties.containsKey(PATH_KEY))
+            problem.setProperty(PATH_KEY, getPathValue(request));
 
         if (
             (err instanceof MethodArgumentNotValidException fieldException) &&
-            (problemProperties == null || !problemProperties.containsKey(FIELD_ERRORS_KEY))
+                (problemProperties == null || !problemProperties.containsKey(FIELD_ERRORS_KEY))
         ) problem.setProperty(FIELD_ERRORS_KEY, getFieldErrors(fieldException));
 
         problem.setCause(buildCause(err.getCause(), request).orElse(null));
@@ -227,12 +226,12 @@ public class ExceptionTranslator extends ResponseEntityExceptionHandler {
     private HttpHeaders buildHeaders(Throwable err) {
         return err instanceof BadRequestAlertException badRequestAlertException
             ? HeaderUtil.createFailureAlert(
-                applicationName,
-                true,
-                badRequestAlertException.getEntityName(),
-                badRequestAlertException.getErrorKey(),
-                badRequestAlertException.getMessage()
-            )
+            applicationName,
+            true,
+            badRequestAlertException.getEntityName(),
+            badRequestAlertException.getErrorKey(),
+            badRequestAlertException.getMessage()
+        )
             : null;
     }
 

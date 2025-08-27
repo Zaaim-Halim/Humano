@@ -10,12 +10,6 @@ import com.humano.security.AuthoritiesConstants;
 import com.humano.security.SecurityUtils;
 import com.humano.service.dto.AdminUserDTO;
 import com.humano.service.dto.UserDTO;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.stream.Collectors;
-
 import com.humano.service.errors.EmailAlreadyUsedException;
 import com.humano.service.errors.InvalidPasswordException;
 import com.humano.service.errors.UsernameAlreadyUsedException;
@@ -28,6 +22,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.jhipster.security.RandomUtil;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Service class for managing users.
@@ -320,6 +323,7 @@ public class UserService {
 
     /**
      * Gets a list of all the authorities.
+     *
      * @return a list of all the authorities.
      */
     @Transactional(readOnly = true)

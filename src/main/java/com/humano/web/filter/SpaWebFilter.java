@@ -4,8 +4,9 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
 
 public class SpaWebFilter extends OncePerRequestFilter {
 
@@ -19,11 +20,11 @@ public class SpaWebFilter extends OncePerRequestFilter {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         if (
             !path.startsWith("/api") &&
-            !path.startsWith("/management") &&
-            !path.startsWith("/v3/api-docs") &&
-            !path.startsWith("/h2-console") &&
-            !path.contains(".") &&
-            path.matches("/(.*)")
+                !path.startsWith("/management") &&
+                !path.startsWith("/v3/api-docs") &&
+                !path.startsWith("/h2-console") &&
+                !path.contains(".") &&
+                path.matches("/(.*)")
         ) {
             request.getRequestDispatcher("/index.html").forward(request, response);
             return;
