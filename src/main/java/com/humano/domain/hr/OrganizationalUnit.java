@@ -9,6 +9,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Represents an organizational unit in the company hierarchy, such as a department, sector, or directorate.
+ * <p>
+ * Supports parent/child relationships, manager assignment, and hierarchical path computation.
+ */
 @Entity
 @Table(name = "organizational_unit")
 public class OrganizationalUnit extends AbstractAuditingEntity<UUID> {
@@ -18,24 +23,42 @@ public class OrganizationalUnit extends AbstractAuditingEntity<UUID> {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    /**
+     * Name of the organizational unit (e.g., Finance, Payroll).
+     */
     @Column(name = "name", nullable = false)
     private String name; // e.g., "Finance", "Payroll"
 
+    /**
+     * Type of the unit (e.g., DEPARTMENT, SECTOR).
+     */
     @Column(name = "type", nullable = false)
     @Enumerated(EnumType.STRING)
     private OrganizationalUnitType type; // DEPARTMENT, DIRECTORATE, SECTOR
 
+    /**
+     * Parent unit in the hierarchy.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_unit_id")
     private OrganizationalUnit parentUnit;
 
+    /**
+     * Sub-units under this unit.
+     */
     @OneToMany(mappedBy = "parentUnit", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OrganizationalUnit> subUnits = new HashSet<>();
 
+    /**
+     * Manager assigned to this unit.
+     */
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id")
     private Employee manager;
 
+    /**
+     * Employees assigned to this unit.
+     */
     @OneToMany(mappedBy = "unit", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Employee> employees = new HashSet<>();
     /*
@@ -45,6 +68,9 @@ public class OrganizationalUnit extends AbstractAuditingEntity<UUID> {
        List<OrganizationalUnit> findAllSubUnits(@Param("path") String path);
      */
 
+    /**
+     * Hierarchical path of the unit (e.g., /Finance/Accounting/Payroll).
+     */
     @Column(name = "path", nullable = false)
     private String path; // e.g., "/Finance/Accounting/Payroll"
 

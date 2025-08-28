@@ -9,6 +9,11 @@ import org.hibernate.annotations.GenericGenerator;
 import java.time.LocalDate;
 import java.util.UUID;
 
+/**
+ * Represents a leave request made by an employee, including type, status, and date range.
+ * <p>
+ * Used to manage employee leave applications and approvals.
+ */
 @Entity
 @Table(name = "leave_request")
 public class LeaveRequest extends AbstractAuditingEntity<UUID> {
@@ -18,20 +23,35 @@ public class LeaveRequest extends AbstractAuditingEntity<UUID> {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    /**
+     * Start date of the leave.
+     */
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
+    /**
+     * End date of the leave.
+     */
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
+    /**
+     * Type of leave (e.g., SICK, VACATION, UNPAID).
+     */
     @Column(name = "leave_type", nullable = false)
     @Enumerated(EnumType.STRING)
     private LeaveType leaveType;
 
+    /**
+     * Status of the leave request (e.g., PENDING, APPROVED, REJECTED).
+     */
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private LeaveStatus status;
 
+    /**
+     * The employee who requested the leave.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
@@ -42,4 +62,3 @@ public class LeaveRequest extends AbstractAuditingEntity<UUID> {
     }
 
 }
-

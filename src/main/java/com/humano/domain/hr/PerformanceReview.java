@@ -7,6 +7,11 @@ import org.hibernate.annotations.GenericGenerator;
 import java.time.LocalDate;
 import java.util.UUID;
 
+/**
+ * Represents a performance review for an employee, including review date, comments, rating, reviewer, and employee.
+ * <p>
+ * Used to track employee performance evaluations and feedback.
+ */
 @Entity
 @Table(name = "performance_review")
 public class PerformanceReview extends AbstractAuditingEntity<UUID> {
@@ -16,20 +21,35 @@ public class PerformanceReview extends AbstractAuditingEntity<UUID> {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    /**
+     * Date the review was conducted.
+     */
     @Column(name = "review_date", nullable = false)
     private LocalDate reviewDate;
 
+    /**
+     * Comments provided during the review.
+     */
     @Lob
     @Column(name = "comments")
     private String comments;
 
+    /**
+     * Rating given during the review (e.g., 1-5).
+     */
     @Column(name = "rating")
-    private Integer rating; // 1-5
+    private Integer rating;
 
+    /**
+     * The employee who conducted the review.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewer_id", nullable = false)
     private Employee reviewer;
 
+    /**
+     * The employee being reviewed.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
