@@ -4,10 +4,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.hibernate.annotations.BatchSize;
 import org.springframework.data.domain.Persistable;
 
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * A Authority.
@@ -26,6 +29,16 @@ public class Authority implements Serializable, Persistable<String> {
     @Column(name = "name", length = 50, nullable = false)
     private String name;
 
+    @JsonIgnoreProperties(value = {"authorities"}, allowSetters = true)
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "authority_permissions",
+        joinColumns = @JoinColumn(name = "authority_name"),
+        inverseJoinColumns = @JoinColumn(name = "permission_name")
+    )
+    @BatchSize(size = 20)
+    private Set<Permission> permissions = new HashSet<>();
+
     @org.springframework.data.annotation.Transient
     @Transient
     private boolean isPersisted;
@@ -40,8 +53,18 @@ public class Authority implements Serializable, Persistable<String> {
         this.name = name;
     }
 
+    public Set<Permission> getPermissions() {
+        return this.permissions;
+    }
+    public void setPermissions(Set<Permission> permissions) {
+        this.permissions = permissions;
+    }
     public Authority name(String name) {
         this.setName(name);
+        return this;
+    }
+    public Authority permissions(Set<Permission> permissions) {
+        this.setPermissions(permissions);
         return this;
     }
 

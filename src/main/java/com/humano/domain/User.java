@@ -22,7 +22,7 @@ import java.util.UUID;
  * A user.
  */
 @Entity
-@Table(name = "user")
+@Inheritance(strategy = InheritanceType.JOINED)
 public class User extends AbstractAuditingEntity<UUID> implements Serializable {
 
     private static final long serialVersionUID = 1L;

@@ -1,5 +1,4 @@
-package per.hzaaim.empmanagement.core.domain;
-
+package com.humano.domain;
 import jakarta.persistence.*;
 
 import java.util.UUID;
