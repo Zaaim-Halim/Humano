@@ -8,6 +8,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Represents a department within the organization, grouping employees by function or business unit.
+ * <p>
+ * Contains department name, description, and associated employees.
+ */
 @Entity
 @Table(name = "department")
 public class Department extends AbstractAuditingEntity<UUID> {
@@ -17,12 +22,21 @@ public class Department extends AbstractAuditingEntity<UUID> {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    /**
+     * Name of the department.
+     */
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 
+    /**
+     * Optional description of the department.
+     */
     @Column(name = "description")
     private String description;
 
+    /**
+     * Employees assigned to this department.
+     */
     @OneToMany(mappedBy = "department")
     private Set<Employee> employees = new HashSet<>();
 

@@ -10,50 +10,83 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Represents an employee in the organization, including job details, department, position, and related records.
+ * <p>
+ * Central entity for HR management, linking to documents, attributes, attendance, leave, and more.
+ */
 @Entity
 @DiscriminatorValue("EMPLOYEE")
 public class Employee extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    /**
+     * Job title of the employee.
+     */
     @Column(name = "job_title")
     private String jobTitle;
+    /**
+     * Phone number of the employee.
+     */
     @Column(name = "phone")
     private String phone;
+    /**
+     * Date the employee started.
+     */
     @Column(name = "start_date")
     private LocalDate startDate;
-
+    /**
+     * Date the employee ended (if applicable).
+     */
     @Column(name = "end_date")
     private LocalDate endDate;
-
+    /**
+     * Current status of the employee (e.g., ACTIVE, INACTIVE).
+     */
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private EmployeeStatus status;
-
+    /**
+     * Country of employment.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "country_id")
     private per.hzaaim.empmanagement.core.domain.Country country;
-
+    /**
+     * Department the employee belongs to.
+     */
     @ManyToOne
     @JoinColumn(name = "department_id")
     private Department department;
-
+    /**
+     * Position held by the employee.
+     */
     @ManyToOne
     @JoinColumn(name = "position_id")
     private Position position;
-
+    /**
+     * Documents associated with the employee.
+     */
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<EmployeeDocument> documents = new HashSet<>();
-
+    /**
+     * Custom attributes for the employee.
+     */
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<EmployeeAttribute> attributes = new HashSet<>();
-
+    /**
+     * Attendance records for the employee.
+     */
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Attendance> attendances = new HashSet<>();
-
+    /**
+     * Leave requests made by the employee.
+     */
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<LeaveRequest> leaveRequests = new HashSet<>();
 

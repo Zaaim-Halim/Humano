@@ -8,25 +8,43 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
+/**
+ * Represents a timesheet entry for an employee, recording hours worked on a specific date and project.
+ * <p>
+ * Used to track employee work hours for payroll and project management.
+ */
 @Entity
 @Table(name = "timesheet")
 public class Timesheet extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    /**
+     * Date of the timesheet entry.
+     */
     @Column(name = "date", nullable = false)
     private LocalDate date;
 
+    /**
+     * Number of hours worked on the date.
+     */
     @Column(name = "hours_worked", nullable = false)
     private BigDecimal hoursWorked;
 
+    /**
+     * Project associated with the timesheet entry.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")
     private Project project;
 
+    /**
+     * The employee who worked the hours.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;

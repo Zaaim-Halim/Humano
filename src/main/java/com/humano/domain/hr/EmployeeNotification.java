@@ -7,25 +7,43 @@ import org.hibernate.annotations.GenericGenerator;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * Represents a notification sent to an employee, such as alerts, reminders, or messages.
+ * <p>
+ * Stores the message, read status, timestamp, and the related employee.
+ */
 @Entity
 @Table(name = "employee_notification")
 public class EmployeeNotification extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    /**
+     * The employee who receives the notification.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
+    /**
+     * The notification message.
+     */
     @Column(name = "message", nullable = false)
     private String message;
 
+    /**
+     * Whether the notification has been read.
+     */
     @Column(name = "read", nullable = false)
     private Boolean read;
 
+    /**
+     * Timestamp when the notification was created.
+     */
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -35,4 +53,3 @@ public class EmployeeNotification extends AbstractAuditingEntity<UUID> {
     }
 
 }
-
