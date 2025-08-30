@@ -63,6 +63,7 @@
     <logger name="org.springframework.boot.docker" level="WARN"/>
     <logger name="liquibase" level="WARN"/>
     <logger name="LiquibaseSchemaResolver" level="INFO"/>
+    <logger name="javax.management.remote.rmi" level="OFF"/>
     <!-- jhipster-needle-logback-add-log - JHipster will add a new log with level -->
 
     <springProperty name="log.level" source="logging.level.root" defaultValue="INFO" />

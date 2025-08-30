@@ -1,6 +1,7 @@
 package com.humano.domain.payroll;
 
 import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.Country;
 import com.humano.domain.enumeration.hr.LeaveType;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -23,7 +24,7 @@ public class LeaveTypeRule extends AbstractAuditingEntity<UUID> {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "country_id", nullable = false)
-    private per.hzaaim.empmanagement.core.domain.Country country;  // country-specific rules
+    private Country country;  // country-specific rules
 
     @Enumerated(EnumType.STRING)
     @Column(name = "leave_type", nullable = false)

@@ -1,6 +1,7 @@
 package com.humano.domain.hr;
 
 import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.Country;
 import com.humano.domain.enumeration.hr.EmployeeStatus;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -56,7 +57,7 @@ public class Employee extends AbstractAuditingEntity<UUID> {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "country_id")
-    private per.hzaaim.empmanagement.core.domain.Country country;
+    private Country country;
     /**
      * Department the employee belongs to.
      */

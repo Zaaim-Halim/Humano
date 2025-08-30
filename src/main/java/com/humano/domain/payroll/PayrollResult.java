@@ -1,6 +1,7 @@
 package com.humano.domain.payroll;
 
 import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.Currency;
 import com.humano.domain.hr.Employee;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -57,7 +58,7 @@ public class PayrollResult extends AbstractAuditingEntity<UUID> {
 
     @ManyToOne
     @JoinColumn(name = "currency_id", nullable = false)
-    private per.hzaaim.empmanagement.core.domain.Currency currency;
+    private Currency currency;
 
     @ManyToOne
     @JoinColumn(name = "payroll_period_id", nullable = false)

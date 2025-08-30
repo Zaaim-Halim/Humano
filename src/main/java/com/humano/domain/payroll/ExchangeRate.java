@@ -1,6 +1,7 @@
 package com.humano.domain.payroll;
 
 import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.Currency;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
@@ -24,11 +25,11 @@ public class ExchangeRate extends AbstractAuditingEntity<UUID> {
 
     @ManyToOne
     @JoinColumn(name = "from_currency_id", nullable = false)
-    private per.hzaaim.empmanagement.core.domain.Currency fromCcy;
+    private Currency fromCcy;
 
     @ManyToOne
     @JoinColumn(name = "to_currency_id", nullable = false)
-    private per.hzaaim.empmanagement.core.domain.Currency toCcy;
+    private Currency toCcy;
 
     @Column(name = "date", nullable = false)
     private LocalDate date;

@@ -18,6 +18,7 @@ logging:
     ROOT: DEBUG
     tech.jhipster: DEBUG
     org.hibernate.SQL: DEBUG
+    org.hibernate.orm.incubating: ERROR
     com.humano: DEBUG
 
 spring:

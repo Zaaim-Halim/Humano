@@ -1,6 +1,7 @@
 package com.humano.domain.payroll;
 
 import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.Country;
 import com.humano.domain.enumeration.payroll.TaxCode;
 import jakarta.persistence.*;
 
@@ -31,7 +32,7 @@ public class TaxBracket extends AbstractAuditingEntity<UUID> {
 
     @ManyToOne
     @JoinColumn(name = "country_id", nullable = false)
-    private per.hzaaim.empmanagement.core.domain.Country country;
+    private Country country;
 
     @Column(name = "valid_from", nullable = false)
     private LocalDate validFrom;

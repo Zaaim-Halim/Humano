@@ -1,8 +1,8 @@
 package com.humano.repository.payroll;
 
+import com.humano.domain.payroll.TaxBracket;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
-import per.hzaaim.empmanagement.payroll.domain.TaxBracket;
 
 import java.time.LocalDate;
 import java.util.List;

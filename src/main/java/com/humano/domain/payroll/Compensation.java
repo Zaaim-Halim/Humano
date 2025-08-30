@@ -1,6 +1,7 @@
 package com.humano.domain.payroll;
 
 import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.Currency;
 import com.humano.domain.enumeration.payroll.Basis;
 import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.Position;
@@ -55,7 +56,7 @@ public class Compensation extends AbstractAuditingEntity<UUID> {
 
     @ManyToOne
     @JoinColumn(name = "currency_id", nullable = false)
-    private per.hzaaim.empmanagement.core.domain.Currency currency;
+    private Currency currency;
     @ManyToOne
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;

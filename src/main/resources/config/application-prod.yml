@@ -18,6 +18,7 @@ logging:
     ROOT: INFO
     tech.jhipster: INFO
     com.humano: INFO
+    org.hibernate.orm.incubating: ERROR
 
 management:
   prometheus:

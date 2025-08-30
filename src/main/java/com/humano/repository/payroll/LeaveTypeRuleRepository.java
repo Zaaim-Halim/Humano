@@ -1,5 +1,6 @@
 package com.humano.repository.payroll;
 
+import com.humano.domain.Country;
 import com.humano.domain.enumeration.hr.LeaveType;
 import com.humano.domain.payroll.LeaveTypeRule;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,5 +14,5 @@ import java.util.UUID;
  */
 @Repository
 public interface LeaveTypeRuleRepository extends JpaRepository<LeaveTypeRule, UUID> {
-    Optional<LeaveTypeRule> findByLeaveTypeAndCountry(LeaveType leaveType, per.hzaaim.empmanagement.core.domain.Country country);
+    Optional<LeaveTypeRule> findByLeaveTypeAndCountry(LeaveType leaveType, Country country);
 }
