@@ -5,6 +5,7 @@ import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.billing.SubscriptionPlan;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -31,7 +32,16 @@ import java.util.UUID;
 public class Tenant extends AbstractAuditingEntity<UUID> {
     @Id
     @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GenericGenerator(
+        name = "UUID",
+        strategy = "org.hibernate.id.UUIDGenerator",
+        parameters = {
+            @Parameter(
+                name = "uuid_gen_strategy_class",
+                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
+            )
+        }
+    )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 

@@ -5,6 +5,7 @@ import com.humano.domain.enumeration.hr.OvertimeApprovalStatus;
 import com.humano.domain.enumeration.hr.OvertimeType;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -20,7 +21,16 @@ import java.util.UUID;
 public class OvertimeRecord extends AbstractAuditingEntity<UUID> {
     @Id
     @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GenericGenerator(
+        name = "UUID",
+        strategy = "org.hibernate.id.UUIDGenerator",
+        parameters = {
+            @Parameter(
+                name = "uuid_gen_strategy_class",
+                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
+            )
+        }
+    )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 

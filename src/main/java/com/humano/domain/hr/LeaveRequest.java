@@ -5,6 +5,7 @@ import com.humano.domain.enumeration.hr.LeaveStatus;
 import com.humano.domain.enumeration.hr.LeaveType;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -19,7 +20,16 @@ import java.util.UUID;
 public class LeaveRequest extends AbstractAuditingEntity<UUID> {
     @Id
     @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GenericGenerator(
+        name = "UUID",
+        strategy = "org.hibernate.id.UUIDGenerator",
+        parameters = {
+            @Parameter(
+                name = "uuid_gen_strategy_class",
+                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
+            )
+        }
+    )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 

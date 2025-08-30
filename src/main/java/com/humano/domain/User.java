@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Size;
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 import java.io.Serializable;
 import java.time.Instant;
@@ -23,13 +24,19 @@ import java.util.UUID;
  */
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
-public class User extends AbstractAuditingEntity<UUID> implements Serializable {
-
-    private static final long serialVersionUID = 1L;
-
+public class User extends AbstractAuditingEntity<UUID> {
     @Id
     @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+    @GenericGenerator(
+        name = "UUID",
+        strategy = "org.hibernate.id.UUIDGenerator",
+        parameters = {
+            @Parameter(
+                name = "uuid_gen_strategy_class",
+                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
+            )
+        }
+    )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
@@ -86,7 +93,7 @@ public class User extends AbstractAuditingEntity<UUID> implements Serializable {
     @JsonIgnore
     @ManyToMany
     @JoinTable(
-        name = "jhi_user_authority",
+        name = "user_authority",
         joinColumns = {@JoinColumn(name = "user_id", referencedColumnName = "id")},
         inverseJoinColumns = {@JoinColumn(name = "authority_name", referencedColumnName = "name")}
     )
