@@ -37,4 +37,17 @@ public abstract class AbstractAuditingEntity<T> implements Serializable {
     public void setAudit(AuditMetadata audit) {
         this.audit = audit;
     }
+
+    public String getCreatedBy() { return audit.getCreatedBy(); }
+    public void setCreatedBy(String createdBy) { this.audit.setCreatedBy(createdBy); }
+
+    public Instant getCreatedDate() { return audit.getCreatedDate(); }
+    public void setCreatedDate(Instant createdDate) { audit.setCreatedDate(createdDate) ; }
+
+    public String getLastModifiedBy() { return audit.getLastModifiedBy(); }
+    public void setLastModifiedBy(String lastModifiedBy) { audit.setLastModifiedBy(lastModifiedBy); }
+
+    public Instant getLastModifiedDate() { return audit.getLastModifiedDate(); }
+    public void setLastModifiedDate(Instant lastModifiedDate) { audit.setLastModifiedDate(lastModifiedDate) ; }
+
 }

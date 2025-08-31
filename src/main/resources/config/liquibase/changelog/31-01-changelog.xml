@@ -1,0 +1,1630 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+                        http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+
+  <changeSet id="1756667163535-1" author="halimzaaim">
+    <createTable tableName="attendance">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_attendance"/>
+      </column>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="check_in" type="TIME"/>
+      <column name="check_out" type="TIME"/>
+      <column name="status" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-2" author="halimzaaim">
+    <createTable tableName="attendance_event">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_attendance_event"/>
+      </column>
+      <column name="attendance_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="event_type" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="event_time" type="TIME">
+        <constraints nullable="false"/>
+      </column>
+      <column name="event_action" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="description" type="VARCHAR(255)"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-3" author="halimzaaim">
+    <createTable tableName="authority">
+      <column name="name" type="VARCHAR(50)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_authority"/>
+      </column>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-4" author="halimzaaim">
+    <createTable tableName="authority_permissions">
+      <column name="authority_name" type="VARCHAR(50)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_authority_permissions"/>
+      </column>
+      <column name="permission_name" type="VARCHAR(100)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_authority_permissions"/>
+      </column>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-5" author="halimzaaim">
+    <createTable tableName="benefit">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_benefit"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="amount" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="description" type="VARCHAR(500)"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-6" author="halimzaaim">
+    <createTable tableName="compensation">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_compensation"/>
+      </column>
+      <column name="base_amount" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="basis" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="effective_from" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="effective_to" type="DATE"/>
+      <column name="currency_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="position_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-7" author="halimzaaim">
+    <createTable tableName="country">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_country"/>
+      </column>
+      <column name="code" type="VARCHAR(3)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-8" author="halimzaaim">
+    <createTable tableName="coupon">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_coupon"/>
+      </column>
+      <column name="code" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="discount" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="expiry_date" type="DATETIME">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-9" author="halimzaaim">
+    <createTable tableName="currency">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_currency"/>
+      </column>
+      <column name="code" type="VARCHAR(3)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="symbol" type="VARCHAR(5)"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-10" author="halimzaaim">
+    <createTable tableName="department">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_department"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="description" type="VARCHAR(500)"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-11" author="halimzaaim">
+    <createTable tableName="employee">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee"/>
+      </column>
+      <column name="job_title" type="VARCHAR(255)"/>
+      <column name="phone" type="VARCHAR(255)"/>
+      <column name="start_date" type="DATE"/>
+      <column name="end_date" type="DATE"/>
+      <column name="status" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="country_id" type="binary(16)"/>
+      <column name="department_id" type="binary(16)"/>
+      <column name="position_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="unit_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="manager_id" type="binary(16)"/>
+      <column name="path" type="VARCHAR(1000)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-12" author="halimzaaim">
+    <createTable tableName="employee_attribute">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_attribute"/>
+      </column>
+      <column name="attribute_key" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="attribute_value" type="VARCHAR(1000)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-13" author="halimzaaim">
+    <createTable tableName="employee_benefit">
+      <column name="benefit_id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_benefit"/>
+      </column>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_benefit"/>
+      </column>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-14" author="halimzaaim">
+    <createTable tableName="employee_document">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_document"/>
+      </column>
+      <column name="type" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="file_path" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-15" author="halimzaaim">
+    <createTable tableName="employee_notification">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_notification"/>
+      </column>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="message" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="read" type="BOOLEAN">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_at" type="DATETIME">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-16" author="halimzaaim">
+    <createTable tableName="employee_portal_settings">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_portal_settings"/>
+      </column>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="email_notifications" type="BOOLEAN"/>
+      <column name="sms_notifications" type="BOOLEAN"/>
+      <column name="dashboard_layout" type="VARCHAR(255)"/>
+      <column name="theme" type="VARCHAR(255)"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-17" author="halimzaaim">
+    <createTable tableName="employee_position_history">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_position_history"/>
+      </column>
+      <column name="old_salary" type="DECIMAL"/>
+      <column name="new_salary" type="DECIMAL"/>
+      <column name="effective_date" type="DATE"/>
+      <column name="change_type" type="VARCHAR(255)"/>
+      <column name="status" type="VARCHAR(255)"/>
+      <column name="reason" type="VARCHAR(255)"/>
+      <column name="employee_id" type="binary(16)"/>
+      <column name="old_position_id" type="binary(16)"/>
+      <column name="new_position_id" type="binary(16)"/>
+      <column name="old_unit_id" type="binary(16)"/>
+      <column name="new_unit_id" type="binary(16)"/>
+      <column name="old_manager_id" type="binary(16)"/>
+      <column name="new_manager_id" type="binary(16)"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-18" author="halimzaaim">
+    <createTable tableName="employee_training">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_training"/>
+      </column>
+      <column name="status" type="SMALLINT"/>
+      <column name="description" type="VARCHAR(255)"/>
+      <column name="completion_date" type="DATE"/>
+      <column name="feedback" type="VARCHAR(255)"/>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="training_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-19" author="halimzaaim">
+    <createTable tableName="exchange_rate">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_exchange_rate"/>
+      </column>
+      <column name="from_currency_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="to_currency_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="rate" type="DECIMAL(19, 6)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-20" author="halimzaaim">
+    <createTable tableName="expense_claim">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_expense_claim"/>
+      </column>
+      <column name="claim_date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="amount" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="description" type="TEXT"/>
+      <column name="status" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="receipt_url" type="VARCHAR(255)"/>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-21" author="halimzaaim">
+    <createTable tableName="feature">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_feature"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="description" type="TEXT"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+      <column name="subscription_plan_id" type="binary(16)"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-22" author="halimzaaim">
+    <createTable tableName="health_insurance">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_health_insurance"/>
+      </column>
+      <column name="provider_name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="policy_number" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="start_date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="end_date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="coverage_amount" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="status" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-23" author="halimzaaim">
+    <createTable tableName="invoice">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_invoice"/>
+      </column>
+      <column name="amount" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="status" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="due_date" type="DATETIME">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-24" author="halimzaaim">
+    <createTable tableName="jhi_date_time_wrapper">
+      <column autoIncrement="true" name="id" type="BIGINT">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_jhi_date_time_wrapper"/>
+      </column>
+      <column name="instant" type="DATETIME"/>
+      <column name="local_date_time" type="DATETIME"/>
+      <column name="offset_date_time" type="DATETIME"/>
+      <column name="zoned_date_time" type="DATETIME"/>
+      <column name="local_time" type="TIME"/>
+      <column name="offset_time" type="TIME"/>
+      <column name="local_date" type="DATE"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-25" author="halimzaaim">
+    <createTable tableName="leave_request">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_leave_request"/>
+      </column>
+      <column name="start_date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="end_date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="leave_type" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="status" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="reason" type="VARCHAR(1000)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-26" author="halimzaaim">
+    <createTable tableName="leave_type_rule">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_leave_type_rule"/>
+      </column>
+      <column name="country_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="leave_type" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="deduction_percentage" type="DECIMAL(5, 2)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="affects_taxable_salary" type="BOOLEAN">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-27" author="halimzaaim">
+    <createTable tableName="organization">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_organization"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="tenant_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-28" author="halimzaaim">
+    <createTable tableName="organizational_unit">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_organizational_unit"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="type" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="parent_unit_id" type="binary(16)"/>
+      <column name="manager_id" type="binary(16)"/>
+      <column name="path" type="VARCHAR(1000)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-29" author="halimzaaim">
+    <createTable tableName="overtime_record">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_overtime_record"/>
+      </column>
+      <column name="date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="hours" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="type" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="approval_status" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="notes" type="VARCHAR(500)"/>
+      <column name="approved_by" type="binary(16)"/>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-30" author="halimzaaim">
+    <createTable tableName="pay_component">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_pay_component"/>
+      </column>
+      <column name="code" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="kind" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="measure" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="taxable" type="BOOLEAN">
+        <constraints nullable="false"/>
+      </column>
+      <column name="contributes_to_social" type="BOOLEAN">
+        <constraints nullable="false"/>
+      </column>
+      <column name="percentage" type="BOOLEAN">
+        <constraints nullable="false"/>
+      </column>
+      <column name="calc_phase" type="INT"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-31" author="halimzaaim">
+    <createTable tableName="pay_rule">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_pay_rule"/>
+      </column>
+      <column name="formula" type="TEXT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="effective_from" type="DATE"/>
+      <column name="effective_to" type="DATE"/>
+      <column name="priority" type="INT"/>
+      <column name="base_formula_ref" type="VARCHAR(255)"/>
+      <column name="active" type="BOOLEAN">
+        <constraints nullable="false"/>
+      </column>
+      <column name="pay_component_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-32" author="halimzaaim">
+    <createTable tableName="payment">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payment"/>
+      </column>
+      <column name="amount" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="method" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="status" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="payment_date" type="DATETIME">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-33" author="halimzaaim">
+    <createTable tableName="payroll_calendar">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_calendar"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="frequency" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="timezone" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="active" type="BOOLEAN">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-34" author="halimzaaim">
+    <createTable tableName="payroll_input">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_input"/>
+      </column>
+      <column name="quantity" type="DECIMAL"/>
+      <column name="rate" type="DECIMAL"/>
+      <column name="amount" type="DECIMAL"/>
+      <column name="meta_json" type="TEXT"/>
+      <column name="source" type="VARCHAR(255)"/>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="period_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="component_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-35" author="halimzaaim">
+    <createTable tableName="payroll_line">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_line"/>
+      </column>
+      <column name="quantity" type="DECIMAL"/>
+      <column name="rate" type="DECIMAL"/>
+      <column name="amount" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="sequence" type="INT"/>
+      <column name="explain" type="TEXT"/>
+      <column name="result_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="component_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-36" author="halimzaaim">
+    <createTable tableName="payroll_period">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_period"/>
+      </column>
+      <column name="start_date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="end_date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="payment_date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="closed" type="BOOLEAN">
+        <constraints nullable="false"/>
+      </column>
+      <column name="code" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="calendar_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-37" author="halimzaaim">
+    <createTable tableName="payroll_result">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_result"/>
+      </column>
+      <column name="gross" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="total_deductions" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="net" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="employer_cost" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="run_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="currency_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="payroll_period_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-38" author="halimzaaim">
+    <createTable tableName="payroll_run">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_run"/>
+      </column>
+      <column name="scope" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="status" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="approved_at" type="DATETIME"/>
+      <column name="hash" type="VARCHAR(255)"/>
+      <column name="period_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="approved_by" type="binary(16)"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-39" author="halimzaaim">
+    <createTable tableName="payslip">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payslip"/>
+      </column>
+      <column name="number" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="pdf_url" type="VARCHAR(255)"/>
+      <column name="result_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-40" author="halimzaaim">
+    <createTable tableName="performance_review">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_performance_review"/>
+      </column>
+      <column name="review_date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="comments" type="CLOB"/>
+      <column defaultValueComputed="0" name="rating" type="INT"/>
+      <column name="reviewer_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-41" author="halimzaaim">
+    <createTable tableName="permission">
+      <column name="name" type="VARCHAR(100)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_permission"/>
+      </column>
+      <column name="description" type="VARCHAR(255)"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-42" author="halimzaaim">
+    <createTable tableName="persistent_token">
+      <column name="series" type="VARCHAR(255)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_persistent_token"/>
+      </column>
+      <column name="token_value" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="token_date" type="DATE"/>
+      <column name="ip_address" type="VARCHAR(39)"/>
+      <column name="user_agent" type="VARCHAR(255)"/>
+      <column name="user_id" type="binary(16)"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-43" author="halimzaaim">
+    <createTable tableName="position">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_position"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="description" type="VARCHAR(255)"/>
+      <column name="level" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="unit_id" type="binary(16)"/>
+      <column name="parent_position_id" type="binary(16)"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-44" author="halimzaaim">
+    <createTable tableName="project">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_project"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="description" type="VARCHAR(255)"/>
+      <column name="start_time" type="DATETIME"/>
+      <column name="end_time" type="DATETIME"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-45" author="halimzaaim">
+    <createTable tableName="subscription">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_subscription"/>
+      </column>
+      <column name="subscription_plan_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="start_date" type="DATETIME">
+        <constraints nullable="false"/>
+      </column>
+      <column name="end_date" type="DATETIME"/>
+      <column name="status" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-46" author="halimzaaim">
+    <createTable tableName="subscription_plan">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_subscription_plan"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="price" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-47" author="halimzaaim">
+    <createTable tableName="survey">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_survey"/>
+      </column>
+      <column name="title" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="description" type="VARCHAR(255)"/>
+      <column name="start_date" type="DATE"/>
+      <column name="end_date" type="DATE"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-48" author="halimzaaim">
+    <createTable tableName="survey_response">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_survey_response"/>
+      </column>
+      <column name="survey_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="response" type="TEXT"/>
+      <column name="submitted_at" type="DATETIME">
+        <constraints nullable="false"/>
+      </column>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-49" author="halimzaaim">
+    <createTable tableName="tax_bracket">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_tax_bracket"/>
+      </column>
+      <column name="country_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="valid_from" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="valid_to" type="DATE"/>
+      <column name="lower" type="DECIMAL(19, 6)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="upper" type="DECIMAL(19, 6)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="rate" type="DECIMAL(5, 4)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="fixed_part" type="DECIMAL(19, 6)"/>
+      <column name="tax_code" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-50" author="halimzaaim">
+    <createTable tableName="tenant">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_tenant"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="domain" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="subdomain" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="logo" type="VARCHAR(255)"/>
+      <column name="timezone" type="VARCHAR(255)"/>
+      <column name="booking_policies" type="TEXT"/>
+      <column name="hr_policies" type="TEXT"/>
+      <column name="subscription_plan_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-51" author="halimzaaim">
+    <createTable tableName="timesheet">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_timesheet"/>
+      </column>
+      <column name="date" type="DATE">
+        <constraints nullable="false"/>
+      </column>
+      <column name="hours_worked" type="DECIMAL">
+        <constraints nullable="false"/>
+      </column>
+      <column name="project_id" type="binary(16)"/>
+      <column name="employee_id" type="binary(16)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-52" author="halimzaaim">
+    <createTable tableName="training">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_training"/>
+      </column>
+      <column name="name" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="provider" type="VARCHAR(255)"/>
+      <column name="start_date" type="DATE"/>
+      <column name="end_date" type="DATE"/>
+      <column name="description" type="VARCHAR(255)"/>
+      <column name="location" type="VARCHAR(255)"/>
+      <column name="certificate" type="VARCHAR(255)"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-53" author="halimzaaim">
+    <createTable tableName="user">
+      <column name="id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user"/>
+      </column>
+      <column name="login" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="password_hash" type="VARCHAR(60)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="first_name" type="VARCHAR(50)"/>
+      <column name="last_name" type="VARCHAR(50)"/>
+      <column name="email" type="VARCHAR(254)"/>
+      <column name="activated" type="BOOLEAN">
+        <constraints nullable="false"/>
+      </column>
+      <column name="lang_key" type="VARCHAR(10)"/>
+      <column name="image_url" type="VARCHAR(256)"/>
+      <column name="activation_key" type="VARCHAR(20)"/>
+      <column name="reset_key" type="VARCHAR(20)"/>
+      <column name="reset_date" type="DATETIME"/>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-54" author="halimzaaim">
+    <createTable tableName="user_authority">
+      <column name="authority_name" type="VARCHAR(50)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user_authority"/>
+      </column>
+      <column name="user_id" type="binary(16)">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user_authority"/>
+      </column>
+    </createTable>
+  </changeSet>
+  <changeSet id="1756667163535-55" author="halimzaaim">
+    <addUniqueConstraint columnNames="leave_type, country_id" constraintName="uc_9b3ff9d24109c8e1f50ef99e4"
+                         tableName="leave_type_rule"/>
+  </changeSet>
+  <changeSet id="1756667163535-56" author="halimzaaim">
+    <addUniqueConstraint columnNames="code" constraintName="uc_country_code" tableName="country"/>
+  </changeSet>
+  <changeSet id="1756667163535-57" author="halimzaaim">
+    <addUniqueConstraint columnNames="code" constraintName="uc_coupon_code" tableName="coupon"/>
+  </changeSet>
+  <changeSet id="1756667163535-58" author="halimzaaim">
+    <addUniqueConstraint columnNames="code" constraintName="uc_currency_code" tableName="currency"/>
+  </changeSet>
+  <changeSet id="1756667163535-59" author="halimzaaim">
+    <addUniqueConstraint columnNames="name" constraintName="uc_department_name" tableName="department"/>
+  </changeSet>
+  <changeSet id="1756667163535-60" author="halimzaaim">
+    <addUniqueConstraint columnNames="employee_id" constraintName="uc_employee_portal_settings_employee"
+                         tableName="employee_portal_settings"/>
+  </changeSet>
+  <changeSet id="1756667163535-61" author="halimzaaim">
+    <addUniqueConstraint columnNames="manager_id" constraintName="uc_organizational_unit_manager"
+                         tableName="organizational_unit"/>
+  </changeSet>
+  <changeSet id="1756667163535-62" author="halimzaaim">
+    <addUniqueConstraint columnNames="code" constraintName="uc_pay_component_code" tableName="pay_component"/>
+  </changeSet>
+  <changeSet id="1756667163535-63" author="halimzaaim">
+    <addUniqueConstraint columnNames="code" constraintName="uc_payroll_period_code" tableName="payroll_period"/>
+  </changeSet>
+  <changeSet id="1756667163535-64" author="halimzaaim">
+    <addUniqueConstraint columnNames="hash" constraintName="uc_payroll_run_hash" tableName="payroll_run"/>
+  </changeSet>
+  <changeSet id="1756667163535-65" author="halimzaaim">
+    <addUniqueConstraint columnNames="number" constraintName="uc_payslip_number" tableName="payslip"/>
+  </changeSet>
+  <changeSet id="1756667163535-66" author="halimzaaim">
+    <addUniqueConstraint columnNames="result_id" constraintName="uc_payslip_result" tableName="payslip"/>
+  </changeSet>
+  <changeSet id="1756667163535-67" author="halimzaaim">
+    <addUniqueConstraint columnNames="name" constraintName="uc_position_name" tableName="position"/>
+  </changeSet>
+  <changeSet id="1756667163535-68" author="halimzaaim">
+    <addUniqueConstraint columnNames="domain" constraintName="uc_tenant_domain" tableName="tenant"/>
+  </changeSet>
+  <changeSet id="1756667163535-69" author="halimzaaim">
+    <addUniqueConstraint columnNames="subdomain" constraintName="uc_tenant_subdomain" tableName="tenant"/>
+  </changeSet>
+  <changeSet id="1756667163535-70" author="halimzaaim">
+    <addUniqueConstraint columnNames="email" constraintName="uc_user_email" tableName="user"/>
+  </changeSet>
+  <changeSet id="1756667163535-71" author="halimzaaim">
+    <addUniqueConstraint columnNames="login" constraintName="uc_user_login" tableName="user"/>
+  </changeSet>
+  <changeSet id="1756667163535-72" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="attendance_id" baseTableName="attendance_event"
+                             constraintName="FK_ATTENDANCE_EVENT_ON_ATTENDANCE" referencedColumnNames="id"
+                             referencedTableName="attendance"/>
+  </changeSet>
+  <changeSet id="1756667163535-73" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="attendance"
+                             constraintName="FK_ATTENDANCE_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-74" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="currency_id" baseTableName="compensation"
+                             constraintName="FK_COMPENSATION_ON_CURRENCY" referencedColumnNames="id"
+                             referencedTableName="currency"/>
+  </changeSet>
+  <changeSet id="1756667163535-75" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="compensation"
+                             constraintName="FK_COMPENSATION_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-76" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="position_id" baseTableName="compensation"
+                             constraintName="FK_COMPENSATION_ON_POSITION" referencedColumnNames="id"
+                             referencedTableName="position"/>
+  </changeSet>
+  <changeSet id="1756667163535-77" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_attribute"
+                             constraintName="FK_EMPLOYEE_ATTRIBUTE_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-78" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_document"
+                             constraintName="FK_EMPLOYEE_DOCUMENT_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-79" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_notification"
+                             constraintName="FK_EMPLOYEE_NOTIFICATION_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-80" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="country_id" baseTableName="employee"
+                             constraintName="FK_EMPLOYEE_ON_COUNTRY" referencedColumnNames="id"
+                             referencedTableName="country"/>
+  </changeSet>
+  <changeSet id="1756667163535-81" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="department_id" baseTableName="employee"
+                             constraintName="FK_EMPLOYEE_ON_DEPARTMENT" referencedColumnNames="id"
+                             referencedTableName="department"/>
+  </changeSet>
+  <changeSet id="1756667163535-82" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="manager_id" baseTableName="employee"
+                             constraintName="FK_EMPLOYEE_ON_MANAGER" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-83" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="position_id" baseTableName="employee"
+                             constraintName="FK_EMPLOYEE_ON_POSITION" referencedColumnNames="id"
+                             referencedTableName="position"/>
+  </changeSet>
+  <changeSet id="1756667163535-84" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="unit_id" baseTableName="employee" constraintName="FK_EMPLOYEE_ON_UNIT"
+                             referencedColumnNames="id" referencedTableName="organizational_unit"/>
+  </changeSet>
+  <changeSet id="1756667163535-85" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_portal_settings"
+                             constraintName="FK_EMPLOYEE_PORTAL_SETTINGS_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-86" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_position_history"
+                             constraintName="FK_EMPLOYEE_POSITION_HISTORY_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-87" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="new_manager_id" baseTableName="employee_position_history"
+                             constraintName="FK_EMPLOYEE_POSITION_HISTORY_ON_NEW_MANAGER" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-88" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="new_position_id" baseTableName="employee_position_history"
+                             constraintName="FK_EMPLOYEE_POSITION_HISTORY_ON_NEW_POSITION" referencedColumnNames="id"
+                             referencedTableName="position"/>
+  </changeSet>
+  <changeSet id="1756667163535-89" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="new_unit_id" baseTableName="employee_position_history"
+                             constraintName="FK_EMPLOYEE_POSITION_HISTORY_ON_NEW_UNIT" referencedColumnNames="id"
+                             referencedTableName="organizational_unit"/>
+  </changeSet>
+  <changeSet id="1756667163535-90" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="old_manager_id" baseTableName="employee_position_history"
+                             constraintName="FK_EMPLOYEE_POSITION_HISTORY_ON_OLD_MANAGER" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-91" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="old_position_id" baseTableName="employee_position_history"
+                             constraintName="FK_EMPLOYEE_POSITION_HISTORY_ON_OLD_POSITION" referencedColumnNames="id"
+                             referencedTableName="position"/>
+  </changeSet>
+  <changeSet id="1756667163535-92" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="old_unit_id" baseTableName="employee_position_history"
+                             constraintName="FK_EMPLOYEE_POSITION_HISTORY_ON_OLD_UNIT" referencedColumnNames="id"
+                             referencedTableName="organizational_unit"/>
+  </changeSet>
+  <changeSet id="1756667163535-93" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_training"
+                             constraintName="FK_EMPLOYEE_TRAINING_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-94" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="training_id" baseTableName="employee_training"
+                             constraintName="FK_EMPLOYEE_TRAINING_ON_TRAINING" referencedColumnNames="id"
+                             referencedTableName="training"/>
+  </changeSet>
+  <changeSet id="1756667163535-95" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="from_currency_id" baseTableName="exchange_rate"
+                             constraintName="FK_EXCHANGE_RATE_ON_FROM_CURRENCY" referencedColumnNames="id"
+                             referencedTableName="currency"/>
+  </changeSet>
+  <changeSet id="1756667163535-96" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="to_currency_id" baseTableName="exchange_rate"
+                             constraintName="FK_EXCHANGE_RATE_ON_TO_CURRENCY" referencedColumnNames="id"
+                             referencedTableName="currency"/>
+  </changeSet>
+  <changeSet id="1756667163535-97" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="expense_claim"
+                             constraintName="FK_EXPENSE_CLAIM_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-98" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="subscription_plan_id" baseTableName="feature"
+                             constraintName="FK_FEATURE_ON_SUBSCRIPTION_PLAN" referencedColumnNames="id"
+                             referencedTableName="subscription_plan"/>
+  </changeSet>
+  <changeSet id="1756667163535-99" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="health_insurance"
+                             constraintName="FK_HEALTH_INSURANCE_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-100" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="leave_request"
+                             constraintName="FK_LEAVE_REQUEST_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-101" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="country_id" baseTableName="leave_type_rule"
+                             constraintName="FK_LEAVE_TYPE_RULE_ON_COUNTRY" referencedColumnNames="id"
+                             referencedTableName="country"/>
+  </changeSet>
+  <changeSet id="1756667163535-102" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="manager_id" baseTableName="organizational_unit"
+                             constraintName="FK_ORGANIZATIONAL_UNIT_ON_MANAGER" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-103" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="parent_unit_id" baseTableName="organizational_unit"
+                             constraintName="FK_ORGANIZATIONAL_UNIT_ON_PARENT_UNIT" referencedColumnNames="id"
+                             referencedTableName="organizational_unit"/>
+  </changeSet>
+  <changeSet id="1756667163535-104" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="tenant_id" baseTableName="organization"
+                             constraintName="FK_ORGANIZATION_ON_TENANT" referencedColumnNames="id"
+                             referencedTableName="tenant"/>
+  </changeSet>
+  <changeSet id="1756667163535-105" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="approved_by" baseTableName="overtime_record"
+                             constraintName="FK_OVERTIME_RECORD_ON_APPROVED_BY" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-106" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="overtime_record"
+                             constraintName="FK_OVERTIME_RECORD_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-107" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="component_id" baseTableName="payroll_input"
+                             constraintName="FK_PAYROLL_INPUT_ON_COMPONENT" referencedColumnNames="id"
+                             referencedTableName="pay_component"/>
+  </changeSet>
+  <changeSet id="1756667163535-108" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="payroll_input"
+                             constraintName="FK_PAYROLL_INPUT_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-109" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="period_id" baseTableName="payroll_input"
+                             constraintName="FK_PAYROLL_INPUT_ON_PERIOD" referencedColumnNames="id"
+                             referencedTableName="payroll_period"/>
+  </changeSet>
+  <changeSet id="1756667163535-110" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="component_id" baseTableName="payroll_line"
+                             constraintName="FK_PAYROLL_LINE_ON_COMPONENT" referencedColumnNames="id"
+                             referencedTableName="pay_component"/>
+  </changeSet>
+  <changeSet id="1756667163535-111" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="result_id" baseTableName="payroll_line"
+                             constraintName="FK_PAYROLL_LINE_ON_RESULT" referencedColumnNames="id"
+                             referencedTableName="payroll_result"/>
+  </changeSet>
+  <changeSet id="1756667163535-112" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="calendar_id" baseTableName="payroll_period"
+                             constraintName="FK_PAYROLL_PERIOD_ON_CALENDAR" referencedColumnNames="id"
+                             referencedTableName="payroll_calendar"/>
+  </changeSet>
+  <changeSet id="1756667163535-113" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="currency_id" baseTableName="payroll_result"
+                             constraintName="FK_PAYROLL_RESULT_ON_CURRENCY" referencedColumnNames="id"
+                             referencedTableName="currency"/>
+  </changeSet>
+  <changeSet id="1756667163535-114" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="payroll_result"
+                             constraintName="FK_PAYROLL_RESULT_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-115" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="payroll_period_id" baseTableName="payroll_result"
+                             constraintName="FK_PAYROLL_RESULT_ON_PAYROLL_PERIOD" referencedColumnNames="id"
+                             referencedTableName="payroll_period"/>
+  </changeSet>
+  <changeSet id="1756667163535-116" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="run_id" baseTableName="payroll_result"
+                             constraintName="FK_PAYROLL_RESULT_ON_RUN" referencedColumnNames="id"
+                             referencedTableName="payroll_run"/>
+  </changeSet>
+  <changeSet id="1756667163535-117" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="approved_by" baseTableName="payroll_run"
+                             constraintName="FK_PAYROLL_RUN_ON_APPROVED_BY" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-118" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="period_id" baseTableName="payroll_run"
+                             constraintName="FK_PAYROLL_RUN_ON_PERIOD" referencedColumnNames="id"
+                             referencedTableName="payroll_period"/>
+  </changeSet>
+  <changeSet id="1756667163535-119" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="result_id" baseTableName="payslip" constraintName="FK_PAYSLIP_ON_RESULT"
+                             referencedColumnNames="id" referencedTableName="payroll_result"/>
+  </changeSet>
+  <changeSet id="1756667163535-120" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="pay_component_id" baseTableName="pay_rule"
+                             constraintName="FK_PAY_RULE_ON_PAY_COMPONENT" referencedColumnNames="id"
+                             referencedTableName="pay_component"/>
+  </changeSet>
+  <changeSet id="1756667163535-121" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="performance_review"
+                             constraintName="FK_PERFORMANCE_REVIEW_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-122" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="reviewer_id" baseTableName="performance_review"
+                             constraintName="FK_PERFORMANCE_REVIEW_ON_REVIEWER" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-123" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="persistent_token"
+                             constraintName="FK_PERSISTENT_TOKEN_ON_USER" referencedColumnNames="id"
+                             referencedTableName="user"/>
+  </changeSet>
+  <changeSet id="1756667163535-124" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="parent_position_id" baseTableName="position"
+                             constraintName="FK_POSITION_ON_PARENT_POSITION" referencedColumnNames="id"
+                             referencedTableName="position"/>
+  </changeSet>
+  <changeSet id="1756667163535-125" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="unit_id" baseTableName="position" constraintName="FK_POSITION_ON_UNIT"
+                             referencedColumnNames="id" referencedTableName="organizational_unit"/>
+  </changeSet>
+  <changeSet id="1756667163535-126" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="subscription_plan_id" baseTableName="subscription"
+                             constraintName="FK_SUBSCRIPTION_ON_SUBSCRIPTION_PLAN" referencedColumnNames="id"
+                             referencedTableName="subscription_plan"/>
+  </changeSet>
+  <changeSet id="1756667163535-127" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="survey_response"
+                             constraintName="FK_SURVEY_RESPONSE_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-128" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="survey_id" baseTableName="survey_response"
+                             constraintName="FK_SURVEY_RESPONSE_ON_SURVEY" referencedColumnNames="id"
+                             referencedTableName="survey"/>
+  </changeSet>
+  <changeSet id="1756667163535-129" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="country_id" baseTableName="tax_bracket"
+                             constraintName="FK_TAX_BRACKET_ON_COUNTRY" referencedColumnNames="id"
+                             referencedTableName="country"/>
+  </changeSet>
+  <changeSet id="1756667163535-130" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="subscription_plan_id" baseTableName="tenant"
+                             constraintName="FK_TENANT_ON_SUBSCRIPTION_PLAN" referencedColumnNames="id"
+                             referencedTableName="subscription_plan"/>
+  </changeSet>
+  <changeSet id="1756667163535-131" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="timesheet"
+                             constraintName="FK_TIMESHEET_ON_EMPLOYEE" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-132" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="project_id" baseTableName="timesheet"
+                             constraintName="FK_TIMESHEET_ON_PROJECT" referencedColumnNames="id"
+                             referencedTableName="project"/>
+  </changeSet>
+  <changeSet id="1756667163535-133" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="authority_name" baseTableName="authority_permissions"
+                             constraintName="fk_autper_on_authority" referencedColumnNames="name"
+                             referencedTableName="authority"/>
+  </changeSet>
+  <changeSet id="1756667163535-134" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="permission_name" baseTableName="authority_permissions"
+                             constraintName="fk_autper_on_permission" referencedColumnNames="name"
+                             referencedTableName="permission"/>
+  </changeSet>
+  <changeSet id="1756667163535-135" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="benefit_id" baseTableName="employee_benefit"
+                             constraintName="fk_empben_on_benefit" referencedColumnNames="id"
+                             referencedTableName="benefit"/>
+  </changeSet>
+  <changeSet id="1756667163535-136" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_benefit"
+                             constraintName="fk_empben_on_employee" referencedColumnNames="id"
+                             referencedTableName="employee"/>
+  </changeSet>
+  <changeSet id="1756667163535-137" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="authority_name" baseTableName="user_authority"
+                             constraintName="fk_useaut_on_authority" referencedColumnNames="name"
+                             referencedTableName="authority"/>
+  </changeSet>
+  <changeSet id="1756667163535-138" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="user_authority" constraintName="fk_useaut_on_user"
+                             referencedColumnNames="id" referencedTableName="user"/>
+  </changeSet>
+
+</databaseChangeLog>
