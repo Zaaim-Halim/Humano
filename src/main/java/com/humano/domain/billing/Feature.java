@@ -27,7 +27,7 @@ public class Feature extends AbstractAuditingEntity<UUID> {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "description")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     // Getters and Setters

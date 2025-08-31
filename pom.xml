@@ -245,6 +245,11 @@
             <version>${mapstruct.version}</version>
             <scope>provided</scope>
         </dependency>
+      <dependency>
+        <groupId>com.mysql</groupId>
+        <artifactId>mysql-connector-j</artifactId>
+        <version>9.0.0</version>
+      </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>jdbc</artifactId>
@@ -812,13 +817,14 @@
             </activation>
             <properties>
                 <!-- default Spring profiles -->
-                <liquibase-plugin.driver>org.h2.Driver</liquibase-plugin.driver>
-                <liquibase-plugin.hibernate-dialect>org.hibernate.dialect.H2Dialect</liquibase-plugin.hibernate-dialect>
-                <liquibase-plugin.password/>
-                <liquibase-plugin.url>jdbc:h2:tcp://localhost:18080/mem:humano</liquibase-plugin.url>
-                <liquibase-plugin.username>humano</liquibase-plugin.username>
-                <profile.test>test,testdev</profile.test>
-                <spring.profiles.active>dev${profile.tls}${profile.no-liquibase}</spring.profiles.active>
+              <liquibase-plugin.driver>com.mysql.cj.jdbc.Driver</liquibase-plugin.driver>
+              <liquibase-plugin.hibernate-dialect>org.hibernate.dialect.MySQLDialect</liquibase-plugin.hibernate-dialect>
+              <liquibase-plugin.url>jdbc:mysql://localhost:3306/humano?createDatabaseIfNotExist=true&amp;useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC</liquibase-plugin.url>
+              <liquibase-plugin.username>root</liquibase-plugin.username>
+              <liquibase-plugin.password>halim1993</liquibase-plugin.password>
+
+
+
             </properties>
             <dependencies>
                 <dependency>
@@ -830,6 +836,11 @@
                     <groupId>com.h2database</groupId>
                     <artifactId>h2</artifactId>
                 </dependency>
+              <dependency>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
+                <version>9.0.0</version>
+              </dependency>
             </dependencies>
             <build>
                 <plugins>

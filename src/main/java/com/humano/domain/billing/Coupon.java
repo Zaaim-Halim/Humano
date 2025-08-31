@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -30,7 +31,7 @@ public class Coupon extends AbstractAuditingEntity<UUID> {
     private String code;
 
     @Column(name = "discount", nullable = false)
-    private Double discount;
+    private BigDecimal discount;
 
     @Column(name = "expiry_date", nullable = false)
     private Instant expiryDate;

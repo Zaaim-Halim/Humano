@@ -78,7 +78,7 @@ public class Employee extends AbstractAuditingEntity<UUID> {
      * Position held by the employee.
      */
     @ManyToOne
-    @JoinColumn(name = "position_id")
+    @JoinColumn(name = "position_id", nullable = false)
     private Position position;
     /**
      * Documents associated with the employee.
@@ -106,7 +106,7 @@ public class Employee extends AbstractAuditingEntity<UUID> {
 
     // Link to unit
     @ManyToOne
-    @JoinColumn(name = "unit_id")
+    @JoinColumn(name = "unit_id", nullable = false)
     private OrganizationalUnit unit;
 
     // Direct manager (can be different from unit manager)
@@ -124,7 +124,7 @@ public class Employee extends AbstractAuditingEntity<UUID> {
      * @Query("SELECT e FROM Employee e WHERE e.path LIKE CONCAT(:managerPath, '/%')")
        List<Employee> findAllSubordinates(@Param("managerPath") String managerPath);
      */
-    @Column(name = "path", nullable = false)
+    @Column(name = "path", nullable = false, length = 1000)
     private String path; // materialized path for employee hierarchy
 
     @PrePersist

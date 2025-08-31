@@ -34,13 +34,13 @@ public class EmployeeAttribute extends AbstractAuditingEntity<UUID> {
     /**
      * Key for the attribute (e.g., "language", "certification").
      */
-    @Column(name = "attribute_key", nullable = false)
+    @Column(name = "attribute_key", nullable = false, length = 255)
     private String key;
 
     /**
      * Value for the attribute.
      */
-    @Column(name = "attribute_value")
+    @Column(name = "attribute_value", nullable = false, length = 1000 )
     private String value;
 
     /**

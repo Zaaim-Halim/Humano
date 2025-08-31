@@ -41,7 +41,7 @@ public class Department extends AbstractAuditingEntity<UUID> {
     /**
      * Optional description of the department.
      */
-    @Column(name = "description")
+    @Column(name = "description", length = 500)
     private String description;
 
     /**

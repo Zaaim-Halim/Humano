@@ -63,7 +63,7 @@ public class OvertimeRecord extends AbstractAuditingEntity<UUID> {
     /**
      * Optional notes about the overtime.
      */
-    @Column(name = "notes")
+    @Column(name = "notes", length = 500)
     private String notes;
 
     /**
