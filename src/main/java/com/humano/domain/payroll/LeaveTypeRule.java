@@ -44,7 +44,7 @@ public class LeaveTypeRule extends AbstractAuditingEntity<UUID> {
     private BigDecimal deductionPercentage; // 0.0 - 100.0
 
     @Column(nullable = false)
-    private boolean affectsTaxableSalary; // optional, if leave affects gross salary
+    private Boolean affectsTaxableSalary = false; // optional, if leave affects gross salary
 
     @Override
     public UUID getId() {

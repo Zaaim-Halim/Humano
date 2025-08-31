@@ -1,6 +1,7 @@
 package com.humano.domain.hr;
 
 import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.enumeration.hr.AttendanceStatus;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
@@ -62,8 +63,9 @@ public class Attendance extends AbstractAuditingEntity<UUID> {
     /**
      * Attendance status (e.g., PRESENT, ABSENT, LEAVE).
      */
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private String status;
+    private AttendanceStatus status;
 
     /**
      * Events related to this attendance record (e.g., breaks, check-ins).

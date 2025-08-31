@@ -62,13 +62,13 @@ public class PayComponent extends AbstractAuditingEntity<UUID> {
     private Measurement measure; // AMOUNT, RATE, HOURS
 
     @Column(name = "taxable", nullable = false)
-    private boolean taxable;
+    private Boolean taxable;
 
     @Column(name = "contributes_to_social", nullable = false)
-    private boolean contributesToSocial;
+    private Boolean contributesToSocial;
 
     @Column(name = "percentage", nullable = false)
-    private boolean percentage; // true if % based
+    private Boolean percentage; // true if % based
 
     @Column(name = "calc_phase")
     private Integer calcPhase; // Stage of calculation

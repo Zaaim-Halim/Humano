@@ -3,6 +3,7 @@ package com.humano.domain.hr;
 import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.hr.ExpenseClaimStatus;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
@@ -43,12 +44,13 @@ public class ExpenseClaim extends AbstractAuditingEntity<UUID> {
      * Amount claimed for reimbursement.
      */
     @Column(name = "amount", nullable = false)
+    @Min(0)
     private BigDecimal amount;
 
     /**
      * Optional description of the claim.
      */
-    @Column(name = "description")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     /**

@@ -2,6 +2,8 @@ package com.humano.domain.hr;
 
 import com.humano.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
@@ -47,7 +49,9 @@ public class PerformanceReview extends AbstractAuditingEntity<UUID> {
     /**
      * Rating given during the review (e.g., 1-5).
      */
-    @Column(name = "rating")
+    @Column(name = "rating", columnDefinition = "default 0")
+    @Min(0)
+    @Max(5)
     private Integer rating;
 
     /**

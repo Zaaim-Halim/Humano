@@ -6,6 +6,7 @@ import com.humano.domain.enumeration.hr.LeaveType;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
+import org.hibernate.validator.constraints.Length;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -59,6 +60,12 @@ public class LeaveRequest extends AbstractAuditingEntity<UUID> {
     @Enumerated(EnumType.STRING)
     private LeaveStatus status;
 
+    /**
+     * Optional details or reason for the leave.
+     */
+    @Column(name = "reason", nullable = false)
+    @Length(min = 20, max = 1000)
+    private String reason;
     /**
      * The employee who requested the leave.
      */

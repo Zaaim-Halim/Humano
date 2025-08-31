@@ -63,7 +63,7 @@ public class PayRule extends AbstractAuditingEntity<UUID> {
     private String baseFormulaRef; // Will refer to other component codes
 
     @Column(name = "active", nullable = false)
-    private boolean active = true;
+    private Boolean active = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pay_component_id", nullable = false)

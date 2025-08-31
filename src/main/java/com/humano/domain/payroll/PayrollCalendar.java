@@ -57,7 +57,7 @@ public class PayrollCalendar extends AbstractAuditingEntity<UUID> {
     private TimeZone timezone; // e.g., "Europe/Tirane"
 
     @Column(name = "active", nullable = false)
-    private boolean active;
+    private Boolean active;
 
     @Override
     public UUID getId() {

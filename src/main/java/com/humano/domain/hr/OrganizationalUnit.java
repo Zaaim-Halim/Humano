@@ -81,7 +81,7 @@ public class OrganizationalUnit extends AbstractAuditingEntity<UUID> {
     /**
      * Hierarchical path of the unit (e.g., /Finance/Accounting/Payroll).
      */
-    @Column(name = "path", nullable = false)
+    @Column(name = "path", nullable = false, length = 1000)
     private String path; // e.g., "/Finance/Accounting/Payroll"
 
     // Precompute path when persisting or updating

@@ -61,11 +61,11 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
     private TimeZone timezone = TimeZone.getTimeZone("UTC"); // Default UTC
 
     @Lob
-    @Column(name = "booking_policies")
+    @Column(name = "booking_policies", columnDefinition = "TEXT")
     private String bookingPolicies;
 
     @Lob
-    @Column(name = "hr_policies")
+    @Column(name = "hr_policies", columnDefinition = "TEXT")
     private String hrPolicies;
 
     @ManyToOne(fetch = FetchType.LAZY)

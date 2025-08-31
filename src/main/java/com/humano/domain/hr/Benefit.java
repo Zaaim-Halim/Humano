@@ -2,11 +2,13 @@ package com.humano.domain.hr;
 
 import com.humano.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
 import java.math.BigDecimal;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -46,12 +48,13 @@ public class Benefit extends AbstractAuditingEntity<UUID> {
      * Monetary value or amount associated with the benefit.
      */
     @Column(name = "amount", nullable = false)
+    @Min(0)
     private BigDecimal amount;
 
     /**
      * Optional description providing additional details about the benefit.
      */
-    @Column(name = "description")
+    @Column(name = "description", length = 500)
     private String description;
 
     /**
@@ -64,7 +67,7 @@ public class Benefit extends AbstractAuditingEntity<UUID> {
         joinColumns = @JoinColumn(name = "benefit_id"),
         inverseJoinColumns = @JoinColumn(name = "employee_id")
     )
-    private java.util.Set<Employee> employees = new HashSet<>();
+    private Set<Employee> employees = new HashSet<>();
 
     // Getters and setters
 
