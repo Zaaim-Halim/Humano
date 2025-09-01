@@ -9,6 +9,7 @@ import org.hibernate.annotations.Parameter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -74,8 +75,113 @@ public class ExpenseClaim extends AbstractAuditingEntity<UUID> {
     private Employee employee;
 
     // Getters and setters
+    @Override
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public LocalDate getClaimDate() {
+        return claimDate;
+    }
+
+    public ExpenseClaim claimDate(LocalDate claimDate) {
+        this.claimDate = claimDate;
+        return this;
+    }
+
+    public void setClaimDate(LocalDate claimDate) {
+        this.claimDate = claimDate;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public ExpenseClaim amount(BigDecimal amount) {
+        this.amount = amount;
+        return this;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public ExpenseClaim description(String description) {
+        this.description = description;
+        return this;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public ExpenseClaimStatus getStatus() {
+        return status;
+    }
+
+    public ExpenseClaim status(ExpenseClaimStatus status) {
+        this.status = status;
+        return this;
+    }
+
+    public void setStatus(ExpenseClaimStatus status) {
+        this.status = status;
+    }
+
+    public String getReceiptUrl() {
+        return receiptUrl;
+    }
+
+    public ExpenseClaim receiptUrl(String receiptUrl) {
+        this.receiptUrl = receiptUrl;
+        return this;
+    }
+
+    public void setReceiptUrl(String receiptUrl) {
+        this.receiptUrl = receiptUrl;
+    }
+
+    public Employee getEmployee() {
+        return employee;
+    }
+
+    public ExpenseClaim employee(Employee employee) {
+        this.employee = employee;
+        return this;
+    }
+
+    public void setEmployee(Employee employee) {
+        this.employee = employee;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ExpenseClaim that = (ExpenseClaim) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "ExpenseClaim{" +
+            "id=" + id +
+            ", claimDate=" + claimDate +
+            ", amount=" + amount +
+            ", status=" + status +
+            '}';
+    }
 }

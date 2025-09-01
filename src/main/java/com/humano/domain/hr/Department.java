@@ -6,6 +6,7 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -50,9 +51,85 @@ public class Department extends AbstractAuditingEntity<UUID> {
     @OneToMany(mappedBy = "department")
     private Set<Employee> employees = new HashSet<>();
 
-    // Getters and setters
+    @Override
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Department name(String name) {
+        this.name = name;
+        return this;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Department description(String description) {
+        this.description = description;
+        return this;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Set<Employee> getEmployees() {
+        return employees;
+    }
+
+    public Department employees(Set<Employee> employees) {
+        this.employees = employees;
+        return this;
+    }
+
+    public void setEmployees(Set<Employee> employees) {
+        this.employees = employees;
+    }
+
+    public Department addEmployee(Employee employee) {
+        this.employees.add(employee);
+        employee.setDepartment(this);
+        return this;
+    }
+
+    public Department removeEmployee(Employee employee) {
+        this.employees.remove(employee);
+        employee.setDepartment(null);
+        return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Department that = (Department) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "Department{" +
+            "id=" + id +
+            ", name='" + name + '\'' +
+            ", description='" + description + '\'' +
+            '}';
+    }
 }

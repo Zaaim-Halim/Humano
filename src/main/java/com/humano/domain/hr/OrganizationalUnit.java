@@ -7,6 +7,7 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -91,16 +92,150 @@ public class OrganizationalUnit extends AbstractAuditingEntity<UUID> {
         this.path = (parentUnit != null ? parentUnit.getPath() : "") + "/" + name;
     }
 
-    // Getters and setters
+    @Override
     public UUID getId() {
         return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public OrganizationalUnit name(String name) {
+        this.name = name;
+        return this;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public OrganizationalUnitType getType() {
+        return type;
+    }
+
+    public OrganizationalUnit type(OrganizationalUnitType type) {
+        this.type = type;
+        return this;
+    }
+
+    public void setType(OrganizationalUnitType type) {
+        this.type = type;
+    }
+
+    public OrganizationalUnit getParentUnit() {
+        return parentUnit;
+    }
+
+    public OrganizationalUnit parentUnit(OrganizationalUnit parentUnit) {
+        this.parentUnit = parentUnit;
+        return this;
+    }
+
+    public void setParentUnit(OrganizationalUnit parentUnit) {
+        this.parentUnit = parentUnit;
+    }
+
+    public Set<OrganizationalUnit> getSubUnits() {
+        return subUnits;
+    }
+
+    public OrganizationalUnit subUnits(Set<OrganizationalUnit> subUnits) {
+        this.subUnits = subUnits;
+        return this;
+    }
+
+    public void setSubUnits(Set<OrganizationalUnit> subUnits) {
+        this.subUnits = subUnits;
+    }
+
+    public OrganizationalUnit addSubUnit(OrganizationalUnit subUnit) {
+        this.subUnits.add(subUnit);
+        subUnit.setParentUnit(this);
+        return this;
+    }
+
+    public OrganizationalUnit removeSubUnit(OrganizationalUnit subUnit) {
+        this.subUnits.remove(subUnit);
+        subUnit.setParentUnit(null);
+        return this;
+    }
+
+    public Employee getManager() {
+        return manager;
+    }
+
+    public OrganizationalUnit manager(Employee manager) {
+        this.manager = manager;
+        return this;
+    }
+
+    public void setManager(Employee manager) {
+        this.manager = manager;
+    }
+
+    public Set<Employee> getEmployees() {
+        return employees;
+    }
+
+    public OrganizationalUnit employees(Set<Employee> employees) {
+        this.employees = employees;
+        return this;
+    }
+
+    public void setEmployees(Set<Employee> employees) {
+        this.employees = employees;
+    }
+
+    public OrganizationalUnit addEmployee(Employee employee) {
+        this.employees.add(employee);
+        employee.setUnit(this);
+        return this;
+    }
+
+    public OrganizationalUnit removeEmployee(Employee employee) {
+        this.employees.remove(employee);
+        employee.setUnit(null);
+        return this;
     }
 
     public String getPath() {
         return path;
     }
 
+    public OrganizationalUnit path(String path) {
+        this.path = path;
+        return this;
+    }
+
     public void setPath(String path) {
         this.path = path;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        OrganizationalUnit that = (OrganizationalUnit) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "OrganizationalUnit{" +
+            "id=" + id +
+            ", name='" + name + '\'' +
+            ", type=" + type +
+            ", path='" + path + '\'' +
+            '}';
     }
 }

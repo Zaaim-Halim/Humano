@@ -8,6 +8,7 @@ import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -69,8 +70,99 @@ public class PerformanceReview extends AbstractAuditingEntity<UUID> {
     private Employee employee;
 
     // Getters and setters
+    @Override
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public LocalDate getReviewDate() {
+        return reviewDate;
+    }
+
+    public PerformanceReview reviewDate(LocalDate reviewDate) {
+        this.reviewDate = reviewDate;
+        return this;
+    }
+
+    public void setReviewDate(LocalDate reviewDate) {
+        this.reviewDate = reviewDate;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public PerformanceReview comments(String comments) {
+        this.comments = comments;
+        return this;
+    }
+
+    public void setComments(String comments) {
+        this.comments = comments;
+    }
+
+    public Integer getRating() {
+        return rating;
+    }
+
+    public PerformanceReview rating(Integer rating) {
+        this.rating = rating;
+        return this;
+    }
+
+    public void setRating(Integer rating) {
+        this.rating = rating;
+    }
+
+    public Employee getReviewer() {
+        return reviewer;
+    }
+
+    public PerformanceReview reviewer(Employee reviewer) {
+        this.reviewer = reviewer;
+        return this;
+    }
+
+    public void setReviewer(Employee reviewer) {
+        this.reviewer = reviewer;
+    }
+
+    public Employee getEmployee() {
+        return employee;
+    }
+
+    public PerformanceReview employee(Employee employee) {
+        this.employee = employee;
+        return this;
+    }
+
+    public void setEmployee(Employee employee) {
+        this.employee = employee;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PerformanceReview that = (PerformanceReview) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "PerformanceReview{" +
+            "id=" + id +
+            ", reviewDate=" + reviewDate +
+            ", rating=" + rating +
+            '}';
+    }
 }

@@ -8,6 +8,7 @@ import org.hibernate.annotations.Parameter;
 
 import java.math.BigDecimal;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -74,5 +75,94 @@ public class Benefit extends AbstractAuditingEntity<UUID> {
     @Override
     public UUID getId() {
         return id;
+    }
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Benefit name(String name) {
+        this.name = name;
+        return this;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public Benefit amount(BigDecimal amount) {
+        this.amount = amount;
+        return this;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Benefit description(String description) {
+        this.description = description;
+        return this;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Set<Employee> getEmployees() {
+        return employees;
+    }
+
+    public Benefit employees(Set<Employee> employees) {
+        this.employees = employees;
+        return this;
+    }
+
+    public void setEmployees(Set<Employee> employees) {
+        this.employees = employees;
+    }
+
+    public Benefit addEmployee(Employee employee) {
+        this.employees.add(employee);
+        return this;
+    }
+
+    public Benefit removeEmployee(Employee employee) {
+        this.employees.remove(employee);
+        return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Benefit benefit = (Benefit) o;
+        return Objects.equals(id, benefit.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "Benefit{" +
+            "id=" + id +
+            ", name='" + name + '\'' +
+            ", amount=" + amount +
+            ", description='" + description + '\'' +
+            '}';
     }
 }

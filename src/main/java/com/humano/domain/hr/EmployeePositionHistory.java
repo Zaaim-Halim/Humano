@@ -9,6 +9,7 @@ import org.hibernate.annotations.Parameter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -111,5 +112,199 @@ public class EmployeePositionHistory extends AbstractAuditingEntity<UUID> {
         return id;
     }
 
-    // Getters and setters can be added here if needed
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public BigDecimal getOldSalary() {
+        return oldSalary;
+    }
+
+    public EmployeePositionHistory oldSalary(BigDecimal oldSalary) {
+        this.oldSalary = oldSalary;
+        return this;
+    }
+
+    public void setOldSalary(BigDecimal oldSalary) {
+        this.oldSalary = oldSalary;
+    }
+
+    public BigDecimal getNewSalary() {
+        return newSalary;
+    }
+
+    public EmployeePositionHistory newSalary(BigDecimal newSalary) {
+        this.newSalary = newSalary;
+        return this;
+    }
+
+    public void setNewSalary(BigDecimal newSalary) {
+        this.newSalary = newSalary;
+    }
+
+    public LocalDate getEffectiveDate() {
+        return effectiveDate;
+    }
+
+    public EmployeePositionHistory effectiveDate(LocalDate effectiveDate) {
+        this.effectiveDate = effectiveDate;
+        return this;
+    }
+
+    public void setEffectiveDate(LocalDate effectiveDate) {
+        this.effectiveDate = effectiveDate;
+    }
+
+    public PositionChangeType getChangeType() {
+        return changeType;
+    }
+
+    public EmployeePositionHistory changeType(PositionChangeType changeType) {
+        this.changeType = changeType;
+        return this;
+    }
+
+    public void setChangeType(PositionChangeType changeType) {
+        this.changeType = changeType;
+    }
+
+    public PositionChangeStatus getStatus() {
+        return status;
+    }
+
+    public EmployeePositionHistory status(PositionChangeStatus status) {
+        this.status = status;
+        return this;
+    }
+
+    public void setStatus(PositionChangeStatus status) {
+        this.status = status;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public EmployeePositionHistory reason(String reason) {
+        this.reason = reason;
+        return this;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
+
+    public Employee getEmployee() {
+        return employee;
+    }
+
+    public EmployeePositionHistory employee(Employee employee) {
+        this.employee = employee;
+        return this;
+    }
+
+    public void setEmployee(Employee employee) {
+        this.employee = employee;
+    }
+
+    public Position getOldPosition() {
+        return oldPosition;
+    }
+
+    public EmployeePositionHistory oldPosition(Position oldPosition) {
+        this.oldPosition = oldPosition;
+        return this;
+    }
+
+    public void setOldPosition(Position oldPosition) {
+        this.oldPosition = oldPosition;
+    }
+
+    public Position getNewPosition() {
+        return newPosition;
+    }
+
+    public EmployeePositionHistory newPosition(Position newPosition) {
+        this.newPosition = newPosition;
+        return this;
+    }
+
+    public void setNewPosition(Position newPosition) {
+        this.newPosition = newPosition;
+    }
+
+    public OrganizationalUnit getOldUnit() {
+        return oldUnit;
+    }
+
+    public EmployeePositionHistory oldUnit(OrganizationalUnit oldUnit) {
+        this.oldUnit = oldUnit;
+        return this;
+    }
+
+    public void setOldUnit(OrganizationalUnit oldUnit) {
+        this.oldUnit = oldUnit;
+    }
+
+    public OrganizationalUnit getNewUnit() {
+        return newUnit;
+    }
+
+    public EmployeePositionHistory newUnit(OrganizationalUnit newUnit) {
+        this.newUnit = newUnit;
+        return this;
+    }
+
+    public void setNewUnit(OrganizationalUnit newUnit) {
+        this.newUnit = newUnit;
+    }
+
+    public Employee getOldManager() {
+        return oldManager;
+    }
+
+    public EmployeePositionHistory oldManager(Employee oldManager) {
+        this.oldManager = oldManager;
+        return this;
+    }
+
+    public void setOldManager(Employee oldManager) {
+        this.oldManager = oldManager;
+    }
+
+    public Employee getNewManager() {
+        return newManager;
+    }
+
+    public EmployeePositionHistory newManager(Employee newManager) {
+        this.newManager = newManager;
+        return this;
+    }
+
+    public void setNewManager(Employee newManager) {
+        this.newManager = newManager;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        EmployeePositionHistory that = (EmployeePositionHistory) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "EmployeePositionHistory{" +
+            "id=" + id +
+            ", effectiveDate=" + effectiveDate +
+            ", changeType=" + changeType +
+            ", status=" + status +
+            '}';
+    }
 }

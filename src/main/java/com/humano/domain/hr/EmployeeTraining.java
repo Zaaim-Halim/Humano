@@ -7,6 +7,7 @@ import org.hibernate.annotations.Parameter;
 import org.springframework.data.jpa.domain.AbstractPersistable;
 
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -71,8 +72,112 @@ public class EmployeeTraining extends AbstractPersistable<UUID> {
     private Training training;
 
     // Getters and setters
+    @Override
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public TrainingStatus getStatus() {
+        return status;
+    }
+
+    public EmployeeTraining status(TrainingStatus status) {
+        this.status = status;
+        return this;
+    }
+
+    public void setStatus(TrainingStatus status) {
+        this.status = status;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public EmployeeTraining description(String description) {
+        this.description = description;
+        return this;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public LocalDate getCompletionDate() {
+        return completionDate;
+    }
+
+    public EmployeeTraining completionDate(LocalDate completionDate) {
+        this.completionDate = completionDate;
+        return this;
+    }
+
+    public void setCompletionDate(LocalDate completionDate) {
+        this.completionDate = completionDate;
+    }
+
+    public String getFeedback() {
+        return feedback;
+    }
+
+    public EmployeeTraining feedback(String feedback) {
+        this.feedback = feedback;
+        return this;
+    }
+
+    public void setFeedback(String feedback) {
+        this.feedback = feedback;
+    }
+
+    public Employee getEmployee() {
+        return employee;
+    }
+
+    public EmployeeTraining employee(Employee employee) {
+        this.employee = employee;
+        return this;
+    }
+
+    public void setEmployee(Employee employee) {
+        this.employee = employee;
+    }
+
+    public Training getTraining() {
+        return training;
+    }
+
+    public EmployeeTraining training(Training training) {
+        this.training = training;
+        return this;
+    }
+
+    public void setTraining(Training training) {
+        this.training = training;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        EmployeeTraining that = (EmployeeTraining) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "EmployeeTraining{" +
+            "id=" + id +
+            ", status=" + status +
+            ", completionDate=" + completionDate +
+            '}';
+    }
 }

@@ -7,6 +7,7 @@ import org.hibernate.annotations.Parameter;
 
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -82,8 +83,152 @@ public class Training extends AbstractAuditingEntity<UUID> {
     private Set<EmployeeTraining> employeeTrainings = new HashSet<>();
 
     // Getters and setters
+    @Override
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Training name(String name) {
+        this.name = name;
+        return this;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public Training provider(String provider) {
+        this.provider = provider;
+        return this;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public Training startDate(LocalDate startDate) {
+        this.startDate = startDate;
+        return this;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public Training endDate(LocalDate endDate) {
+        this.endDate = endDate;
+        return this;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Training description(String description) {
+        this.description = description;
+        return this;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public Training location(String location) {
+        this.location = location;
+        return this;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getCertificate() {
+        return certificate;
+    }
+
+    public Training certificate(String certificate) {
+        this.certificate = certificate;
+        return this;
+    }
+
+    public void setCertificate(String certificate) {
+        this.certificate = certificate;
+    }
+
+    public Set<EmployeeTraining> getEmployeeTrainings() {
+        return employeeTrainings;
+    }
+
+    public Training employeeTrainings(Set<EmployeeTraining> employeeTrainings) {
+        this.employeeTrainings = employeeTrainings;
+        return this;
+    }
+
+    public void setEmployeeTrainings(Set<EmployeeTraining> employeeTrainings) {
+        this.employeeTrainings = employeeTrainings;
+    }
+
+    public Training addEmployeeTraining(EmployeeTraining employeeTraining) {
+        this.employeeTrainings.add(employeeTraining);
+        employeeTraining.setTraining(this);
+        return this;
+    }
+
+    public Training removeEmployeeTraining(EmployeeTraining employeeTraining) {
+        this.employeeTrainings.remove(employeeTraining);
+        return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Training training = (Training) o;
+        return Objects.equals(id, training.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "Training{" +
+            "id=" + id +
+            ", name='" + name + '\'' +
+            ", provider='" + provider + '\'' +
+            ", startDate=" + startDate +
+            ", endDate=" + endDate +
+            ", location='" + location + '\'' +
+            '}';
+    }
 }

@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -62,8 +63,123 @@ public class EmployeePortalSettings extends AbstractAuditingEntity<UUID> {
     private String theme;
 
     // Getters and setters
+    @Override
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public Employee getEmployee() {
+        return employee;
+    }
+
+    public EmployeePortalSettings employee(Employee employee) {
+        this.employee = employee;
+        return this;
+    }
+
+    public void setEmployee(Employee employee) {
+        this.employee = employee;
+    }
+
+    public Boolean getEmailNotifications() {
+        return emailNotifications;
+    }
+
+    public EmployeePortalSettings emailNotifications(Boolean emailNotifications) {
+        this.emailNotifications = emailNotifications;
+        return this;
+    }
+
+    public void setEmailNotifications(Boolean emailNotifications) {
+        this.emailNotifications = emailNotifications;
+    }
+
+    public Boolean getSmsNotifications() {
+        return smsNotifications;
+    }
+
+    public EmployeePortalSettings smsNotifications(Boolean smsNotifications) {
+        this.smsNotifications = smsNotifications;
+        return this;
+    }
+
+    public void setSmsNotifications(Boolean smsNotifications) {
+        this.smsNotifications = smsNotifications;
+    }
+
+    public String getDashboardLayout() {
+        return dashboardLayout;
+    }
+
+    public EmployeePortalSettings dashboardLayout(String dashboardLayout) {
+        this.dashboardLayout = dashboardLayout;
+        return this;
+    }
+
+    public void setDashboardLayout(String dashboardLayout) {
+        this.dashboardLayout = dashboardLayout;
+    }
+
+    public String getTheme() {
+        return theme;
+    }
+
+    public EmployeePortalSettings theme(String theme) {
+        this.theme = theme;
+        return this;
+    }
+
+    public void setTheme(String theme) {
+        this.theme = theme;
+    }
+
+    /**
+     * Enable all notifications.
+     *
+     * @return This settings object
+     */
+    public EmployeePortalSettings enableAllNotifications() {
+        this.emailNotifications = true;
+        this.smsNotifications = true;
+        return this;
+    }
+
+    /**
+     * Disable all notifications.
+     *
+     * @return This settings object
+     */
+    public EmployeePortalSettings disableAllNotifications() {
+        this.emailNotifications = false;
+        this.smsNotifications = false;
+        return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        EmployeePortalSettings that = (EmployeePortalSettings) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "EmployeePortalSettings{" +
+            "id=" + id +
+            ", emailNotifications=" + emailNotifications +
+            ", smsNotifications=" + smsNotifications +
+            ", dashboardLayout='" + dashboardLayout + '\'' +
+            ", theme='" + theme + '\'' +
+            '}';
+    }
 }

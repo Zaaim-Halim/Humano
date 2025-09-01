@@ -7,6 +7,7 @@ import org.hibernate.annotations.Parameter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -60,8 +61,86 @@ public class Timesheet extends AbstractAuditingEntity<UUID> {
     private Employee employee;
 
     // Getters and setters
+    @Override
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public Timesheet date(LocalDate date) {
+        this.date = date;
+        return this;
+    }
+
+    public void setDate(LocalDate date) {
+        this.date = date;
+    }
+
+    public BigDecimal getHoursWorked() {
+        return hoursWorked;
+    }
+
+    public Timesheet hoursWorked(BigDecimal hoursWorked) {
+        this.hoursWorked = hoursWorked;
+        return this;
+    }
+
+    public void setHoursWorked(BigDecimal hoursWorked) {
+        this.hoursWorked = hoursWorked;
+    }
+
+    public Project getProject() {
+        return project;
+    }
+
+    public Timesheet project(Project project) {
+        this.project = project;
+        return this;
+    }
+
+    public void setProject(Project project) {
+        this.project = project;
+    }
+
+    public Employee getEmployee() {
+        return employee;
+    }
+
+    public Timesheet employee(Employee employee) {
+        this.employee = employee;
+        return this;
+    }
+
+    public void setEmployee(Employee employee) {
+        this.employee = employee;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Timesheet timesheet = (Timesheet) o;
+        return Objects.equals(id, timesheet.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "Timesheet{" +
+            "id=" + id +
+            ", date=" + date +
+            ", hoursWorked=" + hoursWorked +
+            '}';
+    }
 }

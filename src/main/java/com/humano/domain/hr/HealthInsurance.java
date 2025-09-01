@@ -8,6 +8,7 @@ import org.hibernate.annotations.Parameter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -78,8 +79,128 @@ public class HealthInsurance extends AbstractAuditingEntity<UUID> {
     private Employee employee;
 
     // Getters and setters
+    @Override
     public UUID getId() {
         return id;
     }
 
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getProviderName() {
+        return providerName;
+    }
+
+    public HealthInsurance providerName(String providerName) {
+        this.providerName = providerName;
+        return this;
+    }
+
+    public void setProviderName(String providerName) {
+        this.providerName = providerName;
+    }
+
+    public String getPolicyNumber() {
+        return policyNumber;
+    }
+
+    public HealthInsurance policyNumber(String policyNumber) {
+        this.policyNumber = policyNumber;
+        return this;
+    }
+
+    public void setPolicyNumber(String policyNumber) {
+        this.policyNumber = policyNumber;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public HealthInsurance startDate(LocalDate startDate) {
+        this.startDate = startDate;
+        return this;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public HealthInsurance endDate(LocalDate endDate) {
+        this.endDate = endDate;
+        return this;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public BigDecimal getCoverageAmount() {
+        return coverageAmount;
+    }
+
+    public HealthInsurance coverageAmount(BigDecimal coverageAmount) {
+        this.coverageAmount = coverageAmount;
+        return this;
+    }
+
+    public void setCoverageAmount(BigDecimal coverageAmount) {
+        this.coverageAmount = coverageAmount;
+    }
+
+    public HealthInsuranceStatus getStatus() {
+        return status;
+    }
+
+    public HealthInsurance status(HealthInsuranceStatus status) {
+        this.status = status;
+        return this;
+    }
+
+    public void setStatus(HealthInsuranceStatus status) {
+        this.status = status;
+    }
+
+    public Employee getEmployee() {
+        return employee;
+    }
+
+    public HealthInsurance employee(Employee employee) {
+        this.employee = employee;
+        return this;
+    }
+
+    public void setEmployee(Employee employee) {
+        this.employee = employee;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        HealthInsurance that = (HealthInsurance) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "HealthInsurance{" +
+            "id=" + id +
+            ", providerName='" + providerName + '\'' +
+            ", policyNumber='" + policyNumber + '\'' +
+            ", startDate=" + startDate +
+            ", endDate=" + endDate +
+            ", status=" + status +
+            '}';
+    }
 }
