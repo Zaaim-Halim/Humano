@@ -258,12 +258,12 @@
     </createTable>
   </changeSet>
   <changeSet id="1756667163535-13" author="halimzaaim">
-    <createTable tableName="employee_benefit">
+    <createTable tableName="hr_employee_benefit">
       <column name="benefit_id" type="${uuidType}">
-        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_benefit"/>
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_hr_employee_benefit"/>
       </column>
       <column name="employee_id" type="${uuidType}">
-        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_benefit"/>
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_hr_employee_benefit"/>
       </column>
     </createTable>
   </changeSet>
@@ -1608,12 +1608,12 @@
                              referencedTableName="permission"/>
   </changeSet>
   <changeSet id="1756667163535-135" author="halimzaaim">
-    <addForeignKeyConstraint baseColumnNames="benefit_id" baseTableName="employee_benefit"
+    <addForeignKeyConstraint baseColumnNames="benefit_id" baseTableName="hr_employee_benefit"
                              constraintName="fk_empben_on_benefit" referencedColumnNames="id"
                              referencedTableName="benefit"/>
   </changeSet>
   <changeSet id="1756667163535-136" author="halimzaaim">
-    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_benefit"
+    <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="hr_employee_benefit"
                              constraintName="fk_empben_on_employee" referencedColumnNames="id"
                              referencedTableName="employee"/>
   </changeSet>

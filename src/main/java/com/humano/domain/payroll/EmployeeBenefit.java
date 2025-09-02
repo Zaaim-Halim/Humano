@@ -142,7 +142,6 @@ public class EmployeeBenefit extends AbstractAuditingEntity<UUID> {
      * conditions, or specific features of the benefit plan.
      */
     @Column(name = "plan_details", columnDefinition = "TEXT")
-    @Size(max = 4000, message = "Plan details cannot exceed 4000 characters")
     private String planDetails;
 
     /**

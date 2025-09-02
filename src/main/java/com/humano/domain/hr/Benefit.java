@@ -64,7 +64,7 @@ public class Benefit extends AbstractAuditingEntity<UUID> {
      */
     @ManyToMany
     @JoinTable(
-        name = "employee_benefit",
+        name = "hr_employee_benefit",
         joinColumns = @JoinColumn(name = "benefit_id"),
         inverseJoinColumns = @JoinColumn(name = "employee_id")
     )

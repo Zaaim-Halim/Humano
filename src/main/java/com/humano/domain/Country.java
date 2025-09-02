@@ -117,3 +117,6 @@ public class Country extends AbstractAuditingEntity<UUID> {
             "id=" + id +
             ", code='" + code + '\'' +
             ", name='" + name + '\'' +
+            '}';
+    }
+}
