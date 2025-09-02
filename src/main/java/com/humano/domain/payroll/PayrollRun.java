@@ -4,10 +4,13 @@ import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.payroll.RunStatus;
 import com.humano.domain.hr.Employee;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
 import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -46,23 +49,57 @@ public class PayrollRun extends AbstractAuditingEntity<UUID> {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    /**
+     * The scope of the run (ALL, UNIT:<id>, EMPLOYEE:<id>).
+     * <p>
+     * Defines which employees are included in this payroll run.
+     */
     @Column(name = "scope", nullable = false)
-    private String scope; // ALL, UNIT:<id>, EMPLOYEE:<id>
+    @NotNull(message = "Scope is required")
+    @Size(min = 3, max = 100, message = "Scope must be between 3 and 100 characters")
+    private String scope;
 
+    /**
+     * The current status of the payroll run.
+     * <p>
+     * Tracks the stage of the payroll process (DRAFT, CALCULATED, APPROVED, POSTED).
+     */
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
+    @NotNull(message = "Status is required")
     private RunStatus status;
 
+    /**
+     * The timestamp when the payroll run was approved.
+     * <p>
+     * Records when the run was officially approved for processing.
+     */
     @Column(name = "approved_at")
     private OffsetDateTime approvedAt;
 
+    /**
+     * An idempotency marker to prevent duplicate processing.
+     * <p>
+     * Used to ensure that payroll calculations are not accidentally duplicated.
+     */
     @Column(name = "hash", unique = true)
-    private String hash; // idempotency marker
+    @Size(max = 100, message = "Hash cannot exceed 100 characters")
+    private String hash;
 
+    /**
+     * The PayrollPeriod for which payroll is being processed.
+     * <p>
+     * Defines the time period (e.g., month) for which pay is being calculated.
+     */
     @ManyToOne
     @JoinColumn(name = "period_id", nullable = false)
     private PayrollPeriod period;
 
+    /**
+     * The Employee who approved the payroll run.
+     * <p>
+     * Records who authorized the payroll processing.
+     */
     @ManyToOne
     @JoinColumn(name = "approved_by")
     private Employee approvedBy;
@@ -71,5 +108,110 @@ public class PayrollRun extends AbstractAuditingEntity<UUID> {
     public UUID getId() {
         return id;
     }
-    // Getters and setters can be added as needed
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public PayrollRun scope(String scope) {
+        this.scope = scope;
+        return this;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
+    }
+
+    public RunStatus getStatus() {
+        return status;
+    }
+
+    public PayrollRun status(RunStatus status) {
+        this.status = status;
+        return this;
+    }
+
+    public void setStatus(RunStatus status) {
+        this.status = status;
+    }
+
+    public OffsetDateTime getApprovedAt() {
+        return approvedAt;
+    }
+
+    public PayrollRun approvedAt(OffsetDateTime approvedAt) {
+        this.approvedAt = approvedAt;
+        return this;
+    }
+
+    public void setApprovedAt(OffsetDateTime approvedAt) {
+        this.approvedAt = approvedAt;
+    }
+
+    public String getHash() {
+        return hash;
+    }
+
+    public PayrollRun hash(String hash) {
+        this.hash = hash;
+        return this;
+    }
+
+    public void setHash(String hash) {
+        this.hash = hash;
+    }
+
+    public PayrollPeriod getPeriod() {
+        return period;
+    }
+
+    public PayrollRun period(PayrollPeriod period) {
+        this.period = period;
+        return this;
+    }
+
+    public void setPeriod(PayrollPeriod period) {
+        this.period = period;
+    }
+
+    public Employee getApprovedBy() {
+        return approvedBy;
+    }
+
+    public PayrollRun approvedBy(Employee approvedBy) {
+        this.approvedBy = approvedBy;
+        return this;
+    }
+
+    public void setApprovedBy(Employee approvedBy) {
+        this.approvedBy = approvedBy;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PayrollRun that = (PayrollRun) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "PayrollRun{" +
+            "id=" + id +
+            ", scope='" + scope + '\'' +
+            ", status=" + status +
+            ", approvedAt=" + approvedAt +
+            ", hash='" + hash + '\'' +
+            '}';
+    }
 }

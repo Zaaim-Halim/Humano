@@ -4,9 +4,12 @@ import com.humano.converters.TimeZoneConverter;
 import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.payroll.Frequency;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
+import java.util.Objects;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -45,23 +48,128 @@ public class PayrollCalendar extends AbstractAuditingEntity<UUID> {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    /**
+     * Human-readable name for the calendar (e.g., "Albania Monthly").
+     * <p>
+     * Provides a descriptive identifier for the payroll calendar.
+     */
     @Column(name = "name", nullable = false)
-    private String name; // e.g., "Albania Monthly"
+    @NotNull(message = "Calendar name is required")
+    @Size(min = 2, max = 255, message = "Calendar name must be between 2 and 255 characters")
+    private String name;
 
+    /**
+     * How often payroll is processed (e.g., MONTHLY, BIWEEKLY).
+     * <p>
+     * Determines the frequency of payroll periods generated from this calendar.
+     */
     @Enumerated(EnumType.STRING)
     @Column(name = "frequency", nullable = false)
-    private Frequency frequency; // MONTHLY, BIWEEKLY...
+    @NotNull(message = "Frequency is required")
+    private Frequency frequency;
 
+    /**
+     * The timezone in which payroll dates are interpreted (e.g., "Europe/Tirane").
+     * <p>
+     * Ensures consistent date handling across different geographic locations.
+     */
     @Column(name = "timezone", nullable = false)
     @Convert(converter = TimeZoneConverter.class)
-    private TimeZone timezone; // e.g., "Europe/Tirane"
+    @NotNull(message = "Timezone is required")
+    private TimeZone timezone;
 
+    /**
+     * Indicates if the calendar is currently in use for payroll processing.
+     * <p>
+     * Used to enable or disable payroll calendars without deleting them.
+     * Default is true (active).
+     */
     @Column(name = "active", nullable = false)
-    private Boolean active;
+    @NotNull(message = "Active status is required")
+    private Boolean active = true;
 
     @Override
     public UUID getId() {
         return id;
     }
-    // Getters and setters can be added as needed
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public PayrollCalendar name(String name) {
+        this.name = name;
+        return this;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Frequency getFrequency() {
+        return frequency;
+    }
+
+    public PayrollCalendar frequency(Frequency frequency) {
+        this.frequency = frequency;
+        return this;
+    }
+
+    public void setFrequency(Frequency frequency) {
+        this.frequency = frequency;
+    }
+
+    public TimeZone getTimezone() {
+        return timezone;
+    }
+
+    public PayrollCalendar timezone(TimeZone timezone) {
+        this.timezone = timezone;
+        return this;
+    }
+
+    public void setTimezone(TimeZone timezone) {
+        this.timezone = timezone;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public PayrollCalendar active(Boolean active) {
+        this.active = active;
+        return this;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PayrollCalendar that = (PayrollCalendar) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "PayrollCalendar{" +
+            "id=" + id +
+            ", name='" + name + '\'' +
+            ", frequency=" + frequency +
+            ", timezone=" + timezone +
+            ", active=" + active +
+            '}';
+    }
 }

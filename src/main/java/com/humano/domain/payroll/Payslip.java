@@ -2,9 +2,12 @@ package com.humano.domain.payroll;
 
 import com.humano.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -40,12 +43,30 @@ public class Payslip extends AbstractAuditingEntity<UUID> {
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
+    /**
+     * Human-readable payslip number (e.g., "PS-2025-08-001").
+     * <p>
+     * Provides a user-friendly identifier for the payslip.
+     */
     @Column(name = "number", nullable = false, unique = true)
-    private String number; // human-readable : "PS-2025-08-001"
+    @NotNull(message = "Payslip number is required")
+    @Size(min = 3, max = 50, message = "Payslip number must be between 3 and 50 characters")
+    private String number;
 
+    /**
+     * URL to the generated payslip PDF artifact.
+     * <p>
+     * Provides access to the downloadable payslip document.
+     */
     @Column(name = "pdf_url")
-    private String pdfUrl; // generated artifact
+    @Size(max = 255, message = "PDF URL cannot exceed 255 characters")
+    private String pdfUrl;
 
+    /**
+     * The PayrollResult containing all payroll calculations for the employee and period.
+     * <p>
+     * Links to the detailed calculation results that form the basis of this payslip.
+     */
     @OneToOne
     @JoinColumn(name = "result_id", nullable = false, unique = true)
     private PayrollResult result;
@@ -54,5 +75,69 @@ public class Payslip extends AbstractAuditingEntity<UUID> {
     public UUID getId() {
         return id;
     }
-    // Getters and setters can be added as needed
+
+    public void setId(UUID id) {
+        this.id = id;
+    }
+
+    public String getNumber() {
+        return number;
+    }
+
+    public Payslip number(String number) {
+        this.number = number;
+        return this;
+    }
+
+    public void setNumber(String number) {
+        this.number = number;
+    }
+
+    public String getPdfUrl() {
+        return pdfUrl;
+    }
+
+    public Payslip pdfUrl(String pdfUrl) {
+        this.pdfUrl = pdfUrl;
+        return this;
+    }
+
+    public void setPdfUrl(String pdfUrl) {
+        this.pdfUrl = pdfUrl;
+    }
+
+    public PayrollResult getResult() {
+        return result;
+    }
+
+    public Payslip result(PayrollResult result) {
+        this.result = result;
+        return this;
+    }
+
+    public void setResult(PayrollResult result) {
+        this.result = result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Payslip payslip = (Payslip) o;
+        return Objects.equals(id, payslip.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        return "Payslip{" +
+            "id=" + id +
+            ", number='" + number + '\'' +
+            ", pdfUrl='" + pdfUrl + '\'' +
+            '}';
+    }
 }
