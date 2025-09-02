@@ -250,6 +250,13 @@
         <artifactId>mysql-connector-j</artifactId>
         <version>9.0.0</version>
       </dependency>
+        <!-- TestContainers dependencies -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mysql</artifactId>
+            <version>1.19.7</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>jdbc</artifactId>
