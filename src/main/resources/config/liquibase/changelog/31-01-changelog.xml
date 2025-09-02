@@ -8,10 +8,10 @@
 
   <changeSet id="1756667163535-1" author="halimzaaim">
     <createTable tableName="attendance">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_attendance"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="date" type="DATE">
@@ -32,10 +32,10 @@
   </changeSet>
   <changeSet id="1756667163535-2" author="halimzaaim">
     <createTable tableName="attendance_event">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_attendance_event"/>
       </column>
-      <column name="attendance_id" type="binary(16)">
+      <column name="attendance_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="event_type" type="VARCHAR(255)">
@@ -75,7 +75,7 @@
   </changeSet>
   <changeSet id="1756667163535-5" author="halimzaaim">
     <createTable tableName="benefit">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_benefit"/>
       </column>
       <column name="name" type="VARCHAR(255)">
@@ -95,7 +95,7 @@
   </changeSet>
   <changeSet id="1756667163535-6" author="halimzaaim">
     <createTable tableName="compensation">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_compensation"/>
       </column>
       <column name="base_amount" type="DECIMAL">
@@ -108,13 +108,13 @@
         <constraints nullable="false"/>
       </column>
       <column name="effective_to" type="DATE"/>
-      <column name="currency_id" type="binary(16)">
+      <column name="currency_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="position_id" type="binary(16)">
+      <column name="position_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -127,7 +127,7 @@
   </changeSet>
   <changeSet id="1756667163535-7" author="halimzaaim">
     <createTable tableName="country">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_country"/>
       </column>
       <column name="code" type="VARCHAR(3)">
@@ -146,7 +146,7 @@
   </changeSet>
   <changeSet id="1756667163535-8" author="halimzaaim">
     <createTable tableName="coupon">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_coupon"/>
       </column>
       <column name="code" type="VARCHAR(255)">
@@ -168,7 +168,7 @@
   </changeSet>
   <changeSet id="1756667163535-9" author="halimzaaim">
     <createTable tableName="currency">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_currency"/>
       </column>
       <column name="code" type="VARCHAR(3)">
@@ -188,7 +188,7 @@
   </changeSet>
   <changeSet id="1756667163535-10" author="halimzaaim">
     <createTable tableName="department">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_department"/>
       </column>
       <column name="name" type="VARCHAR(255)">
@@ -205,7 +205,7 @@
   </changeSet>
   <changeSet id="1756667163535-11" author="halimzaaim">
     <createTable tableName="employee">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee"/>
       </column>
       <column name="job_title" type="VARCHAR(255)"/>
@@ -215,15 +215,15 @@
       <column name="status" type="VARCHAR(255)">
         <constraints nullable="false"/>
       </column>
-      <column name="country_id" type="binary(16)"/>
-      <column name="department_id" type="binary(16)"/>
-      <column name="position_id" type="binary(16)">
+      <column name="country_id" type="${uuidType}"/>
+      <column name="department_id" type="${uuidType}"/>
+      <column name="position_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="unit_id" type="binary(16)">
+      <column name="unit_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="manager_id" type="binary(16)"/>
+      <column name="manager_id" type="${uuidType}"/>
       <column name="path" type="VARCHAR(1000)">
         <constraints nullable="false"/>
       </column>
@@ -237,7 +237,7 @@
   </changeSet>
   <changeSet id="1756667163535-12" author="halimzaaim">
     <createTable tableName="employee_attribute">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_attribute"/>
       </column>
       <column name="attribute_key" type="VARCHAR(255)">
@@ -246,7 +246,7 @@
       <column name="attribute_value" type="VARCHAR(1000)">
         <constraints nullable="false"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -259,17 +259,17 @@
   </changeSet>
   <changeSet id="1756667163535-13" author="halimzaaim">
     <createTable tableName="employee_benefit">
-      <column name="benefit_id" type="binary(16)">
+      <column name="benefit_id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_benefit"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_benefit"/>
       </column>
     </createTable>
   </changeSet>
   <changeSet id="1756667163535-14" author="halimzaaim">
     <createTable tableName="employee_document">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_document"/>
       </column>
       <column name="type" type="VARCHAR(255)">
@@ -278,7 +278,7 @@
       <column name="file_path" type="VARCHAR(255)">
         <constraints nullable="false"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -291,10 +291,10 @@
   </changeSet>
   <changeSet id="1756667163535-15" author="halimzaaim">
     <createTable tableName="employee_notification">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_notification"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="message" type="VARCHAR(255)">
@@ -316,10 +316,10 @@
   </changeSet>
   <changeSet id="1756667163535-16" author="halimzaaim">
     <createTable tableName="employee_portal_settings">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_portal_settings"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="email_notifications" type="BOOLEAN"/>
@@ -336,7 +336,7 @@
   </changeSet>
   <changeSet id="1756667163535-17" author="halimzaaim">
     <createTable tableName="employee_position_history">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_position_history"/>
       </column>
       <column name="old_salary" type="DECIMAL"/>
@@ -345,13 +345,13 @@
       <column name="change_type" type="VARCHAR(255)"/>
       <column name="status" type="VARCHAR(255)"/>
       <column name="reason" type="VARCHAR(255)"/>
-      <column name="employee_id" type="binary(16)"/>
-      <column name="old_position_id" type="binary(16)"/>
-      <column name="new_position_id" type="binary(16)"/>
-      <column name="old_unit_id" type="binary(16)"/>
-      <column name="new_unit_id" type="binary(16)"/>
-      <column name="old_manager_id" type="binary(16)"/>
-      <column name="new_manager_id" type="binary(16)"/>
+      <column name="employee_id" type="${uuidType}"/>
+      <column name="old_position_id" type="${uuidType}"/>
+      <column name="new_position_id" type="${uuidType}"/>
+      <column name="old_unit_id" type="${uuidType}"/>
+      <column name="new_unit_id" type="${uuidType}"/>
+      <column name="old_manager_id" type="${uuidType}"/>
+      <column name="new_manager_id" type="${uuidType}"/>
       <column name="created_by" type="VARCHAR(50)">
         <constraints nullable="false"/>
       </column>
@@ -362,30 +362,30 @@
   </changeSet>
   <changeSet id="1756667163535-18" author="halimzaaim">
     <createTable tableName="employee_training">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_training"/>
       </column>
       <column name="status" type="SMALLINT"/>
       <column name="description" type="VARCHAR(255)"/>
       <column name="completion_date" type="DATE"/>
       <column name="feedback" type="VARCHAR(255)"/>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="training_id" type="binary(16)">
+      <column name="training_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
     </createTable>
   </changeSet>
   <changeSet id="1756667163535-19" author="halimzaaim">
     <createTable tableName="exchange_rate">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_exchange_rate"/>
       </column>
-      <column name="from_currency_id" type="binary(16)">
+      <column name="from_currency_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="to_currency_id" type="binary(16)">
+      <column name="to_currency_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="date" type="DATE">
@@ -404,7 +404,7 @@
   </changeSet>
   <changeSet id="1756667163535-20" author="halimzaaim">
     <createTable tableName="expense_claim">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_expense_claim"/>
       </column>
       <column name="claim_date" type="DATE">
@@ -418,7 +418,7 @@
         <constraints nullable="false"/>
       </column>
       <column name="receipt_url" type="VARCHAR(255)"/>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -431,7 +431,7 @@
   </changeSet>
   <changeSet id="1756667163535-21" author="halimzaaim">
     <createTable tableName="feature">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_feature"/>
       </column>
       <column name="name" type="VARCHAR(255)">
@@ -444,12 +444,12 @@
       <column name="created_date" type="DATETIME"/>
       <column name="last_modified_by" type="VARCHAR(50)"/>
       <column name="last_modified_date" type="DATETIME"/>
-      <column name="subscription_plan_id" type="binary(16)"/>
+      <column name="subscription_plan_id" type="${uuidType}"/>
     </createTable>
   </changeSet>
   <changeSet id="1756667163535-22" author="halimzaaim">
     <createTable tableName="health_insurance">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_health_insurance"/>
       </column>
       <column name="provider_name" type="VARCHAR(255)">
@@ -470,7 +470,7 @@
       <column name="status" type="VARCHAR(255)">
         <constraints nullable="false"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -483,7 +483,7 @@
   </changeSet>
   <changeSet id="1756667163535-23" author="halimzaaim">
     <createTable tableName="invoice">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_invoice"/>
       </column>
       <column name="amount" type="DECIMAL">
@@ -504,9 +504,9 @@
     </createTable>
   </changeSet>
   <changeSet id="1756667163535-24" author="halimzaaim">
-    <createTable tableName="jhi_date_time_wrapper">
+    <createTable tableName="date_time_wrapper">
       <column autoIncrement="true" name="id" type="BIGINT">
-        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_jhi_date_time_wrapper"/>
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_date_time_wrapper"/>
       </column>
       <column name="instant" type="DATETIME"/>
       <column name="local_date_time" type="DATETIME"/>
@@ -519,7 +519,7 @@
   </changeSet>
   <changeSet id="1756667163535-25" author="halimzaaim">
     <createTable tableName="leave_request">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_leave_request"/>
       </column>
       <column name="start_date" type="DATE">
@@ -537,7 +537,7 @@
       <column name="reason" type="VARCHAR(1000)">
         <constraints nullable="false"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -550,10 +550,10 @@
   </changeSet>
   <changeSet id="1756667163535-26" author="halimzaaim">
     <createTable tableName="leave_type_rule">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_leave_type_rule"/>
       </column>
-      <column name="country_id" type="binary(16)">
+      <column name="country_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="leave_type" type="VARCHAR(255)">
@@ -575,13 +575,13 @@
   </changeSet>
   <changeSet id="1756667163535-27" author="halimzaaim">
     <createTable tableName="organization">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_organization"/>
       </column>
       <column name="name" type="VARCHAR(255)">
         <constraints nullable="false"/>
       </column>
-      <column name="tenant_id" type="binary(16)">
+      <column name="tenant_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -594,7 +594,7 @@
   </changeSet>
   <changeSet id="1756667163535-28" author="halimzaaim">
     <createTable tableName="organizational_unit">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_organizational_unit"/>
       </column>
       <column name="name" type="VARCHAR(255)">
@@ -603,8 +603,8 @@
       <column name="type" type="VARCHAR(255)">
         <constraints nullable="false"/>
       </column>
-      <column name="parent_unit_id" type="binary(16)"/>
-      <column name="manager_id" type="binary(16)"/>
+      <column name="parent_unit_id" type="${uuidType}"/>
+      <column name="manager_id" type="${uuidType}"/>
       <column name="path" type="VARCHAR(1000)">
         <constraints nullable="false"/>
       </column>
@@ -618,7 +618,7 @@
   </changeSet>
   <changeSet id="1756667163535-29" author="halimzaaim">
     <createTable tableName="overtime_record">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_overtime_record"/>
       </column>
       <column name="date" type="DATE">
@@ -634,8 +634,8 @@
         <constraints nullable="false"/>
       </column>
       <column name="notes" type="VARCHAR(500)"/>
-      <column name="approved_by" type="binary(16)"/>
-      <column name="employee_id" type="binary(16)">
+      <column name="approved_by" type="${uuidType}"/>
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -648,7 +648,7 @@
   </changeSet>
   <changeSet id="1756667163535-30" author="halimzaaim">
     <createTable tableName="pay_component">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_pay_component"/>
       </column>
       <column name="code" type="VARCHAR(255)">
@@ -683,7 +683,7 @@
   </changeSet>
   <changeSet id="1756667163535-31" author="halimzaaim">
     <createTable tableName="pay_rule">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_pay_rule"/>
       </column>
       <column name="formula" type="TEXT">
@@ -696,7 +696,7 @@
       <column name="active" type="BOOLEAN">
         <constraints nullable="false"/>
       </column>
-      <column name="pay_component_id" type="binary(16)">
+      <column name="pay_component_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -709,7 +709,7 @@
   </changeSet>
   <changeSet id="1756667163535-32" author="halimzaaim">
     <createTable tableName="payment">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payment"/>
       </column>
       <column name="amount" type="DECIMAL">
@@ -734,7 +734,7 @@
   </changeSet>
   <changeSet id="1756667163535-33" author="halimzaaim">
     <createTable tableName="payroll_calendar">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_calendar"/>
       </column>
       <column name="name" type="VARCHAR(255)">
@@ -759,7 +759,7 @@
   </changeSet>
   <changeSet id="1756667163535-34" author="halimzaaim">
     <createTable tableName="payroll_input">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_input"/>
       </column>
       <column name="quantity" type="DECIMAL"/>
@@ -767,13 +767,13 @@
       <column name="amount" type="DECIMAL"/>
       <column name="meta_json" type="TEXT"/>
       <column name="source" type="VARCHAR(255)"/>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="period_id" type="binary(16)">
+      <column name="period_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="component_id" type="binary(16)">
+      <column name="component_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -786,7 +786,7 @@
   </changeSet>
   <changeSet id="1756667163535-35" author="halimzaaim">
     <createTable tableName="payroll_line">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_line"/>
       </column>
       <column name="quantity" type="DECIMAL"/>
@@ -796,10 +796,10 @@
       </column>
       <column name="sequence" type="INT"/>
       <column name="explain" type="TEXT"/>
-      <column name="result_id" type="binary(16)">
+      <column name="result_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="component_id" type="binary(16)">
+      <column name="component_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -812,7 +812,7 @@
   </changeSet>
   <changeSet id="1756667163535-36" author="halimzaaim">
     <createTable tableName="payroll_period">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_period"/>
       </column>
       <column name="start_date" type="DATE">
@@ -830,7 +830,7 @@
       <column name="code" type="VARCHAR(255)">
         <constraints nullable="false"/>
       </column>
-      <column name="calendar_id" type="binary(16)">
+      <column name="calendar_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -843,7 +843,7 @@
   </changeSet>
   <changeSet id="1756667163535-37" author="halimzaaim">
     <createTable tableName="payroll_result">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_result"/>
       </column>
       <column name="gross" type="DECIMAL">
@@ -858,16 +858,16 @@
       <column name="employer_cost" type="DECIMAL">
         <constraints nullable="false"/>
       </column>
-      <column name="run_id" type="binary(16)">
+      <column name="run_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="currency_id" type="binary(16)">
+      <column name="currency_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="payroll_period_id" type="binary(16)">
+      <column name="payroll_period_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -880,7 +880,7 @@
   </changeSet>
   <changeSet id="1756667163535-38" author="halimzaaim">
     <createTable tableName="payroll_run">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_run"/>
       </column>
       <column name="scope" type="VARCHAR(255)">
@@ -891,10 +891,10 @@
       </column>
       <column name="approved_at" type="DATETIME"/>
       <column name="hash" type="VARCHAR(255)"/>
-      <column name="period_id" type="binary(16)">
+      <column name="period_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="approved_by" type="binary(16)"/>
+      <column name="approved_by" type="${uuidType}"/>
       <column name="created_by" type="VARCHAR(50)">
         <constraints nullable="false"/>
       </column>
@@ -905,14 +905,14 @@
   </changeSet>
   <changeSet id="1756667163535-39" author="halimzaaim">
     <createTable tableName="payslip">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payslip"/>
       </column>
       <column name="number" type="VARCHAR(255)">
         <constraints nullable="false"/>
       </column>
       <column name="pdf_url" type="VARCHAR(255)"/>
-      <column name="result_id" type="binary(16)">
+      <column name="result_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -925,7 +925,7 @@
   </changeSet>
   <changeSet id="1756667163535-40" author="halimzaaim">
     <createTable tableName="performance_review">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_performance_review"/>
       </column>
       <column name="review_date" type="DATE">
@@ -933,10 +933,10 @@
       </column>
       <column name="comments" type="CLOB"/>
       <column defaultValueComputed="0" name="rating" type="INT"/>
-      <column name="reviewer_id" type="binary(16)">
+      <column name="reviewer_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -966,12 +966,12 @@
       <column name="token_date" type="DATE"/>
       <column name="ip_address" type="VARCHAR(39)"/>
       <column name="user_agent" type="VARCHAR(255)"/>
-      <column name="user_id" type="binary(16)"/>
+      <column name="user_id" type="${uuidType}"/>
     </createTable>
   </changeSet>
   <changeSet id="1756667163535-43" author="halimzaaim">
     <createTable tableName="position">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_position"/>
       </column>
       <column name="name" type="VARCHAR(255)">
@@ -981,8 +981,8 @@
       <column name="level" type="VARCHAR(255)">
         <constraints nullable="false"/>
       </column>
-      <column name="unit_id" type="binary(16)"/>
-      <column name="parent_position_id" type="binary(16)"/>
+      <column name="unit_id" type="${uuidType}"/>
+      <column name="parent_position_id" type="${uuidType}"/>
       <column name="created_by" type="VARCHAR(50)">
         <constraints nullable="false"/>
       </column>
@@ -993,7 +993,7 @@
   </changeSet>
   <changeSet id="1756667163535-44" author="halimzaaim">
     <createTable tableName="project">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_project"/>
       </column>
       <column name="name" type="VARCHAR(255)">
@@ -1012,10 +1012,10 @@
   </changeSet>
   <changeSet id="1756667163535-45" author="halimzaaim">
     <createTable tableName="subscription">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_subscription"/>
       </column>
-      <column name="subscription_plan_id" type="binary(16)">
+      <column name="subscription_plan_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="start_date" type="DATETIME">
@@ -1035,7 +1035,7 @@
   </changeSet>
   <changeSet id="1756667163535-46" author="halimzaaim">
     <createTable tableName="subscription_plan">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_subscription_plan"/>
       </column>
       <column name="name" type="VARCHAR(255)">
@@ -1054,7 +1054,7 @@
   </changeSet>
   <changeSet id="1756667163535-47" author="halimzaaim">
     <createTable tableName="survey">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_survey"/>
       </column>
       <column name="title" type="VARCHAR(255)">
@@ -1073,17 +1073,17 @@
   </changeSet>
   <changeSet id="1756667163535-48" author="halimzaaim">
     <createTable tableName="survey_response">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_survey_response"/>
       </column>
-      <column name="survey_id" type="binary(16)">
+      <column name="survey_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="response" type="TEXT"/>
       <column name="submitted_at" type="DATETIME">
         <constraints nullable="false"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -1096,10 +1096,10 @@
   </changeSet>
   <changeSet id="1756667163535-49" author="halimzaaim">
     <createTable tableName="tax_bracket">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_tax_bracket"/>
       </column>
-      <column name="country_id" type="binary(16)">
+      <column name="country_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="valid_from" type="DATE">
@@ -1129,7 +1129,7 @@
   </changeSet>
   <changeSet id="1756667163535-50" author="halimzaaim">
     <createTable tableName="tenant">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_tenant"/>
       </column>
       <column name="name" type="VARCHAR(255)">
@@ -1145,7 +1145,7 @@
       <column name="timezone" type="VARCHAR(255)"/>
       <column name="booking_policies" type="TEXT"/>
       <column name="hr_policies" type="TEXT"/>
-      <column name="subscription_plan_id" type="binary(16)">
+      <column name="subscription_plan_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -1158,7 +1158,7 @@
   </changeSet>
   <changeSet id="1756667163535-51" author="halimzaaim">
     <createTable tableName="timesheet">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_timesheet"/>
       </column>
       <column name="date" type="DATE">
@@ -1167,8 +1167,8 @@
       <column name="hours_worked" type="DECIMAL">
         <constraints nullable="false"/>
       </column>
-      <column name="project_id" type="binary(16)"/>
-      <column name="employee_id" type="binary(16)">
+      <column name="project_id" type="${uuidType}"/>
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="created_by" type="VARCHAR(50)">
@@ -1181,7 +1181,7 @@
   </changeSet>
   <changeSet id="1756667163535-52" author="halimzaaim">
     <createTable tableName="training">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_training"/>
       </column>
       <column name="name" type="VARCHAR(255)">
@@ -1203,7 +1203,7 @@
   </changeSet>
   <changeSet id="1756667163535-53" author="halimzaaim">
     <createTable tableName="user">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user"/>
       </column>
       <column name="login" type="VARCHAR(50)">
@@ -1236,7 +1236,7 @@
       <column name="authority_name" type="VARCHAR(50)">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user_authority"/>
       </column>
-      <column name="user_id" type="binary(16)">
+      <column name="user_id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_user_authority"/>
       </column>
     </createTable>

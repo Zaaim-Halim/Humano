@@ -8,10 +8,10 @@
 
   <changeSet id="1756753261184-1" author="halimzaaim">
     <createTable tableName="employee_process">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_process"/>
       </column>
-      <column name="employee_id" type="binary(16)">
+      <column name="employee_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="process_type" type="VARCHAR(255)">
@@ -36,10 +36,10 @@
   </changeSet>
   <changeSet id="1756753261184-2" author="halimzaaim">
     <createTable tableName="employee_process_task">
-      <column name="id" type="binary(16)">
+      <column name="id" type="${uuidType}">
         <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_process_task"/>
       </column>
-      <column name="process_id" type="binary(16)">
+      <column name="process_id" type="${uuidType}">
         <constraints nullable="false"/>
       </column>
       <column name="title" type="VARCHAR(255)">
@@ -51,7 +51,7 @@
       <column name="is_completed" type="BOOLEAN">
         <constraints nullable="false"/>
       </column>
-      <column name="assigned_to_id" type="binary(16)"/>
+      <column name="assigned_to_id" type="${uuidType}"/>
       <column name="completion_notes" type="VARCHAR(1000)"/>
       <column name="created_by" type="VARCHAR(50)">
         <constraints nullable="false"/>
