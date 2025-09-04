@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.29.xsd"
+  objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+  <changeSet id="1757011610813-1" author="halimzaaim">
+    <createTable tableName="organization">
+      <column name="id" type="${uuidType}">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_organization"/>
+      </column>
+      <column name="name" type="VARCHAR(100)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="tenant_id" type="${uuidType}">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1757011610813-2" author="halimzaaim">
+    <createTable tableName="tenant">
+      <column name="id" type="${uuidType}">
+        <constraints nullable="false" primaryKey="true" primaryKeyName="pk_tenant"/>
+      </column>
+      <column name="name" type="VARCHAR(100)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="domain" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="subdomain" type="VARCHAR(63)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="logo" type="VARCHAR(255)"/>
+      <column name="timezone" type="VARCHAR(255)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="booking_policies" type="TEXT"/>
+      <column name="hr_policies" type="TEXT"/>
+      <column name="subscription_plan_id" type="${uuidType}">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_by" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_date" type="DATETIME"/>
+      <column name="last_modified_by" type="VARCHAR(50)"/>
+      <column name="last_modified_date" type="DATETIME"/>
+    </createTable>
+  </changeSet>
+  <changeSet id="1757011610813-3" author="halimzaaim">
+    <addUniqueConstraint columnNames="domain" constraintName="uc_tenant_domain" tableName="tenant"/>
+  </changeSet>
+  <changeSet id="1757011610813-4" author="halimzaaim">
+    <addUniqueConstraint columnNames="subdomain" constraintName="uc_tenant_subdomain" tableName="tenant"/>
+  </changeSet>
+  <changeSet id="1757011610813-5" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="tenant_id" baseTableName="organization"
+                             constraintName="FK_ORGANIZATION_ON_TENANT" referencedColumnNames="id"
+                             referencedTableName="tenant"/>
+  </changeSet>
+  <changeSet id="1757011610813-6" author="halimzaaim">
+    <addForeignKeyConstraint baseColumnNames="subscription_plan_id" baseTableName="tenant"
+                             constraintName="FK_TENANT_ON_SUBSCRIPTION_PLAN" referencedColumnNames="id"
+                             referencedTableName="billing_subscription_plan"/>
+  </changeSet>
+
+</databaseChangeLog>
