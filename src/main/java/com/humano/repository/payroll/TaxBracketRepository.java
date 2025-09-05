@@ -1,6 +1,7 @@
 package com.humano.repository.payroll;
 
 import com.humano.domain.payroll.TaxBracket;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 
@@ -8,7 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-public interface TaxBracketRepository extends Repository<TaxBracket, UUID> {
+public interface TaxBracketRepository extends Repository<TaxBracket, UUID> , JpaSpecificationExecutor<TaxBracket> { 
     @Query("""
         SELECT t
         FROM TaxBracket t
