@@ -2,8 +2,8 @@ package com.humano.service.mapper;
 
 import com.humano.domain.Authority;
 import com.humano.domain.User;
-import com.humano.service.dto.AdminUserDTO;
-import com.humano.service.dto.UserDTO;
+import com.humano.dto.AdminUserDTO;
+import com.humano.dto.UserDTO;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

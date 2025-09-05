@@ -1,4 +1,4 @@
-package com.humano.service.dto;
+package com.humano.dto;
 
 import com.humano.config.Constants;
 import com.humano.domain.Authority;

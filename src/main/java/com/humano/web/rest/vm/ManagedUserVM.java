@@ -1,6 +1,6 @@
 package com.humano.web.rest.vm;
 
-import com.humano.service.dto.AdminUserDTO;
+import com.humano.dto.AdminUserDTO;
 import jakarta.validation.constraints.Size;
 
 /**

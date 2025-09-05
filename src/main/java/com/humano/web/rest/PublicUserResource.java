@@ -1,7 +1,7 @@
 package com.humano.web.rest;
 
 import com.humano.service.UserService;
-import com.humano.service.dto.UserDTO;
+import com.humano.dto.UserDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;

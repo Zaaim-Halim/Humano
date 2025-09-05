@@ -12,7 +12,7 @@ import com.humano.domain.User;
 import com.humano.repository.UserRepository;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.service.UserService;
-import com.humano.service.dto.AdminUserDTO;
+import com.humano.dto.AdminUserDTO;
 import com.humano.service.mapper.UserMapper;
 import jakarta.persistence.EntityManager;
 import java.util.*;

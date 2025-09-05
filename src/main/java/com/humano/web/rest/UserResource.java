@@ -6,7 +6,7 @@ import com.humano.repository.UserRepository;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.service.MailService;
 import com.humano.service.UserService;
-import com.humano.service.dto.AdminUserDTO;
+import com.humano.dto.AdminUserDTO;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import com.humano.web.rest.errors.EmailAlreadyUsedException;
 import com.humano.web.rest.errors.LoginAlreadyUsedException;

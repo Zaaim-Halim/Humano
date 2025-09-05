@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.humano.domain.Authority;
 import com.humano.domain.User;
 import com.humano.security.AuthoritiesConstants;
-import com.humano.service.dto.AdminUserDTO;
-import com.humano.service.dto.UserDTO;
+import com.humano.dto.AdminUserDTO;
+import com.humano.dto.UserDTO;
 import java.time.Instant;
 import java.util.*;
 

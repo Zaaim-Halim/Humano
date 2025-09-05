@@ -1,4 +1,4 @@
-package com.humano.service.dto;
+package com.humano.dto;
 
 import java.io.Serializable;
 
