@@ -6,10 +6,12 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
+import java.util.List;
 
 /**
  * Spring Data JPA repository for the {@link Payslip} entity.
  */
 @Repository
 public interface PayslipRepository extends JpaRepository<Payslip, UUID>, JpaSpecificationExecutor<Payslip> {
+    List<Payslip> findByEmployeeId(UUID employeeId);
 }

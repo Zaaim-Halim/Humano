@@ -6,10 +6,12 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
+import java.util.List;
 
 /**
  * Spring Data JPA repository for the {@link Bonus} entity.
  */
 @Repository
 public interface BonusRepository extends JpaRepository<Bonus, UUID>, JpaSpecificationExecutor<Bonus> {
+    List<Bonus> findByEmployeeId(UUID employeeId);
 }

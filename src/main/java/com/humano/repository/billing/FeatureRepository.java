@@ -6,10 +6,12 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
+import java.util.List;
 
 /**
  * Spring Data JPA repository for the {@link Feature} entity.
  */
 @Repository
 public interface FeatureRepository extends JpaRepository<Feature, UUID>, JpaSpecificationExecutor<Feature> {
+    List<Feature> findBySubscriptionPlanId(UUID subscriptionPlanId);
 }

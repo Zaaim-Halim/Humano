@@ -6,10 +6,12 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
+import java.util.List;
 
 /**
  * Spring Data JPA repository for the {@link PayrollInput} entity.
  */
 @Repository
 public interface PayrollInputRepository extends JpaRepository<PayrollInput, UUID>, JpaSpecificationExecutor<PayrollInput> {
+    List<PayrollInput> findByEmployeeId(UUID employeeId);
 }
