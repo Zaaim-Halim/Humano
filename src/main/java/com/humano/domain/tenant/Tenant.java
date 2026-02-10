@@ -3,19 +3,19 @@ package com.humano.domain.tenant;
 import com.humano.converters.TimeZoneConverter;
 import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.billing.SubscriptionPlan;
+import com.humano.domain.enumeration.tenant.TenantStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a tenant (organization or company) in the system.
@@ -39,20 +39,24 @@ import java.util.UUID;
 @Entity
 @Table(name = "tenant")
 public class Tenant extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
+
+    /**
+     * The current status of the tenant in the system lifecycle.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    @NotNull(message = "Tenant status is required")
+    private TenantStatus status = TenantStatus.PENDING_SETUP;
 
     /**
      * The display name of the tenant.
@@ -83,7 +87,10 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
      */
     @Column(name = "subdomain", nullable = false, unique = true)
     @NotBlank(message = "Subdomain is required")
-    @Pattern(regexp = "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$", message = "Subdomain must contain only letters, numbers, and hyphens, and cannot start or end with a hyphen")
+    @Pattern(
+        regexp = "^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+        message = "Subdomain must contain only letters, numbers, and hyphens, and cannot start or end with a hyphen"
+    )
     @Size(min = 2, max = 63, message = "Subdomain must be between 2 and 63 characters")
     private String subdomain;
 
@@ -153,6 +160,19 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public TenantStatus getStatus() {
+        return status;
+    }
+
+    public Tenant status(TenantStatus status) {
+        this.status = status;
+        return this;
+    }
+
+    public void setStatus(TenantStatus status) {
+        this.status = status;
     }
 
     public String getName() {
@@ -299,12 +319,22 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Tenant{" +
-            "id=" + id +
-            ", name='" + name + '\'' +
-            ", domain='" + domain + '\'' +
-            ", subdomain='" + subdomain + '\'' +
-            ", timezone=" + (timezone != null ? timezone.getID() : null) +
-            '}';
+        return (
+            "Tenant{" +
+            "id=" +
+            id +
+            ", name='" +
+            name +
+            '\'' +
+            ", domain='" +
+            domain +
+            '\'' +
+            ", subdomain='" +
+            subdomain +
+            '\'' +
+            ", timezone=" +
+            (timezone != null ? timezone.getID() : null) +
+            '}'
+        );
     }
 }
