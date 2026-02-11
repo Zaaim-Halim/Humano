@@ -1,5 +1,6 @@
 package com.humano.service.errors;
 
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
@@ -22,6 +23,16 @@ public class EntityNotFoundException extends RuntimeException {
     }
 
     /**
+     * Constructs a new entity not found exception for a specific entity type and ID.
+     *
+     * @param entityName the name of the entity type
+     * @param id the identifier that was not found
+     */
+    public EntityNotFoundException(String entityName, UUID id) {
+        super(entityName + " not found with id: " + id);
+    }
+
+    /**
      * Constructs a new entity not found exception with the specified detail message and cause.
      *
      * @param message the detail message
@@ -32,13 +43,13 @@ public class EntityNotFoundException extends RuntimeException {
     }
 
     /**
-     * Constructs a new entity not found exception for a specific entity type and ID.
+     * Static factory method to create a new entity not found exception.
      *
-     * @param entityName the name of the entity
-     * @param id the ID that was not found
-     * @return the exception
+     * @param entityName the name of the entity type
+     * @param id the identifier that was not found
+     * @return a new EntityNotFoundException instance
      */
-    public static EntityNotFoundException create(String entityName, Object id) {
-        return new EntityNotFoundException(entityName + " not found with ID: " + id);
+    public static EntityNotFoundException create(String entityName, UUID id) {
+        return new EntityNotFoundException(entityName, id);
     }
 }
