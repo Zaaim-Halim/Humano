@@ -4,11 +4,13 @@ import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.Project;
 import com.humano.domain.hr.Timesheet;
 import com.humano.dto.hr.requests.CreateTimesheetRequest;
+import com.humano.dto.hr.requests.TimesheetSearchRequest;
 import com.humano.dto.hr.requests.UpdateTimesheetRequest;
 import com.humano.dto.hr.responses.TimesheetResponse;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.ProjectRepository;
 import com.humano.repository.hr.TimesheetRepository;
+import com.humano.repository.hr.specification.TimesheetSpecification;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -145,6 +148,60 @@ public class TimesheetService {
         }
         timesheetRepository.deleteById(id);
         log.info("Deleted timesheet with ID: {}", id);
+    }
+
+    /**
+     * Search timesheets using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of timesheet responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<TimesheetResponse> searchTimesheets(TimesheetSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search Timesheets with criteria: {}", searchRequest);
+
+        Specification<Timesheet> specification = TimesheetSpecification.withCriteria(
+            searchRequest.employeeId(),
+            searchRequest.projectId(),
+            searchRequest.dateFrom(),
+            searchRequest.dateTo(),
+            searchRequest.minHours(),
+            searchRequest.maxHours(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return timesheetRepository.findAll(specification, pageable).map(this::mapToResponse);
+    }
+
+    /**
+     * Search timesheets for a specific employee using multiple criteria with pagination.
+     *
+     * @param employeeId the employee ID
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of timesheet responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<TimesheetResponse> searchTimesheetsByEmployee(UUID employeeId, TimesheetSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search Timesheets for Employee: {} with criteria: {}", employeeId, searchRequest);
+
+        // Override employeeId in search request to ensure it matches the path parameter
+        TimesheetSearchRequest modifiedRequest = new TimesheetSearchRequest(
+            employeeId,
+            searchRequest.projectId(),
+            searchRequest.dateFrom(),
+            searchRequest.dateTo(),
+            searchRequest.minHours(),
+            searchRequest.maxHours(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return searchTimesheets(modifiedRequest, pageable);
     }
 
     private TimesheetResponse mapToResponse(Timesheet timesheet) {

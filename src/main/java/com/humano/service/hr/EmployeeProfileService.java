@@ -9,6 +9,7 @@ import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.OrganizationalUnit;
 import com.humano.domain.hr.Position;
 import com.humano.dto.hr.requests.CreateEmployeeProfileRequest;
+import com.humano.dto.hr.requests.EmployeeSearchRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeProfileRequest;
 import com.humano.dto.hr.responses.EmployeeProfileResponse;
 import com.humano.dto.hr.responses.SimpleEmployeeProfileResponse;
@@ -18,6 +19,7 @@ import com.humano.repository.hr.DepartmentRepository;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.OrganizationalUnitRepository;
 import com.humano.repository.hr.PositionRepository;
+import com.humano.repository.hr.specification.EmployeeSpecification;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
@@ -29,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -183,6 +186,37 @@ public class EmployeeProfileService {
                     throw new EntityNotFoundException("Employee not found with ID: " + id);
                 }
             );
+    }
+
+    /**
+     * Search employees using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of employee profile responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<SimpleEmployeeProfileResponse> searchEmployees(EmployeeSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search Employees with criteria: {}", searchRequest);
+
+        Specification<Employee> specification = EmployeeSpecification.withCriteria(
+            searchRequest.firstName(),
+            searchRequest.lastName(),
+            searchRequest.email(),
+            searchRequest.jobTitle(),
+            searchRequest.phone(),
+            searchRequest.status(),
+            searchRequest.departmentId(),
+            searchRequest.positionId(),
+            searchRequest.unitId(),
+            searchRequest.managerId(),
+            searchRequest.startDateFrom(),
+            searchRequest.startDateTo(),
+            searchRequest.endDateFrom(),
+            searchRequest.endDateTo()
+        );
+
+        return employeeRepository.findAll(specification, pageable).map(this::mapToSimpleEmployeeProfileResponse);
     }
 
     /**

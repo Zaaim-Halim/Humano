@@ -3,16 +3,19 @@ package com.humano.service.hr;
 import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.PerformanceReview;
 import com.humano.dto.hr.requests.CreatePerformanceReviewRequest;
+import com.humano.dto.hr.requests.PerformanceReviewSearchRequest;
 import com.humano.dto.hr.requests.UpdatePerformanceReviewRequest;
 import com.humano.dto.hr.responses.PerformanceReviewResponse;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.PerformanceReviewRepository;
+import com.humano.repository.hr.specification.PerformanceReviewSpecification;
 import com.humano.service.errors.EntityNotFoundException;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -115,6 +118,33 @@ public class PerformanceReviewService {
         }
         performanceReviewRepository.deleteById(id);
         log.info("Deleted performance review with ID: {}", id);
+    }
+
+    /**
+     * Search performance reviews using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of performance review responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<PerformanceReviewResponse> searchPerformanceReviews(PerformanceReviewSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search PerformanceReviews with criteria: {}", searchRequest);
+
+        Specification<PerformanceReview> specification = PerformanceReviewSpecification.withCriteria(
+            searchRequest.employeeId(),
+            searchRequest.reviewerId(),
+            searchRequest.reviewDateFrom(),
+            searchRequest.reviewDateTo(),
+            searchRequest.minRating(),
+            searchRequest.maxRating(),
+            searchRequest.comments(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return performanceReviewRepository.findAll(specification, pageable).map(this::mapToResponse);
     }
 
     private PerformanceReviewResponse mapToResponse(PerformanceReview review) {

@@ -4,10 +4,12 @@ import com.humano.domain.enumeration.hr.ExpenseClaimStatus;
 import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.ExpenseClaim;
 import com.humano.dto.hr.requests.CreateExpenseClaimRequest;
+import com.humano.dto.hr.requests.ExpenseClaimSearchRequest;
 import com.humano.dto.hr.requests.ProcessExpenseClaimRequest;
 import com.humano.dto.hr.responses.ExpenseClaimResponse;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.ExpenseClaimRepository;
+import com.humano.repository.hr.specification.ExpenseClaimSpecification;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.time.LocalDate;
@@ -16,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -193,6 +196,68 @@ public class ExpenseClaimService {
         }
         expenseClaimRepository.deleteById(id);
         log.info("Deleted expense claim with ID: {}", id);
+    }
+
+    /**
+     * Search expense claims using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of expense claim responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<ExpenseClaimResponse> searchExpenseClaims(ExpenseClaimSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search ExpenseClaims with criteria: {}", searchRequest);
+
+        Specification<ExpenseClaim> specification = ExpenseClaimSpecification.withCriteria(
+            searchRequest.employeeId(),
+            searchRequest.status(),
+            searchRequest.claimDateFrom(),
+            searchRequest.claimDateTo(),
+            searchRequest.minAmount(),
+            searchRequest.maxAmount(),
+            searchRequest.description(),
+            searchRequest.hasReceipt(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return expenseClaimRepository.findAll(specification, pageable).map(this::mapToResponse);
+    }
+
+    /**
+     * Search expense claims for a specific employee using multiple criteria with pagination.
+     *
+     * @param employeeId the employee ID
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of expense claim responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<ExpenseClaimResponse> searchExpenseClaimsByEmployee(
+        UUID employeeId,
+        ExpenseClaimSearchRequest searchRequest,
+        Pageable pageable
+    ) {
+        log.debug("Request to search ExpenseClaims for Employee: {} with criteria: {}", employeeId, searchRequest);
+
+        // Override employeeId in search request to ensure it matches the path parameter
+        ExpenseClaimSearchRequest modifiedRequest = new ExpenseClaimSearchRequest(
+            employeeId,
+            searchRequest.status(),
+            searchRequest.claimDateFrom(),
+            searchRequest.claimDateTo(),
+            searchRequest.minAmount(),
+            searchRequest.maxAmount(),
+            searchRequest.description(),
+            searchRequest.hasReceipt(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return searchExpenseClaims(modifiedRequest, pageable);
     }
 
     private ExpenseClaimResponse mapToResponse(ExpenseClaim claim) {

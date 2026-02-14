@@ -4,10 +4,12 @@ import com.humano.domain.enumeration.hr.OvertimeApprovalStatus;
 import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.OvertimeRecord;
 import com.humano.dto.hr.requests.CreateOvertimeRecordRequest;
+import com.humano.dto.hr.requests.OvertimeRecordSearchRequest;
 import com.humano.dto.hr.requests.ProcessOvertimeRecordRequest;
 import com.humano.dto.hr.responses.OvertimeRecordResponse;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.OvertimeRecordRepository;
+import com.humano.repository.hr.specification.OvertimeRecordSpecification;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.time.LocalDate;
@@ -16,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -201,6 +204,70 @@ public class OvertimeRecordService {
         }
         overtimeRecordRepository.deleteById(id);
         log.info("Deleted overtime record with ID: {}", id);
+    }
+
+    /**
+     * Search overtime records using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of overtime record responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<OvertimeRecordResponse> searchOvertimeRecords(OvertimeRecordSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search OvertimeRecords with criteria: {}", searchRequest);
+
+        Specification<OvertimeRecord> specification = OvertimeRecordSpecification.withCriteria(
+            searchRequest.employeeId(),
+            searchRequest.approvedById(),
+            searchRequest.overtimeType(),
+            searchRequest.approvalStatus(),
+            searchRequest.dateFrom(),
+            searchRequest.dateTo(),
+            searchRequest.minHours(),
+            searchRequest.maxHours(),
+            searchRequest.notes(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return overtimeRecordRepository.findAll(specification, pageable).map(this::mapToResponse);
+    }
+
+    /**
+     * Search overtime records for a specific employee using multiple criteria with pagination.
+     *
+     * @param employeeId the employee ID
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of overtime record responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<OvertimeRecordResponse> searchOvertimeRecordsByEmployee(
+        UUID employeeId,
+        OvertimeRecordSearchRequest searchRequest,
+        Pageable pageable
+    ) {
+        log.debug("Request to search OvertimeRecords for Employee: {} with criteria: {}", employeeId, searchRequest);
+
+        // Override employeeId in search request to ensure it matches the path parameter
+        OvertimeRecordSearchRequest modifiedRequest = new OvertimeRecordSearchRequest(
+            employeeId,
+            searchRequest.approvedById(),
+            searchRequest.overtimeType(),
+            searchRequest.approvalStatus(),
+            searchRequest.dateFrom(),
+            searchRequest.dateTo(),
+            searchRequest.minHours(),
+            searchRequest.maxHours(),
+            searchRequest.notes(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return searchOvertimeRecords(modifiedRequest, pageable);
     }
 
     private OvertimeRecordResponse mapToResponse(OvertimeRecord record) {

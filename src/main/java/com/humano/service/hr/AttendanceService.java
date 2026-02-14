@@ -3,6 +3,8 @@ package com.humano.service.hr;
 import com.humano.domain.hr.Attendance;
 import com.humano.domain.hr.AttendanceEvent;
 import com.humano.domain.hr.Employee;
+import com.humano.dto.hr.requests.AttendanceEventSearchRequest;
+import com.humano.dto.hr.requests.AttendanceSearchRequest;
 import com.humano.dto.hr.requests.CreateAttendanceEventRequest;
 import com.humano.dto.hr.requests.CreateAttendanceRequest;
 import com.humano.dto.hr.requests.UpdateAttendanceRequest;
@@ -11,6 +13,8 @@ import com.humano.dto.hr.responses.AttendanceResponse;
 import com.humano.repository.hr.AttendanceEventRepository;
 import com.humano.repository.hr.AttendanceRepository;
 import com.humano.repository.hr.EmployeeRepository;
+import com.humano.repository.hr.specification.AttendanceEventSpecification;
+import com.humano.repository.hr.specification.AttendanceSpecification;
 import com.humano.service.errors.EntityNotFoundException;
 import java.time.LocalDate;
 import java.util.Collections;
@@ -21,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -209,6 +214,128 @@ public class AttendanceService {
         log.info("Deleted attendance with ID: {}", id);
     }
 
+    /**
+     * Search attendance records using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of attendance responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<AttendanceResponse> searchAttendance(AttendanceSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search Attendance with criteria: {}", searchRequest);
+
+        Specification<Attendance> specification = AttendanceSpecification.withCriteria(
+            searchRequest.employeeId(),
+            searchRequest.startDate(),
+            searchRequest.endDate(),
+            searchRequest.status(),
+            searchRequest.checkInFrom(),
+            searchRequest.checkInTo(),
+            searchRequest.checkOutFrom(),
+            searchRequest.checkOutTo(),
+            searchRequest.createdBy(),
+            searchRequest.lastModifiedBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return attendanceRepository.findAll(specification, pageable).map(this::mapToResponse);
+    }
+
+    /**
+     * Search attendance records for a specific employee using multiple criteria with pagination.
+     *
+     * @param employeeId the employee ID
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of attendance responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<AttendanceResponse> searchAttendanceByEmployee(UUID employeeId, AttendanceSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search Attendance for Employee: {} with criteria: {}", employeeId, searchRequest);
+
+        // Override employeeId in search request to ensure it matches the path parameter
+        AttendanceSearchRequest modifiedRequest = new AttendanceSearchRequest(
+            employeeId,
+            searchRequest.startDate(),
+            searchRequest.endDate(),
+            searchRequest.status(),
+            searchRequest.checkInFrom(),
+            searchRequest.checkInTo(),
+            searchRequest.checkOutFrom(),
+            searchRequest.checkOutTo(),
+            searchRequest.createdBy(),
+            searchRequest.lastModifiedBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return searchAttendance(modifiedRequest, pageable);
+    }
+
+    /**
+     * Search attendance events using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of attendance event responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<AttendanceEventResponse> searchAttendanceEvents(AttendanceEventSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search AttendanceEvents with criteria: {}", searchRequest);
+
+        Specification<AttendanceEvent> specification = AttendanceEventSpecification.withCriteria(
+            searchRequest.attendanceId(),
+            searchRequest.employeeId(),
+            searchRequest.eventType(),
+            searchRequest.eventAction(),
+            searchRequest.eventTimeFrom(),
+            searchRequest.eventTimeTo(),
+            searchRequest.description(),
+            searchRequest.createdBy(),
+            searchRequest.lastModifiedBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return attendanceEventRepository.findAll(specification, pageable).map(this::mapToAttendanceEventResponse);
+    }
+
+    /**
+     * Search attendance events for a specific employee using multiple criteria with pagination.
+     *
+     * @param employeeId the employee ID
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of attendance event responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<AttendanceEventResponse> searchAttendanceEventsByEmployee(
+        UUID employeeId,
+        AttendanceEventSearchRequest searchRequest,
+        Pageable pageable
+    ) {
+        log.debug("Request to search AttendanceEvents for Employee: {} with criteria: {}", employeeId, searchRequest);
+
+        // Override employeeId in search request to ensure it matches the path parameter
+        AttendanceEventSearchRequest modifiedRequest = new AttendanceEventSearchRequest(
+            searchRequest.attendanceId(),
+            employeeId,
+            searchRequest.eventType(),
+            searchRequest.eventAction(),
+            searchRequest.eventTimeFrom(),
+            searchRequest.eventTimeTo(),
+            searchRequest.description(),
+            searchRequest.createdBy(),
+            searchRequest.lastModifiedBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return searchAttendanceEvents(modifiedRequest, pageable);
+    }
+
     private AttendanceResponse mapToResponse(Attendance attendance) {
         String employeeName = attendance.getEmployee().getFirstName() + " " + attendance.getEmployee().getLastName();
 
@@ -242,6 +369,16 @@ public class AttendanceService {
             attendance.getCreatedDate(),
             attendance.getLastModifiedBy(),
             attendance.getLastModifiedDate()
+        );
+    }
+
+    private AttendanceEventResponse mapToAttendanceEventResponse(AttendanceEvent event) {
+        return new AttendanceEventResponse(
+            event.getId(),
+            event.getEventType(),
+            event.getEventTime(),
+            event.getEventAction(),
+            event.getDescription()
         );
     }
 }

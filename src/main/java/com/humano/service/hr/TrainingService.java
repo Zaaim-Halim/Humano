@@ -5,6 +5,7 @@ import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.EmployeeTraining;
 import com.humano.domain.hr.Training;
 import com.humano.dto.hr.requests.CreateTrainingRequest;
+import com.humano.dto.hr.requests.EmployeeTrainingSearchRequest;
 import com.humano.dto.hr.requests.EnrollEmployeeTrainingRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeTrainingRequest;
 import com.humano.dto.hr.requests.UpdateTrainingRequest;
@@ -13,12 +14,14 @@ import com.humano.dto.hr.responses.TrainingResponse;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.EmployeeTrainingRepository;
 import com.humano.repository.hr.TrainingRepository;
+import com.humano.repository.hr.specification.EmployeeTrainingSpecification;
 import com.humano.service.errors.EntityNotFoundException;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -258,6 +261,30 @@ public class TrainingService {
         }
         employeeTrainingRepository.deleteById(id);
         log.info("Removed employee training with ID: {}", id);
+    }
+
+    /**
+     * Search employee training records using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of employee training responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<EmployeeTrainingResponse> searchEmployeeTrainings(EmployeeTrainingSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search EmployeeTrainings with criteria: {}", searchRequest);
+
+        Specification<EmployeeTraining> specification = EmployeeTrainingSpecification.withCriteria(
+            searchRequest.employeeId(),
+            searchRequest.trainingId(),
+            searchRequest.status(),
+            searchRequest.completionDateFrom(),
+            searchRequest.completionDateTo(),
+            searchRequest.description(),
+            searchRequest.feedback()
+        );
+
+        return employeeTrainingRepository.findAll(specification, pageable).map(this::mapToEmployeeTrainingResponse);
     }
 
     private TrainingResponse mapToTrainingResponse(Training training) {

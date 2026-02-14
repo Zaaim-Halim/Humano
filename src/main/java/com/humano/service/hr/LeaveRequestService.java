@@ -4,10 +4,12 @@ import com.humano.domain.enumeration.hr.LeaveStatus;
 import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.LeaveRequest;
 import com.humano.dto.hr.requests.CreateLeaveRequest;
+import com.humano.dto.hr.requests.LeaveRequestSearchRequest;
 import com.humano.dto.hr.requests.ProcessLeaveRequest;
 import com.humano.dto.hr.responses.LeaveRequestResponse;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.LeaveRequestRepository;
+import com.humano.repository.hr.specification.LeaveRequestSpecification;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.time.temporal.ChronoUnit;
@@ -16,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -148,6 +151,74 @@ public class LeaveRequestService {
         }
         leaveRequestRepository.deleteById(id);
         log.info("Deleted leave request with ID: {}", id);
+    }
+
+    /**
+     * Search leave requests using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of leave request responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<LeaveRequestResponse> searchLeaveRequests(LeaveRequestSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search LeaveRequests with criteria: {}", searchRequest);
+
+        Specification<LeaveRequest> specification = LeaveRequestSpecification.withCriteria(
+            searchRequest.employeeId(),
+            searchRequest.approverId(),
+            searchRequest.leaveType(),
+            searchRequest.status(),
+            searchRequest.startDateFrom(),
+            searchRequest.startDateTo(),
+            searchRequest.endDateFrom(),
+            searchRequest.endDateTo(),
+            searchRequest.reason(),
+            searchRequest.minDaysCount(),
+            searchRequest.maxDaysCount(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return leaveRequestRepository.findAll(specification, pageable).map(this::mapToResponse);
+    }
+
+    /**
+     * Search leave requests for a specific employee using multiple criteria with pagination.
+     *
+     * @param employeeId the employee ID
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of leave request responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<LeaveRequestResponse> searchLeaveRequestsByEmployee(
+        UUID employeeId,
+        LeaveRequestSearchRequest searchRequest,
+        Pageable pageable
+    ) {
+        log.debug("Request to search LeaveRequests for Employee: {} with criteria: {}", employeeId, searchRequest);
+
+        // Override employeeId in search request to ensure it matches the path parameter
+        LeaveRequestSearchRequest modifiedRequest = new LeaveRequestSearchRequest(
+            employeeId,
+            searchRequest.approverId(),
+            searchRequest.leaveType(),
+            searchRequest.status(),
+            searchRequest.startDateFrom(),
+            searchRequest.startDateTo(),
+            searchRequest.endDateFrom(),
+            searchRequest.endDateTo(),
+            searchRequest.reason(),
+            searchRequest.minDaysCount(),
+            searchRequest.maxDaysCount(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return searchLeaveRequests(modifiedRequest, pageable);
     }
 
     private LeaveRequestResponse mapToResponse(LeaveRequest leaveRequest) {
