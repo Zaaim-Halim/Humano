@@ -2,22 +2,14 @@ package com.humano.service.hr;
 
 import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.EmployeeDocument;
+import com.humano.dto.hr.requests.CreateEmployeeDocumentRequest;
+import com.humano.dto.hr.requests.UpdateEmployeeDocumentRequest;
+import com.humano.dto.hr.responses.EmployeeDocumentResponse;
 import com.humano.repository.hr.EmployeeDocumentRepository;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.hr.dto.requests.CreateEmployeeDocumentRequest;
-import com.humano.service.hr.dto.requests.UpdateEmployeeDocumentRequest;
-import com.humano.service.hr.dto.responses.EmployeeDocumentResponse;
-import com.humano.service.storage.StorageFactory;
 import com.humano.service.storage.FileStorageService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-
+import com.humano.service.storage.StorageFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDateTime;
@@ -25,6 +17,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Service for managing employee documents.
@@ -34,6 +33,7 @@ import java.util.stream.Collectors;
  */
 @Service
 public class EmployeeDocumentService {
+
     private static final Logger log = LoggerFactory.getLogger(EmployeeDocumentService.class);
 
     private final EmployeeDocumentRepository employeeDocumentRepository;
@@ -43,12 +43,12 @@ public class EmployeeDocumentService {
     public EmployeeDocumentService(
         EmployeeDocumentRepository employeeDocumentRepository,
         EmployeeRepository employeeRepository,
-        StorageFactory storageFactory) {
+        StorageFactory storageFactory
+    ) {
         this.employeeDocumentRepository = employeeDocumentRepository;
         this.employeeRepository = employeeRepository;
         this.fileStorageService = storageFactory.getStorageService();
-        log.info("Employee document service initialized with storage provider: {}",
-                fileStorageService.getClass().getSimpleName());
+        log.info("Employee document service initialized with storage provider: {}", fileStorageService.getClass().getSimpleName());
     }
 
     /**
@@ -61,10 +61,12 @@ public class EmployeeDocumentService {
      * @throws IOException if file handling fails
      */
     @Transactional
-    public EmployeeDocumentResponse uploadDocument(UUID employeeId, CreateEmployeeDocumentRequest request, MultipartFile file) throws IOException {
+    public EmployeeDocumentResponse uploadDocument(UUID employeeId, CreateEmployeeDocumentRequest request, MultipartFile file)
+        throws IOException {
         log.debug("Request to upload document for Employee ID: {}", employeeId);
 
-        Employee employee = employeeRepository.findById(employeeId)
+        Employee employee = employeeRepository
+            .findById(employeeId)
             .orElseThrow(() -> new EntityNotFoundException("Employee not found with ID: " + employeeId));
 
         // Generate unique file name
@@ -100,7 +102,8 @@ public class EmployeeDocumentService {
     public EmployeeDocumentResponse updateDocument(UUID id, UpdateEmployeeDocumentRequest request) {
         log.debug("Request to update document with ID: {}", id);
 
-        return employeeDocumentRepository.findById(id)
+        return employeeDocumentRepository
+            .findById(id)
             .map(document -> {
                 if (request.type() != null) {
                     document.setType(request.type());
@@ -124,14 +127,21 @@ public class EmployeeDocumentService {
     public EmployeeDocumentResponse replaceDocumentFile(UUID id, MultipartFile file) throws IOException {
         log.debug("Request to replace file for document with ID: {}", id);
 
-        EmployeeDocument document = employeeDocumentRepository.findById(id)
+        EmployeeDocument document = employeeDocumentRepository
+            .findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Document not found with ID: " + id));
 
         // Generate new unique file name
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename != null ? originalFilename.substring(originalFilename.lastIndexOf(".")) : "";
-        String fileName = String.format("%s-%s-%s%s", document.getEmployee().getId(), document.getType().replaceAll("\\s+", "-"), timestamp, extension);
+        String fileName = String.format(
+            "%s-%s-%s%s",
+            document.getEmployee().getId(),
+            document.getType().replaceAll("\\s+", "-"),
+            timestamp,
+            extension
+        );
 
         // Store the new file
         String directory = "employee-documents/" + document.getEmployee().getId();
@@ -161,7 +171,8 @@ public class EmployeeDocumentService {
     public EmployeeDocumentResponse getDocument(UUID id) {
         log.debug("Request to get document with ID: {}", id);
 
-        return employeeDocumentRepository.findById(id)
+        return employeeDocumentRepository
+            .findById(id)
             .map(this::mapToEmployeeDocumentResponse)
             .orElseThrow(() -> new EntityNotFoundException("Document not found with ID: " + id));
     }
@@ -177,10 +188,12 @@ public class EmployeeDocumentService {
     public InputStream getDocumentContent(UUID id) throws IOException {
         log.debug("Request to get document content for ID: {}", id);
 
-        EmployeeDocument document = employeeDocumentRepository.findById(id)
+        EmployeeDocument document = employeeDocumentRepository
+            .findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Document not found with ID: " + id));
 
-        return fileStorageService.retrieve(document.getFilePath())
+        return fileStorageService
+            .retrieve(document.getFilePath())
             .orElseThrow(() -> new IOException("Document content not found for ID: " + id));
     }
 
@@ -199,7 +212,8 @@ public class EmployeeDocumentService {
             throw new EntityNotFoundException("Employee not found with ID: " + employeeId);
         }
 
-        return employeeDocumentRepository.findAll()
+        return employeeDocumentRepository
+            .findAll()
             .stream()
             .filter(doc -> doc.getEmployee().getId().equals(employeeId))
             .map(this::mapToEmployeeDocumentResponse)
@@ -216,8 +230,7 @@ public class EmployeeDocumentService {
     public Page<EmployeeDocumentResponse> getAllDocuments(Pageable pageable) {
         log.debug("Request to get all documents with pagination");
 
-        return employeeDocumentRepository.findAll(pageable)
-            .map(this::mapToEmployeeDocumentResponse);
+        return employeeDocumentRepository.findAll(pageable).map(this::mapToEmployeeDocumentResponse);
     }
 
     /**
@@ -229,21 +242,23 @@ public class EmployeeDocumentService {
     public void deleteDocument(UUID id) {
         log.debug("Request to delete document with ID: {}", id);
 
-        employeeDocumentRepository.findById(id).ifPresentOrElse(
-            document -> {
-                // Delete the physical file using the storage service
-                if (fileStorageService.exists(document.getFilePath())) {
-                    fileStorageService.delete(document.getFilePath());
-                }
+        employeeDocumentRepository
+            .findById(id)
+            .ifPresentOrElse(
+                document -> {
+                    // Delete the physical file using the storage service
+                    if (fileStorageService.exists(document.getFilePath())) {
+                        fileStorageService.delete(document.getFilePath());
+                    }
 
-                // Delete the document record
-                employeeDocumentRepository.delete(document);
-                log.info("Document deleted successfully with ID: {}", id);
-            },
-            () -> {
-                throw new EntityNotFoundException("Document not found with ID: " + id);
-            }
-        );
+                    // Delete the document record
+                    employeeDocumentRepository.delete(document);
+                    log.info("Document deleted successfully with ID: {}", id);
+                },
+                () -> {
+                    throw new EntityNotFoundException("Document not found with ID: " + id);
+                }
+            );
     }
 
     /**

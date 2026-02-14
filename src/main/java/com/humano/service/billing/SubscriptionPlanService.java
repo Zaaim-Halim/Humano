@@ -2,10 +2,10 @@ package com.humano.service.billing;
 
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.billing.SubscriptionType;
+import com.humano.dto.billing.requests.CreateSubscriptionPlanRequest;
+import com.humano.dto.billing.requests.UpdateSubscriptionPlanRequest;
+import com.humano.dto.billing.responses.SubscriptionPlanResponse;
 import com.humano.repository.billing.SubscriptionPlanRepository;
-import com.humano.service.billing.dto.requests.CreateSubscriptionPlanRequest;
-import com.humano.service.billing.dto.requests.UpdateSubscriptionPlanRequest;
-import com.humano.service.billing.dto.responses.SubscriptionPlanResponse;
 import com.humano.service.errors.EntityNotFoundException;
 import java.util.List;
 import java.util.UUID;

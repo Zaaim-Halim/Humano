@@ -2,12 +2,12 @@ package com.humano.service.hr;
 
 import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.PerformanceReview;
+import com.humano.dto.hr.requests.CreatePerformanceReviewRequest;
+import com.humano.dto.hr.requests.UpdatePerformanceReviewRequest;
+import com.humano.dto.hr.responses.PerformanceReviewResponse;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.PerformanceReviewRepository;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.hr.dto.requests.CreatePerformanceReviewRequest;
-import com.humano.service.hr.dto.requests.UpdatePerformanceReviewRequest;
-import com.humano.service.hr.dto.responses.PerformanceReviewResponse;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

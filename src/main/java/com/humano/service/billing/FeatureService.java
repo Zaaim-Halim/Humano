@@ -1,9 +1,9 @@
 package com.humano.service.billing;
 
 import com.humano.domain.billing.Feature;
+import com.humano.dto.billing.requests.CreateFeatureRequest;
+import com.humano.dto.billing.responses.FeatureResponse;
 import com.humano.repository.billing.FeatureRepository;
-import com.humano.service.billing.dto.requests.CreateFeatureRequest;
-import com.humano.service.billing.dto.responses.FeatureResponse;
 import com.humano.service.errors.EntityNotFoundException;
 import java.util.List;
 import java.util.UUID;

@@ -2,12 +2,12 @@ package com.humano.service.tenant;
 
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.tenant.Tenant;
+import com.humano.dto.tenant.requests.CreateTenantRequest;
+import com.humano.dto.tenant.requests.UpdateTenantRequest;
+import com.humano.dto.tenant.responses.TenantResponse;
 import com.humano.repository.billing.SubscriptionPlanRepository;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.tenant.dto.requests.CreateTenantRequest;
-import com.humano.service.tenant.dto.requests.UpdateTenantRequest;
-import com.humano.service.tenant.dto.responses.TenantResponse;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;

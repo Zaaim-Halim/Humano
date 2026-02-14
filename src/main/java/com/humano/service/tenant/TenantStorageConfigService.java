@@ -2,11 +2,11 @@ package com.humano.service.tenant;
 
 import com.humano.domain.tenant.Tenant;
 import com.humano.domain.tenant.TenantStorageConfig;
+import com.humano.dto.tenant.requests.CreateTenantStorageConfigRequest;
+import com.humano.dto.tenant.responses.TenantStorageConfigResponse;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.repository.tenant.TenantStorageConfigRepository;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.tenant.dto.requests.CreateTenantStorageConfigRequest;
-import com.humano.service.tenant.dto.responses.TenantStorageConfigResponse;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

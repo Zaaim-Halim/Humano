@@ -2,12 +2,12 @@ package com.humano.service.hr;
 
 import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.OrganizationalUnit;
+import com.humano.dto.hr.requests.CreateOrganizationalUnitRequest;
+import com.humano.dto.hr.requests.UpdateOrganizationalUnitRequest;
+import com.humano.dto.hr.responses.OrganizationalUnitResponse;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.OrganizationalUnitRepository;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.hr.dto.requests.CreateOrganizationalUnitRequest;
-import com.humano.service.hr.dto.requests.UpdateOrganizationalUnitRequest;
-import com.humano.service.hr.dto.responses.OrganizationalUnitResponse;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

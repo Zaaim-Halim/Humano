@@ -8,6 +8,10 @@ import com.humano.domain.hr.Department;
 import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.OrganizationalUnit;
 import com.humano.domain.hr.Position;
+import com.humano.dto.hr.requests.CreateEmployeeProfileRequest;
+import com.humano.dto.hr.requests.UpdateEmployeeProfileRequest;
+import com.humano.dto.hr.responses.EmployeeProfileResponse;
+import com.humano.dto.hr.responses.SimpleEmployeeProfileResponse;
 import com.humano.repository.CountryRepository;
 import com.humano.repository.UserRepository;
 import com.humano.repository.hr.DepartmentRepository;
@@ -16,22 +20,17 @@ import com.humano.repository.hr.OrganizationalUnitRepository;
 import com.humano.repository.hr.PositionRepository;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.hr.dto.requests.CreateEmployeeProfileRequest;
-import com.humano.service.hr.dto.requests.UpdateEmployeeProfileRequest;
-import com.humano.service.hr.dto.responses.EmployeeProfileResponse;
-import com.humano.service.hr.dto.responses.SimpleEmployeeProfileResponse;
 import com.humano.web.rest.errors.BadRequestAlertException;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
 
 /**
  * Service for managing employee profiles.
@@ -59,7 +58,8 @@ public class EmployeeProfileService {
         DepartmentRepository departmentRepository,
         PositionRepository positionRepository,
         OrganizationalUnitRepository organizationalUnitRepository,
-        CountryRepository countryRepository) {
+        CountryRepository countryRepository
+    ) {
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
@@ -79,8 +79,7 @@ public class EmployeeProfileService {
     public EmployeeProfileResponse createEmployeeProfile(UUID userId, CreateEmployeeProfileRequest request) {
         log.debug("Request to create Employee Profile for User ID: {}", userId);
 
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
+        User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
 
         // Check if user is already an employee
         if (employeeRepository.existsById(userId)) {
@@ -118,7 +117,8 @@ public class EmployeeProfileService {
     public EmployeeProfileResponse updateEmployeeProfile(UUID id, UpdateEmployeeProfileRequest request) {
         log.debug("Request to update Employee Profile: {}", request);
 
-        return employeeRepository.findById(id)
+        return employeeRepository
+            .findById(id)
             .map(existingEmployee -> {
                 // Update employee properties
                 updateEmployeeFromRequest(existingEmployee, request);
@@ -142,7 +142,8 @@ public class EmployeeProfileService {
     public EmployeeProfileResponse getEmployeeProfileById(UUID id) {
         log.debug("Request to get Employee Profile by ID: {}", id);
 
-        return employeeRepository.findById(id)
+        return employeeRepository
+            .findById(id)
             .map(this::mapToEmployeeProfileResponse)
             .orElseThrow(() -> new EntityNotFoundException("Employee not found with ID: " + id));
     }
@@ -157,8 +158,7 @@ public class EmployeeProfileService {
     public Page<SimpleEmployeeProfileResponse> getAllEmployeeProfiles(Pageable pageable) {
         log.debug("Request to get all Employee Profiles");
 
-        return employeeRepository.findAll(pageable)
-            .map(this::mapToSimpleEmployeeProfileResponse);
+        return employeeRepository.findAll(pageable).map(this::mapToSimpleEmployeeProfileResponse);
     }
 
     /**
@@ -171,16 +171,18 @@ public class EmployeeProfileService {
     public void deleteEmployeeProfile(UUID id) {
         log.debug("Request to delete Employee Profile: {}", id);
 
-        employeeRepository.findById(id).ifPresentOrElse(
-            employee -> {
-                // Remove EMPLOYEE role
-                removeEmployeeAuthority(employee);
-                employeeRepository.delete(employee);
-            },
-            () -> {
-                throw new EntityNotFoundException("Employee not found with ID: " + id);
-            }
-        );
+        employeeRepository
+            .findById(id)
+            .ifPresentOrElse(
+                employee -> {
+                    // Remove EMPLOYEE role
+                    removeEmployeeAuthority(employee);
+                    employeeRepository.delete(employee);
+                },
+                () -> {
+                    throw new EntityNotFoundException("Employee not found with ID: " + id);
+                }
+            );
     }
 
     /**
@@ -243,29 +245,34 @@ public class EmployeeProfileService {
      */
     private void setEmployeeRelationships(Employee employee, CreateEmployeeProfileRequest request) {
         // Set required relationships
-        Position position = positionRepository.findById(request.positionId())
+        Position position = positionRepository
+            .findById(request.positionId())
             .orElseThrow(() -> new EntityNotFoundException("Position not found with ID: " + request.positionId()));
         employee.setPosition(position);
 
-        OrganizationalUnit unit = organizationalUnitRepository.findById(request.unitId())
+        OrganizationalUnit unit = organizationalUnitRepository
+            .findById(request.unitId())
             .orElseThrow(() -> new EntityNotFoundException("Organizational Unit not found with ID: " + request.unitId()));
         employee.setUnit(unit);
 
         // Set optional relationships
         if (request.departmentId() != null) {
-            Department department = departmentRepository.findById(request.departmentId())
+            Department department = departmentRepository
+                .findById(request.departmentId())
                 .orElseThrow(() -> new EntityNotFoundException("Department not found with ID: " + request.departmentId()));
             employee.setDepartment(department);
         }
 
         if (request.countryId() != null) {
-            Country country = countryRepository.findById(request.countryId())
+            Country country = countryRepository
+                .findById(request.countryId())
                 .orElseThrow(() -> new EntityNotFoundException("Country not found with ID: " + request.countryId()));
             employee.setCountry(country);
         }
 
         if (request.managerId() != null) {
-            Employee manager = employeeRepository.findById(request.managerId())
+            Employee manager = employeeRepository
+                .findById(request.managerId())
                 .orElseThrow(() -> new EntityNotFoundException("Manager not found with ID: " + request.managerId()));
             employee.setManager(manager);
         }
@@ -319,14 +326,16 @@ public class EmployeeProfileService {
     private void updateEmployeeRelationships(Employee employee, UpdateEmployeeProfileRequest request) {
         // Update position if provided
         if (request.positionId() != null) {
-            Position position = positionRepository.findById(request.positionId())
+            Position position = positionRepository
+                .findById(request.positionId())
                 .orElseThrow(() -> new EntityNotFoundException("Position not found with ID: " + request.positionId()));
             employee.setPosition(position);
         }
 
         // Update unit if provided
         if (request.unitId() != null) {
-            OrganizationalUnit unit = organizationalUnitRepository.findById(request.unitId())
+            OrganizationalUnit unit = organizationalUnitRepository
+                .findById(request.unitId())
                 .orElseThrow(() -> new EntityNotFoundException("Organizational Unit not found with ID: " + request.unitId()));
             employee.setUnit(unit);
         }
@@ -336,7 +345,8 @@ public class EmployeeProfileService {
             if (request.departmentId().equals(UUID.fromString("00000000-0000-0000-0000-000000000000"))) {
                 employee.setDepartment(null);
             } else {
-                Department department = departmentRepository.findById(request.departmentId())
+                Department department = departmentRepository
+                    .findById(request.departmentId())
                     .orElseThrow(() -> new EntityNotFoundException("Department not found with ID: " + request.departmentId()));
                 employee.setDepartment(department);
             }
@@ -347,7 +357,8 @@ public class EmployeeProfileService {
             if (request.countryId().equals(UUID.fromString("00000000-0000-0000-0000-000000000000"))) {
                 employee.setCountry(null);
             } else {
-                Country country = countryRepository.findById(request.countryId())
+                Country country = countryRepository
+                    .findById(request.countryId())
                     .orElseThrow(() -> new EntityNotFoundException("Country not found with ID: " + request.countryId()));
                 employee.setCountry(country);
             }
@@ -360,7 +371,8 @@ public class EmployeeProfileService {
             } else if (request.managerId().equals(employee.getId())) {
                 throw new BadRequestAlertException("Employee cannot be their own manager", ENTITY_NAME, "selfReference");
             } else {
-                Employee manager = employeeRepository.findById(request.managerId())
+                Employee manager = employeeRepository
+                    .findById(request.managerId())
                     .orElseThrow(() -> new EntityNotFoundException("Manager not found with ID: " + request.managerId()));
                 employee.setManager(manager);
             }
@@ -390,8 +402,9 @@ public class EmployeeProfileService {
             employee.getUnit().getId(),
             employee.getUnit().getName(),
             Optional.ofNullable(employee.getManager()).map(Employee::getId).orElse(null),
-            Optional.ofNullable(employee.getManager()).map(manager ->
-                manager.getJobTitle() + " - " + manager.getPosition().getName()).orElse(null),
+            Optional.ofNullable(employee.getManager())
+                .map(manager -> manager.getJobTitle() + " - " + manager.getPosition().getName())
+                .orElse(null),
             employee.getCreatedBy(),
             employee.getCreatedDate(),
             employee.getLastModifiedBy(),

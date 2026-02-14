@@ -1,11 +1,11 @@
 package com.humano.service.hr;
 
 import com.humano.domain.hr.Skill;
+import com.humano.dto.hr.requests.CreateSkillRequest;
+import com.humano.dto.hr.requests.UpdateSkillRequest;
+import com.humano.dto.hr.responses.SkillResponse;
 import com.humano.repository.hr.SkillRepository;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.hr.dto.requests.CreateSkillRequest;
-import com.humano.service.hr.dto.requests.UpdateSkillRequest;
-import com.humano.service.hr.dto.responses.SkillResponse;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -3,14 +3,14 @@ package com.humano.service.hr;
 import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.Survey;
 import com.humano.domain.hr.SurveyResponse;
+import com.humano.dto.hr.requests.CreateSurveyRequest;
+import com.humano.dto.hr.requests.SubmitSurveyResponseRequest;
+import com.humano.dto.hr.requests.UpdateSurveyRequest;
+import com.humano.dto.hr.responses.SurveyResponseResponse;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.SurveyRepository;
 import com.humano.repository.hr.SurveyResponseRepository;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.hr.dto.requests.CreateSurveyRequest;
-import com.humano.service.hr.dto.requests.SubmitSurveyResponseRequest;
-import com.humano.service.hr.dto.requests.UpdateSurveyRequest;
-import com.humano.service.hr.dto.responses.SurveyResponseResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -51,7 +51,7 @@ public class SurveyService {
      * @return the created survey response DTO
      */
     @Transactional
-    public com.humano.service.hr.dto.responses.SurveyResponse createSurvey(CreateSurveyRequest request) {
+    public com.humano.dto.hr.responses.SurveyResponse createSurvey(CreateSurveyRequest request) {
         log.debug("Request to create Survey: {}", request);
 
         Survey survey = new Survey();
@@ -74,7 +74,7 @@ public class SurveyService {
      * @return the updated survey response DTO
      */
     @Transactional
-    public com.humano.service.hr.dto.responses.SurveyResponse updateSurvey(UUID id, UpdateSurveyRequest request) {
+    public com.humano.dto.hr.responses.SurveyResponse updateSurvey(UUID id, UpdateSurveyRequest request) {
         log.debug("Request to update Survey: {}", id);
 
         return surveyRepository
@@ -104,7 +104,7 @@ public class SurveyService {
      * @return the survey response DTO
      */
     @Transactional(readOnly = true)
-    public com.humano.service.hr.dto.responses.SurveyResponse getSurveyById(UUID id) {
+    public com.humano.dto.hr.responses.SurveyResponse getSurveyById(UUID id) {
         log.debug("Request to get Survey by ID: {}", id);
 
         return surveyRepository.findById(id).map(this::mapToSurveyResponse).orElseThrow(() -> EntityNotFoundException.create("Survey", id));
@@ -117,7 +117,7 @@ public class SurveyService {
      * @return page of survey response DTOs
      */
     @Transactional(readOnly = true)
-    public Page<com.humano.service.hr.dto.responses.SurveyResponse> getAllSurveys(Pageable pageable) {
+    public Page<com.humano.dto.hr.responses.SurveyResponse> getAllSurveys(Pageable pageable) {
         log.debug("Request to get all Surveys");
 
         return surveyRepository.findAll(pageable).map(this::mapToSurveyResponse);
@@ -130,7 +130,7 @@ public class SurveyService {
      * @return page of survey response DTOs
      */
     @Transactional(readOnly = true)
-    public Page<com.humano.service.hr.dto.responses.SurveyResponse> getActiveSurveys(Pageable pageable) {
+    public Page<com.humano.dto.hr.responses.SurveyResponse> getActiveSurveys(Pageable pageable) {
         log.debug("Request to get active Surveys");
         LocalDate today = LocalDate.now();
 
@@ -215,8 +215,8 @@ public class SurveyService {
         log.info("Deleted survey response with ID: {}", id);
     }
 
-    private com.humano.service.hr.dto.responses.SurveyResponse mapToSurveyResponse(Survey survey) {
-        return new com.humano.service.hr.dto.responses.SurveyResponse(
+    private com.humano.dto.hr.responses.SurveyResponse mapToSurveyResponse(Survey survey) {
+        return new com.humano.dto.hr.responses.SurveyResponse(
             survey.getId(),
             survey.getTitle(),
             survey.getDescription(),

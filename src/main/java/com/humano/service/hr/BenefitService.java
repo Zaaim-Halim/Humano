@@ -1,11 +1,11 @@
 package com.humano.service.hr;
 
 import com.humano.domain.hr.Benefit;
+import com.humano.dto.hr.requests.CreateBenefitRequest;
+import com.humano.dto.hr.requests.UpdateBenefitRequest;
+import com.humano.dto.hr.responses.BenefitResponse;
 import com.humano.repository.hr.BenefitRepository;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.hr.dto.requests.CreateBenefitRequest;
-import com.humano.service.hr.dto.requests.UpdateBenefitRequest;
-import com.humano.service.hr.dto.responses.BenefitResponse;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

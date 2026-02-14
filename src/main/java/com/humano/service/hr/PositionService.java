@@ -2,12 +2,12 @@ package com.humano.service.hr;
 
 import com.humano.domain.hr.OrganizationalUnit;
 import com.humano.domain.hr.Position;
+import com.humano.dto.hr.requests.CreatePositionRequest;
+import com.humano.dto.hr.requests.UpdatePositionRequest;
+import com.humano.dto.hr.responses.PositionResponse;
 import com.humano.repository.hr.OrganizationalUnitRepository;
 import com.humano.repository.hr.PositionRepository;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.hr.dto.requests.CreatePositionRequest;
-import com.humano.service.hr.dto.requests.UpdatePositionRequest;
-import com.humano.service.hr.dto.responses.PositionResponse;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

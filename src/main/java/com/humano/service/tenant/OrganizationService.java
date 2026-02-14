@@ -2,12 +2,12 @@ package com.humano.service.tenant;
 
 import com.humano.domain.tenant.Organization;
 import com.humano.domain.tenant.Tenant;
+import com.humano.dto.tenant.requests.CreateOrganizationRequest;
+import com.humano.dto.tenant.requests.UpdateOrganizationRequest;
+import com.humano.dto.tenant.responses.OrganizationResponse;
 import com.humano.repository.tenant.OrganizationRepository;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.tenant.dto.requests.CreateOrganizationRequest;
-import com.humano.service.tenant.dto.requests.UpdateOrganizationRequest;
-import com.humano.service.tenant.dto.responses.OrganizationResponse;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;

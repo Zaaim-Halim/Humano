@@ -1,9 +1,9 @@
 package com.humano.service.billing;
 
 import com.humano.domain.billing.Coupon;
+import com.humano.dto.billing.requests.CreateCouponRequest;
+import com.humano.dto.billing.responses.CouponResponse;
 import com.humano.repository.billing.CouponRepository;
-import com.humano.service.billing.dto.requests.CreateCouponRequest;
-import com.humano.service.billing.dto.responses.CouponResponse;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.time.Instant;

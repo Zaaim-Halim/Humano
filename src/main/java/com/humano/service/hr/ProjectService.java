@@ -1,11 +1,11 @@
 package com.humano.service.hr;
 
 import com.humano.domain.hr.Project;
+import com.humano.dto.hr.requests.CreateProjectRequest;
+import com.humano.dto.hr.requests.UpdateProjectRequest;
+import com.humano.dto.hr.responses.ProjectResponse;
 import com.humano.repository.hr.ProjectRepository;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.hr.dto.requests.CreateProjectRequest;
-import com.humano.service.hr.dto.requests.UpdateProjectRequest;
-import com.humano.service.hr.dto.responses.ProjectResponse;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

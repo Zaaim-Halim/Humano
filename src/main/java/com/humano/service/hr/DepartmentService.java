@@ -1,11 +1,11 @@
 package com.humano.service.hr;
 
 import com.humano.domain.hr.Department;
+import com.humano.dto.hr.requests.CreateDepartmentRequest;
+import com.humano.dto.hr.requests.UpdateDepartmentRequest;
+import com.humano.dto.hr.responses.DepartmentResponse;
 import com.humano.repository.hr.DepartmentRepository;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.service.hr.dto.requests.CreateDepartmentRequest;
-import com.humano.service.hr.dto.requests.UpdateDepartmentRequest;
-import com.humano.service.hr.dto.responses.DepartmentResponse;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
