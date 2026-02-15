@@ -5,12 +5,14 @@ import com.humano.domain.enumeration.payroll.BonusType;
 import com.humano.domain.hr.Employee;
 import com.humano.domain.payroll.Bonus;
 import com.humano.dto.payroll.request.AwardBonusRequest;
+import com.humano.dto.payroll.request.BonusSearchRequest;
 import com.humano.dto.payroll.request.BulkBonusRequest;
 import com.humano.dto.payroll.response.BonusResponse;
 import com.humano.dto.payroll.response.BonusSummaryResponse;
 import com.humano.repository.CurrencyRepository;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.payroll.BonusRepository;
+import com.humano.repository.payroll.specification.BonusSpecification;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
@@ -301,6 +303,72 @@ public class BonusService {
         );
 
         return analytics;
+    }
+
+    /**
+     * Search bonuses using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of bonus responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<BonusResponse> searchBonuses(BonusSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search Bonuses with criteria: {}", searchRequest);
+
+        Specification<Bonus> specification = BonusSpecification.withCriteria(
+            searchRequest.employeeId(),
+            searchRequest.type(),
+            searchRequest.currencyId(),
+            searchRequest.minAmount(),
+            searchRequest.maxAmount(),
+            searchRequest.awardDateFrom(),
+            searchRequest.awardDateTo(),
+            searchRequest.paymentDateFrom(),
+            searchRequest.paymentDateTo(),
+            searchRequest.isPaid(),
+            searchRequest.isTaxable(),
+            searchRequest.description(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return bonusRepository.findAll(specification, pageable).map(this::toResponse);
+    }
+
+    /**
+     * Search bonuses for a specific employee using multiple criteria with pagination.
+     *
+     * @param employeeId the employee ID to filter by
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of bonus responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<BonusResponse> searchBonusesByEmployee(UUID employeeId, BonusSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search Bonuses for Employee: {} with criteria: {}", employeeId, searchRequest);
+
+        // Override employeeId in search request to ensure it matches the path parameter
+        Specification<Bonus> specification = BonusSpecification.withCriteria(
+            employeeId,
+            searchRequest.type(),
+            searchRequest.currencyId(),
+            searchRequest.minAmount(),
+            searchRequest.maxAmount(),
+            searchRequest.awardDateFrom(),
+            searchRequest.awardDateTo(),
+            searchRequest.paymentDateFrom(),
+            searchRequest.paymentDateTo(),
+            searchRequest.isPaid(),
+            searchRequest.isTaxable(),
+            searchRequest.description(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return bonusRepository.findAll(specification, pageable).map(this::toResponse);
     }
 
     private void validateBonusRules(Employee employee, BonusType type, BigDecimal amount) {

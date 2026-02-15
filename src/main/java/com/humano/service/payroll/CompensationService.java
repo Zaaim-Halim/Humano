@@ -4,6 +4,7 @@ import com.humano.domain.Currency;
 import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.Position;
 import com.humano.domain.payroll.Compensation;
+import com.humano.dto.payroll.request.CompensationSearchRequest;
 import com.humano.dto.payroll.request.CreateCompensationRequest;
 import com.humano.dto.payroll.request.SalaryAdjustmentRequest;
 import com.humano.dto.payroll.response.CompensationResponse;
@@ -12,6 +13,7 @@ import com.humano.repository.CurrencyRepository;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.PositionRepository;
 import com.humano.repository.payroll.CompensationRepository;
+import com.humano.repository.payroll.specification.CompensationSpecification;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
@@ -292,6 +294,70 @@ public class CompensationService {
         );
 
         return result;
+    }
+
+    /**
+     * Search compensations using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of compensation responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<CompensationResponse> searchCompensations(CompensationSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search Compensations with criteria: {}", searchRequest);
+
+        Specification<Compensation> specification = CompensationSpecification.withCriteria(
+            searchRequest.employeeId(),
+            searchRequest.positionId(),
+            searchRequest.currencyId(),
+            searchRequest.basis(),
+            searchRequest.minAmount(),
+            searchRequest.maxAmount(),
+            searchRequest.effectiveFrom(),
+            searchRequest.effectiveTo(),
+            searchRequest.activeOnly(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return compensationRepository.findAll(specification, pageable).map(this::toResponse);
+    }
+
+    /**
+     * Search compensations for a specific employee using multiple criteria with pagination.
+     *
+     * @param employeeId the employee ID to filter by
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of compensation responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<CompensationResponse> searchCompensationsByEmployee(
+        UUID employeeId,
+        CompensationSearchRequest searchRequest,
+        Pageable pageable
+    ) {
+        log.debug("Request to search Compensations for Employee: {} with criteria: {}", employeeId, searchRequest);
+
+        // Override employeeId in search request to ensure it matches the path parameter
+        Specification<Compensation> specification = CompensationSpecification.withCriteria(
+            employeeId,
+            searchRequest.positionId(),
+            searchRequest.currencyId(),
+            searchRequest.basis(),
+            searchRequest.minAmount(),
+            searchRequest.maxAmount(),
+            searchRequest.effectiveFrom(),
+            searchRequest.effectiveTo(),
+            searchRequest.activeOnly(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return compensationRepository.findAll(specification, pageable).map(this::toResponse);
     }
 
     private void closeOverlappingCompensations(UUID employeeId, LocalDate newEffectiveFrom) {

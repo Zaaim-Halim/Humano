@@ -5,10 +5,12 @@ import com.humano.domain.enumeration.payroll.DeductionType;
 import com.humano.domain.hr.Employee;
 import com.humano.domain.payroll.Deduction;
 import com.humano.dto.payroll.request.CreateDeductionRequest;
+import com.humano.dto.payroll.request.DeductionSearchRequest;
 import com.humano.dto.payroll.response.DeductionResponse;
 import com.humano.repository.CurrencyRepository;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.payroll.DeductionRepository;
+import com.humano.repository.payroll.specification.DeductionSpecification;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
@@ -245,6 +247,72 @@ public class DeductionService {
         statistics.put("fixedBasedCount", fixedBased);
 
         return statistics;
+    }
+
+    /**
+     * Search deductions using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of deduction responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<DeductionResponse> searchDeductions(DeductionSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search Deductions with criteria: {}", searchRequest);
+
+        Specification<Deduction> specification = DeductionSpecification.withCriteria(
+            searchRequest.employeeId(),
+            searchRequest.type(),
+            searchRequest.currencyId(),
+            searchRequest.minAmount(),
+            searchRequest.maxAmount(),
+            searchRequest.minPercentage(),
+            searchRequest.maxPercentage(),
+            searchRequest.effectiveFrom(),
+            searchRequest.effectiveTo(),
+            searchRequest.isPreTax(),
+            searchRequest.activeOnly(),
+            searchRequest.description(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return deductionRepository.findAll(specification, pageable).map(this::toResponse);
+    }
+
+    /**
+     * Search deductions for a specific employee using multiple criteria with pagination.
+     *
+     * @param employeeId the employee ID to filter by
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of deduction responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<DeductionResponse> searchDeductionsByEmployee(UUID employeeId, DeductionSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search Deductions for Employee: {} with criteria: {}", employeeId, searchRequest);
+
+        // Override employeeId in search request to ensure it matches the path parameter
+        Specification<Deduction> specification = DeductionSpecification.withCriteria(
+            employeeId,
+            searchRequest.type(),
+            searchRequest.currencyId(),
+            searchRequest.minAmount(),
+            searchRequest.maxAmount(),
+            searchRequest.minPercentage(),
+            searchRequest.maxPercentage(),
+            searchRequest.effectiveFrom(),
+            searchRequest.effectiveTo(),
+            searchRequest.isPreTax(),
+            searchRequest.activeOnly(),
+            searchRequest.description(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return deductionRepository.findAll(specification, pageable).map(this::toResponse);
     }
 
     private void validateDeduction(CreateDeductionRequest request) {

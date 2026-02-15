@@ -2,10 +2,12 @@ package com.humano.service.payroll;
 
 import com.humano.domain.hr.Employee;
 import com.humano.domain.payroll.*;
+import com.humano.dto.payroll.request.PayslipSearchRequest;
 import com.humano.dto.payroll.response.PayrollResultResponse;
 import com.humano.dto.payroll.response.PayslipResponse;
 import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.payroll.*;
+import com.humano.repository.payroll.specification.PayslipSpecification;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
@@ -362,6 +364,70 @@ public class PayslipService {
         }
 
         return stats;
+    }
+
+    /**
+     * Search payslips using multiple criteria with pagination.
+     *
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of payslip responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<PayslipResponse> searchPayslipsAdvanced(PayslipSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search Payslips with criteria: {}", searchRequest);
+
+        Specification<Payslip> specification = PayslipSpecification.withCriteria(
+            searchRequest.employeeId(),
+            searchRequest.payslipNumber(),
+            searchRequest.payrollRunId(),
+            searchRequest.minGross(),
+            searchRequest.maxGross(),
+            searchRequest.minNet(),
+            searchRequest.maxNet(),
+            searchRequest.periodStartFrom(),
+            searchRequest.periodStartTo(),
+            searchRequest.periodEndFrom(),
+            searchRequest.periodEndTo(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return payslipRepository.findAll(specification, pageable).map(this::toResponse);
+    }
+
+    /**
+     * Search payslips for a specific employee using multiple criteria with pagination.
+     *
+     * @param employeeId the employee ID to filter by
+     * @param searchRequest the search criteria
+     * @param pageable pagination information
+     * @return page of payslip responses matching the criteria
+     */
+    @Transactional(readOnly = true)
+    public Page<PayslipResponse> searchPayslipsByEmployee(UUID employeeId, PayslipSearchRequest searchRequest, Pageable pageable) {
+        log.debug("Request to search Payslips for Employee: {} with criteria: {}", employeeId, searchRequest);
+
+        // Override employeeId in search request to ensure it matches the path parameter
+        Specification<Payslip> specification = PayslipSpecification.withCriteria(
+            employeeId,
+            searchRequest.payslipNumber(),
+            searchRequest.payrollRunId(),
+            searchRequest.minGross(),
+            searchRequest.maxGross(),
+            searchRequest.minNet(),
+            searchRequest.maxNet(),
+            searchRequest.periodStartFrom(),
+            searchRequest.periodStartTo(),
+            searchRequest.periodEndFrom(),
+            searchRequest.periodEndTo(),
+            searchRequest.createdBy(),
+            searchRequest.createdDateFrom(),
+            searchRequest.createdDateTo()
+        );
+
+        return payslipRepository.findAll(specification, pageable).map(this::toResponse);
     }
 
     private String generatePayslipNumber(String periodPrefix, long sequence) {
