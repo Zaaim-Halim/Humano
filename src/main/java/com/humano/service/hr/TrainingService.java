@@ -220,6 +220,22 @@ public class TrainingService {
     }
 
     /**
+     * Get an employee training record by ID.
+     *
+     * @param id the ID of the employee training record
+     * @return the employee training response
+     */
+    @Transactional(readOnly = true)
+    public EmployeeTrainingResponse getEmployeeTrainingById(UUID id) {
+        log.debug("Request to get EmployeeTraining: {}", id);
+
+        return employeeTrainingRepository
+            .findById(id)
+            .map(this::mapToEmployeeTrainingResponse)
+            .orElseThrow(() -> EntityNotFoundException.create("EmployeeTraining", id));
+    }
+
+    /**
      * Get employee training records by employee.
      *
      * @param employeeId the employee ID
