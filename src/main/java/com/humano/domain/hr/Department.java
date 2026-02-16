@@ -2,13 +2,12 @@ package com.humano.domain.hr;
 
 import com.humano.domain.AbstractAuditingEntity;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a department within the organization, grouping employees by function or business unit.
@@ -18,17 +17,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "department")
 public class Department extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -50,6 +45,13 @@ public class Department extends AbstractAuditingEntity<UUID> {
      */
     @OneToMany(mappedBy = "department")
     private Set<Employee> employees = new HashSet<>();
+
+    /**
+     * The head/manager of this department.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "head_id")
+    private Employee head;
 
     @Override
     public UUID getId() {
@@ -99,6 +101,19 @@ public class Department extends AbstractAuditingEntity<UUID> {
         this.employees = employees;
     }
 
+    public Employee getHead() {
+        return head;
+    }
+
+    public Department head(Employee head) {
+        this.head = head;
+        return this;
+    }
+
+    public void setHead(Employee head) {
+        this.head = head;
+    }
+
     public Department addEmployee(Employee employee) {
         this.employees.add(employee);
         employee.setDepartment(this);
@@ -126,10 +141,6 @@ public class Department extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Department{" +
-            "id=" + id +
-            ", name='" + name + '\'' +
-            ", description='" + description + '\'' +
-            '}';
+        return "Department{" + "id=" + id + ", name='" + name + '\'' + ", description='" + description + '\'' + '}';
     }
 }

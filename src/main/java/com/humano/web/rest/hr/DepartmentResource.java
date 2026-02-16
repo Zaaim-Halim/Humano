@@ -162,4 +162,41 @@ public class DepartmentResource {
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
     }
+
+    /**
+     * {@code PUT  /departments/{id}/head/{headId}} : Assign a head/manager to a department.
+     *
+     * @param id the ID of the department
+     * @param headId the ID of the employee to assign as head
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated department
+     */
+    @PutMapping("/{id}/head/{headId}")
+    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    public ResponseEntity<DepartmentResponse> assignHead(@PathVariable UUID id, @PathVariable UUID headId) {
+        LOG.debug("REST request to assign head {} to Department: {}", headId, id);
+
+        DepartmentResponse result = departmentService.assignHead(id, headId);
+
+        return ResponseEntity.ok()
+            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
+            .body(result);
+    }
+
+    /**
+     * {@code DELETE  /departments/{id}/head} : Remove the head/manager from a department.
+     *
+     * @param id the ID of the department
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated department
+     */
+    @DeleteMapping("/{id}/head")
+    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    public ResponseEntity<DepartmentResponse> removeHead(@PathVariable UUID id) {
+        LOG.debug("REST request to remove head from Department: {}", id);
+
+        DepartmentResponse result = departmentService.removeHead(id);
+
+        return ResponseEntity.ok()
+            .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, id.toString()))
+            .body(result);
+    }
 }

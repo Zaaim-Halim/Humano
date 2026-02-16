@@ -10,6 +10,8 @@ public record DepartmentResponse(
     UUID id,
     String name,
     String description,
+    UUID headId,
+    String headName,
     int employeeCount,
     String createdBy,
     Instant createdDate,
