@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ======================================================================================= -->
+    <!-- WORKFLOW ENTITIES CHANGELOG - HR Workflow & Approval System                            -->
+    <!-- Added: 2026-02-18                                                                       -->
+    <!-- Contains: approval_chain_config, workflow_instance, approval_request,                  -->
+    <!--           workflow_deadline, workflow_state_transition, review_cycle                   -->
+    <!-- ======================================================================================= -->
+
+    <!-- ==================== PHASE 1: Independent Tables ==================== -->
+
+    <!-- approval_chain_config - No dependencies -->
+    <changeSet id="workflow-001-approval-chain-config" author="halimzaaim">
+        <createTable tableName="approval_chain_config">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_approval_chain_config"/>
+            </column>
+            <column name="approval_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sequence_order" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="approver_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="specific_approver_id" type="${uuidType}"/>
+            <column name="condition_expression" type="VARCHAR(500)"/>
+            <column name="description" type="VARCHAR(500)"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="min_threshold" type="DOUBLE"/>
+            <column name="max_threshold" type="DOUBLE"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="approval_chain_config" indexName="idx_approval_chain_type">
+            <column name="approval_type"/>
+            <column name="sequence_order"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- review_cycle - No dependencies -->
+    <changeSet id="workflow-002-review-cycle" author="halimzaaim">
+        <createTable tableName="review_cycle">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_review_cycle"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(500)"/>
+            <column name="review_period_start" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="review_period_end" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="phase" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="self_assessment_deadline" type="DATE"/>
+            <column name="manager_review_deadline" type="DATE"/>
+            <column name="calibration_deadline" type="DATE"/>
+            <column name="communication_deadline" type="DATE"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="review_cycle" indexName="idx_review_cycle_phase">
+            <column name="phase"/>
+        </createIndex>
+        <createIndex tableName="review_cycle" indexName="idx_review_cycle_dates">
+            <column name="start_date"/>
+            <column name="end_date"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- ==================== PHASE 2: Tables depending on employee ==================== -->
+
+    <!-- workflow_instance - depends on employee -->
+    <changeSet id="workflow-003-workflow-instance" author="halimzaaim">
+        <createTable tableName="workflow_instance">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_workflow_instance"/>
+            </column>
+            <column name="workflow_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="entity_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="entity_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_state" type="VARCHAR(50)"/>
+            <column name="current_assignee_id" type="${uuidType}"/>
+            <column name="initiator_id" type="${uuidType}"/>
+            <column name="context" type="TEXT"/>
+            <column name="started_at" type="DATETIME"/>
+            <column name="completed_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="workflow_instance" indexName="idx_workflow_entity">
+            <column name="entity_id"/>
+            <column name="entity_type"/>
+        </createIndex>
+        <createIndex tableName="workflow_instance" indexName="idx_workflow_type_status">
+            <column name="workflow_type"/>
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="workflow_instance" indexName="idx_workflow_assignee">
+            <column name="current_assignee_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- ==================== PHASE 3: Tables depending on workflow_instance ==================== -->
+
+    <!-- approval_request - depends on workflow_instance, employee -->
+    <changeSet id="workflow-004-approval-request" author="halimzaaim">
+        <createTable tableName="approval_request">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_approval_request"/>
+            </column>
+            <column name="workflow_id" type="${uuidType}"/>
+            <column name="approval_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="entity_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="entity_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requestor_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="approver_id" type="${uuidType}"/>
+            <column name="current_level" type="INT" defaultValueNumeric="1"/>
+            <column name="status" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="decision" type="VARCHAR(20)"/>
+            <column name="decision_notes" type="VARCHAR(1000)"/>
+            <column name="decided_at" type="DATETIME"/>
+            <column name="due_date" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="approval_request" indexName="idx_approval_workflow">
+            <column name="workflow_id"/>
+        </createIndex>
+        <createIndex tableName="approval_request" indexName="idx_approval_approver">
+            <column name="approver_id"/>
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="approval_request" indexName="idx_approval_entity">
+            <column name="entity_id"/>
+            <column name="entity_type"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- workflow_deadline - depends on workflow_instance -->
+    <changeSet id="workflow-005-workflow-deadline" author="halimzaaim">
+        <createTable tableName="workflow_deadline">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_workflow_deadline"/>
+            </column>
+            <column name="workflow_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deadline_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(500)"/>
+            <column name="deadline_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="warning_at" type="DATETIME"/>
+            <column name="escalation_level" type="INT" defaultValueNumeric="0"/>
+            <column name="is_completed" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="completed_at" type="DATETIME"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="workflow_deadline" indexName="idx_deadline_workflow">
+            <column name="workflow_id"/>
+        </createIndex>
+        <createIndex tableName="workflow_deadline" indexName="idx_deadline_date">
+            <column name="deadline_at"/>
+            <column name="is_completed"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- workflow_state_transition - depends on workflow_instance -->
+    <changeSet id="workflow-006-workflow-state-transition" author="halimzaaim">
+        <createTable tableName="workflow_state_transition">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_workflow_state_transition"/>
+            </column>
+            <column name="workflow_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="from_state" type="VARCHAR(50)"/>
+            <column name="to_state" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reason" type="VARCHAR(500)"/>
+            <column name="transitioned_by" type="VARCHAR(50)"/>
+            <column name="transitioned_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="workflow_state_transition" indexName="idx_transition_workflow">
+            <column name="workflow_id"/>
+        </createIndex>
+        <createIndex tableName="workflow_state_transition" indexName="idx_transition_date">
+            <column name="transitioned_at"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- ==================== PHASE 4: Unique Constraints ==================== -->
+
+    <changeSet id="workflow-010-uc-review-cycle-name" author="halimzaaim">
+        <addUniqueConstraint columnNames="name" constraintName="uc_review_cycle_name" tableName="review_cycle"/>
+    </changeSet>
+
+    <!-- ==================== PHASE 5: Foreign Key Constraints ==================== -->
+
+    <!-- workflow_instance FKs -->
+    <changeSet id="workflow-020-fk-workflow-instance-assignee" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="current_assignee_id" baseTableName="workflow_instance"
+                                 constraintName="FK_WORKFLOW_INSTANCE_ON_ASSIGNEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="workflow-021-fk-workflow-instance-initiator" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="initiator_id" baseTableName="workflow_instance"
+                                 constraintName="FK_WORKFLOW_INSTANCE_ON_INITIATOR" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <!-- approval_request FKs -->
+    <changeSet id="workflow-022-fk-approval-request-workflow" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="workflow_id" baseTableName="approval_request"
+                                 constraintName="FK_APPROVAL_REQUEST_ON_WORKFLOW" referencedColumnNames="id"
+                                 referencedTableName="workflow_instance"/>
+    </changeSet>
+
+    <changeSet id="workflow-023-fk-approval-request-requestor" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="requestor_id" baseTableName="approval_request"
+                                 constraintName="FK_APPROVAL_REQUEST_ON_REQUESTOR" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="workflow-024-fk-approval-request-approver" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="approver_id" baseTableName="approval_request"
+                                 constraintName="FK_APPROVAL_REQUEST_ON_APPROVER" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <!-- workflow_deadline FK -->
+    <changeSet id="workflow-025-fk-workflow-deadline-workflow" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="workflow_id" baseTableName="workflow_deadline"
+                                 constraintName="FK_WORKFLOW_DEADLINE_ON_WORKFLOW" referencedColumnNames="id"
+                                 referencedTableName="workflow_instance"/>
+    </changeSet>
+
+    <!-- workflow_state_transition FK -->
+    <changeSet id="workflow-026-fk-workflow-state-transition-workflow" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="workflow_id" baseTableName="workflow_state_transition"
+                                 constraintName="FK_WORKFLOW_STATE_TRANSITION_ON_WORKFLOW" referencedColumnNames="id"
+                                 referencedTableName="workflow_instance"/>
+    </changeSet>
+
+    <!-- Add FK from performance_review to review_cycle -->
+    <changeSet id="workflow-027-fk-performance-review-cycle" author="halimzaaim">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="performance_review" columnName="review_cycle_id"/>
+        </preConditions>
+        <addForeignKeyConstraint baseColumnNames="review_cycle_id" baseTableName="performance_review"
+                                 constraintName="FK_PERFORMANCE_REVIEW_ON_REVIEW_CYCLE" referencedColumnNames="id"
+                                 referencedTableName="review_cycle"/>
+    </changeSet>
+
+    <!-- Add review_cycle_id column to performance_review if it doesn't exist -->
+    <changeSet id="workflow-028-add-review-cycle-to-performance-review" author="halimzaaim">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="performance_review" columnName="review_cycle_id"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="performance_review">
+            <column name="review_cycle_id" type="${uuidType}"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>
+

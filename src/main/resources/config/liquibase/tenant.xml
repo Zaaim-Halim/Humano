@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <property name="now" value="now()" dbms="h2"/>
+  <property name="floatType" value="float4" dbms="h2"/>
+  <property name="uuidType" value="varchar(36)" dbms="h2"/>
+  <property name="datetimeType" value="datetime(6)" dbms="h2"/>
+  <property name="timeType" value="time(6)" dbms="h2"/>
+  <property name="clobType" value="clob" dbms="h2"/>
+  <property name="blobType" value="blob" dbms="h2"/>
+  <property name="now" value="now()" dbms="mysql"/>
+  <property name="floatType" value="float" dbms="mysql"/>
+  <property name="clobType" value="clob" dbms="mysql"/>
+  <property name="blobType" value="longblob" dbms="mysql"/>
+  <property name="uuidType" value="varchar(36)" dbms="mysql"/>
+  <property name="datetimeType" value="datetime(6)" dbms="mysql"/>
+  <property name="timeType" value="time(6)" dbms="mysql"/>
+  <property name="uuidType" value="UUID" dbms="postgresql,oracle,mssql"/>
+
+    <!--
+        =====================================================================================
+        TENANT DATABASE CHANGELOG
+        =====================================================================================
+        Contains: HR, Payroll, and tenant-specific operational entities
+        =====================================================================================
+    -->
+
+    <!-- Base tenant changelog with HR/Payroll tables -->
+    <include file="config/liquibase/changelog/tenant/00000000000000-tenant-changelog.xml" relativeToChangelogFile="false"/>
+
+    <!-- Workflow entities changelog (approval, workflow, review cycle) -->
+    <include file="config/liquibase/changelog/tenant/20260218-workflow-entities-changelog.xml" relativeToChangelogFile="false"/>
+
+    <!--  will add tenant liquibase changelogs here -->
+
+</databaseChangeLog>

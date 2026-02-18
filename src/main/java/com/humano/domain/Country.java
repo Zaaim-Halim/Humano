@@ -1,12 +1,13 @@
 package com.humano.domain;
+
+import com.humano.domain.enumeration.CountryCode;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Country entity represents a geographical nation or territory.
@@ -26,17 +27,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "country")
 public class Country extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -49,8 +46,8 @@ public class Country extends AbstractAuditingEntity<UUID> {
      */
     @Column(name = "code", nullable = false, unique = true, length = 3)
     @NotNull(message = "Country code is required")
-    @Size(min = 2, max = 3, message = "Country code must be 2 or 3 characters")
-    private String code;
+    @Enumerated(EnumType.STRING)
+    private CountryCode code;
 
     /**
      * The full name of the country.
@@ -72,16 +69,16 @@ public class Country extends AbstractAuditingEntity<UUID> {
         this.id = id;
     }
 
-    public String getCode() {
+    public CountryCode getCode() {
         return code;
     }
 
-    public Country code(String code) {
+    public Country code(CountryCode code) {
         this.code = code;
         return this;
     }
 
-    public void setCode(String code) {
+    public void setCode(CountryCode code) {
         this.code = code;
     }
 
@@ -113,10 +110,6 @@ public class Country extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Country{" +
-            "id=" + id +
-            ", code='" + code + '\'' +
-            ", name='" + name + '\'' +
-            '}';
+        return "Country{" + "id=" + id + ", code='" + code + '\'' + ", name='" + name + '\'' + '}';
     }
 }

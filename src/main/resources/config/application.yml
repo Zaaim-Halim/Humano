@@ -220,3 +220,24 @@ jhipster:
 # ===================================================================
 
 # application:
+
+# ===================================================================
+# Humano Multi-Tenant Configuration
+# ===================================================================
+humano:
+  multitenancy:
+    enabled: true
+    master-database: humano_master_db
+    tenant-database-prefix: humano_tenant_
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # Default database server for new tenants
+    default-db-host: ${DEFAULT_DB_HOST:localhost}
+    default-db-port: ${DEFAULT_DB_PORT:3306}
+    # Connection pool settings per tenant database
+    default-max-pool-size: 10
+    default-min-idle: 2
+    connection-timeout: 30000
+    idle-timeout: 600000
+    max-lifetime: 1800000
+    # Default connection parameters
+    default-connection-params: 'useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8'

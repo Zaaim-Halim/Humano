@@ -1,0 +1,496 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- ======================================================================================= -->
+    <!-- MASTER DATABASE CHANGELOG - Multi-tenant SaaS Platform                                  -->
+    <!-- This file contains all changesets for the master database in proper dependency order    -->
+    <!-- ======================================================================================= -->
+
+    <!-- ==================== PHASE 1: Independent Tables (No FK dependencies) ==================== -->
+
+    <!-- billing_subscription_plan - Base table, no dependencies -->
+    <changeSet id="master-001-billing-subscription-plan" author="halimzaaim">
+        <createTable tableName="billing_subscription_plan">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_billing_subscription_plan"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="price" type="DECIMAL(19, 4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="display_name" type="VARCHAR(100)"/>
+            <column name="active" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="base_price" type="DECIMAL(19, 4)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <!-- billing_coupon - No dependencies -->
+    <changeSet id="master-002-billing-coupon" author="halimzaaim">
+        <createTable tableName="billing_coupon">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_billing_coupon"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="discount" type="DECIMAL(19, 4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expiry_date" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="discount_type" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="percentage" type="DECIMAL(5, 2)"/>
+            <column name="currency" type="VARCHAR(3)"/>
+            <column name="start_date" type="DATETIME"/>
+            <column name="active" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="max_redemptions" type="INT"/>
+            <column name="times_redeemed" type="INT"/>
+            <column name="version" type="BIGINT"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <!-- billing_currency - Reference table for payments -->
+    <changeSet id="master-003-billing-currency" author="halimzaaim">
+        <createTable tableName="billing_currency">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_billing_currency"/>
+            </column>
+            <column name="code" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="symbol" type="VARCHAR(5)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ==================== PHASE 2: Tables depending on billing_subscription_plan ==================== -->
+
+    <!-- tenant - depends on billing_subscription_plan -->
+    <changeSet id="master-004-tenant" author="halimzaaim">
+        <createTable tableName="tenant">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_tenant"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="domain" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="subdomain" type="VARCHAR(63)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="logo" type="VARCHAR(255)"/>
+            <column name="timezone" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="booking_policies" type="TEXT"/>
+            <column name="hr_policies" type="TEXT"/>
+            <column name="subscription_plan_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <!-- billing_feature - depends on billing_subscription_plan -->
+    <changeSet id="master-005-billing-feature" author="halimzaaim">
+        <createTable tableName="billing_feature">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_billing_feature"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category" type="VARCHAR(50)"/>
+            <column name="active" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+            <column name="subscription_plan_id" type="${uuidType}"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ==================== PHASE 3: Tables depending on tenant ==================== -->
+
+    <!-- organization - depends on tenant -->
+    <changeSet id="master-006-organization" author="halimzaaim">
+        <createTable tableName="organization">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_organization"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tenant_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <!-- billing_subscription - depends on tenant and billing_subscription_plan -->
+    <changeSet id="master-007-billing-subscription" author="halimzaaim">
+        <createTable tableName="billing_subscription">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_billing_subscription"/>
+            </column>
+            <column name="start_date" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_date" type="DATETIME"/>
+            <column name="status" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="auto_renew" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="billing_cycle" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_period_start" type="DATETIME"/>
+            <column name="current_period_end" type="DATETIME"/>
+            <column name="cancel_at_period_end" type="BOOLEAN"/>
+            <column name="trial_start" type="DATETIME"/>
+            <column name="trial_end" type="DATETIME"/>
+            <column name="subscription_plan_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tenant_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <!-- billing_invoice - depends on tenant and billing_subscription -->
+    <changeSet id="master-008-billing-invoice" author="halimzaaim">
+        <createTable tableName="billing_invoice">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_billing_invoice"/>
+            </column>
+            <column name="invoice_number" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="DECIMAL(19, 4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tax_amount" type="DECIMAL(19, 4)"/>
+            <column name="total_amount" type="DECIMAL(19, 4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issue_date" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="due_date" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="paid_date" type="DATETIME"/>
+            <column name="subscription_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tenant_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="TEXT"/>
+            <column name="currency" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <!-- billing_payment - depends on billing_invoice and billing_currency -->
+    <changeSet id="master-009-billing-payment" author="halimzaaim">
+        <createTable tableName="billing_payment">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_billing_payment"/>
+            </column>
+            <column name="amount" type="DECIMAL(19, 4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payment_date" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="invoice_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="method" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="external_payment_id" type="VARCHAR(255)"/>
+            <column name="failure_reason" type="VARCHAR(255)"/>
+            <column name="refunded_amount" type="DECIMAL(19, 4)"/>
+            <column name="retry_count" type="INT"/>
+            <column name="next_retry_at" type="DATETIME"/>
+            <column name="captured_at" type="DATETIME"/>
+            <column name="currency_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="BIGINT"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <!-- tenant_database_config - depends on tenant -->
+    <changeSet id="master-010-tenant-database-config" author="halimzaaim">
+        <createTable tableName="tenant_database_config">
+            <column name="id" type="${uuidType}">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="tenant_id" type="${uuidType}">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="db_host" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="db_port" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="db_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="db_username" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="db_password" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="connection_params" type="VARCHAR(500)"/>
+            <column name="region" type="VARCHAR(50)"/>
+            <column name="max_pool_size" type="INT" defaultValueNumeric="10"/>
+            <column name="dedicated_server" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="server_group" type="VARCHAR(50)"/>
+            <column name="created_by" type="VARCHAR(50)"/>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <!-- tenant_storage_config - depends on tenant -->
+    <changeSet id="master-011-tenant-storage-config" author="halimzaaim">
+        <createTable tableName="tenant_storage_config">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_tenant_storage_config"/>
+            </column>
+            <column name="tenant_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="storage_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="storage_location" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="config_json" type="VARCHAR(2000)"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <!-- ==================== PHASE 4: Unique Constraints ==================== -->
+
+    <changeSet id="master-020-uc-billing-currency-code" author="halimzaaim">
+        <addUniqueConstraint columnNames="code" constraintName="uc_billing_currency_code" tableName="billing_currency"/>
+    </changeSet>
+
+    <changeSet id="master-021-uc-billing-coupon-code" author="halimzaaim">
+        <addUniqueConstraint columnNames="code" constraintName="uc_billing_coupon_code" tableName="billing_coupon"/>
+    </changeSet>
+
+    <changeSet id="master-022-uc-billing-feature-code" author="halimzaaim">
+        <addUniqueConstraint columnNames="code" constraintName="uc_billing_feature_code" tableName="billing_feature"/>
+    </changeSet>
+
+    <changeSet id="master-023-uc-billing-invoice-number" author="halimzaaim">
+        <addUniqueConstraint columnNames="invoice_number" constraintName="uc_billing_invoice_invoice_number" tableName="billing_invoice"/>
+    </changeSet>
+
+    <changeSet id="master-024-uc-tenant-domain" author="halimzaaim">
+        <addUniqueConstraint columnNames="domain" constraintName="uc_tenant_domain" tableName="tenant"/>
+    </changeSet>
+
+    <changeSet id="master-025-uc-tenant-subdomain" author="halimzaaim">
+        <addUniqueConstraint columnNames="subdomain" constraintName="uc_tenant_subdomain" tableName="tenant"/>
+    </changeSet>
+
+    <!-- ==================== PHASE 5: Foreign Key Constraints ==================== -->
+
+    <!-- FK for tenant -> billing_subscription_plan -->
+    <changeSet id="master-030-fk-tenant-subscription-plan" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="subscription_plan_id" baseTableName="tenant"
+                                 constraintName="FK_TENANT_ON_SUBSCRIPTION_PLAN" referencedColumnNames="id"
+                                 referencedTableName="billing_subscription_plan"/>
+    </changeSet>
+
+    <!-- FK for billing_feature -> billing_subscription_plan -->
+    <changeSet id="master-031-fk-billing-feature-subscription-plan" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="subscription_plan_id" baseTableName="billing_feature"
+                                 constraintName="FK_BILLING_FEATURE_ON_SUBSCRIPTION_PLAN" referencedColumnNames="id"
+                                 referencedTableName="billing_subscription_plan"/>
+    </changeSet>
+
+    <!-- FK for organization -> tenant -->
+    <changeSet id="master-032-fk-organization-tenant" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="tenant_id" baseTableName="organization"
+                                 constraintName="FK_ORGANIZATION_ON_TENANT" referencedColumnNames="id"
+                                 referencedTableName="tenant"/>
+    </changeSet>
+
+    <!-- FK for billing_subscription -> billing_subscription_plan -->
+    <changeSet id="master-033-fk-billing-subscription-plan" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="subscription_plan_id" baseTableName="billing_subscription"
+                                 constraintName="FK_BILLING_SUBSCRIPTION_ON_SUBSCRIPTION_PLAN" referencedColumnNames="id"
+                                 referencedTableName="billing_subscription_plan"/>
+    </changeSet>
+
+    <!-- FK for billing_subscription -> tenant -->
+    <changeSet id="master-034-fk-billing-subscription-tenant" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="tenant_id" baseTableName="billing_subscription"
+                                 constraintName="FK_BILLING_SUBSCRIPTION_ON_TENANT" referencedColumnNames="id"
+                                 referencedTableName="tenant"/>
+    </changeSet>
+
+    <!-- FK for billing_invoice -> billing_subscription -->
+    <changeSet id="master-035-fk-billing-invoice-subscription" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="subscription_id" baseTableName="billing_invoice"
+                                 constraintName="FK_BILLING_INVOICE_ON_SUBSCRIPTION" referencedColumnNames="id"
+                                 referencedTableName="billing_subscription"/>
+    </changeSet>
+
+    <!-- FK for billing_invoice -> tenant -->
+    <changeSet id="master-036-fk-billing-invoice-tenant" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="tenant_id" baseTableName="billing_invoice"
+                                 constraintName="FK_BILLING_INVOICE_ON_TENANT" referencedColumnNames="id"
+                                 referencedTableName="tenant"/>
+    </changeSet>
+
+    <!-- FK for billing_payment -> billing_invoice -->
+    <changeSet id="master-037-fk-billing-payment-invoice" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="invoice_id" baseTableName="billing_payment"
+                                 constraintName="FK_BILLING_PAYMENT_ON_INVOICE" referencedColumnNames="id"
+                                 referencedTableName="billing_invoice"/>
+    </changeSet>
+
+    <!-- FK for billing_payment -> billing_currency -->
+    <changeSet id="master-038-fk-billing-payment-currency" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="currency_id" baseTableName="billing_payment"
+                                 constraintName="FK_BILLING_PAYMENT_ON_CURRENCY" referencedColumnNames="id"
+                                 referencedTableName="billing_currency"/>
+    </changeSet>
+
+    <!-- FK for tenant_database_config -> tenant -->
+    <changeSet id="master-039-fk-tenant-db-config-tenant" author="halimzaaim">
+        <addForeignKeyConstraint baseTableName="tenant_database_config" baseColumnNames="tenant_id"
+                                 referencedTableName="tenant" referencedColumnNames="id"
+                                 constraintName="fk_tenant_db_config_tenant" onDelete="CASCADE"/>
+    </changeSet>
+
+    <!-- FK for tenant_storage_config -> tenant -->
+    <changeSet id="master-040-fk-tenant-storage-config-tenant" author="halimzaaim">
+        <addForeignKeyConstraint baseTableName="tenant_storage_config" baseColumnNames="tenant_id"
+                                 referencedTableName="tenant" referencedColumnNames="id"
+                                 constraintName="fk_tenant_storage_config_tenant" onDelete="CASCADE"/>
+    </changeSet>
+
+    <!-- ==================== PHASE 6: Indexes ==================== -->
+
+    <changeSet id="master-041-idx-tenant-db-config-db-name" author="halimzaaim">
+        <createIndex tableName="tenant_database_config" indexName="idx_tenant_db_config_db_name">
+            <column name="db_name"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="master-042-idx-tenant-db-config-region" author="halimzaaim">
+        <createIndex tableName="tenant_database_config" indexName="idx_tenant_db_config_region">
+            <column name="region"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="master-043-idx-tenant-storage-config-tenant" author="halimzaaim">
+        <createIndex tableName="tenant_storage_config" indexName="idx_tenant_storage_config_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

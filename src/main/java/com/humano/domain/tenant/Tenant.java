@@ -3,6 +3,7 @@ package com.humano.domain.tenant;
 import com.humano.converters.TimeZoneConverter;
 import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.billing.SubscriptionPlan;
+import com.humano.domain.enumeration.CountryCode;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -135,6 +136,16 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
     private String hrPolicies;
 
     /**
+     * The country where the tenant is located.
+     * <p>
+     * Uses ISO 3166-1 alpha-2 country codes to identify the tenant's country.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "country", nullable = false)
+    @NotNull(message = "Country is required")
+    private CountryCode country;
+
+    /**
      * The subscription plan associated with this tenant.
      * <p>
      * Defines the features, limits, and billing information for this tenant.
@@ -152,6 +163,13 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
      */
     @OneToMany(mappedBy = "tenant")
     private Set<Organization> organizations = new HashSet<>();
+
+    /**
+     * Database configuration for this tenant.
+     * Contains connection details for the tenant's dedicated database.
+     */
+    @OneToOne(mappedBy = "tenant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private TenantDatabaseConfig databaseConfig;
 
     @Override
     public UUID getId() {
@@ -266,6 +284,19 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
         this.hrPolicies = hrPolicies;
     }
 
+    public CountryCode getCountry() {
+        return country;
+    }
+
+    public Tenant country(CountryCode country) {
+        this.country = country;
+        return this;
+    }
+
+    public void setCountry(CountryCode country) {
+        this.country = country;
+    }
+
     public SubscriptionPlan getSubscriptionPlan() {
         return subscriptionPlan;
     }
@@ -301,6 +332,19 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
     public Tenant removeOrganization(Organization organization) {
         this.organizations.remove(organization);
         organization.setTenant(null);
+        return this;
+    }
+
+    public TenantDatabaseConfig getDatabaseConfig() {
+        return databaseConfig;
+    }
+
+    public void setDatabaseConfig(TenantDatabaseConfig databaseConfig) {
+        this.databaseConfig = databaseConfig;
+    }
+
+    public Tenant databaseConfig(TenantDatabaseConfig databaseConfig) {
+        this.databaseConfig = databaseConfig;
         return this;
     }
 
