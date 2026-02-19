@@ -1,10 +1,14 @@
 package com.humano.security;
 
-import com.humano.domain.PersistentToken;
-import com.humano.repository.PersistentTokenRepository;
-import com.humano.repository.UserRepository;
+import com.humano.domain.shared.PersistentToken;
+import com.humano.repository.shared.PersistentTokenRepository;
+import com.humano.repository.shared.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -19,11 +23,6 @@ import org.springframework.stereotype.Service;
 import tech.jhipster.config.JHipsterProperties;
 import tech.jhipster.security.PersistentTokenCache;
 import tech.jhipster.security.RandomUtil;
-
-import java.io.Serializable;
-import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.Optional;
 
 /**
  * Custom implementation of Spring Security's RememberMeServices.
@@ -198,18 +197,17 @@ public class PersistentTokenRememberMeServices extends AbstractRememberMeService
     }
 
     private void addCookie(PersistentToken token, HttpServletRequest request, HttpServletResponse response) {
-        setCookie(new String[]{token.getSeries(), token.getTokenValue()}, TOKEN_VALIDITY_SECONDS, request, response);
+        setCookie(new String[] { token.getSeries(), token.getTokenValue() }, TOKEN_VALIDITY_SECONDS, request, response);
     }
 
     private record UpgradedRememberMeToken(String[] upgradedToken, String userLogin) implements Serializable {
-
-            private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1L;
 
         String getUserLoginIfValid(String[] currentToken) {
-                if (currentToken[0].equals(this.upgradedToken[0]) && currentToken[1].equals(this.upgradedToken[1])) {
-                    return this.userLogin;
-                }
-                return null;
+            if (currentToken[0].equals(this.upgradedToken[0]) && currentToken[1].equals(this.upgradedToken[1])) {
+                return this.userLogin;
             }
+            return null;
         }
+    }
 }

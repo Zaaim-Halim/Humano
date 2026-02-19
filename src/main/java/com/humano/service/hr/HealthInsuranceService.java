@@ -1,13 +1,13 @@
 package com.humano.service.hr;
 
 import com.humano.domain.enumeration.hr.HealthInsuranceStatus;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.HealthInsurance;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.requests.CreateHealthInsuranceRequest;
 import com.humano.dto.hr.requests.UpdateHealthInsuranceRequest;
 import com.humano.dto.hr.responses.HealthInsuranceResponse;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.HealthInsuranceRepository;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.util.UUID;

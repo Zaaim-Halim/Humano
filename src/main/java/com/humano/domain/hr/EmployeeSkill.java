@@ -1,16 +1,16 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a skill or competency possessed by an employee.
@@ -20,17 +20,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "employee_skill")
 public class EmployeeSkill extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -197,12 +193,19 @@ public class EmployeeSkill extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "EmployeeSkill{" +
-            "id=" + id +
-            ", proficiencyLevel=" + proficiencyLevel +
-            ", acquisitionDate=" + acquisitionDate +
-            ", expiryDate=" + expiryDate +
-            ", isVerified=" + isVerified +
-            '}';
+        return (
+            "EmployeeSkill{" +
+            "id=" +
+            id +
+            ", proficiencyLevel=" +
+            proficiencyLevel +
+            ", acquisitionDate=" +
+            acquisitionDate +
+            ", expiryDate=" +
+            expiryDate +
+            ", isVerified=" +
+            isVerified +
+            '}'
+        );
     }
 }

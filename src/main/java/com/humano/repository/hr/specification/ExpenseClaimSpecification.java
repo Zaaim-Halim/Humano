@@ -1,8 +1,8 @@
 package com.humano.repository.hr.specification;
 
 import com.humano.domain.enumeration.hr.ExpenseClaimStatus;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.ExpenseClaim;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;

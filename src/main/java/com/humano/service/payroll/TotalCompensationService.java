@@ -1,10 +1,10 @@
 package com.humano.service.payroll;
 
-import com.humano.domain.hr.Employee;
 import com.humano.domain.payroll.*;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.payroll.response.TotalCompensationResponse;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.payroll.*;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;

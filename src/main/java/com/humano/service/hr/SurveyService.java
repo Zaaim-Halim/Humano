@@ -1,15 +1,15 @@
 package com.humano.service.hr;
 
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.Survey;
 import com.humano.domain.hr.SurveyResponse;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.requests.CreateSurveyRequest;
 import com.humano.dto.hr.requests.SubmitSurveyResponseRequest;
 import com.humano.dto.hr.requests.UpdateSurveyRequest;
 import com.humano.dto.hr.responses.SurveyResponseResponse;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.SurveyRepository;
 import com.humano.repository.hr.SurveyResponseRepository;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

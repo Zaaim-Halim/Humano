@@ -1,12 +1,14 @@
-package com.humano.domain;
+package com.humano.domain.payroll;
+
+import com.humano.domain.enumeration.CurrencyCode;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Currency entity represents a monetary unit used for financial transactions and payroll.
@@ -26,17 +28,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "currency")
 public class Currency extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -50,7 +48,8 @@ public class Currency extends AbstractAuditingEntity<UUID> {
     @Column(name = "code", nullable = false, unique = true, length = 3)
     @NotNull(message = "Currency code is required")
     @Size(min = 3, max = 3, message = "Currency code must be exactly 3 characters")
-    private String code;
+    @Enumerated(EnumType.STRING)
+    private CurrencyCode code;
 
     /**
      * The full name of the currency.
@@ -82,16 +81,16 @@ public class Currency extends AbstractAuditingEntity<UUID> {
         this.id = id;
     }
 
-    public String getCode() {
+    public CurrencyCode getCode() {
         return code;
     }
 
-    public Currency code(String code) {
+    public Currency code(CurrencyCode code) {
         this.code = code;
         return this;
     }
 
-    public void setCode(String code) {
+    public void setCode(CurrencyCode code) {
         this.code = code;
     }
 
@@ -136,11 +135,6 @@ public class Currency extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Currency{" +
-            "id=" + id +
-            ", code='" + code + '\'' +
-            ", name='" + name + '\'' +
-            ", symbol='" + symbol + '\'' +
-            '}';
+        return "Currency{" + "id=" + id + ", code='" + code + '\'' + ", name='" + name + '\'' + ", symbol='" + symbol + '\'' + '}';
     }
 }

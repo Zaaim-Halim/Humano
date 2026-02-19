@@ -1,5 +1,6 @@
 package com.humano.web.rest.hr;
 
+import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.requests.CreateEmployeeProfileRequest;
 import com.humano.dto.hr.requests.EmployeeSearchRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeProfileRequest;
@@ -27,7 +28,7 @@ import tech.jhipster.web.util.PaginationUtil;
 /**
  * REST controller for managing Employee profiles.
  * <p>
- * This class accesses the {@link com.humano.domain.hr.Employee} entity, and needs to fetch its collection of authorities.
+ * This class accesses the {@link Employee} entity, and needs to fetch its collection of authorities.
  * <p>
  * For a normal use-case, it would be better to have an eager relationship between User and Authority,
  * and send everything to the client side: there would be no View Model and DTO, a lot less code, and an outer-join

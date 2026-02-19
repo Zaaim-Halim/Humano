@@ -2,8 +2,8 @@ package com.humano.repository.hr.specification;
 
 import com.humano.domain.enumeration.hr.LeaveStatus;
 import com.humano.domain.enumeration.hr.LeaveType;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.LeaveRequest;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDate;

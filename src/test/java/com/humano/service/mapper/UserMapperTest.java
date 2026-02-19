@@ -2,14 +2,13 @@ package com.humano.service.mapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.humano.domain.Authority;
-import com.humano.domain.User;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.domain.shared.Authority;
+import com.humano.domain.shared.User;
 import com.humano.dto.AdminUserDTO;
 import com.humano.dto.UserDTO;
+import com.humano.security.AuthoritiesConstants;
 import java.time.Instant;
 import java.util.*;
-
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

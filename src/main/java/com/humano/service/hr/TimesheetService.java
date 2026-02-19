@@ -1,16 +1,16 @@
 package com.humano.service.hr;
 
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.Project;
 import com.humano.domain.hr.Timesheet;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.requests.CreateTimesheetRequest;
 import com.humano.dto.hr.requests.TimesheetSearchRequest;
 import com.humano.dto.hr.requests.UpdateTimesheetRequest;
 import com.humano.dto.hr.responses.TimesheetResponse;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.ProjectRepository;
 import com.humano.repository.hr.TimesheetRepository;
 import com.humano.repository.hr.specification.TimesheetSpecification;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDate;

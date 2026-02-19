@@ -1,8 +1,8 @@
 package com.humano.repository.hr.specification;
 
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.Project;
 import com.humano.domain.hr.Timesheet;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;

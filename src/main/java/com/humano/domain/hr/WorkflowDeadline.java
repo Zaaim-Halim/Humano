@@ -1,6 +1,7 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;

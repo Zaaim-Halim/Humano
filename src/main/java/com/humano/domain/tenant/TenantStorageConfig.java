@@ -1,13 +1,12 @@
 package com.humano.domain.tenant;
 
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.tenant.StorageType;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Entity for storing tenant-specific storage configuration.
@@ -22,12 +21,7 @@ public class TenantStorageConfig extends AbstractAuditingEntity<UUID> {
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -122,12 +116,20 @@ public class TenantStorageConfig extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "TenantStorageConfig{" +
-            "id=" + id +
-            ", tenant=" + (tenant != null ? tenant.getId() : null) +
-            ", storageType=" + storageType +
-            ", storageLocation='" + storageLocation + '\'' +
-            ", active=" + active +
-            '}';
+        return (
+            "TenantStorageConfig{" +
+            "id=" +
+            id +
+            ", tenant=" +
+            (tenant != null ? tenant.getId() : null) +
+            ", storageType=" +
+            storageType +
+            ", storageLocation='" +
+            storageLocation +
+            '\'' +
+            ", active=" +
+            active +
+            '}'
+        );
     }
 }

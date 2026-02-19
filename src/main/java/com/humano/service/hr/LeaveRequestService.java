@@ -1,15 +1,15 @@
 package com.humano.service.hr;
 
 import com.humano.domain.enumeration.hr.LeaveStatus;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.LeaveRequest;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.requests.CreateLeaveRequest;
 import com.humano.dto.hr.requests.LeaveRequestSearchRequest;
 import com.humano.dto.hr.requests.ProcessLeaveRequest;
 import com.humano.dto.hr.responses.LeaveRequestResponse;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.LeaveRequestRepository;
 import com.humano.repository.hr.specification.LeaveRequestSpecification;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.time.temporal.ChronoUnit;

@@ -1,11 +1,11 @@
 package com.humano.service.payroll;
 
-import com.humano.domain.Currency;
+import com.humano.domain.payroll.Currency;
 import com.humano.domain.payroll.ExchangeRate;
 import com.humano.dto.payroll.request.CreateExchangeRateRequest;
 import com.humano.dto.payroll.response.CurrencyConversionResponse;
 import com.humano.dto.payroll.response.ExchangeRateResponse;
-import com.humano.repository.CurrencyRepository;
+import com.humano.repository.payroll.CurrencyRepository;
 import com.humano.repository.payroll.ExchangeRateRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;

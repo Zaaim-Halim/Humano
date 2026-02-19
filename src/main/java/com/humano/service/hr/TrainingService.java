@@ -1,9 +1,9 @@
 package com.humano.service.hr;
 
 import com.humano.domain.enumeration.hr.TrainingStatus;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.EmployeeTraining;
 import com.humano.domain.hr.Training;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.requests.CreateTrainingRequest;
 import com.humano.dto.hr.requests.EmployeeTrainingSearchRequest;
 import com.humano.dto.hr.requests.EnrollEmployeeTrainingRequest;
@@ -11,10 +11,10 @@ import com.humano.dto.hr.requests.UpdateEmployeeTrainingRequest;
 import com.humano.dto.hr.requests.UpdateTrainingRequest;
 import com.humano.dto.hr.responses.EmployeeTrainingResponse;
 import com.humano.dto.hr.responses.TrainingResponse;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.EmployeeTrainingRepository;
 import com.humano.repository.hr.TrainingRepository;
 import com.humano.repository.hr.specification.EmployeeTrainingSpecification;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import java.util.UUID;
 import org.slf4j.Logger;

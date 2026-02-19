@@ -8,11 +8,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.humano.IntegrationTest;
-import com.humano.domain.User;
-import com.humano.repository.UserRepository;
+import com.humano.domain.shared.User;
+import com.humano.dto.AdminUserDTO;
+import com.humano.repository.shared.UserRepository;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.service.UserService;
-import com.humano.dto.AdminUserDTO;
 import com.humano.service.mapper.UserMapper;
 import jakarta.persistence.EntityManager;
 import java.util.*;

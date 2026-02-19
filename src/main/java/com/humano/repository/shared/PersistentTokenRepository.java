@@ -1,11 +1,10 @@
-package com.humano.repository;
+package com.humano.repository.shared;
 
-import com.humano.domain.PersistentToken;
-import com.humano.domain.User;
-import org.springframework.data.jpa.repository.JpaRepository;
-
+import com.humano.domain.shared.PersistentToken;
+import com.humano.domain.shared.User;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
  * Spring Data JPA repository for the {@link PersistentToken} entity.

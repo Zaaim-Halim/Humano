@@ -1,17 +1,16 @@
 package com.humano.domain.payroll;
 
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.payroll.RunStatus;
-import com.humano.domain.hr.Employee;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * PayrollRun represents a single execution of payroll processing for a given payroll period and scope.
@@ -34,17 +33,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "payroll_run")
 public class PayrollRun extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -206,12 +201,21 @@ public class PayrollRun extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "PayrollRun{" +
-            "id=" + id +
-            ", scope='" + scope + '\'' +
-            ", status=" + status +
-            ", approvedAt=" + approvedAt +
-            ", hash='" + hash + '\'' +
-            '}';
+        return (
+            "PayrollRun{" +
+            "id=" +
+            id +
+            ", scope='" +
+            scope +
+            '\'' +
+            ", status=" +
+            status +
+            ", approvedAt=" +
+            approvedAt +
+            ", hash='" +
+            hash +
+            '\'' +
+            '}'
+        );
     }
 }

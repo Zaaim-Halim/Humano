@@ -1,14 +1,14 @@
 package com.humano.domain.hr;
 
 import com.humano.domain.enumeration.hr.TrainingStatus;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-import org.springframework.data.jpa.domain.AbstractPersistable;
-
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
+import org.springframework.data.jpa.domain.AbstractPersistable;
 
 /**
  * Represents a training record for an employee, including status, description, completion date, and feedback.
@@ -18,17 +18,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "employee_training")
 public class EmployeeTraining extends AbstractPersistable<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -174,10 +170,6 @@ public class EmployeeTraining extends AbstractPersistable<UUID> {
 
     @Override
     public String toString() {
-        return "EmployeeTraining{" +
-            "id=" + id +
-            ", status=" + status +
-            ", completionDate=" + completionDate +
-            '}';
+        return "EmployeeTraining{" + "id=" + id + ", status=" + status + ", completionDate=" + completionDate + '}';
     }
 }

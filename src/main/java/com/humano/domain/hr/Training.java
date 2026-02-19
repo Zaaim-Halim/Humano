@@ -1,15 +1,14 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a training program offered to employees, including name, provider, schedule, and related records.
@@ -19,17 +18,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "training")
 public class Training extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -222,13 +217,24 @@ public class Training extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Training{" +
-            "id=" + id +
-            ", name='" + name + '\'' +
-            ", provider='" + provider + '\'' +
-            ", startDate=" + startDate +
-            ", endDate=" + endDate +
-            ", location='" + location + '\'' +
-            '}';
+        return (
+            "Training{" +
+            "id=" +
+            id +
+            ", name='" +
+            name +
+            '\'' +
+            ", provider='" +
+            provider +
+            '\'' +
+            ", startDate=" +
+            startDate +
+            ", endDate=" +
+            endDate +
+            ", location='" +
+            location +
+            '\'' +
+            '}'
+        );
     }
 }

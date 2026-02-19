@@ -1,16 +1,16 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a type of benefit provided to employees, such as health insurance, transport allowance, or other perks.
@@ -29,12 +29,7 @@ public class Benefit extends AbstractAuditingEntity<UUID> {
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -158,11 +153,6 @@ public class Benefit extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Benefit{" +
-            "id=" + id +
-            ", name='" + name + '\'' +
-            ", amount=" + amount +
-            ", description='" + description + '\'' +
-            '}';
+        return "Benefit{" + "id=" + id + ", name='" + name + '\'' + ", amount=" + amount + ", description='" + description + '\'' + '}';
     }
 }

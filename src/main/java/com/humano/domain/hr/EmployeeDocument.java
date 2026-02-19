@@ -1,12 +1,12 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a document associated with an employee, such as contracts, certificates, or identification.
@@ -22,12 +22,7 @@ public class EmployeeDocument extends AbstractAuditingEntity<UUID> {
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -114,10 +109,6 @@ public class EmployeeDocument extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "EmployeeDocument{" +
-            "id=" + id +
-            ", type='" + type + '\'' +
-            ", filePath='" + filePath + '\'' +
-            '}';
+        return "EmployeeDocument{" + "id=" + id + ", type='" + type + '\'' + ", filePath='" + filePath + '\'' + '}';
     }
 }

@@ -1,7 +1,6 @@
 package com.humano.dto;
 
-import com.humano.domain.User;
-
+import com.humano.domain.shared.User;
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;

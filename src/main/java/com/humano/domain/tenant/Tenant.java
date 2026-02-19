@@ -1,10 +1,10 @@
 package com.humano.domain.tenant;
 
 import com.humano.converters.TimeZoneConverter;
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.CountryCode;
 import com.humano.domain.enumeration.tenant.TenantStatus;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

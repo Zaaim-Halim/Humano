@@ -1,12 +1,12 @@
 package com.humano.service.payroll;
 
 import com.humano.domain.enumeration.payroll.TaxType;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.payroll.TaxWithholding;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.payroll.request.CreateTaxWithholdingRequest;
 import com.humano.dto.payroll.response.TaxWithholdingResponse;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.payroll.TaxWithholdingRepository;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;

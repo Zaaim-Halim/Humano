@@ -1,9 +1,9 @@
 package com.humano.service.hr.workflow.infrastructure;
 
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.EmployeeNotification;
+import com.humano.domain.shared.Employee;
 import com.humano.repository.hr.EmployeeNotificationRepository;
-import com.humano.repository.hr.EmployeeRepository;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import java.time.Instant;
 import java.time.LocalDateTime;

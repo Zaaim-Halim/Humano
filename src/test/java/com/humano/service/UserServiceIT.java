@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.humano.IntegrationTest;
-import com.humano.domain.PersistentToken;
-import com.humano.domain.User;
-import com.humano.repository.PersistentTokenRepository;
-import com.humano.repository.UserRepository;
+import com.humano.domain.shared.PersistentToken;
+import com.humano.domain.shared.User;
+import com.humano.repository.shared.PersistentTokenRepository;
+import com.humano.repository.shared.UserRepository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

@@ -1,11 +1,10 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.hr.ApprovalType;
 import com.humano.domain.enumeration.hr.ApproverType;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import java.util.Objects;
 import java.util.UUID;
 
 /**

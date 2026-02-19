@@ -1,4 +1,4 @@
-package com.humano.domain;
+package com.humano.domain.shared;
 
 import com.humano.domain.enumeration.CountryCode;
 import jakarta.persistence.*;

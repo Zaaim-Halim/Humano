@@ -1,14 +1,14 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a job position within the organization, including name, description, level, and relationships to employees and units.
@@ -18,17 +18,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "position")
 public class Position extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -186,11 +182,19 @@ public class Position extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Position{" +
-            "id=" + id +
-            ", name='" + name + '\'' +
-            ", level='" + level + '\'' +
-            ", employeeCount=" + (employees != null ? employees.size() : 0) +
-            '}';
+        return (
+            "Position{" +
+            "id=" +
+            id +
+            ", name='" +
+            name +
+            '\'' +
+            ", level='" +
+            level +
+            '\'' +
+            ", employeeCount=" +
+            (employees != null ? employees.size() : 0) +
+            '}'
+        );
     }
 }

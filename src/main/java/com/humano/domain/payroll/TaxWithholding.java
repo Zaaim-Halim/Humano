@@ -1,20 +1,19 @@
 package com.humano.domain.payroll;
 
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.payroll.TaxType;
-import com.humano.domain.hr.Employee;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * TaxWithholding entity represents tax-specific deductions from employee pay.
@@ -36,12 +35,7 @@ public class TaxWithholding extends AbstractAuditingEntity<UUID> {
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -260,15 +254,27 @@ public class TaxWithholding extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "TaxWithholding{" +
-            "id=" + id +
-            ", type=" + type +
-            ", rate=" + rate +
-            ", effectiveFrom=" + effectiveFrom +
-            ", effectiveTo=" + effectiveTo +
-            ", taxAuthority='" + taxAuthority + '\'' +
-            ", taxIdentifier='" + taxIdentifier + '\'' +
-            ", yearToDateAmount=" + yearToDateAmount +
-            '}';
+        return (
+            "TaxWithholding{" +
+            "id=" +
+            id +
+            ", type=" +
+            type +
+            ", rate=" +
+            rate +
+            ", effectiveFrom=" +
+            effectiveFrom +
+            ", effectiveTo=" +
+            effectiveTo +
+            ", taxAuthority='" +
+            taxAuthority +
+            '\'' +
+            ", taxIdentifier='" +
+            taxIdentifier +
+            '\'' +
+            ", yearToDateAmount=" +
+            yearToDateAmount +
+            '}'
+        );
     }
 }

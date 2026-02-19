@@ -1,15 +1,15 @@
 package com.humano.service.hr;
 
 import com.humano.domain.enumeration.hr.ExpenseClaimStatus;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.ExpenseClaim;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.requests.CreateExpenseClaimRequest;
 import com.humano.dto.hr.requests.ExpenseClaimSearchRequest;
 import com.humano.dto.hr.requests.ProcessExpenseClaimRequest;
 import com.humano.dto.hr.responses.ExpenseClaimResponse;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.ExpenseClaimRepository;
 import com.humano.repository.hr.specification.ExpenseClaimSpecification;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.time.LocalDate;

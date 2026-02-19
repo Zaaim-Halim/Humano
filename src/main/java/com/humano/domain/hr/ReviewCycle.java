@@ -1,10 +1,9 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.hr.ReviewCyclePhase;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 

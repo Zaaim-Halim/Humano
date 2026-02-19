@@ -1,17 +1,23 @@
 package com.humano.web.rest;
 
 import com.humano.config.Constants;
-import com.humano.domain.User;
-import com.humano.repository.UserRepository;
+import com.humano.domain.shared.User;
+import com.humano.dto.AdminUserDTO;
+import com.humano.repository.shared.UserRepository;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.service.MailService;
 import com.humano.service.UserService;
-import com.humano.dto.AdminUserDTO;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import com.humano.web.rest.errors.EmailAlreadyUsedException;
 import com.humano.web.rest.errors.LoginAlreadyUsedException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,17 +34,10 @@ import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.PaginationUtil;
 import tech.jhipster.web.util.ResponseUtil;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
 /**
  * REST controller for managing users.
  * <p>
- * This class accesses the {@link com.humano.domain.User} entity, and needs to fetch its collection of authorities.
+ * This class accesses the {@link User} entity, and needs to fetch its collection of authorities.
  * <p>
  * For a normal use-case, it would be better to have an eager relationship between User and Authority,
  * and send everything to the client side: there would be no View Model and DTO, a lot less code, and an outer-join
@@ -83,6 +82,7 @@ public class UserResource {
     private final UserService userService;
     private final UserRepository userRepository;
     private final MailService mailService;
+
     @Value("${jhipster.clientApp.name}")
     private String applicationName;
 
@@ -133,7 +133,7 @@ public class UserResource {
      * @throws EmailAlreadyUsedException {@code 400 (Bad Request)} if the email is already in use.
      * @throws LoginAlreadyUsedException {@code 400 (Bad Request)} if the login is already in use.
      */
-    @PutMapping({"/users", "/users/{login}"})
+    @PutMapping({ "/users", "/users/{login}" })
     @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
     public ResponseEntity<AdminUserDTO> updateUser(
         @PathVariable(name = "login", required = false) @Pattern(regexp = Constants.LOGIN_REGEX) String login,

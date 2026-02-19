@@ -1,17 +1,16 @@
 package com.humano.domain.billing;
 
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.billing.SubscriptionStatus;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import com.humano.domain.tenant.Tenant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Subscription entity represents a tenant's active service agreement.
@@ -37,17 +36,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "billing_subscription")
 public class Subscription extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -166,7 +161,6 @@ public class Subscription extends AbstractAuditingEntity<UUID> {
     @JoinColumn(name = "tenant_id", nullable = false)
     @NotNull(message = "Tenant is required")
     private Tenant tenant;
-
 
     @Override
     public UUID getId() {
@@ -333,7 +327,6 @@ public class Subscription extends AbstractAuditingEntity<UUID> {
         this.tenant = tenant;
     }
 
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -349,18 +342,31 @@ public class Subscription extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Subscription{" +
-            "id=" + id +
-            ", startDate=" + startDate +
-            ", endDate=" + endDate +
-            ", status=" + status +
-            ", autoRenew=" + autoRenew +
-            ", billingCycle=" + billingCycle +
-            ", currentPeriodStart=" + currentPeriodStart +
-            ", currentPeriodEnd=" + currentPeriodEnd +
-            ", cancelAtPeriodEnd=" + cancelAtPeriodEnd +
-            ", trialStart=" + trialStart +
-            ", trialEnd=" + trialEnd +
-            '}';
+        return (
+            "Subscription{" +
+            "id=" +
+            id +
+            ", startDate=" +
+            startDate +
+            ", endDate=" +
+            endDate +
+            ", status=" +
+            status +
+            ", autoRenew=" +
+            autoRenew +
+            ", billingCycle=" +
+            billingCycle +
+            ", currentPeriodStart=" +
+            currentPeriodStart +
+            ", currentPeriodEnd=" +
+            currentPeriodEnd +
+            ", cancelAtPeriodEnd=" +
+            cancelAtPeriodEnd +
+            ", trialStart=" +
+            trialStart +
+            ", trialEnd=" +
+            trialEnd +
+            '}'
+        );
     }
 }

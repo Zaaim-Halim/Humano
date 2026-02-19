@@ -6,7 +6,7 @@ import static org.mockito.Mockito.*;
 
 import com.humano.IntegrationTest;
 import com.humano.config.Constants;
-import com.humano.domain.User;
+import com.humano.domain.shared.User;
 import jakarta.mail.Multipart;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeBodyPart;

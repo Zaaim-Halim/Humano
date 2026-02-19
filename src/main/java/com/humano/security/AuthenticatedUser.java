@@ -1,18 +1,19 @@
 package com.humano.security;
 
-import com.humano.domain.Authority;
-import com.humano.domain.User;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-
+import com.humano.domain.shared.Authority;
+import com.humano.domain.shared.User;
 import java.util.Collection;
 import java.util.UUID;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 /**
  * @author halimzaaim
  */
-public class AuthenticatedUser extends org.springframework.security.core.userdetails.User{
+public class AuthenticatedUser extends org.springframework.security.core.userdetails.User {
+
     private final UUID id;
+
     //TODO add more fields if needed
     public AuthenticatedUser(String username, String password, Collection<? extends GrantedAuthority> authorities, final UUID id) {
         super(username, password, authorities);
@@ -27,6 +28,7 @@ public class AuthenticatedUser extends org.springframework.security.core.userdet
             user.getId()
         );
     }
+
     public UUID getId() {
         return id;
     }

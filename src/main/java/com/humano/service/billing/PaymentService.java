@@ -1,6 +1,5 @@
 package com.humano.service.billing;
 
-import com.humano.domain.Currency;
 import com.humano.domain.billing.Invoice;
 import com.humano.domain.billing.Payment;
 import com.humano.domain.billing.Subscription;
@@ -8,14 +7,15 @@ import com.humano.domain.enumeration.billing.InvoiceStatus;
 import com.humano.domain.enumeration.billing.PaymentStatus;
 import com.humano.domain.enumeration.billing.SubscriptionStatus;
 import com.humano.domain.enumeration.tenant.TenantStatus;
+import com.humano.domain.payroll.Currency;
 import com.humano.domain.tenant.Tenant;
 import com.humano.dto.billing.requests.CreatePaymentRequest;
 import com.humano.dto.billing.responses.PaymentResponse;
 import com.humano.events.PaymentCompletedEvent;
-import com.humano.repository.CurrencyRepository;
 import com.humano.repository.billing.InvoiceRepository;
 import com.humano.repository.billing.PaymentRepository;
 import com.humano.repository.billing.SubscriptionRepository;
+import com.humano.repository.payroll.CurrencyRepository;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;

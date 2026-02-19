@@ -1,13 +1,13 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a notification sent to an employee, such as alerts, reminders, or messages.
@@ -23,12 +23,7 @@ public class EmployeeNotification extends AbstractAuditingEntity<UUID> {
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -145,13 +140,18 @@ public class EmployeeNotification extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "EmployeeNotification{" +
-            "id=" + id +
-            ", message='" + (message != null && message.length() > 30
-                           ? message.substring(0, 27) + "..."
-                           : message) + '\'' +
-            ", read=" + read +
-            ", createdAt=" + createdAt +
-            '}';
+        return (
+            "EmployeeNotification{" +
+            "id=" +
+            id +
+            ", message='" +
+            (message != null && message.length() > 30 ? message.substring(0, 27) + "..." : message) +
+            '\'' +
+            ", read=" +
+            read +
+            ", createdAt=" +
+            createdAt +
+            '}'
+        );
     }
 }

@@ -1,20 +1,19 @@
 package com.humano.domain.billing;
 
-import com.humano.domain.AbstractAuditingEntity;
-import com.humano.domain.Currency;
 import com.humano.domain.enumeration.billing.PaymentMethodType;
 import com.humano.domain.enumeration.billing.PaymentStatus;
+import com.humano.domain.payroll.Currency;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Payment entity represents a financial transaction for an invoice.
@@ -40,17 +39,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "billing_payment")
 public class Payment extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -385,14 +380,24 @@ public class Payment extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Payment{" +
-            "id=" + id +
-            ", amount=" + amount +
-            ", status=" + status +
-            ", paymentDate=" + paymentDate +
-            ", methodType=" + methodType +
-            ", externalPaymentId='" + externalPaymentId + '\'' +
-            ", refundedAmount=" + refundedAmount +
-            '}';
+        return (
+            "Payment{" +
+            "id=" +
+            id +
+            ", amount=" +
+            amount +
+            ", status=" +
+            status +
+            ", paymentDate=" +
+            paymentDate +
+            ", methodType=" +
+            methodType +
+            ", externalPaymentId='" +
+            externalPaymentId +
+            '\'' +
+            ", refundedAmount=" +
+            refundedAmount +
+            '}'
+        );
     }
 }

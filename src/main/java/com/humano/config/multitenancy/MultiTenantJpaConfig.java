@@ -125,7 +125,7 @@ class MasterRepositoryConfig {}
  */
 @Configuration
 @EnableJpaRepositories(
-    basePackages = { "com.humano.repository.hr", "com.humano.repository.payroll" },
+    basePackages = { "com.humano.repository.hr", "com.humano.repository.payroll", "com.humano.repository.shared" },
     entityManagerFactoryRef = "tenantEntityManagerFactory",
     transactionManagerRef = "tenantTransactionManager"
 )

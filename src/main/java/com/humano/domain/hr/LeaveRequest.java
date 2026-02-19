@@ -1,18 +1,18 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.hr.LeaveStatus;
 import com.humano.domain.enumeration.hr.LeaveType;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-import org.hibernate.validator.constraints.Length;
-
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
+import org.hibernate.validator.constraints.Length;
 
 /**
  * Represents a leave request made by an employee, including type, status, and date range.
@@ -22,17 +22,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "leave_request")
 public class LeaveRequest extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -255,13 +251,21 @@ public class LeaveRequest extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "LeaveRequest{" +
-            "id=" + id +
-            ", startDate=" + startDate +
-            ", endDate=" + endDate +
-            ", leaveType=" + leaveType +
-            ", status=" + status +
-            ", daysCount=" + daysCount +
-            '}';
+        return (
+            "LeaveRequest{" +
+            "id=" +
+            id +
+            ", startDate=" +
+            startDate +
+            ", endDate=" +
+            endDate +
+            ", leaveType=" +
+            leaveType +
+            ", status=" +
+            status +
+            ", daysCount=" +
+            daysCount +
+            '}'
+        );
     }
 }

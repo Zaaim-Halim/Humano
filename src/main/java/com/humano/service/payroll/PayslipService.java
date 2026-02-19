@@ -1,13 +1,13 @@
 package com.humano.service.payroll;
 
-import com.humano.domain.hr.Employee;
 import com.humano.domain.payroll.*;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.payroll.request.PayslipSearchRequest;
 import com.humano.dto.payroll.response.PayrollResultResponse;
 import com.humano.dto.payroll.response.PayslipResponse;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.payroll.*;
 import com.humano.repository.payroll.specification.PayslipSpecification;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;

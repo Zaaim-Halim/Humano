@@ -1,10 +1,10 @@
 package com.humano.repository.payroll.specification;
 
-import com.humano.domain.Currency;
 import com.humano.domain.enumeration.payroll.Basis;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.Position;
 import com.humano.domain.payroll.Compensation;
+import com.humano.domain.payroll.Currency;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;

@@ -2,6 +2,8 @@ package com.humano.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.humano.domain.shared.Authority;
+
 public class AuthorityAsserts {
 
     /**

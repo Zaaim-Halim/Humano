@@ -1,16 +1,15 @@
 package com.humano.service.mapper;
 
-import com.humano.domain.Authority;
-import com.humano.domain.User;
+import com.humano.domain.shared.Authority;
+import com.humano.domain.shared.User;
 import com.humano.dto.AdminUserDTO;
 import com.humano.dto.UserDTO;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.springframework.stereotype.Service;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Mapper for the entity {@link User} and its DTO called {@link UserDTO}.

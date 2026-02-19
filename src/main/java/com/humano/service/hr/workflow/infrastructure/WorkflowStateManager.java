@@ -2,13 +2,13 @@ package com.humano.service.hr.workflow.infrastructure;
 
 import com.humano.domain.enumeration.hr.WorkflowStatus;
 import com.humano.domain.enumeration.hr.WorkflowType;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.WorkflowInstance;
 import com.humano.domain.hr.WorkflowStateTransition;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.workflow.responses.WorkflowResponse;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.workflow.WorkflowInstanceRepository;
 import com.humano.repository.hr.workflow.WorkflowStateTransitionRepository;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.time.Instant;

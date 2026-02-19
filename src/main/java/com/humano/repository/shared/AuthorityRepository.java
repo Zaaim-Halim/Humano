@@ -1,6 +1,6 @@
-package com.humano.repository;
+package com.humano.repository.shared;
 
-import com.humano.domain.Authority;
+import com.humano.domain.shared.Authority;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -9,5 +9,4 @@ import org.springframework.stereotype.Repository;
  */
 @SuppressWarnings("unused")
 @Repository
-public interface AuthorityRepository extends JpaRepository<Authority, String> {
-}
+public interface AuthorityRepository extends JpaRepository<Authority, String> {}

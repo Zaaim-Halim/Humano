@@ -5,8 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.humano.IntegrationTest;
-import com.humano.domain.User;
-import com.humano.repository.UserRepository;
+import com.humano.domain.shared.User;
+import com.humano.repository.shared.UserRepository;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.service.UserService;
 import java.util.Set;

@@ -1,15 +1,14 @@
-package com.humano.domain;
+package com.humano.domain.shared;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.springframework.data.domain.Persistable;
-
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import org.springframework.data.domain.Persistable;
 
 /**
  * @author halimzaaim
@@ -17,8 +16,9 @@ import java.util.Set;
 @Entity
 @Table(name = "permission")
 @SuppressWarnings("common-java:DuplicatedBlocks")
-@JsonIgnoreProperties(value = {"new", "id"})
-public class Permission implements Serializable , Persistable<String> {
+@JsonIgnoreProperties(value = { "new", "id" })
+public class Permission implements Serializable, Persistable<String> {
+
     @NotNull
     @Size(max = 100)
     @Id
@@ -30,7 +30,6 @@ public class Permission implements Serializable , Persistable<String> {
 
     @ManyToMany(mappedBy = "permissions", fetch = FetchType.LAZY)
     private Set<Authority> authorities = new HashSet<>();
-
 
     public String getName() {
         return this.name;
@@ -55,14 +54,17 @@ public class Permission implements Serializable , Persistable<String> {
     public String getDescription() {
         return description;
     }
+
     public Permission name(String name) {
         this.setName(name);
         return this;
     }
+
     public Permission description(String description) {
         this.setDescription(description);
         return this;
     }
+
     public Permission authorities(Set<Authority> authorities) {
         this.setAuthorities(authorities);
         return this;
@@ -113,10 +115,6 @@ public class Permission implements Serializable , Persistable<String> {
 
     @Override
     public String toString() {
-        return "Permission{" +
-            "name='" + name + '\'' +
-            ", description='" + description + '\'' +
-            ", authorities=" + authorities +
-            '}';
+        return "Permission{" + "name='" + name + '\'' + ", description='" + description + '\'' + ", authorities=" + authorities + '}';
     }
 }

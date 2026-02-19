@@ -1,15 +1,14 @@
 package com.humano.domain.payroll;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * PayrollPeriod represents a single payroll cycle within a PayrollCalendar.
@@ -31,17 +30,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "payroll_period")
 public class PayrollPeriod extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -203,13 +198,22 @@ public class PayrollPeriod extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "PayrollPeriod{" +
-            "id=" + id +
-            ", code='" + code + '\'' +
-            ", startDate=" + startDate +
-            ", endDate=" + endDate +
-            ", paymentDate=" + paymentDate +
-            ", closed=" + closed +
-            '}';
+        return (
+            "PayrollPeriod{" +
+            "id=" +
+            id +
+            ", code='" +
+            code +
+            '\'' +
+            ", startDate=" +
+            startDate +
+            ", endDate=" +
+            endDate +
+            ", paymentDate=" +
+            paymentDate +
+            ", closed=" +
+            closed +
+            '}'
+        );
     }
 }

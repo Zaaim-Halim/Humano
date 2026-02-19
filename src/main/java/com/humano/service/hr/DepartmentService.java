@@ -1,12 +1,12 @@
 package com.humano.service.hr;
 
 import com.humano.domain.hr.Department;
-import com.humano.domain.hr.Employee;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.requests.CreateDepartmentRequest;
 import com.humano.dto.hr.requests.UpdateDepartmentRequest;
 import com.humano.dto.hr.responses.DepartmentResponse;
 import com.humano.repository.hr.DepartmentRepository;
-import com.humano.repository.hr.EmployeeRepository;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import java.util.UUID;
 import org.slf4j.Logger;

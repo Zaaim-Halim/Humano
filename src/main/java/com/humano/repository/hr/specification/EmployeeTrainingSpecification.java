@@ -1,9 +1,9 @@
 package com.humano.repository.hr.specification;
 
 import com.humano.domain.enumeration.hr.TrainingStatus;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.EmployeeTraining;
 import com.humano.domain.hr.Training;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDate;

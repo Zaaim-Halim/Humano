@@ -1,19 +1,18 @@
 package com.humano.domain.payroll;
 
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.payroll.Kind;
 import com.humano.domain.enumeration.payroll.Measurement;
 import com.humano.domain.enumeration.payroll.PayComponentCode;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * PayComponent represents a single element of employee compensation or deduction.
@@ -36,17 +35,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "pay_component")
 public class PayComponent extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -291,15 +286,26 @@ public class PayComponent extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "PayComponent{" +
-            "id=" + id +
-            ", code=" + code +
-            ", name='" + name + '\'' +
-            ", kind=" + kind +
-            ", measure=" + measure +
-            ", taxable=" + taxable +
-            ", contributesToSocial=" + contributesToSocial +
-            ", percentage=" + percentage +
-            '}';
+        return (
+            "PayComponent{" +
+            "id=" +
+            id +
+            ", code=" +
+            code +
+            ", name='" +
+            name +
+            '\'' +
+            ", kind=" +
+            kind +
+            ", measure=" +
+            measure +
+            ", taxable=" +
+            taxable +
+            ", contributesToSocial=" +
+            contributesToSocial +
+            ", percentage=" +
+            percentage +
+            '}'
+        );
     }
 }

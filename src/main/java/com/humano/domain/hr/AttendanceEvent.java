@@ -1,15 +1,14 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.hr.EventAction;
 import com.humano.domain.enumeration.hr.EventType;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.time.LocalTime;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents an event within an employee's attendance record, such as check-in, check-out, or breaks.
@@ -19,17 +18,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "attendance_event")
 public class AttendanceEvent extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -156,12 +151,20 @@ public class AttendanceEvent extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "AttendanceEvent{" +
-            "id=" + id +
-            ", eventType=" + eventType +
-            ", eventTime=" + eventTime +
-            ", eventAction=" + eventAction +
-            ", description='" + description + '\'' +
-            '}';
+        return (
+            "AttendanceEvent{" +
+            "id=" +
+            id +
+            ", eventType=" +
+            eventType +
+            ", eventTime=" +
+            eventTime +
+            ", eventAction=" +
+            eventAction +
+            ", description='" +
+            description +
+            '\'' +
+            '}'
+        );
     }
 }

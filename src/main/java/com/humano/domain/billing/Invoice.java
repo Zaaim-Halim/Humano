@@ -1,22 +1,21 @@
 package com.humano.domain.billing;
 
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.billing.InvoiceStatus;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import com.humano.domain.tenant.Tenant;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Invoice entity represents a billing document issued to a tenant for subscription charges.
@@ -41,17 +40,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "billing_invoice")
 public class Invoice extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -178,7 +173,6 @@ public class Invoice extends AbstractAuditingEntity<UUID> {
     @Size(min = 3, max = 3, message = "Currency code must be exactly 3 characters")
     private String currency = "USD";
 
-
     @Override
     public UUID getId() {
         return id;
@@ -292,7 +286,6 @@ public class Invoice extends AbstractAuditingEntity<UUID> {
         this.currency = currency;
     }
 
-
     public Invoice invoiceNumber(String invoiceNumber) {
         this.invoiceNumber = invoiceNumber;
         return this;
@@ -373,17 +366,31 @@ public class Invoice extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Invoice{" +
-            "id=" + id +
-            ", invoiceNumber='" + invoiceNumber + '\'' +
-            ", amount=" + amount +
-            ", taxAmount=" + taxAmount +
-            ", totalAmount=" + totalAmount +
-            ", status=" + status +
-            ", issueDate=" + issueDate +
-            ", dueDate=" + dueDate +
-            ", paidDate=" + paidDate +
-            ", currency='" + currency + '\'' +
-            '}';
+        return (
+            "Invoice{" +
+            "id=" +
+            id +
+            ", invoiceNumber='" +
+            invoiceNumber +
+            '\'' +
+            ", amount=" +
+            amount +
+            ", taxAmount=" +
+            taxAmount +
+            ", totalAmount=" +
+            totalAmount +
+            ", status=" +
+            status +
+            ", issueDate=" +
+            issueDate +
+            ", dueDate=" +
+            dueDate +
+            ", paidDate=" +
+            paidDate +
+            ", currency='" +
+            currency +
+            '\'' +
+            '}'
+        );
     }
 }

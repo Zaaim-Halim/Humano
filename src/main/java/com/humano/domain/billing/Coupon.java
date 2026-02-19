@@ -1,20 +1,20 @@
 package com.humano.domain.billing;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.enumeration.CurrencyCode;
 import com.humano.domain.enumeration.billing.DiscountType;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Coupon entity represents a discount that can be applied to subscriptions.
@@ -40,17 +40,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "billing_coupon")
 public class Coupon extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -117,7 +113,8 @@ public class Coupon extends AbstractAuditingEntity<UUID> {
      */
     @Column(name = "currency", length = 3)
     @Size(min = 3, max = 3, message = "Currency code must be exactly 3 characters")
-    private String currency = "USD";
+    @Enumerated(EnumType.STRING)
+    private CurrencyCode currency = CurrencyCode.USD;
 
     /**
      * The start date of the coupon's validity period.
@@ -223,16 +220,16 @@ public class Coupon extends AbstractAuditingEntity<UUID> {
         this.percentage = percentage;
     }
 
-    public String getCurrency() {
+    public CurrencyCode getCurrency() {
         return currency;
     }
 
-    public Coupon currency(String currency) {
+    public Coupon currency(CurrencyCode currency) {
         this.currency = currency;
         return this;
     }
 
-    public void setCurrency(String currency) {
+    public void setCurrency(CurrencyCode currency) {
         this.currency = currency;
     }
 
@@ -311,10 +308,12 @@ public class Coupon extends AbstractAuditingEntity<UUID> {
      */
     public boolean isApplicable() {
         Instant now = Instant.now();
-        return active
-            && (startDate == null || !startDate.isAfter(now))
-            && !expiryDate.isBefore(now)
-            && (maxRedemptions == null || timesRedeemed < maxRedemptions);
+        return (
+            active &&
+            (startDate == null || !startDate.isAfter(now)) &&
+            !expiryDate.isBefore(now) &&
+            (maxRedemptions == null || timesRedeemed < maxRedemptions)
+        );
     }
 
     /**
@@ -346,15 +345,27 @@ public class Coupon extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Coupon{" +
-            "id=" + id +
-            ", code='" + code + '\'' +
-            ", type=" + type +
-            ", discount=" + (type == DiscountType.FIXED ? discount : percentage + "%") +
-            ", currency='" + (type == DiscountType.FIXED ? currency : "") + '\'' +
-            ", expiryDate=" + expiryDate +
-            ", active=" + active +
-            ", timesRedeemed=" + timesRedeemed +
-            '}';
+        return (
+            "Coupon{" +
+            "id=" +
+            id +
+            ", code='" +
+            code +
+            '\'' +
+            ", type=" +
+            type +
+            ", discount=" +
+            (type == DiscountType.FIXED ? discount : percentage + "%") +
+            ", currency='" +
+            (type == DiscountType.FIXED ? currency : "") +
+            '\'' +
+            ", expiryDate=" +
+            expiryDate +
+            ", active=" +
+            active +
+            ", timesRedeemed=" +
+            timesRedeemed +
+            '}'
+        );
     }
 }

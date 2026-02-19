@@ -1,15 +1,15 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.hr.OrganizationalUnitType;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents an organizational unit in the company hierarchy, such as a department, sector, or directorate.
@@ -19,17 +19,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "organizational_unit")
 public class OrganizationalUnit extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -72,6 +68,7 @@ public class OrganizationalUnit extends AbstractAuditingEntity<UUID> {
      */
     @OneToMany(mappedBy = "unit", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Employee> employees = new HashSet<>();
+
     /*
      * The path is a precomputed field that represents the full path of the organizational unit
      * in the hierarchy, e.g., "/Finance/Accounting/Payroll". It is computed based on the parent unit.
@@ -231,11 +228,6 @@ public class OrganizationalUnit extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "OrganizationalUnit{" +
-            "id=" + id +
-            ", name='" + name + '\'' +
-            ", type=" + type +
-            ", path='" + path + '\'' +
-            '}';
+        return "OrganizationalUnit{" + "id=" + id + ", name='" + name + '\'' + ", type=" + type + ", path='" + path + '\'' + '}';
     }
 }

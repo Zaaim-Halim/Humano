@@ -1,7 +1,8 @@
 package com.humano.security;
 
-import com.humano.domain.User;
-import com.humano.repository.UserRepository;
+import com.humano.domain.shared.User;
+import com.humano.repository.shared.UserRepository;
+import java.util.Locale;
 import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,8 +11,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Locale;
 
 /**
  * Authenticate a user from the database.

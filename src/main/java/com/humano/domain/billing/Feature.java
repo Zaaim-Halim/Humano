@@ -1,14 +1,13 @@
 package com.humano.domain.billing;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
 
 /**
  * Feature entity represents a capability or module available in subscription plans.
@@ -30,6 +29,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "billing_feature")
 public class Feature extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
@@ -39,7 +39,7 @@ public class Feature extends AbstractAuditingEntity<UUID> {
             @org.hibernate.annotations.Parameter(
                 name = "uuid_gen_strategy_class",
                 value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
+            ),
         }
     )
     @Column(name = "id", nullable = false, updatable = false)
@@ -96,7 +96,6 @@ public class Feature extends AbstractAuditingEntity<UUID> {
     @Column(name = "active", nullable = false)
     @NotNull(message = "Active status is required")
     private boolean active = true;
-
 
     @Override
     public UUID getId() {
@@ -172,7 +171,6 @@ public class Feature extends AbstractAuditingEntity<UUID> {
         this.active = active;
     }
 
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -188,12 +186,22 @@ public class Feature extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Feature{" +
-            "id=" + id +
-            ", name='" + name + '\'' +
-            ", code='" + code + '\'' +
-            ", category='" + category + '\'' +
-            ", active=" + active +
-            '}';
+        return (
+            "Feature{" +
+            "id=" +
+            id +
+            ", name='" +
+            name +
+            '\'' +
+            ", code='" +
+            code +
+            '\'' +
+            ", category='" +
+            category +
+            '\'' +
+            ", active=" +
+            active +
+            '}'
+        );
     }
 }

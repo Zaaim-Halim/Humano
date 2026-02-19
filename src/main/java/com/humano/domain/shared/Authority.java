@@ -1,23 +1,22 @@
-package com.humano.domain;
+package com.humano.domain.shared;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.BatchSize;
-import org.springframework.data.domain.Persistable;
-
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import org.hibernate.annotations.BatchSize;
+import org.springframework.data.domain.Persistable;
 
 /**
  * A Authority.
  */
 @Entity
 @Table(name = "authority")
-@JsonIgnoreProperties(value = {"new", "id"})
+@JsonIgnoreProperties(value = { "new", "id" })
 @SuppressWarnings("common-java:DuplicatedBlocks")
 public class Authority implements Serializable, Persistable<String> {
 
@@ -29,7 +28,7 @@ public class Authority implements Serializable, Persistable<String> {
     @Column(name = "name", length = 50, nullable = false)
     private String name;
 
-    @JsonIgnoreProperties(value = {"authorities"}, allowSetters = true)
+    @JsonIgnoreProperties(value = { "authorities" }, allowSetters = true)
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "authority_permissions",
@@ -56,13 +55,16 @@ public class Authority implements Serializable, Persistable<String> {
     public Set<Permission> getPermissions() {
         return this.permissions;
     }
+
     public void setPermissions(Set<Permission> permissions) {
         this.permissions = permissions;
     }
+
     public Authority name(String name) {
         this.setName(name);
         return this;
     }
+
     public Authority permissions(Set<Permission> permissions) {
         this.setPermissions(permissions);
         return this;

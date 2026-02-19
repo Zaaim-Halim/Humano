@@ -1,10 +1,8 @@
-package com.humano.domain.hr;
+package com.humano.domain.shared;
 
-import com.humano.domain.Country;
-import com.humano.domain.User;
 import com.humano.domain.enumeration.hr.EmployeeStatus;
+import com.humano.domain.hr.*;
 import jakarta.persistence.*;
-
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Objects;
@@ -26,60 +24,71 @@ public class Employee extends User {
      */
     @Column(name = "job_title")
     private String jobTitle;
+
     /**
      * Phone number of the employee.
      */
     @Column(name = "phone")
     private String phone;
+
     /**
      * Date the employee started.
      */
     @Column(name = "start_date")
     private LocalDate startDate;
+
     /**
      * Date the employee ended (if applicable).
      */
     @Column(name = "end_date")
     private LocalDate endDate;
+
     /**
      * Current status of the employee (e.g., ACTIVE, INACTIVE).
      */
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private EmployeeStatus status;
+
     /**
      * Country of employment.
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "country_id")
     private Country country;
+
     /**
      * Department the employee belongs to.
      */
     @ManyToOne
     @JoinColumn(name = "department_id")
     private Department department;
+
     /**
      * Position held by the employee.
      */
     @ManyToOne
     @JoinColumn(name = "position_id", nullable = false)
     private Position position;
+
     /**
      * Documents associated with the employee.
      */
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<EmployeeDocument> documents = new HashSet<>();
+
     /**
      * Custom attributes for the employee.
      */
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<EmployeeAttribute> attributes = new HashSet<>();
+
     /**
      * Attendance records for the employee.
      */
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Attendance> attendances = new HashSet<>();
+
     /**
      * Leave requests made by the employee.
      */
@@ -457,14 +466,26 @@ public class Employee extends User {
 
     @Override
     public String toString() {
-        return "Employee{" +
-            "id=" + getId() +
-            ", jobTitle='" + jobTitle + '\'' +
-            ", phone='" + phone + '\'' +
-            ", startDate=" + startDate +
-            ", endDate=" + endDate +
-            ", status=" + status +
-            ", path='" + path + '\'' +
-            '}';
+        return (
+            "Employee{" +
+            "id=" +
+            getId() +
+            ", jobTitle='" +
+            jobTitle +
+            '\'' +
+            ", phone='" +
+            phone +
+            '\'' +
+            ", startDate=" +
+            startDate +
+            ", endDate=" +
+            endDate +
+            ", status=" +
+            status +
+            ", path='" +
+            path +
+            '\'' +
+            '}'
+        );
     }
 }

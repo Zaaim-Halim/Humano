@@ -1,21 +1,19 @@
 package com.humano.domain.payroll;
 
-import com.humano.domain.AbstractAuditingEntity;
-import com.humano.domain.Currency;
 import com.humano.domain.enumeration.payroll.DeductionType;
-import com.humano.domain.hr.Employee;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Deduction entity represents amounts deducted from an employee's pay.
@@ -36,12 +34,7 @@ public class Deduction extends AbstractAuditingEntity<UUID> {
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -281,15 +274,26 @@ public class Deduction extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Deduction{" +
-            "id=" + id +
-            ", type=" + type +
-            ", amount=" + amount +
-            ", percentage=" + percentage +
-            ", effectiveFrom=" + effectiveFrom +
-            ", effectiveTo=" + effectiveTo +
-            ", description='" + description + '\'' +
-            ", isPreTax=" + isPreTax +
-            '}';
+        return (
+            "Deduction{" +
+            "id=" +
+            id +
+            ", type=" +
+            type +
+            ", amount=" +
+            amount +
+            ", percentage=" +
+            percentage +
+            ", effectiveFrom=" +
+            effectiveFrom +
+            ", effectiveTo=" +
+            effectiveTo +
+            ", description='" +
+            description +
+            '\'' +
+            ", isPreTax=" +
+            isPreTax +
+            '}'
+        );
     }
 }

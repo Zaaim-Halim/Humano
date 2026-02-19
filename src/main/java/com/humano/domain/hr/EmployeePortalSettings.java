@@ -1,12 +1,12 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents portal settings and preferences for an employee, such as notification preferences and UI layout.
@@ -16,17 +16,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "employee_portal_settings")
 public class EmployeePortalSettings extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -174,12 +170,21 @@ public class EmployeePortalSettings extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "EmployeePortalSettings{" +
-            "id=" + id +
-            ", emailNotifications=" + emailNotifications +
-            ", smsNotifications=" + smsNotifications +
-            ", dashboardLayout='" + dashboardLayout + '\'' +
-            ", theme='" + theme + '\'' +
-            '}';
+        return (
+            "EmployeePortalSettings{" +
+            "id=" +
+            id +
+            ", emailNotifications=" +
+            emailNotifications +
+            ", smsNotifications=" +
+            smsNotifications +
+            ", dashboardLayout='" +
+            dashboardLayout +
+            '\'' +
+            ", theme='" +
+            theme +
+            '\'' +
+            '}'
+        );
     }
 }

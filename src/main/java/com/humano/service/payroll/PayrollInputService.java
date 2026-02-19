@@ -1,16 +1,16 @@
 package com.humano.service.payroll;
 
-import com.humano.domain.hr.Employee;
 import com.humano.domain.payroll.PayComponent;
 import com.humano.domain.payroll.PayrollInput;
 import com.humano.domain.payroll.PayrollPeriod;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.payroll.request.BulkPayrollInputRequest;
 import com.humano.dto.payroll.request.CreatePayrollInputRequest;
 import com.humano.dto.payroll.response.PayrollInputResponse;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.payroll.PayComponentRepository;
 import com.humano.repository.payroll.PayrollInputRepository;
 import com.humano.repository.payroll.PayrollPeriodRepository;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;

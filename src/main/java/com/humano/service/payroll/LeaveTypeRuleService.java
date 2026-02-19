@@ -1,11 +1,11 @@
 package com.humano.service.payroll;
 
-import com.humano.domain.Country;
 import com.humano.domain.enumeration.hr.LeaveType;
 import com.humano.domain.payroll.LeaveTypeRule;
+import com.humano.domain.shared.Country;
 import com.humano.dto.payroll.request.CreateLeaveTypeRuleRequest;
 import com.humano.dto.payroll.response.LeaveTypeRuleResponse;
-import com.humano.repository.CountryRepository;
+import com.humano.repository.payroll.CountryRepository;
 import com.humano.repository.payroll.LeaveTypeRuleRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;

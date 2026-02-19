@@ -2,9 +2,9 @@ package com.humano.repository.hr.specification;
 
 import com.humano.domain.enumeration.hr.EmployeeStatus;
 import com.humano.domain.hr.Department;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.OrganizationalUnit;
 import com.humano.domain.hr.Position;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDate;

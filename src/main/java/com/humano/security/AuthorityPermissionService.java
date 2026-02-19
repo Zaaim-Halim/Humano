@@ -1,17 +1,15 @@
 package com.humano.security;
 
-import com.humano.domain.Authority;
-import com.humano.domain.Permission;
-import com.humano.repository.AuthorityRepository;
-import com.humano.repository.PermissionRepository;
-import jakarta.annotation.PostConstruct;
+import com.humano.domain.shared.Authority;
+import com.humano.domain.shared.Permission;
+import com.humano.repository.shared.AuthorityRepository;
+import com.humano.repository.shared.PermissionRepository;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Service for managing authority-based permissions.
@@ -55,9 +53,7 @@ public class AuthorityPermissionService {
 
         List<Authority> authorities = authorityRepository.findAll();
         for (Authority authority : authorities) {
-            Set<String> permissionNames = authority.getPermissions().stream()
-                .map(Permission::getName)
-                .collect(Collectors.toSet());
+            Set<String> permissionNames = authority.getPermissions().stream().map(Permission::getName).collect(Collectors.toSet());
             authorityPermissionCache.put(authority.getName(), permissionNames);
         }
 
@@ -114,67 +110,76 @@ public class AuthorityPermissionService {
         assignAllPermissionsToAuthority(adminAuthority);
 
         Authority userAuthority = ensureAuthority(AuthoritiesConstants.USER);
-        assignPermissionsToAuthority(userAuthority, Set.of(
-            PermissionsConstants.VIEW_DASHBOARD,
-            PermissionsConstants.ACCESS_API
-        ));
+        assignPermissionsToAuthority(userAuthority, Set.of(PermissionsConstants.VIEW_DASHBOARD, PermissionsConstants.ACCESS_API));
 
         Authority hrManagerAuthority = ensureAuthority(AuthoritiesConstants.HR_MANAGER);
-        assignPermissionsToAuthority(hrManagerAuthority, Set.of(
-            PermissionsConstants.VIEW_DASHBOARD,
-            PermissionsConstants.ACCESS_API,
-            PermissionsConstants.CREATE_EMPLOYEE,
-            PermissionsConstants.READ_EMPLOYEE,
-            PermissionsConstants.UPDATE_EMPLOYEE,
-            PermissionsConstants.DELETE_EMPLOYEE,
-            PermissionsConstants.MANAGE_DEPARTMENTS,
-            PermissionsConstants.MANAGE_POSITIONS
-        ));
+        assignPermissionsToAuthority(
+            hrManagerAuthority,
+            Set.of(
+                PermissionsConstants.VIEW_DASHBOARD,
+                PermissionsConstants.ACCESS_API,
+                PermissionsConstants.CREATE_EMPLOYEE,
+                PermissionsConstants.READ_EMPLOYEE,
+                PermissionsConstants.UPDATE_EMPLOYEE,
+                PermissionsConstants.DELETE_EMPLOYEE,
+                PermissionsConstants.MANAGE_DEPARTMENTS,
+                PermissionsConstants.MANAGE_POSITIONS
+            )
+        );
 
         Authority hrSpecialistAuthority = ensureAuthority(AuthoritiesConstants.HR_SPECIALIST);
-        assignPermissionsToAuthority(hrSpecialistAuthority, Set.of(
-            PermissionsConstants.VIEW_DASHBOARD,
-            PermissionsConstants.ACCESS_API,
-            PermissionsConstants.READ_EMPLOYEE,
-            PermissionsConstants.UPDATE_EMPLOYEE
-        ));
+        assignPermissionsToAuthority(
+            hrSpecialistAuthority,
+            Set.of(
+                PermissionsConstants.VIEW_DASHBOARD,
+                PermissionsConstants.ACCESS_API,
+                PermissionsConstants.READ_EMPLOYEE,
+                PermissionsConstants.UPDATE_EMPLOYEE
+            )
+        );
 
         Authority payrollAdminAuthority = ensureAuthority(AuthoritiesConstants.PAYROLL_ADMIN);
-        assignPermissionsToAuthority(payrollAdminAuthority, Set.of(
-            PermissionsConstants.VIEW_DASHBOARD,
-            PermissionsConstants.ACCESS_API,
-            PermissionsConstants.READ_EMPLOYEE,
-            PermissionsConstants.CREATE_PAYROLL_RUN,
-            PermissionsConstants.VIEW_PAYROLL_RUN,
-            PermissionsConstants.APPROVE_PAYROLL,
-            PermissionsConstants.PROCESS_PAYROLL,
-            PermissionsConstants.MANAGE_PAY_COMPONENTS,
-            PermissionsConstants.MANAGE_DEDUCTIONS,
-            PermissionsConstants.MANAGE_BENEFITS,
-            PermissionsConstants.MANAGE_TAX_BRACKETS,
-            PermissionsConstants.VIEW_PAYSLIPS,
-            PermissionsConstants.GENERATE_PAYSLIPS
-        ));
+        assignPermissionsToAuthority(
+            payrollAdminAuthority,
+            Set.of(
+                PermissionsConstants.VIEW_DASHBOARD,
+                PermissionsConstants.ACCESS_API,
+                PermissionsConstants.READ_EMPLOYEE,
+                PermissionsConstants.CREATE_PAYROLL_RUN,
+                PermissionsConstants.VIEW_PAYROLL_RUN,
+                PermissionsConstants.APPROVE_PAYROLL,
+                PermissionsConstants.PROCESS_PAYROLL,
+                PermissionsConstants.MANAGE_PAY_COMPONENTS,
+                PermissionsConstants.MANAGE_DEDUCTIONS,
+                PermissionsConstants.MANAGE_BENEFITS,
+                PermissionsConstants.MANAGE_TAX_BRACKETS,
+                PermissionsConstants.VIEW_PAYSLIPS,
+                PermissionsConstants.GENERATE_PAYSLIPS
+            )
+        );
 
         // Create and assign permissions for Employee authority
         Authority employeeAuthority = ensureAuthority(AuthoritiesConstants.EMPLOYEE);
-        assignPermissionsToAuthority(employeeAuthority, Set.of(
-            PermissionsConstants.VIEW_DASHBOARD,
-            PermissionsConstants.ACCESS_API,
-            PermissionsConstants.VIEW_OWN_PROFILE,
-            PermissionsConstants.UPDATE_OWN_PROFILE,
-            PermissionsConstants.VIEW_OWN_PAYSLIPS,
-            PermissionsConstants.VIEW_OWN_TRAINING,
-            PermissionsConstants.REGISTER_FOR_TRAINING,
-            PermissionsConstants.VIEW_OWN_BENEFITS,
-            PermissionsConstants.MANAGE_OWN_BENEFITS,
-            PermissionsConstants.VIEW_OWN_LEAVE,
-            PermissionsConstants.REQUEST_LEAVE,
-            PermissionsConstants.VIEW_OWN_ATTENDANCE,
-            PermissionsConstants.VIEW_OWN_PERFORMANCE,
-            PermissionsConstants.VIEW_OWN_DOCUMENTS,
-            PermissionsConstants.UPLOAD_OWN_DOCUMENTS
-        ));
+        assignPermissionsToAuthority(
+            employeeAuthority,
+            Set.of(
+                PermissionsConstants.VIEW_DASHBOARD,
+                PermissionsConstants.ACCESS_API,
+                PermissionsConstants.VIEW_OWN_PROFILE,
+                PermissionsConstants.UPDATE_OWN_PROFILE,
+                PermissionsConstants.VIEW_OWN_PAYSLIPS,
+                PermissionsConstants.VIEW_OWN_TRAINING,
+                PermissionsConstants.REGISTER_FOR_TRAINING,
+                PermissionsConstants.VIEW_OWN_BENEFITS,
+                PermissionsConstants.MANAGE_OWN_BENEFITS,
+                PermissionsConstants.VIEW_OWN_LEAVE,
+                PermissionsConstants.REQUEST_LEAVE,
+                PermissionsConstants.VIEW_OWN_ATTENDANCE,
+                PermissionsConstants.VIEW_OWN_PERFORMANCE,
+                PermissionsConstants.VIEW_OWN_DOCUMENTS,
+                PermissionsConstants.UPLOAD_OWN_DOCUMENTS
+            )
+        );
 
         // Refresh cache after making changes
         refreshPermissionCache();
@@ -227,9 +232,7 @@ public class AuthorityPermissionService {
     @Transactional
     public void assignPermissionsToAuthority(Authority authority, Set<String> permissionNames) {
         Set<Permission> existingPermissions = authority.getPermissions();
-        Set<String> existingPermissionNames = existingPermissions.stream()
-            .map(Permission::getName)
-            .collect(Collectors.toSet());
+        Set<String> existingPermissionNames = existingPermissions.stream().map(Permission::getName).collect(Collectors.toSet());
 
         // Add only permissions that don't already exist
         for (String permissionName : permissionNames) {
@@ -238,8 +241,7 @@ public class AuthorityPermissionService {
                 if (permission.isPresent()) {
                     existingPermissions.add(permission.get());
                 } else {
-                    log.warn("Permission {} does not exist and cannot be assigned to authority {}",
-                        permissionName, authority.getName());
+                    log.warn("Permission {} does not exist and cannot be assigned to authority {}", permissionName, authority.getName());
                 }
             }
         }

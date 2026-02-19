@@ -1,32 +1,31 @@
 package com.humano.web.rest;
 
-import com.humano.domain.PersistentToken;
-import com.humano.domain.User;
-import com.humano.repository.PersistentTokenRepository;
-import com.humano.repository.UserRepository;
+import com.humano.domain.shared.PersistentToken;
+import com.humano.domain.shared.User;
+import com.humano.dto.AdminUserDTO;
+import com.humano.dto.PasswordChangeDTO;
+import com.humano.repository.shared.PersistentTokenRepository;
+import com.humano.repository.shared.UserRepository;
 import com.humano.security.SecurityUtils;
 import com.humano.service.MailService;
 import com.humano.service.UserService;
-import com.humano.dto.AdminUserDTO;
-import com.humano.dto.PasswordChangeDTO;
 import com.humano.web.rest.errors.EmailAlreadyUsedException;
 import com.humano.web.rest.errors.InvalidPasswordException;
 import com.humano.web.rest.errors.LoginAlreadyUsedException;
 import com.humano.web.rest.vm.KeyAndPasswordVM;
 import com.humano.web.rest.vm.ManagedUserVM;
 import jakarta.validation.Valid;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.security.Principal;
+import java.util.List;
+import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.security.Principal;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * REST controller for managing the current user's account.
@@ -56,8 +55,8 @@ public class AccountResource {
     private static boolean isPasswordLengthInvalid(String password) {
         return (
             StringUtils.isEmpty(password) ||
-                password.length() < ManagedUserVM.PASSWORD_MIN_LENGTH ||
-                password.length() > ManagedUserVM.PASSWORD_MAX_LENGTH
+            password.length() < ManagedUserVM.PASSWORD_MIN_LENGTH ||
+            password.length() > ManagedUserVM.PASSWORD_MAX_LENGTH
         );
     }
 

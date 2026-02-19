@@ -1,15 +1,15 @@
 package com.humano.service.hr;
 
 import com.humano.domain.enumeration.hr.OvertimeApprovalStatus;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.OvertimeRecord;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.requests.CreateOvertimeRecordRequest;
 import com.humano.dto.hr.requests.OvertimeRecordSearchRequest;
 import com.humano.dto.hr.requests.ProcessOvertimeRecordRequest;
 import com.humano.dto.hr.responses.OvertimeRecordResponse;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.OvertimeRecordRepository;
 import com.humano.repository.hr.specification.OvertimeRecordSpecification;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.time.LocalDate;

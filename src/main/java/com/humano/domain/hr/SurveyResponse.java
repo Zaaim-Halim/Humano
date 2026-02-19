@@ -1,13 +1,13 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a response to a survey by an employee, including response text and submission time.
@@ -17,17 +17,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "survey_response")
 public class SurveyResponse extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -135,10 +131,15 @@ public class SurveyResponse extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "SurveyResponse{" +
-            "id=" + id +
-            ", submittedAt=" + submittedAt +
-            ", responseLength=" + (response != null ? response.length() : 0) +
-            '}';
+        return (
+            "SurveyResponse{" +
+            "id=" +
+            id +
+            ", submittedAt=" +
+            submittedAt +
+            ", responseLength=" +
+            (response != null ? response.length() : 0) +
+            '}'
+        );
     }
 }

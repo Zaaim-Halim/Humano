@@ -1,12 +1,12 @@
 package com.humano.service.payroll;
 
-import com.humano.domain.Country;
 import com.humano.domain.enumeration.payroll.TaxCode;
 import com.humano.domain.payroll.TaxBracket;
+import com.humano.domain.shared.Country;
 import com.humano.dto.payroll.request.CreateTaxBracketRequest;
 import com.humano.dto.payroll.response.TaxBracketResponse;
 import com.humano.dto.payroll.response.TaxCalculationResponse;
-import com.humano.repository.CountryRepository;
+import com.humano.repository.payroll.CountryRepository;
 import com.humano.repository.payroll.TaxBracketRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;

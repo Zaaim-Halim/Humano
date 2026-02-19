@@ -1,19 +1,19 @@
 package com.humano.service.payroll;
 
-import com.humano.domain.Currency;
-import com.humano.domain.hr.Employee;
 import com.humano.domain.hr.Position;
 import com.humano.domain.payroll.Compensation;
+import com.humano.domain.payroll.Currency;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.payroll.request.CompensationSearchRequest;
 import com.humano.dto.payroll.request.CreateCompensationRequest;
 import com.humano.dto.payroll.request.SalaryAdjustmentRequest;
 import com.humano.dto.payroll.response.CompensationResponse;
 import com.humano.dto.payroll.response.SalaryHistoryResponse;
-import com.humano.repository.CurrencyRepository;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.PositionRepository;
 import com.humano.repository.payroll.CompensationRepository;
+import com.humano.repository.payroll.CurrencyRepository;
 import com.humano.repository.payroll.specification.CompensationSpecification;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;

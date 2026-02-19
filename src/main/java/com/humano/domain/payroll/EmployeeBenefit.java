@@ -1,21 +1,19 @@
 package com.humano.domain.payroll;
 
-import com.humano.domain.AbstractAuditingEntity;
-import com.humano.domain.Currency;
 import com.humano.domain.enumeration.payroll.BenefitStatus;
 import com.humano.domain.enumeration.payroll.BenefitType;
-import com.humano.domain.hr.Employee;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * EmployeeBenefit entity represents benefits provided to employees and their associated costs.
@@ -37,12 +35,7 @@ public class EmployeeBenefit extends AbstractAuditingEntity<UUID> {
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -308,15 +301,26 @@ public class EmployeeBenefit extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "EmployeeBenefit{" +
-            "id=" + id +
-            ", type=" + type +
-            ", employerCost=" + employerCost +
-            ", employeeCost=" + employeeCost +
-            ", effectiveFrom=" + effectiveFrom +
-            ", effectiveTo=" + effectiveTo +
-            ", status=" + status +
-            ", planName='" + planName + '\'' +
-            '}';
+        return (
+            "EmployeeBenefit{" +
+            "id=" +
+            id +
+            ", type=" +
+            type +
+            ", employerCost=" +
+            employerCost +
+            ", employeeCost=" +
+            employeeCost +
+            ", effectiveFrom=" +
+            effectiveFrom +
+            ", effectiveTo=" +
+            effectiveTo +
+            ", status=" +
+            status +
+            ", planName='" +
+            planName +
+            '\'' +
+            '}'
+        );
     }
 }

@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.humano.IntegrationTest;
-import com.humano.domain.User;
-import com.humano.repository.UserRepository;
+import com.humano.domain.shared.User;
+import com.humano.repository.shared.UserRepository;
 import com.humano.service.UserService;
 import java.util.Locale;
 import org.apache.commons.lang3.RandomStringUtils;

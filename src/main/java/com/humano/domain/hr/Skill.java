@@ -1,15 +1,14 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a skill or competency that can be assigned to employees.
@@ -19,17 +18,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "skill")
 public class Skill extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -165,11 +160,19 @@ public class Skill extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Skill{" +
-            "id=" + id +
-            ", name='" + name + '\'' +
-            ", category='" + category + '\'' +
-            ", requiresCertification=" + requiresCertification +
-            '}';
+        return (
+            "Skill{" +
+            "id=" +
+            id +
+            ", name='" +
+            name +
+            '\'' +
+            ", category='" +
+            category +
+            '\'' +
+            ", requiresCertification=" +
+            requiresCertification +
+            '}'
+        );
     }
 }

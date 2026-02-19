@@ -1,4 +1,4 @@
-package com.humano.domain;
+package com.humano.domain.shared;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.humano.config.Constants;
@@ -7,17 +7,15 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import org.apache.commons.lang3.StringUtils;
-import org.hibernate.annotations.BatchSize;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
-import java.io.Serializable;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import org.apache.commons.lang3.StringUtils;
+import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * A user.
@@ -25,17 +23,13 @@ import java.util.UUID;
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
 public class User extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -94,8 +88,8 @@ public class User extends AbstractAuditingEntity<UUID> {
     @ManyToMany
     @JoinTable(
         name = "user_authority",
-        joinColumns = {@JoinColumn(name = "user_id", referencedColumnName = "id")},
-        inverseJoinColumns = {@JoinColumn(name = "authority_name", referencedColumnName = "name")}
+        joinColumns = { @JoinColumn(name = "user_id", referencedColumnName = "id") },
+        inverseJoinColumns = { @JoinColumn(name = "authority_name", referencedColumnName = "name") }
     )
     @BatchSize(size = 20)
     private Set<Authority> authorities = new HashSet<>();

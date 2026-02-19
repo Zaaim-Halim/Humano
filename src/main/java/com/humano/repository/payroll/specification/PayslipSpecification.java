@@ -1,10 +1,10 @@
 package com.humano.repository.payroll.specification;
 
-import com.humano.domain.hr.Employee;
 import com.humano.domain.payroll.PayrollPeriod;
 import com.humano.domain.payroll.PayrollResult;
 import com.humano.domain.payroll.PayrollRun;
 import com.humano.domain.payroll.Payslip;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;

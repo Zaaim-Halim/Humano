@@ -2,16 +2,17 @@ package com.humano.service.hr.workflow;
 
 import com.humano.domain.enumeration.hr.*;
 import com.humano.domain.hr.*;
+import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.workflow.requests.ApprovalDecisionRequest;
 import com.humano.dto.hr.workflow.requests.SubmitApprovalRequest;
 import com.humano.dto.hr.workflow.responses.ApprovalWorkflowResponse;
 import com.humano.dto.hr.workflow.responses.PendingApprovalSummary;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.ExpenseClaimRepository;
 import com.humano.repository.hr.LeaveRequestRepository;
 import com.humano.repository.hr.OvertimeRecordRepository;
 import com.humano.repository.hr.workflow.ApprovalChainConfigRepository;
 import com.humano.repository.hr.workflow.ApprovalRequestRepository;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.workflow.infrastructure.DeadlineMonitorService;
 import com.humano.service.hr.workflow.infrastructure.NotificationOrchestrationService;

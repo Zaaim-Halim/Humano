@@ -1,14 +1,13 @@
 package com.humano.domain.payroll;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * PayComponent → PayRule → PayrollLine → PayrollResult (net salary)
@@ -32,17 +31,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "payroll_line")
 public class PayrollLine extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -227,13 +222,21 @@ public class PayrollLine extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "PayrollLine{" +
-            "id=" + id +
-            ", component=" + (component != null ? component.getCode() : null) +
-            ", amount=" + amount +
-            ", quantity=" + quantity +
-            ", rate=" + rate +
-            ", sequence=" + sequence +
-            '}';
+        return (
+            "PayrollLine{" +
+            "id=" +
+            id +
+            ", component=" +
+            (component != null ? component.getCode() : null) +
+            ", amount=" +
+            amount +
+            ", quantity=" +
+            quantity +
+            ", rate=" +
+            rate +
+            ", sequence=" +
+            sequence +
+            '}'
+        );
     }
 }

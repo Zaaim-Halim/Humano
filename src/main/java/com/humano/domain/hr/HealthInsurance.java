@@ -1,15 +1,15 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
 import com.humano.domain.enumeration.hr.HealthInsuranceStatus;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a health insurance policy for an employee, including provider, policy number, coverage, and status.
@@ -19,17 +19,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "health_insurance")
 public class HealthInsurance extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -194,13 +190,23 @@ public class HealthInsurance extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "HealthInsurance{" +
-            "id=" + id +
-            ", providerName='" + providerName + '\'' +
-            ", policyNumber='" + policyNumber + '\'' +
-            ", startDate=" + startDate +
-            ", endDate=" + endDate +
-            ", status=" + status +
-            '}';
+        return (
+            "HealthInsurance{" +
+            "id=" +
+            id +
+            ", providerName='" +
+            providerName +
+            '\'' +
+            ", policyNumber='" +
+            policyNumber +
+            '\'' +
+            ", startDate=" +
+            startDate +
+            ", endDate=" +
+            endDate +
+            ", status=" +
+            status +
+            '}'
+        );
     }
 }

@@ -3,6 +3,7 @@ package com.humano.domain;
 import static com.humano.domain.AuthorityTestSamples.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.humano.domain.shared.Authority;
 import com.humano.web.rest.TestUtil;
 import org.junit.jupiter.api.Test;
 

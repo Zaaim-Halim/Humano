@@ -1,5 +1,6 @@
 package com.humano.domain;
 
+import com.humano.domain.shared.Authority;
 import java.util.UUID;
 
 public class AuthorityTestSamples {

@@ -1,12 +1,12 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a custom attribute for an employee, stored as a key-value pair.
@@ -22,12 +22,7 @@ public class EmployeeAttribute extends AbstractAuditingEntity<UUID> {
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -41,7 +36,7 @@ public class EmployeeAttribute extends AbstractAuditingEntity<UUID> {
     /**
      * Value for the attribute.
      */
-    @Column(name = "attribute_value", nullable = false, length = 1000 )
+    @Column(name = "attribute_value", nullable = false, length = 1000)
     private String value;
 
     /**
@@ -114,10 +109,6 @@ public class EmployeeAttribute extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "EmployeeAttribute{" +
-            "id=" + id +
-            ", key='" + key + '\'' +
-            ", value='" + value + '\'' +
-            '}';
+        return "EmployeeAttribute{" + "id=" + id + ", key='" + key + '\'' + ", value='" + value + '\'' + '}';
     }
 }

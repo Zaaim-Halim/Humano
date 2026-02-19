@@ -1,20 +1,18 @@
 package com.humano.domain.payroll;
 
-import com.humano.domain.AbstractAuditingEntity;
-import com.humano.domain.Currency;
 import com.humano.domain.enumeration.payroll.BonusType;
-import com.humano.domain.hr.Employee;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Bonus entity represents additional compensation awarded to employees beyond their base salary.
@@ -35,12 +33,7 @@ public class Bonus extends AbstractAuditingEntity<UUID> {
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -279,15 +272,26 @@ public class Bonus extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Bonus{" +
-            "id=" + id +
-            ", type=" + type +
-            ", amount=" + amount +
-            ", awardDate=" + awardDate +
-            ", paymentDate=" + paymentDate +
-            ", isPaid=" + isPaid +
-            ", description='" + description + '\'' +
-            ", isTaxable=" + isTaxable +
-            '}';
+        return (
+            "Bonus{" +
+            "id=" +
+            id +
+            ", type=" +
+            type +
+            ", amount=" +
+            amount +
+            ", awardDate=" +
+            awardDate +
+            ", paymentDate=" +
+            paymentDate +
+            ", isPaid=" +
+            isPaid +
+            ", description='" +
+            description +
+            '\'' +
+            ", isTaxable=" +
+            isTaxable +
+            '}'
+        );
     }
 }

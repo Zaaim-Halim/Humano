@@ -9,8 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.humano.IntegrationTest;
-import com.humano.domain.Authority;
-import com.humano.repository.AuthorityRepository;
+import com.humano.domain.shared.Authority;
+import com.humano.repository.shared.AuthorityRepository;
 import jakarta.persistence.EntityManager;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;

@@ -1,15 +1,14 @@
 package com.humano.domain.tenant;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents an organization within a tenant.
@@ -28,17 +27,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "organization")
 public class Organization extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -115,9 +110,6 @@ public class Organization extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Organization{" +
-            "id=" + id +
-            ", name='" + name + '\'' +
-            '}';
+        return "Organization{" + "id=" + id + ", name='" + name + '\'' + '}';
     }
 }

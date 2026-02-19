@@ -1,16 +1,15 @@
 package com.humano.service.hr.workflow;
 
 import com.humano.domain.enumeration.hr.ReviewCyclePhase;
-import com.humano.domain.hr.PerformanceReview;
 import com.humano.domain.hr.ReviewCycle;
 import com.humano.dto.hr.workflow.requests.InitiateReviewCycleRequest;
 import com.humano.dto.hr.workflow.requests.ManagerReviewRequest;
 import com.humano.dto.hr.workflow.requests.SelfAssessmentRequest;
 import com.humano.dto.hr.workflow.responses.ReviewCycleResponse;
 import com.humano.repository.hr.DepartmentRepository;
-import com.humano.repository.hr.EmployeeRepository;
 import com.humano.repository.hr.PerformanceReviewRepository;
 import com.humano.repository.hr.workflow.ReviewCycleRepository;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.workflow.infrastructure.DeadlineMonitorService;
 import com.humano.service.hr.workflow.infrastructure.NotificationOrchestrationService;

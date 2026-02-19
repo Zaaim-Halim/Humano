@@ -1,15 +1,14 @@
 package com.humano.domain.hr;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a survey conducted within the organization, including title, description, date range, and responses.
@@ -19,17 +18,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "survey")
 public class Survey extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -165,12 +160,20 @@ public class Survey extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "Survey{" +
-            "id=" + id +
-            ", title='" + title + '\'' +
-            ", startDate=" + startDate +
-            ", endDate=" + endDate +
-            ", responseCount=" + (responses != null ? responses.size() : 0) +
-            '}';
+        return (
+            "Survey{" +
+            "id=" +
+            id +
+            ", title='" +
+            title +
+            '\'' +
+            ", startDate=" +
+            startDate +
+            ", endDate=" +
+            endDate +
+            ", responseCount=" +
+            (responses != null ? responses.size() : 0) +
+            '}'
+        );
     }
 }

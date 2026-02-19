@@ -2,7 +2,7 @@ package com.humano.repository.hr.specification;
 
 import com.humano.domain.enumeration.hr.AttendanceStatus;
 import com.humano.domain.hr.Attendance;
-import com.humano.domain.hr.Employee;
+import com.humano.domain.shared.Employee;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDate;

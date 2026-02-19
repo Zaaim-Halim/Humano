@@ -1,12 +1,12 @@
-package com.humano.domain;
+package com.humano.domain.shared;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import java.time.Instant;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
-
-import java.time.Instant;
 
 @Embeddable
 public class AuditMetadata {
@@ -28,16 +28,35 @@ public class AuditMetadata {
     private Instant lastModifiedDate = Instant.now();
 
     // Getters & Setters
-    public String getCreatedBy() { return createdBy; }
-    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
+    public String getCreatedBy() {
+        return createdBy;
+    }
 
-    public Instant getCreatedDate() { return createdDate; }
-    public void setCreatedDate(Instant createdDate) { this.createdDate = createdDate; }
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
 
-    public String getLastModifiedBy() { return lastModifiedBy; }
-    public void setLastModifiedBy(String lastModifiedBy) { this.lastModifiedBy = lastModifiedBy; }
+    public Instant getCreatedDate() {
+        return createdDate;
+    }
 
-    public Instant getLastModifiedDate() { return lastModifiedDate; }
-    public void setLastModifiedDate(Instant lastModifiedDate) { this.lastModifiedDate = lastModifiedDate; }
+    public void setCreatedDate(Instant createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    public String getLastModifiedBy() {
+        return lastModifiedBy;
+    }
+
+    public void setLastModifiedBy(String lastModifiedBy) {
+        this.lastModifiedBy = lastModifiedBy;
+    }
+
+    public Instant getLastModifiedDate() {
+        return lastModifiedDate;
+    }
+
+    public void setLastModifiedDate(Instant lastModifiedDate) {
+        this.lastModifiedDate = lastModifiedDate;
+    }
 }
-

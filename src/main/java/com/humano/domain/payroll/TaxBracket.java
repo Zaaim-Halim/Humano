@@ -1,19 +1,18 @@
 package com.humano.domain.payroll;
 
-import com.humano.domain.AbstractAuditingEntity;
-import com.humano.domain.Country;
 import com.humano.domain.enumeration.payroll.TaxCode;
+import com.humano.domain.shared.AbstractAuditingEntity;
+import com.humano.domain.shared.Country;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 /**
  * Represents a tax bracket for a specific tax code and country.
@@ -37,17 +36,13 @@ import java.util.UUID;
 @Entity
 @Table(name = "tax_bracket")
 public class TaxBracket extends AbstractAuditingEntity<UUID> {
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(
         name = "UUID",
         strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = {
-            @Parameter(
-                name = "uuid_gen_strategy_class",
-                value = "org.hibernate.id.uuid.CustomVersionOneStrategy"
-            )
-        }
+        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
     )
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
@@ -260,15 +255,25 @@ public class TaxBracket extends AbstractAuditingEntity<UUID> {
 
     @Override
     public String toString() {
-        return "TaxBracket{" +
-            "id=" + id +
-            ", taxCode=" + taxCode +
-            ", country=" + (country != null ? country.getCode() : null) +
-            ", lower=" + lower +
-            ", upper=" + upper +
-            ", rate=" + rate +
-            ", validFrom=" + validFrom +
-            ", validTo=" + validTo +
-            '}';
+        return (
+            "TaxBracket{" +
+            "id=" +
+            id +
+            ", taxCode=" +
+            taxCode +
+            ", country=" +
+            (country != null ? country.getCode() : null) +
+            ", lower=" +
+            lower +
+            ", upper=" +
+            upper +
+            ", rate=" +
+            rate +
+            ", validFrom=" +
+            validFrom +
+            ", validTo=" +
+            validTo +
+            '}'
+        );
     }
 }

@@ -1,10 +1,9 @@
 package com.humano.domain.tenant;
 
-import com.humano.domain.AbstractAuditingEntity;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import java.util.Objects;
 import java.util.UUID;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
