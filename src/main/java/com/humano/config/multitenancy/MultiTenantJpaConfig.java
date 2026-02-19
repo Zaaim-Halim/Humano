@@ -53,7 +53,7 @@ public class MultiTenantJpaConfig {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setDataSource(dataSource);
         em.setPackagesToScan(
-            "com.humano.domain", // User, Authority
+            "com.humano.domain.shared", // User, Authority
             "com.humano.domain.hr", // HR entities
             "com.humano.domain.payroll" // Payroll entities
         );

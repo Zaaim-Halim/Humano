@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -79,9 +80,9 @@ public class TenantDataSourceProvider {
         config.setConnectionTestQuery("SELECT 1");
 
         // Additional properties for reliability
-        config.addDataSourceProperty("cachePrepStmts", "true");
-        config.addDataSourceProperty("prepStmtCacheSize", "250");
-        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        config.addDataSourceProperty("cachePrepStmts", properties.isCachePrepStmts());
+        config.addDataSourceProperty("prepStmtCacheSize", properties.getPrepStmtCacheSize());
+        config.addDataSourceProperty("prepStmtCacheSqlLimit", properties.getPrepStmtCacheSqlLimit());
 
         LOG.info(
             "Created DataSource for tenant {} connecting to {}:{}/{}",

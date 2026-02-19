@@ -1,5 +1,6 @@
 package com.humano.config.multitenancy;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -23,6 +24,10 @@ public class MultiTenantProperties {
     private long connectionTimeout = 30000;
     private long idleTimeout = 600000;
     private long maxLifetime = 1800000;
+
+    private boolean cachePrepStmts;
+    private int prepStmtCacheSize;
+    private int prepStmtCacheSqlLimit;
 
     // Default connection parameters
     private String defaultConnectionParams =
@@ -126,5 +131,29 @@ public class MultiTenantProperties {
 
     public void setDefaultDbPort(int defaultDbPort) {
         this.defaultDbPort = defaultDbPort;
+    }
+
+    public boolean isCachePrepStmts() {
+        return cachePrepStmts;
+    }
+
+    public void setCachePrepStmts(boolean cachePrepStmts) {
+        this.cachePrepStmts = cachePrepStmts;
+    }
+
+    public int getPrepStmtCacheSize() {
+        return prepStmtCacheSize;
+    }
+
+    public void setPrepStmtCacheSize(int prepStmtCacheSize) {
+        this.prepStmtCacheSize = prepStmtCacheSize;
+    }
+
+    public int getPrepStmtCacheSqlLimit() {
+        return prepStmtCacheSqlLimit;
+    }
+
+    public void setPrepStmtCacheSqlLimit(int prepStmtCacheSqlLimit) {
+        this.prepStmtCacheSqlLimit = prepStmtCacheSqlLimit;
     }
 }
