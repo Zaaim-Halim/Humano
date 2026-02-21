@@ -493,7 +493,7 @@ public class PayslipService {
             result.getGross(),
             result.getTotalDeductions(),
             result.getNet(),
-            result.getCurrency() != null ? result.getCurrency().getCode() : null,
+            result.getCurrency() != null ? result.getCurrency().getCode().getCode() : null,
             payslip.getPdfUrl(),
             details
         );
@@ -539,7 +539,7 @@ public class PayslipService {
             result.getTotalDeductions(),
             result.getNet(),
             result.getEmployerCost(),
-            result.getCurrency() != null ? result.getCurrency().getCode() : null,
+            result.getCurrency() != null ? result.getCurrency().getCode().getCode() : null,
             earnings,
             deductions,
             employerCharges,

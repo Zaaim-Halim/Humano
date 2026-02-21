@@ -346,7 +346,7 @@ public class DeductionService {
             deduction.getType(),
             deduction.getAmount(),
             deduction.getPercentage(),
-            deduction.getCurrency() != null ? deduction.getCurrency().getCode() : null,
+            deduction.getCurrency() != null ? deduction.getCurrency().getCode().getCode() : null,
             deduction.getEffectiveFrom(),
             deduction.getEffectiveTo(),
             isActive,

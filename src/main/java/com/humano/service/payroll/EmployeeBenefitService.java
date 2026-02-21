@@ -378,7 +378,7 @@ public class EmployeeBenefitService {
             benefit.getEmployerCost(),
             benefit.getEmployeeCost(),
             totalCost,
-            benefit.getCurrency() != null ? benefit.getCurrency().getCode() : null,
+            benefit.getCurrency() != null ? benefit.getCurrency().getCode().getCode() : null,
             benefit.getEffectiveFrom(),
             benefit.getEffectiveTo(),
             benefit.getStatus(),

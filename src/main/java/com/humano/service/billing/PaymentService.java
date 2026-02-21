@@ -177,7 +177,7 @@ public class PaymentService {
             tenant.getId(),
             tenant.getName(),
             payment.getAmount(),
-            payment.getCurrency() != null ? payment.getCurrency().getCode() : "USD",
+            payment.getCurrency() != null ? payment.getCurrency().getCode().getCode() : "USD",
             payment.getMethodType().name(),
             payment.getExternalPaymentId()
         );
@@ -366,7 +366,7 @@ public class PaymentService {
             payment.getStatus(),
             payment.getPaymentDate(),
             payment.getMethodType(),
-            payment.getCurrency() != null ? payment.getCurrency().getCode() : null,
+            payment.getCurrency() != null ? payment.getCurrency().getCode().getCode() : null,
             payment.getExternalPaymentId(),
             payment.getFailureReason(),
             payment.getRefundedAmount(),

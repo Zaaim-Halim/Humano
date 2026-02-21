@@ -380,7 +380,7 @@ public class PayrollProcessingService {
             }
         }
 
-        String currencyCode = results.isEmpty() ? null : results.get(0).getCurrency().getCode();
+        String currencyCode = results.isEmpty() ? null : results.get(0).getCurrency().getCode().getCode();
 
         return new PayrollRunSummaryResponse(
             runId,
@@ -572,7 +572,7 @@ public class PayrollProcessingService {
         BigDecimal totalNet = results.stream().map(PayrollResult::getNet).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalEmployerCost = results.stream().map(PayrollResult::getEmployerCost).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        String currencyCode = results.isEmpty() ? null : results.get(0).getCurrency().getCode();
+        String currencyCode = results.isEmpty() ? null : results.get(0).getCurrency().getCode().getCode();
 
         return new PayrollRunResponse(
             run.getId(),

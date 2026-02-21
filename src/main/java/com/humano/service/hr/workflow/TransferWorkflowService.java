@@ -116,6 +116,10 @@ public class TransferWorkflowService {
             context.put("currentManagerId", employee.getManager().getId().toString());
             context.put("currentManagerName", employee.getManager().getFirstName() + " " + employee.getManager().getLastName());
         }
+        if (employee.getUnit() != null) {
+            context.put("currentOrganizationalUnitId", employee.getUnit().getId().toString());
+            context.put("currentOrganizationalUnitName", employee.getUnit().getName());
+        }
 
         // Store new values
         if (request.newDepartmentId() != null) {
@@ -138,6 +142,13 @@ public class TransferWorkflowService {
                 .orElseThrow(() -> EntityNotFoundException.create("Employee", request.newManagerId()));
             context.put("newManagerId", newManager.getId().toString());
             context.put("newManagerName", newManager.getFirstName() + " " + newManager.getLastName());
+        }
+        if (request.newOrganizationalUnitId() != null) {
+            OrganizationalUnit newUnit = organizationalUnitRepository
+                .findById(request.newOrganizationalUnitId())
+                .orElseThrow(() -> EntityNotFoundException.create("OrganizationalUnit", request.newOrganizationalUnitId()));
+            context.put("newOrganizationalUnitId", newUnit.getId().toString());
+            context.put("newOrganizationalUnitName", newUnit.getName());
         }
 
         // Create workflow
@@ -412,6 +423,14 @@ public class TransferWorkflowService {
             employee.setManager(newManager);
         }
 
+        if (context.containsKey("newOrganizationalUnitId")) {
+            UUID newUnitId = UUID.fromString((String) context.get("newOrganizationalUnitId"));
+            OrganizationalUnit newUnit = organizationalUnitRepository
+                .findById(newUnitId)
+                .orElseThrow(() -> EntityNotFoundException.create("OrganizationalUnit", newUnitId));
+            employee.setUnit(newUnit);
+        }
+
         // Note: OrganizationalUnit changes are tracked in history but not directly set on Employee
         // as the Employee entity may not support this field directly
 
@@ -497,8 +516,10 @@ public class TransferWorkflowService {
             (String) context.get("currentPositionTitle"),
             context.containsKey("currentManagerId") ? UUID.fromString((String) context.get("currentManagerId")) : null,
             (String) context.get("currentManagerName"),
-            null,
-            null
+            context.containsKey("currentOrganizationalUnitId")
+                ? UUID.fromString((String) context.get("currentOrganizationalUnitId"))
+                : null,
+            (String) context.get("currentOrganizationalUnitName")
         );
 
         TransferWorkflowResponse.TransferDetails newDetails = new TransferWorkflowResponse.TransferDetails(
@@ -508,8 +529,8 @@ public class TransferWorkflowService {
             (String) context.get("newPositionTitle"),
             context.containsKey("newManagerId") ? UUID.fromString((String) context.get("newManagerId")) : null,
             (String) context.get("newManagerName"),
-            null,
-            null
+            context.containsKey("newOrganizationalUnitId") ? UUID.fromString((String) context.get("newOrganizationalUnitId")) : null,
+            (String) context.get("newOrganizationalUnitName")
         );
 
         TransferWorkflowResponse.ApprovalStatus approvalStatus = new TransferWorkflowResponse.ApprovalStatus(

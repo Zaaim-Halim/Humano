@@ -409,7 +409,7 @@ public class BonusService {
             employee.getFirstName() + " " + employee.getLastName(),
             bonus.getType(),
             bonus.getAmount(),
-            bonus.getCurrency().getCode(),
+            bonus.getCurrency().getCode().getCode(),
             bonus.getAwardDate(),
             bonus.getPaymentDate(),
             bonus.getIsPaid(),

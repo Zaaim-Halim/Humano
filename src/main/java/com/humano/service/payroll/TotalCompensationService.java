@@ -405,7 +405,7 @@ public class TotalCompensationService {
             )
             .stream()
             .findFirst()
-            .map(c -> c.getCurrency().getCode())
+            .map(c -> c.getCurrency().getCode().getCode())
             .orElse("USD");
     }
 }
