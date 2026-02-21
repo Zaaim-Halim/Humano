@@ -28,18 +28,42 @@ spring:
     livereload:
       enabled: false
   datasource:
-    type: com.zaxxer.hikari.HikariDataSource
-    url: jdbc:mysql://localhost:3306/humano?useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&createDatabaseIfNotExist=true
-    username: root
-    password:
-    hikari:
-      poolName: Hikari
-      auto-commit: false
-      data-source-properties:
-        cachePrepStmts: true
-        prepStmtCacheSize: 250
-        prepStmtCacheSqlLimit: 2048
-        useServerPrepStmts: true
+    master:
+      type: com.zaxxer.hikari.HikariDataSource
+      url: jdbc:mysql://${humano.multitenancy.default-db-host}:${humano.multitenancy.default-db-port}/${humano.multitenancy.master-database}?${humano.multitenancy.default-connection-params}
+      username: root
+      password:
+      driver-class-name: ${humano.multitenancy.driver-class-name}
+      hikari:
+        poolName: HikariMaster
+        auto-commit: false
+        maximum-pool-size: ${humano.multitenancy.default-max-pool-size}
+        minimum-idle: ${humano.multitenancy.default-min-idle}
+        connection-timeout: ${humano.multitenancy.connection-timeout}
+        idle-timeout: ${humano.multitenancy.idle-timeout}
+        max-lifetime: ${humano.multitenancy.max-lifetime}
+        data-source-properties:
+          cachePrepStmts: ${humano.multitenancy.cachePrepStmts}
+          prepStmtCacheSize: ${humano.multitenancy.prepStmtCacheSize}
+          prepStmtCacheSqlLimit: ${humano.multitenancy.prepStmtCacheSqlLimit}
+    default-tenant:
+      type: com.zaxxer.hikari.HikariDataSource
+      url: jdbc:mysql://${humano.multitenancy.default-db-host}:${humano.multitenancy.default-db-port}/${humano.multitenancy.tenant-database-prefix}default?${humano.multitenancy.default-connection-params}
+      username: root
+      password:
+      driver-class-name: ${humano.multitenancy.driver-class-name}
+      hikari:
+        poolName: HikariDefaultTenant
+        auto-commit: false
+        maximum-pool-size: ${humano.multitenancy.default-max-pool-size}
+        minimum-idle: ${humano.multitenancy.default-min-idle}
+        connection-timeout: ${humano.multitenancy.connection-timeout}
+        idle-timeout: ${humano.multitenancy.idle-timeout}
+        max-lifetime: ${humano.multitenancy.max-lifetime}
+        data-source-properties:
+          cachePrepStmts: ${humano.multitenancy.cachePrepStmts}
+          prepStmtCacheSize: ${humano.multitenancy.prepStmtCacheSize}
+          prepStmtCacheSqlLimit: ${humano.multitenancy.prepStmtCacheSqlLimit}
   # Replace by 'prod, faker' to add the faker context and have sample data loaded in production
   liquibase:
     contexts: prod

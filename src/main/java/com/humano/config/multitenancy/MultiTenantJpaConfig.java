@@ -4,6 +4,9 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateProperties;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateSettings;
+import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -21,6 +24,14 @@ import org.springframework.transaction.PlatformTransactionManager;
  */
 @Configuration
 public class MultiTenantJpaConfig {
+
+    private final JpaProperties jpaProperties;
+    private final HibernateProperties hibernateProperties;
+
+    public MultiTenantJpaConfig(JpaProperties jpaProperties, HibernateProperties hibernateProperties) {
+        this.jpaProperties = jpaProperties;
+        this.hibernateProperties = hibernateProperties;
+    }
 
     /**
      * Entity Manager Factory for MASTER database entities.
@@ -91,18 +102,23 @@ public class MultiTenantJpaConfig {
     }
 
     /**
-     * Common JPA/Hibernate properties for both master and tenant databases.
+     * JPA/Hibernate properties read from application.yml (spring.jpa.*).
      *
      * @return map of JPA properties
      */
     private Map<String, Object> jpaProperties() {
         Map<String, Object> props = new HashMap<>();
-        props.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
-        props.put("hibernate.hbm2ddl.auto", "none");
-        props.put("hibernate.show_sql", false);
-        props.put("hibernate.format_sql", true);
-        props.put("hibernate.jdbc.time_zone", "UTC");
-        props.put("hibernate.id.new_generator_mappings", true);
+
+        // Get properties from spring.jpa.properties.*
+        props.putAll(jpaProperties.getProperties());
+
+        // Get hibernate ddl-auto from spring.jpa.hibernate.ddl-auto
+        Map<String, Object> hibernateProps = hibernateProperties.determineHibernateProperties(
+            jpaProperties.getProperties(),
+            new HibernateSettings()
+        );
+        props.putAll(hibernateProps);
+
         return props;
     }
 }
