@@ -93,11 +93,11 @@
         </createTable>
     </changeSet>
 
-    <!-- jhi_user - Base user table -->
+    <!-- app_user - Base user table -->
     <changeSet id="tenant-006-user" author="halimzaaim">
-        <createTable tableName="jhi_user">
+        <createTable tableName="app_user">
             <column name="id" type="${uuidType}">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_jhi_user"/>
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_app_user"/>
             </column>
             <column name="login" type="VARCHAR(50)">
                 <constraints nullable="false" unique="true" uniqueConstraintName="uc_user_login"/>
@@ -140,7 +140,7 @@
         <addPrimaryKey columnNames="user_id, authority_name" tableName="user_authority"/>
         <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="user_authority"
                                  constraintName="FK_USER_AUTHORITY_ON_USER" referencedColumnNames="id"
-                                 referencedTableName="jhi_user"/>
+                                 referencedTableName="app_user"/>
         <addForeignKeyConstraint baseColumnNames="authority_name" baseTableName="user_authority"
                                  constraintName="FK_USER_AUTHORITY_ON_AUTHORITY" referencedColumnNames="name"
                                  referencedTableName="authority"/>
@@ -162,7 +162,7 @@
         </createTable>
         <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="persistent_token"
                                  constraintName="FK_PERSISTENT_TOKEN_ON_USER" referencedColumnNames="id"
-                                 referencedTableName="jhi_user"/>
+                                 referencedTableName="app_user"/>
     </changeSet>
 
     <!-- ==================== PHASE 2: HR Core Tables ==================== -->
@@ -246,7 +246,7 @@
         </createTable>
     </changeSet>
 
-    <!-- employee - Extends jhi_user, depends on department, position, country, organizational_unit -->
+    <!-- employee - Extends app_user, depends on department, position, country, organizational_unit -->
     <changeSet id="tenant-013-employee" author="halimzaaim">
         <createTable tableName="employee">
             <column name="id" type="${uuidType}">
@@ -271,7 +271,7 @@
         </createTable>
         <addForeignKeyConstraint baseColumnNames="id" baseTableName="employee"
                                  constraintName="FK_EMPLOYEE_ON_USER" referencedColumnNames="id"
-                                 referencedTableName="jhi_user"/>
+                                 referencedTableName="app_user"/>
         <addForeignKeyConstraint baseColumnNames="country_id" baseTableName="employee"
                                  constraintName="FK_EMPLOYEE_ON_COUNTRY" referencedColumnNames="id"
                                  referencedTableName="country"/>

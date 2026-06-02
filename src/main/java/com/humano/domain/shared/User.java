@@ -17,9 +17,11 @@ import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.UuidGenerator;
 
 /**
- * A user.
+ * A user. Maps to the {@code app_user} table — bare {@code user} is reserved in
+ * Postgres/Oracle, so we keep the prefix (formerly {@code jhi_user}).
  */
 @Entity
+@Table(name = "app_user")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class User extends AbstractAuditingEntity<UUID> {
 
