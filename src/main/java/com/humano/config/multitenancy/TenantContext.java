@@ -8,6 +8,19 @@ package com.humano.config.multitenancy;
  */
 public final class TenantContext {
 
+    /**
+     * HTTP session attribute name that pins an authenticated session to a tenant subdomain.
+     * Written by the login success handler; checked by {@code TenantResolutionFilter} on
+     * every subsequent request so a stolen session cookie cannot be reused across tenants.
+     */
+    public static final String SESSION_TENANT_ATTRIBUTE = "humano.tenant";
+
+    /**
+     * Reserved subdomain used for platform/admin operations against the master DB. Business
+     * endpoints under {@code /api/**} reject this value.
+     */
+    public static final String MASTER = "master";
+
     private static final ThreadLocal<String> CURRENT_TENANT = new InheritableThreadLocal<>();
 
     private TenantContext() {
@@ -47,7 +60,7 @@ public final class TenantContext {
      */
     public static boolean isMasterContext() {
         String tenant = CURRENT_TENANT.get();
-        return tenant == null || "master".equals(tenant);
+        return tenant == null || MASTER.equals(tenant);
     }
 
     /**
@@ -57,6 +70,6 @@ public final class TenantContext {
      */
     public static boolean hasTenant() {
         String tenant = CURRENT_TENANT.get();
-        return tenant != null && !"master".equals(tenant);
+        return tenant != null && !MASTER.equals(tenant);
     }
 }

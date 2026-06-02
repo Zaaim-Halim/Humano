@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +26,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class TenantResolutionFilter extends OncePerRequestFilter {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantResolutionFilter.class);
-    private static final String MASTER = "master";
 
     private final TenantResolver tenantResolver;
 
@@ -47,18 +47,44 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             // Business endpoints (anything under /api/** except platform/onboarding/public,
             // which shouldNotFilter already excludes) require a real tenant. Reject the
             // reserved "master" sentinel with 400.
-            if (MASTER.equals(tenantId) && request.getRequestURI().startsWith("/api/")) {
-                response.sendError(
+            if (TenantContext.MASTER.equals(tenantId) && request.getRequestURI().startsWith("/api/")) {
+                writeError(
+                    response,
                     HttpServletResponse.SC_BAD_REQUEST,
                     "Missing tenant: provide X-Tenant-ID header or use a tenant subdomain"
                 );
                 return;
             }
 
+            // Pin sessions to the tenant they authenticated against. If a previously
+            // authenticated session is being reused with a different request tenant
+            // (cookie replay across subdomains / X-Tenant-ID switch), reject with 401.
+            HttpSession existing = request.getSession(false);
+            if (existing != null) {
+                Object sessionTenant = existing.getAttribute(TenantContext.SESSION_TENANT_ATTRIBUTE);
+                if (sessionTenant != null && !sessionTenant.equals(tenantId)) {
+                    LOG.warn("Session/tenant mismatch: session={} request={} uri={}", sessionTenant, tenantId, request.getRequestURI());
+                    writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "Session is bound to a different tenant");
+                    return;
+                }
+            }
+
             filterChain.doFilter(request, response);
         } finally {
             TenantContext.clear();
         }
+    }
+
+    /**
+     * Write a terminal error directly to the response (status + plain-text body) instead of
+     * {@link HttpServletResponse#sendError}. {@code sendError} triggers an internal error
+     * dispatch which re-enters Spring Security's chain and clobbers our status with a 401.
+     */
+    private static void writeError(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("text/plain;charset=UTF-8");
+        response.getWriter().write(message);
+        response.flushBuffer();
     }
 
     @Override

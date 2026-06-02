@@ -3,6 +3,7 @@ package com.humano.config;
 import static org.springframework.security.config.Customizer.withDefaults;
 import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
 
+import com.humano.config.multitenancy.TenantContext;
 import com.humano.config.multitenancy.TenantResolutionFilter;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.web.filter.SpaWebFilter;
@@ -140,7 +141,16 @@ public class SecurityConfiguration {
                 formLogin
                     .loginPage("/")
                     .loginProcessingUrl("/api/authentication")
-                    .successHandler((request, response, authentication) -> response.setStatus(HttpStatus.OK.value()))
+                    .successHandler((request, response, authentication) -> {
+                        // P1.3 (pragmatic v1): bind the authenticated session to the tenant the
+                        // login was performed against, so subsequent requests with a mismatched
+                        // X-Tenant-ID / subdomain are rejected by TenantResolutionFilter (401).
+                        String tenant = TenantContext.getCurrentTenant();
+                        if (tenant != null && !TenantContext.MASTER.equals(tenant)) {
+                            request.getSession().setAttribute(TenantContext.SESSION_TENANT_ATTRIBUTE, tenant);
+                        }
+                        response.setStatus(HttpStatus.OK.value());
+                    })
                     .failureHandler((request, response, exception) -> response.setStatus(HttpStatus.UNAUTHORIZED.value()))
                     .permitAll()
             )
