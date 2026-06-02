@@ -151,10 +151,10 @@ public class ExchangeRateService {
             return new ExchangeRateResponse(
                 rate.getId(),
                 rate.getToCcy().getId(),
-                rate.getToCcy().getCode(),
+                rate.getToCcy().getCode().name(),
                 rate.getToCcy().getName(),
                 rate.getFromCcy().getId(),
-                rate.getFromCcy().getCode(),
+                rate.getFromCcy().getCode().name(),
                 rate.getFromCcy().getName(),
                 BigDecimal.ONE.divide(rate.getRate(), RATE_SCALE, RoundingMode.HALF_UP),
                 rate.getRate(),
@@ -176,9 +176,9 @@ public class ExchangeRateService {
                 .orElseThrow(() -> new EntityNotFoundException("Currency", fromCurrencyId));
             return new CurrencyConversionResponse(
                 amount,
-                currency.getCode(),
+                currency.getCode().name(),
                 amount,
-                currency.getCode(),
+                currency.getCode().name(),
                 BigDecimal.ONE,
                 date != null ? date : LocalDate.now(),
                 null
@@ -216,7 +216,7 @@ public class ExchangeRateService {
                 .findById(currencyId)
                 .orElseThrow(() -> new EntityNotFoundException("Currency", currencyId));
 
-            result.put(currency.getCode(), conversion.convertedAmount());
+            result.put(currency.getCode().name(), conversion.convertedAmount());
             total = total.add(conversion.convertedAmount());
         }
 
@@ -445,10 +445,10 @@ public class ExchangeRateService {
         return new ExchangeRateResponse(
             rate.getId(),
             fromCurrency.getId(),
-            fromCurrency.getCode(),
+            fromCurrency.getCode().name(),
             fromCurrency.getName(),
             toCurrency.getId(),
-            toCurrency.getCode(),
+            toCurrency.getCode().name(),
             toCurrency.getName(),
             rate.getRate(),
             inverseRate,
