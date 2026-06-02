@@ -14,9 +14,6 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface TenantRepository extends JpaRepository<Tenant, UUID>, JpaSpecificationExecutor<Tenant> {
-    Optional<Tenant> findByCode(String code);
-    boolean existsByCode(String code);
-
     Optional<Tenant> findBySubdomain(String subdomain);
     Optional<Tenant> findByDomain(String domain);
     boolean existsByDomain(String domain);

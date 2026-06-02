@@ -1,9 +1,15 @@
 package com.humano.config;
 
+import static org.springframework.security.config.Customizer.withDefaults;
+import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
+
+import com.humano.config.multitenancy.TenantResolutionFilter;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.web.filter.SpaWebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.function.Supplier;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -17,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.RememberMeServices;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.*;
@@ -28,11 +35,6 @@ import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 import tech.jhipster.config.JHipsterConstants;
 import tech.jhipster.config.JHipsterProperties;
 
-import java.util.function.Supplier;
-
-import static org.springframework.security.config.Customizer.withDefaults;
-import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
-
 @Configuration
 @EnableMethodSecurity(securedEnabled = true)
 public class SecurityConfiguration {
@@ -43,15 +45,35 @@ public class SecurityConfiguration {
 
     private final RememberMeServices rememberMeServices;
 
-    public SecurityConfiguration(Environment env, RememberMeServices rememberMeServices, JHipsterProperties jHipsterProperties) {
+    private final TenantResolutionFilter tenantResolutionFilter;
+
+    public SecurityConfiguration(
+        Environment env,
+        RememberMeServices rememberMeServices,
+        JHipsterProperties jHipsterProperties,
+        TenantResolutionFilter tenantResolutionFilter
+    ) {
         this.env = env;
         this.rememberMeServices = rememberMeServices;
         this.jHipsterProperties = jHipsterProperties;
+        this.tenantResolutionFilter = tenantResolutionFilter;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Suppress Spring Boot's default servlet-level auto-registration of the
+     * {@link TenantResolutionFilter} bean so it runs exactly once — inserted explicitly
+     * into the Spring Security chain by {@link #filterChain}.
+     */
+    @Bean
+    public FilterRegistrationBean<TenantResolutionFilter> tenantResolutionFilterRegistration(TenantResolutionFilter filter) {
+        FilterRegistrationBean<TenantResolutionFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean
@@ -63,6 +85,10 @@ public class SecurityConfiguration {
                     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
             )
+            // Tenant resolution MUST run before any authentication step so the user lookup
+            // hits the correct tenant DB. JWT filter (P1.3) will also be inserted before
+            // UsernamePasswordAuthenticationFilter, after this one.
+            .addFilterBefore(tenantResolutionFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(new SpaWebFilter(), BasicAuthenticationFilter.class)
             .headers(headers ->
                 headers

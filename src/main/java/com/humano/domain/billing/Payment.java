@@ -2,7 +2,6 @@ package com.humano.domain.billing;
 
 import com.humano.domain.enumeration.billing.PaymentMethodType;
 import com.humano.domain.enumeration.billing.PaymentStatus;
-import com.humano.domain.payroll.Currency;
 import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
@@ -164,13 +163,13 @@ public class Payment extends AbstractAuditingEntity<UUID> {
     /**
      * The currency of the payment amount.
      * <p>
-     * Specifies which currency the payment was made in.
-     * Links to the Currency entity to identify the monetary unit.
+     * References {@link BillingCurrency} (master-DB) so this aggregate stays inside the
+     * master persistence unit per ROADMAP invariant I1.
      */
     @ManyToOne(optional = false)
     @JoinColumn(name = "currency_id", nullable = false)
     @NotNull(message = "Currency is required")
-    private Currency currency;
+    private BillingCurrency currency;
 
     /**
      * Optimistic locking version for concurrent modifications.
@@ -348,16 +347,16 @@ public class Payment extends AbstractAuditingEntity<UUID> {
         this.capturedAt = capturedAt;
     }
 
-    public Currency getCurrency() {
+    public BillingCurrency getCurrency() {
         return currency;
     }
 
-    public Payment currency(Currency currency) {
+    public Payment currency(BillingCurrency currency) {
         this.currency = currency;
         return this;
     }
 
-    public void setCurrency(Currency currency) {
+    public void setCurrency(BillingCurrency currency) {
         this.currency = currency;
     }
 

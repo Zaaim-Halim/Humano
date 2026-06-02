@@ -1,5 +1,6 @@
 package com.humano.service.billing;
 
+import com.humano.domain.billing.BillingCurrency;
 import com.humano.domain.billing.Invoice;
 import com.humano.domain.billing.Payment;
 import com.humano.domain.billing.Subscription;
@@ -7,15 +8,14 @@ import com.humano.domain.enumeration.billing.InvoiceStatus;
 import com.humano.domain.enumeration.billing.PaymentStatus;
 import com.humano.domain.enumeration.billing.SubscriptionStatus;
 import com.humano.domain.enumeration.tenant.TenantStatus;
-import com.humano.domain.payroll.Currency;
 import com.humano.domain.tenant.Tenant;
 import com.humano.dto.billing.requests.CreatePaymentRequest;
 import com.humano.dto.billing.responses.PaymentResponse;
 import com.humano.events.PaymentCompletedEvent;
+import com.humano.repository.billing.BillingCurrencyRepository;
 import com.humano.repository.billing.InvoiceRepository;
 import com.humano.repository.billing.PaymentRepository;
 import com.humano.repository.billing.SubscriptionRepository;
-import com.humano.repository.payroll.CurrencyRepository;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
@@ -41,7 +41,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final InvoiceRepository invoiceRepository;
-    private final CurrencyRepository currencyRepository;
+    private final BillingCurrencyRepository currencyRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final TenantRepository tenantRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -49,7 +49,7 @@ public class PaymentService {
     public PaymentService(
         PaymentRepository paymentRepository,
         InvoiceRepository invoiceRepository,
-        CurrencyRepository currencyRepository,
+        BillingCurrencyRepository currencyRepository,
         SubscriptionRepository subscriptionRepository,
         TenantRepository tenantRepository,
         ApplicationEventPublisher eventPublisher
@@ -76,7 +76,7 @@ public class PaymentService {
             .findById(request.invoiceId())
             .orElseThrow(() -> EntityNotFoundException.create("Invoice", request.invoiceId()));
 
-        Currency currency = currencyRepository
+        BillingCurrency currency = currencyRepository
             .findById(request.currencyId())
             .orElseThrow(() -> EntityNotFoundException.create("Currency", request.currencyId()));
 
@@ -177,7 +177,7 @@ public class PaymentService {
             tenant.getId(),
             tenant.getName(),
             payment.getAmount(),
-            payment.getCurrency() != null ? payment.getCurrency().getCode().getCode() : "USD",
+            payment.getCurrency() != null ? payment.getCurrency().getCode().name() : "USD",
             payment.getMethodType().name(),
             payment.getExternalPaymentId()
         );
@@ -366,7 +366,7 @@ public class PaymentService {
             payment.getStatus(),
             payment.getPaymentDate(),
             payment.getMethodType(),
-            payment.getCurrency() != null ? payment.getCurrency().getCode().getCode() : null,
+            payment.getCurrency() != null ? payment.getCurrency().getCode().name() : null,
             payment.getExternalPaymentId(),
             payment.getFailureReason(),
             payment.getRefundedAmount(),

@@ -2,21 +2,20 @@ package com.humano.service.storage;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.domain.tenant.TenantStorageConfig;
 import com.humano.repository.tenant.TenantStorageConfigRepository;
-import com.humano.security.TenantContextHolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
-
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
 
 /**
  * Factory service that provides the appropriate FileStorageService implementation
@@ -24,9 +23,11 @@ import java.util.UUID;
  */
 @Service
 public class StorageFactory {
+
     private static final Logger log = LoggerFactory.getLogger(StorageFactory.class);
 
     private final TenantStorageConfigRepository tenantStorageConfigRepository;
+    private final TenantIdResolver tenantIdResolver;
     private final ObjectMapper objectMapper;
     private final JdbcTemplate jdbcTemplate;
 
@@ -38,13 +39,15 @@ public class StorageFactory {
     private final Map<UUID, FileStorageService> storageServiceCache = new HashMap<>();
 
     public StorageFactory(
-            TenantStorageConfigRepository tenantStorageConfigRepository,
-            ObjectMapper objectMapper,
-            JdbcTemplate jdbcTemplate,
-            @Value("${app.file-storage.type:filesystem}") String defaultStorageType,
-            @Value("${app.file-storage.filesystem.root-location:./uploads}") String defaultFilesystemRootLocation) {
-
+        TenantStorageConfigRepository tenantStorageConfigRepository,
+        TenantIdResolver tenantIdResolver,
+        ObjectMapper objectMapper,
+        JdbcTemplate jdbcTemplate,
+        @Value("${app.file-storage.type:filesystem}") String defaultStorageType,
+        @Value("${app.file-storage.filesystem.root-location:./uploads}") String defaultFilesystemRootLocation
+    ) {
         this.tenantStorageConfigRepository = tenantStorageConfigRepository;
+        this.tenantIdResolver = tenantIdResolver;
         this.objectMapper = objectMapper;
         this.jdbcTemplate = jdbcTemplate;
         this.defaultStorageType = defaultStorageType;
@@ -58,10 +61,12 @@ public class StorageFactory {
      * @throws StorageException if the storage service cannot be created
      */
     public FileStorageService getStorageService() {
-        // Get the current tenant ID from the context
-        UUID tenantId = TenantContextHolder.getCurrentTenantId();
-        if (tenantId == null) {
-            throw new StorageException("No tenant context available for storage operations");
+        // Resolve current subdomain → master-DB tenant UUID
+        UUID tenantId;
+        try {
+            tenantId = tenantIdResolver.requireCurrentTenantId();
+        } catch (RuntimeException e) {
+            throw new StorageException("No tenant context available for storage operations", e);
         }
 
         // Check if we already have a cached storage service for this tenant
@@ -138,8 +143,8 @@ public class StorageFactory {
      * @return a DatabaseStorageService configured for the tenant
      */
     private FileStorageService createDatabaseStorageService(TenantStorageConfig config) {
-        // For database storage, we use the TenantContextHolder to automatically apply tenant filtering
-        return new DatabaseStorageService(jdbcTemplate);
+        // Tenant filtering is applied by DatabaseStorageService via TenantIdResolver.
+        return new DatabaseStorageService(jdbcTemplate, tenantIdResolver);
     }
 
     /**
@@ -150,7 +155,7 @@ public class StorageFactory {
      */
     private FileStorageService createDefaultStorageService() {
         // Simple default using filesystem storage with tenant subfolder
-        UUID tenantId = TenantContextHolder.getCurrentTenantId();
+        UUID tenantId = tenantIdResolver.requireCurrentTenantId();
         String tenantPath = defaultFilesystemRootLocation + "/" + tenantId;
         return new FilesystemStorageService(Paths.get(tenantPath));
     }

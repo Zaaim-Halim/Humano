@@ -1,5 +1,6 @@
 package com.humano.config;
 
+import java.sql.SQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -10,15 +11,17 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import tech.jhipster.config.JHipsterConstants;
 import tech.jhipster.config.h2.H2ConfigurationHelper;
 
-import java.sql.SQLException;
-
+/**
+ * JPA repository scanning is partitioned by persistence unit in
+ * {@code MultiTenantJpaConfig} (MasterRepositoryConfig / TenantRepositoryConfig); this class
+ * intentionally does not declare {@code @EnableJpaRepositories} to avoid registering each
+ * repository bean twice.
+ */
 @Configuration
-@EnableJpaRepositories({"com.humano.repository"})
 @EnableJpaAuditing(auditorAwareRef = "springSecurityAuditorAware")
 @EnableTransactionManagement
 @EnableConfigurationProperties(H2ConsoleProperties.class)

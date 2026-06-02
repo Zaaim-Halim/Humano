@@ -1,15 +1,6 @@
 package com.humano.service.storage;
 
-import com.humano.security.TenantContextHolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.support.SqlLobValue;
-import org.springframework.jdbc.support.lob.DefaultLobHandler;
-import org.springframework.jdbc.support.lob.LobHandler;
-import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
-
+import com.humano.config.multitenancy.TenantIdResolver;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,6 +10,14 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.support.SqlLobValue;
+import org.springframework.jdbc.support.lob.DefaultLobHandler;
+import org.springframework.jdbc.support.lob.LobHandler;
+import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Implementation of FileStorageService that stores files directly in a database.
@@ -26,13 +25,16 @@ import java.util.UUID;
  */
 @Component
 public class DatabaseStorageService implements FileStorageService {
+
     private static final Logger log = LoggerFactory.getLogger(DatabaseStorageService.class);
 
     private final JdbcTemplate jdbcTemplate;
+    private final TenantIdResolver tenantIdResolver;
     private final LobHandler lobHandler;
 
-    public DatabaseStorageService(JdbcTemplate jdbcTemplate) {
+    public DatabaseStorageService(JdbcTemplate jdbcTemplate, TenantIdResolver tenantIdResolver) {
         this.jdbcTemplate = jdbcTemplate;
+        this.tenantIdResolver = tenantIdResolver;
         this.lobHandler = new DefaultLobHandler();
         // Create table if it doesn't exist
         createTableIfNotExists();
@@ -128,27 +130,25 @@ public class DatabaseStorageService implements FileStorageService {
     }
 
     /**
-     * Get the current tenant ID from the TenantContextHolder.
-     * Throws an exception if no tenant context is set.
+     * Resolve the current tenant's UUID via {@link TenantIdResolver}.
+     * Throws if no tenant context is set on this thread.
      *
      * @return the current tenant ID
      * @throws IllegalStateException if no tenant context is set
      */
     private UUID getCurrentTenantId() {
-        UUID tenantId = TenantContextHolder.getCurrentTenantId();
-        if (tenantId == null) {
-            throw new IllegalStateException("No tenant context found. Operations must be performed within a tenant context.");
-        }
-        return tenantId;
+        return tenantIdResolver.requireCurrentTenantId();
     }
 
     @Override
     public String store(MultipartFile file, String directory) throws IOException {
         UUID tenantId = getCurrentTenantId();
         String id = UUID.randomUUID().toString();
-        String sql = "INSERT INTO file_storage (id, tenant_id, filename, content_type, directory, file_size, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql =
+            "INSERT INTO file_storage (id, tenant_id, filename, content_type, directory, file_size, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try {
-            jdbcTemplate.update(sql,
+            jdbcTemplate.update(
+                sql,
                 id,
                 tenantId.toString(),
                 file.getOriginalFilename(),
@@ -170,9 +170,11 @@ public class DatabaseStorageService implements FileStorageService {
     public String store(MultipartFile file, String directory, String filename) throws IOException {
         UUID tenantId = getCurrentTenantId();
         String id = UUID.randomUUID().toString();
-        String sql = "INSERT INTO file_storage (id, tenant_id, filename, content_type, directory, file_size, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql =
+            "INSERT INTO file_storage (id, tenant_id, filename, content_type, directory, file_size, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try {
-            jdbcTemplate.update(sql,
+            jdbcTemplate.update(
+                sql,
                 id,
                 tenantId.toString(),
                 filename,
@@ -194,14 +196,16 @@ public class DatabaseStorageService implements FileStorageService {
     public String store(InputStream inputStream, String directory, String filename, String contentType) throws IOException {
         UUID tenantId = getCurrentTenantId();
         String id = UUID.randomUUID().toString();
-        String sql = "INSERT INTO file_storage (id, tenant_id, filename, content_type, directory, file_size, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql =
+            "INSERT INTO file_storage (id, tenant_id, filename, content_type, directory, file_size, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try {
             // We need to load the input stream into memory to get its size
             // This could be inefficient for large files - consider alternatives for production use
             byte[] bytes = inputStream.readAllBytes();
             long fileSize = bytes.length;
 
-            jdbcTemplate.update(sql,
+            jdbcTemplate.update(
+                sql,
                 id,
                 tenantId.toString(),
                 filename,
