@@ -12,8 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
+import org.hibernate.annotations.UuidGenerator;
 
 /**
  * TaxWithholding entity represents tax-specific deductions from employee pay.
@@ -31,12 +30,7 @@ import org.hibernate.annotations.Parameter;
 public class TaxWithholding extends AbstractAuditingEntity<UUID> {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(
-        name = "UUID",
-        strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
-    )
+    @UuidGenerator(style = UuidGenerator.Style.TIME)
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 

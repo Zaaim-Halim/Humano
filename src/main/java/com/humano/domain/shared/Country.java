@@ -6,8 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Objects;
 import java.util.UUID;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
+import org.hibernate.annotations.UuidGenerator;
 
 /**
  * Country entity represents a geographical nation or territory.
@@ -29,12 +28,7 @@ import org.hibernate.annotations.Parameter;
 public class Country extends AbstractAuditingEntity<UUID> {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(
-        name = "UUID",
-        strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
-    )
+    @UuidGenerator(style = UuidGenerator.Style.TIME)
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 

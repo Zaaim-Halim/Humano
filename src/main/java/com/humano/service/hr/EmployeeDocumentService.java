@@ -38,7 +38,7 @@ public class EmployeeDocumentService {
 
     private final EmployeeDocumentRepository employeeDocumentRepository;
     private final EmployeeRepository employeeRepository;
-    private final FileStorageService fileStorageService;
+    private final StorageFactory storageFactory;
 
     public EmployeeDocumentService(
         EmployeeDocumentRepository employeeDocumentRepository,
@@ -47,8 +47,11 @@ public class EmployeeDocumentService {
     ) {
         this.employeeDocumentRepository = employeeDocumentRepository;
         this.employeeRepository = employeeRepository;
-        this.fileStorageService = storageFactory.getStorageService();
-        log.info("Employee document service initialized with storage provider: {}", fileStorageService.getClass().getSimpleName());
+        this.storageFactory = storageFactory;
+    }
+
+    private FileStorageService fileStorageService() {
+        return storageFactory.getStorageService();
     }
 
     /**
@@ -77,7 +80,7 @@ public class EmployeeDocumentService {
 
         // Store the file using the storage service
         String directory = "employee-documents/" + employee.getId();
-        String fileReference = fileStorageService.store(file, directory, fileName);
+        String fileReference = fileStorageService().store(file, directory, fileName);
 
         // Create document entity
         EmployeeDocument document = new EmployeeDocument();
@@ -145,11 +148,11 @@ public class EmployeeDocumentService {
 
         // Store the new file
         String directory = "employee-documents/" + document.getEmployee().getId();
-        String fileReference = fileStorageService.store(file, directory, fileName);
+        String fileReference = fileStorageService().store(file, directory, fileName);
 
         // Delete the old file if possible
-        if (fileStorageService.exists(document.getFilePath())) {
-            fileStorageService.delete(document.getFilePath());
+        if (fileStorageService().exists(document.getFilePath())) {
+            fileStorageService().delete(document.getFilePath());
         }
 
         // Update document entity
@@ -192,7 +195,7 @@ public class EmployeeDocumentService {
             .findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Document not found with ID: " + id));
 
-        return fileStorageService
+        return fileStorageService()
             .retrieve(document.getFilePath())
             .orElseThrow(() -> new IOException("Document content not found for ID: " + id));
     }
@@ -247,8 +250,8 @@ public class EmployeeDocumentService {
             .ifPresentOrElse(
                 document -> {
                     // Delete the physical file using the storage service
-                    if (fileStorageService.exists(document.getFilePath())) {
-                        fileStorageService.delete(document.getFilePath());
+                    if (fileStorageService().exists(document.getFilePath())) {
+                        fileStorageService().delete(document.getFilePath());
                     }
 
                     // Delete the document record
@@ -270,7 +273,7 @@ public class EmployeeDocumentService {
     private EmployeeDocumentResponse mapToEmployeeDocumentResponse(EmployeeDocument document) {
         // Try to get a public URL if available
         String filePath = document.getFilePath();
-        String publicUrl = fileStorageService.getUrl(filePath).orElse(filePath);
+        String publicUrl = fileStorageService().getUrl(filePath).orElse(filePath);
 
         return new EmployeeDocumentResponse(
             document.getId(),

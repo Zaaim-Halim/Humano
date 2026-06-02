@@ -13,8 +13,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
+import org.hibernate.annotations.UuidGenerator;
 
 /**
  * Coupon entity represents a discount that can be applied to subscriptions.
@@ -42,12 +41,7 @@ import org.hibernate.annotations.Parameter;
 public class Coupon extends AbstractAuditingEntity<UUID> {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(
-        name = "UUID",
-        strategy = "org.hibernate.id.UUIDGenerator",
-        parameters = { @Parameter(name = "uuid_gen_strategy_class", value = "org.hibernate.id.uuid.CustomVersionOneStrategy") }
-    )
+    @UuidGenerator(style = UuidGenerator.Style.TIME)
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 

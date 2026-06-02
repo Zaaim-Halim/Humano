@@ -98,7 +98,7 @@ public interface WorkflowInstanceRepository extends JpaRepository<WorkflowInstan
     /**
      * Find workflows created in date range.
      */
-    @Query("SELECT w FROM WorkflowInstance w WHERE w.createdDate BETWEEN :startDate AND :endDate")
+    @Query("SELECT w FROM WorkflowInstance w WHERE w.audit.createdDate BETWEEN :startDate AND :endDate")
     Page<WorkflowInstance> findByCreatedDateBetween(
         @Param("startDate") Instant startDate,
         @Param("endDate") Instant endDate,

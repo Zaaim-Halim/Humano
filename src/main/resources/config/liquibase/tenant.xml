@@ -5,21 +5,27 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
+  <!-- See master.xml for the rationale on BINARY(16) UUID storage. Note: @UuidGenerator(style=TIME)
+       emits RFC 4122 v1 UUIDs, which are NOT binary-sortable; storage win holds, clustering does not. -->
   <property name="now" value="now()" dbms="h2"/>
   <property name="floatType" value="float4" dbms="h2"/>
-  <property name="uuidType" value="varchar(36)" dbms="h2"/>
+  <property name="uuidType" value="BINARY(16)" dbms="h2"/>
   <property name="datetimeType" value="datetime(6)" dbms="h2"/>
   <property name="timeType" value="time(6)" dbms="h2"/>
   <property name="clobType" value="clob" dbms="h2"/>
   <property name="blobType" value="blob" dbms="h2"/>
-  <property name="now" value="now()" dbms="mysql"/>
-  <property name="floatType" value="float" dbms="mysql"/>
-  <property name="clobType" value="clob" dbms="mysql"/>
-  <property name="blobType" value="longblob" dbms="mysql"/>
-  <property name="uuidType" value="varchar(36)" dbms="mysql"/>
-  <property name="datetimeType" value="datetime(6)" dbms="mysql"/>
-  <property name="timeType" value="time(6)" dbms="mysql"/>
-  <property name="uuidType" value="UUID" dbms="postgresql,oracle,mssql"/>
+
+  <property name="now" value="now()" dbms="mysql,mariadb"/>
+  <property name="floatType" value="float" dbms="mysql,mariadb"/>
+  <property name="clobType" value="clob" dbms="mysql,mariadb"/>
+  <property name="blobType" value="longblob" dbms="mysql,mariadb"/>
+  <property name="uuidType" value="BINARY(16)" dbms="mysql,mariadb"/>
+  <property name="datetimeType" value="datetime(6)" dbms="mysql,mariadb"/>
+  <property name="timeType" value="time(6)" dbms="mysql,mariadb"/>
+
+  <property name="uuidType" value="BYTEA" dbms="postgresql"/>
+  <property name="uuidType" value="BINARY(16)" dbms="mssql"/>
+  <property name="uuidType" value="RAW(16)" dbms="oracle"/>
 
     <!--
         =====================================================================================

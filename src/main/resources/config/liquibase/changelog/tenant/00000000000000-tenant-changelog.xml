@@ -50,165 +50,6 @@
                              referencedTableName="permission"/>
   </changeSet>
 
-  <changeSet id="tenant-063-tax-bracket" author="halimzaaim">
-        <createTable tableName="tax_bracket">
-            <column name="id" type="${uuidType}">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_tax_bracket"/>
-            </column>
-            <column name="lower" type="DECIMAL(19,6)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="upper" type="DECIMAL(19,6)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="rate" type="DECIMAL(5,4)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="fixed_part" type="DECIMAL(19,6)"/>
-            <column name="valid_from" type="DATE">
-                <constraints nullable="false"/>
-            </column>
-            <column name="valid_to" type="DATE"/>
-            <column name="tax_code" type="VARCHAR(30)"/>
-            <column name="country_id" type="${uuidType}">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_date" type="DATETIME"/>
-            <column name="last_modified_by" type="VARCHAR(50)"/>
-            <column name="last_modified_date" type="DATETIME"/>
-        </createTable>
-        <addForeignKeyConstraint baseColumnNames="country_id" baseTableName="tax_bracket"
-                                 constraintName="FK_TAX_BRACKET_ON_COUNTRY" referencedColumnNames="id"
-                                 referencedTableName="country"/>
-    </changeSet>
-
-    <!-- tax_withholding -->
-    <changeSet id="tenant-064-tax-withholding" author="halimzaaim">
-        <createTable tableName="tax_withholding">
-            <column name="id" type="${uuidType}">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_tax_withholding"/>
-            </column>
-            <column name="type" type="VARCHAR(30)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="rate" type="DECIMAL(5,2)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="effective_from" type="DATE">
-                <constraints nullable="false"/>
-            </column>
-            <column name="effective_to" type="DATE"/>
-            <column name="tax_authority" type="VARCHAR(100)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="tax_identifier" type="VARCHAR(50)"/>
-            <column name="employee_id" type="${uuidType}">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_date" type="DATETIME"/>
-            <column name="last_modified_by" type="VARCHAR(50)"/>
-            <column name="last_modified_date" type="DATETIME"/>
-        </createTable>
-        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="tax_withholding"
-                                 constraintName="FK_TAX_WITHHOLDING_ON_EMPLOYEE" referencedColumnNames="id"
-                                 referencedTableName="employee"/>
-    </changeSet>
-
-    <!-- exchange_rate -->
-    <changeSet id="tenant-065-exchange-rate" author="halimzaaim">
-        <createTable tableName="exchange_rate">
-            <column name="id" type="${uuidType}">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_exchange_rate"/>
-            </column>
-            <column name="date" type="DATE">
-                <constraints nullable="false"/>
-            </column>
-            <column name="rate" type="DECIMAL(19,6)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="from_currency_id" type="${uuidType}">
-                <constraints nullable="false"/>
-            </column>
-            <column name="to_currency_id" type="${uuidType}">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_date" type="DATETIME"/>
-            <column name="last_modified_by" type="VARCHAR(50)"/>
-            <column name="last_modified_date" type="DATETIME"/>
-        </createTable>
-        <addForeignKeyConstraint baseColumnNames="from_currency_id" baseTableName="exchange_rate"
-                                 constraintName="FK_EXCHANGE_RATE_ON_FROM_CURRENCY" referencedColumnNames="id"
-                                 referencedTableName="currency"/>
-        <addForeignKeyConstraint baseColumnNames="to_currency_id" baseTableName="exchange_rate"
-                                 constraintName="FK_EXCHANGE_RATE_ON_TO_CURRENCY" referencedColumnNames="id"
-                                 referencedTableName="currency"/>
-        <createIndex tableName="exchange_rate" indexName="idx_exchange_rate_date">
-            <column name="date"/>
-        </createIndex>
-    </changeSet>
-
-    <!-- leave_type_rule -->
-    <changeSet id="tenant-066-leave-type-rule" author="halimzaaim">
-        <createTable tableName="leave_type_rule">
-            <column name="id" type="${uuidType}">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_leave_type_rule"/>
-            </column>
-            <column name="leave_type" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="deduction_percentage" type="DECIMAL(5,2)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="affects_taxable_salary" type="BOOLEAN" defaultValueBoolean="false">
-                <constraints nullable="false"/>
-            </column>
-            <column name="country_id" type="${uuidType}">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_date" type="DATETIME"/>
-            <column name="last_modified_by" type="VARCHAR(50)"/>
-            <column name="last_modified_date" type="DATETIME"/>
-        </createTable>
-        <addForeignKeyConstraint baseColumnNames="country_id" baseTableName="leave_type_rule"
-                                 constraintName="FK_LEAVE_TYPE_RULE_ON_COUNTRY" referencedColumnNames="id"
-                                 referencedTableName="country"/>
-        <addUniqueConstraint columnNames="leave_type, country_id" constraintName="uc_leave_type_rule_type_country" tableName="leave_type_rule"/>
-    </changeSet>
-
-
-    <changeSet id="tenant-070-indexes" author="halimzaaim">
-        <createIndex tableName="employee" indexName="idx_employee_status">
-            <column name="status"/>
-        </createIndex>
-        <createIndex tableName="employee" indexName="idx_employee_department">
-            <column name="department_id"/>
-        </createIndex>
-        <createIndex tableName="employee" indexName="idx_employee_position">
-            <column name="position_id"/>
-        </createIndex>
-        <createIndex tableName="compensation" indexName="idx_compensation_employee">
-            <column name="employee_id"/>
-        </createIndex>
-        <createIndex tableName="payroll_result" indexName="idx_payroll_result_run">
-            <column name="run_id"/>
-        </createIndex>
-        <createIndex tableName="payroll_line" indexName="idx_payroll_line_result">
-            <column name="result_id"/>
-        </createIndex>
-    </changeSet>
-
     <!-- country - Reference table -->
     <changeSet id="tenant-004-country" author="halimzaaim">
         <createTable tableName="country">
@@ -1663,6 +1504,165 @@
                                  referencedTableName="currency"/>
     </changeSet>
 
-    <!-- tax_bracket -->
+    <!-- tax_bracket / tax_withholding / exchange_rate / leave_type_rule / cross-table indexes -->
+
+  <changeSet id="tenant-063-tax-bracket" author="halimzaaim">
+        <createTable tableName="tax_bracket">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_tax_bracket"/>
+            </column>
+            <column name="lower" type="DECIMAL(19,6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="upper" type="DECIMAL(19,6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rate" type="DECIMAL(5,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fixed_part" type="DECIMAL(19,6)"/>
+            <column name="valid_from" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valid_to" type="DATE"/>
+            <column name="tax_code" type="VARCHAR(30)"/>
+            <column name="country_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="country_id" baseTableName="tax_bracket"
+                                 constraintName="FK_TAX_BRACKET_ON_COUNTRY" referencedColumnNames="id"
+                                 referencedTableName="country"/>
+    </changeSet>
+
+    <!-- tax_withholding -->
+    <changeSet id="tenant-064-tax-withholding" author="halimzaaim">
+        <createTable tableName="tax_withholding">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_tax_withholding"/>
+            </column>
+            <column name="type" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rate" type="DECIMAL(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="effective_from" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="effective_to" type="DATE"/>
+            <column name="tax_authority" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tax_identifier" type="VARCHAR(50)"/>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="tax_withholding"
+                                 constraintName="FK_TAX_WITHHOLDING_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <!-- exchange_rate -->
+    <changeSet id="tenant-065-exchange-rate" author="halimzaaim">
+        <createTable tableName="exchange_rate">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_exchange_rate"/>
+            </column>
+            <column name="date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rate" type="DECIMAL(19,6)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="from_currency_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="to_currency_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="from_currency_id" baseTableName="exchange_rate"
+                                 constraintName="FK_EXCHANGE_RATE_ON_FROM_CURRENCY" referencedColumnNames="id"
+                                 referencedTableName="currency"/>
+        <addForeignKeyConstraint baseColumnNames="to_currency_id" baseTableName="exchange_rate"
+                                 constraintName="FK_EXCHANGE_RATE_ON_TO_CURRENCY" referencedColumnNames="id"
+                                 referencedTableName="currency"/>
+        <createIndex tableName="exchange_rate" indexName="idx_exchange_rate_date">
+            <column name="date"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- leave_type_rule -->
+    <changeSet id="tenant-066-leave-type-rule" author="halimzaaim">
+        <createTable tableName="leave_type_rule">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_leave_type_rule"/>
+            </column>
+            <column name="leave_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deduction_percentage" type="DECIMAL(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="affects_taxable_salary" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="country_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="country_id" baseTableName="leave_type_rule"
+                                 constraintName="FK_LEAVE_TYPE_RULE_ON_COUNTRY" referencedColumnNames="id"
+                                 referencedTableName="country"/>
+        <addUniqueConstraint columnNames="leave_type, country_id" constraintName="uc_leave_type_rule_type_country" tableName="leave_type_rule"/>
+    </changeSet>
+
+
+    <changeSet id="tenant-070-indexes" author="halimzaaim">
+        <createIndex tableName="employee" indexName="idx_employee_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="employee" indexName="idx_employee_department">
+            <column name="department_id"/>
+        </createIndex>
+        <createIndex tableName="employee" indexName="idx_employee_position">
+            <column name="position_id"/>
+        </createIndex>
+        <createIndex tableName="compensation" indexName="idx_compensation_employee">
+            <column name="employee_id"/>
+        </createIndex>
+        <createIndex tableName="payroll_result" indexName="idx_payroll_result_run">
+            <column name="run_id"/>
+        </createIndex>
+        <createIndex tableName="payroll_line" indexName="idx_payroll_line_result">
+            <column name="result_id"/>
+        </createIndex>
+    </changeSet>
 
 </databaseChangeLog>

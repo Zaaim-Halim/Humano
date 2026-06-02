@@ -1,20 +1,25 @@
 package com.humano.service.storage;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Optional;
-
 /**
  * Placeholder implementation of FileStorageService for Azure Blob Storage.
  * Full implementation to be added in the future.
  */
-@Component
+/**
+ * Stub for Azure Blob storage. Not yet implemented. Intentionally not a Spring
+ * {@code @Component} — instantiated on demand via {@code StorageFactory} when a
+ * tenant's storage config selects Azure, at which point this implementation will
+ * throw {@link StorageException}.
+ */
 public class AzureBlobStorageService implements FileStorageService {
+
     private static final Logger log = LoggerFactory.getLogger(AzureBlobStorageService.class);
 
     // Constructor to be implemented later

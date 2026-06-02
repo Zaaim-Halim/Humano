@@ -33,14 +33,4 @@ public interface EmployeePositionHistoryRepository extends JpaRepository<Employe
      * Find the latest position history entry for an employee.
      */
     EmployeePositionHistory findFirstByEmployeeIdOrderByEffectiveDateDesc(UUID employeeId);
-
-    /**
-     * Find position history by department.
-     */
-    List<EmployeePositionHistory> findByDepartmentId(UUID departmentId);
-
-    /**
-     * Find position history by position.
-     */
-    List<EmployeePositionHistory> findByPositionId(UUID positionId);
 }

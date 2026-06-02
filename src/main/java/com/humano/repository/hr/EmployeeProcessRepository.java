@@ -72,7 +72,7 @@ public interface EmployeeProcessRepository extends JpaRepository<EmployeeProcess
     /**
      * Find overdue processes.
      */
-    @Query("SELECT p FROM EmployeeProcess p WHERE p.targetEndDate < :today AND p.status IN :activeStatuses")
+    @Query("SELECT p FROM EmployeeProcess p WHERE p.dueDate < :today AND p.status IN :activeStatuses")
     List<EmployeeProcess> findOverdueProcesses(
         @Param("today") LocalDate today,
         @Param("activeStatuses") List<EmployeeProcessStatus> activeStatuses

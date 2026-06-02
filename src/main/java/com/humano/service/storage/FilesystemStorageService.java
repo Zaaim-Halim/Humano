@@ -1,10 +1,5 @@
 package com.humano.service.storage;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -15,12 +10,18 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Implementation of FileStorageService that stores files in the local filesystem.
+ * Filesystem-backed storage. Instantiated per tenant by {@code StorageFactory} with the
+ * tenant's configured root location, so this is intentionally not a Spring
+ * {@code @Component}.
  */
-@Component
 public class FilesystemStorageService implements FileStorageService {
+
     private static final Logger log = LoggerFactory.getLogger(FilesystemStorageService.class);
 
     private final Path rootLocation;
@@ -59,8 +60,7 @@ public class FilesystemStorageService implements FileStorageService {
         }
 
         Path targetDir = createDirectoryIfNeeded(directory);
-        Path destinationFile = targetDir.resolve(Paths.get(filename))
-                .normalize().toAbsolutePath();
+        Path destinationFile = targetDir.resolve(Paths.get(filename)).normalize().toAbsolutePath();
 
         if (!destinationFile.getParent().startsWith(this.rootLocation)) {
             // This is a security check to prevent storing files outside the root location
@@ -78,8 +78,7 @@ public class FilesystemStorageService implements FileStorageService {
     @Override
     public String store(InputStream inputStream, String directory, String filename, String contentType) throws IOException {
         Path targetDir = createDirectoryIfNeeded(directory);
-        Path destinationFile = targetDir.resolve(Paths.get(filename))
-                .normalize().toAbsolutePath();
+        Path destinationFile = targetDir.resolve(Paths.get(filename)).normalize().toAbsolutePath();
 
         if (!destinationFile.getParent().startsWith(this.rootLocation)) {
             throw new StorageException("Cannot store file outside current directory.");
@@ -127,18 +126,13 @@ public class FilesystemStorageService implements FileStorageService {
     }
 
     private Path createDirectoryIfNeeded(String directory) throws IOException {
-        Path targetDir = directory != null && !directory.isBlank()
-                ? this.rootLocation.resolve(directory)
-                : this.rootLocation;
+        Path targetDir = directory != null && !directory.isBlank() ? this.rootLocation.resolve(directory) : this.rootLocation;
 
         Files.createDirectories(targetDir);
         return targetDir;
     }
 
     private String getExtension(String filename) {
-        return Optional.ofNullable(filename)
-                .filter(f -> f.contains("."))
-                .map(f -> f.substring(f.lastIndexOf(".")))
-                .orElse("");
+        return Optional.ofNullable(filename).filter(f -> f.contains(".")).map(f -> f.substring(f.lastIndexOf("."))).orElse("");
     }
 }
