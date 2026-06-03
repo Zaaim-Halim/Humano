@@ -1,6 +1,7 @@
 package com.humano.service.multitenancy;
 
 import com.humano.config.multitenancy.MultiTenantProperties;
+import com.humano.config.multitenancy.TenantPasswordCipher;
 import com.humano.domain.tenant.TenantDatabaseConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,9 +21,11 @@ public class TenantDatabaseManager {
     private static final Logger LOG = LoggerFactory.getLogger(TenantDatabaseManager.class);
 
     private final MultiTenantProperties properties;
+    private final TenantPasswordCipher passwordCipher;
 
-    public TenantDatabaseManager(MultiTenantProperties properties) {
+    public TenantDatabaseManager(MultiTenantProperties properties, TenantPasswordCipher passwordCipher) {
         this.properties = properties;
+        this.passwordCipher = passwordCipher;
     }
 
     /**
@@ -81,7 +84,9 @@ public class TenantDatabaseManager {
      */
     private void createDatabaseUser(JdbcTemplate jdbcTemplate, TenantDatabaseConfig dbConfig) {
         String username = dbConfig.getDbUsername();
-        String password = dbConfig.getDbPassword();
+        // dbConfig.getDbPassword() is the ciphertext stored in tenant_database_config.db_password;
+        // MySQL needs the plaintext for CREATE USER ... IDENTIFIED BY.
+        String password = passwordCipher.decrypt(dbConfig.getDbPassword());
         String database = dbConfig.getDbName();
 
         // Create user

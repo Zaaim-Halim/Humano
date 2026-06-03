@@ -29,10 +29,16 @@ public class TenantDataSourceProvider {
     private final Map<String, HikariDataSource> tenantDataSources = new ConcurrentHashMap<>();
     private final TenantRepository tenantRepository;
     private final MultiTenantProperties properties;
+    private final TenantPasswordCipher passwordCipher;
 
-    public TenantDataSourceProvider(TenantRepository tenantRepository, MultiTenantProperties properties) {
+    public TenantDataSourceProvider(
+        TenantRepository tenantRepository,
+        MultiTenantProperties properties,
+        TenantPasswordCipher passwordCipher
+    ) {
         this.tenantRepository = tenantRepository;
         this.properties = properties;
+        this.passwordCipher = passwordCipher;
     }
 
     /**
@@ -65,7 +71,7 @@ public class TenantDataSourceProvider {
         // This database can be on any server (same or different)
         config.setJdbcUrl(dbConfig.buildJdbcUrl());
         config.setUsername(dbConfig.getDbUsername());
-        config.setPassword(decryptPassword(dbConfig.getDbPassword()));
+        config.setPassword(passwordCipher.decrypt(dbConfig.getDbPassword()));
         config.setDriverClassName(properties.getDriverClassName());
 
         // Connection pool settings
@@ -135,19 +141,6 @@ public class TenantDataSourceProvider {
                 LOG.error("Health check failed for tenant {}: {}", tenantId, e.getMessage());
             }
         });
-    }
-
-    /**
-     * Decrypts the database password.
-     * For production, use Jasypt or similar encryption library.
-     *
-     * @param encryptedPassword the encrypted password
-     * @return the decrypted password
-     */
-    private String decryptPassword(String encryptedPassword) {
-        // TODO: Implement password decryption logic using Jasypt or similar
-        // For now, return as-is (passwords should be encrypted in production)
-        return encryptedPassword;
     }
 
     /**

@@ -82,6 +82,14 @@ spring:
   thymeleaf:
     cache: false
 
+# Dev-only Jasypt key. Prod requires the JASYPT_ENCRYPTOR_PASSWORD env var
+# (no default — boot fails fast if absent). See P1.4 in docs/ROADMAP.md.
+jasypt:
+  encryptor:
+    password: dev-only-change-me
+    algorithm: PBEWITHHMACSHA512ANDAES_256
+    iv-generator-classname: org.jasypt.iv.RandomIvGenerator
+
 server:
   port: 8080
   # make sure requests the proxy uri instead of the server one

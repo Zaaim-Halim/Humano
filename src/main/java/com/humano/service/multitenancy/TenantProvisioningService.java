@@ -1,6 +1,7 @@
 package com.humano.service.multitenancy;
 
 import com.humano.config.multitenancy.MultiTenantProperties;
+import com.humano.config.multitenancy.TenantPasswordCipher;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.domain.tenant.TenantDatabaseConfig;
@@ -36,6 +37,7 @@ public class TenantProvisioningService {
     private final TenantInitializationService initializationService;
     private final DatabaseServerSelector serverSelector;
     private final MultiTenantProperties properties;
+    private final TenantPasswordCipher passwordCipher;
 
     public TenantProvisioningService(
         TenantRepository tenantRepository,
@@ -44,7 +46,8 @@ public class TenantProvisioningService {
         TenantMigrationService migrationService,
         TenantInitializationService initializationService,
         DatabaseServerSelector serverSelector,
-        MultiTenantProperties properties
+        MultiTenantProperties properties,
+        TenantPasswordCipher passwordCipher
     ) {
         this.tenantRepository = tenantRepository;
         this.databaseConfigRepository = databaseConfigRepository;
@@ -53,6 +56,7 @@ public class TenantProvisioningService {
         this.initializationService = initializationService;
         this.serverSelector = serverSelector;
         this.properties = properties;
+        this.passwordCipher = passwordCipher;
     }
 
     /**
@@ -213,7 +217,11 @@ public class TenantProvisioningService {
         config.setDbPort(serverInfo.port());
         config.setDbName(properties.getTenantDatabasePrefix() + tenant.getSubdomain().toLowerCase().replaceAll("[^a-z0-9]", "_"));
         config.setDbUsername(generateDbUsername(tenant));
-        config.setDbPassword(generateSecurePassword());
+        // Plaintext is generated, used once at DB-user creation in TenantDatabaseManager (the
+        // bcrypt-/SHA-style hash MySQL stores is opaque to us), and never persisted. What we
+        // store in tenant_database_config.db_password is the Jasypt-encrypted form, which
+        // TenantDataSourceProvider decrypts when wiring each tenant's Hikari pool.
+        config.setDbPassword(passwordCipher.encrypt(passwordCipher.generatePassword()));
         config.setConnectionParams(properties.getDefaultConnectionParams());
         config.setRegion(serverInfo.region());
         config.setMaxPoolSize(determinePoolSize(tenant));
@@ -224,11 +232,6 @@ public class TenantProvisioningService {
 
     private String generateDbUsername(Tenant tenant) {
         return "tenant_" + tenant.getSubdomain().toLowerCase().replaceAll("[^a-z0-9]", "_");
-    }
-
-    private String generateSecurePassword() {
-        // Generate a secure random password
-        return java.util.UUID.randomUUID().toString().replace("-", "");
     }
 
     private int determinePoolSize(Tenant tenant) {
