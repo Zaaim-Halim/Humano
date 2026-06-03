@@ -268,11 +268,9 @@
                 <constraints nullable="false"/>
             </column>
             <column name="manager_id" type="${uuidType}"/>
-            <!-- Materialized path for the employee org-chart hierarchy (Employee.path).
-                 Required NOT NULL by the entity; nullable=true here only because
-                 Employee.@PrePersist computes it from the manager chain after the row
-                 gets its UUID. -->
-            <column name="path" type="VARCHAR(1000)"/>
+            <column name="path" type="VARCHAR(1000)">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
         <addForeignKeyConstraint baseColumnNames="id" baseTableName="employee"
                                  constraintName="FK_EMPLOYEE_ON_USER" referencedColumnNames="id"
@@ -583,7 +581,6 @@
             <column name="employee_id" type="${uuidType}">
                 <constraints nullable="false"/>
             </column>
-            <column name="review_cycle_id" type="${uuidType}"/>
             <column name="created_by" type="VARCHAR(50)">
                 <constraints nullable="false"/>
             </column>
@@ -1178,7 +1175,6 @@
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
             <column name="calc_phase" type="integer"/>
-            <column name="calc_phase" type="integer"/>
         </createTable>
     </changeSet>
 
@@ -1246,9 +1242,6 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
-            <column name="payroll_period_id" type="${uuidType}">
-                <constraints nullable="false"/>
-            </column>
             <column name="payroll_period_id" type="${uuidType}">
                 <constraints nullable="false"/>
             </column>
@@ -1424,7 +1417,9 @@
                 <constraints nullable="false"/>
             </column>
             <column name="description" type="VARCHAR(500)"/>
-            <column name="is_taxable" type="${booleanType}" defaultValueBoolean="true"/>
+            <column name="is_taxable" type="${booleanType}" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
             <column name="employee_id" type="${uuidType}">
                 <constraints nullable="false"/>
             </column>
@@ -1475,9 +1470,6 @@
             <column name="is_pre_tax" type="${booleanType}">
                 <constraints nullable="false"/>
             </column>
-            <column name="is_pre_tax" type="${booleanType}">
-                <constraints nullable="false"/>
-            </column>
         </createTable>
         <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="deduction"
                                  constraintName="FK_DEDUCTION_ON_EMPLOYEE" referencedColumnNames="id"
@@ -1503,7 +1495,6 @@
             </column>
             <column name="effective_to" type="DATE"/>
             <column name="status" type="VARCHAR(30)"/>
-            <column name="description" type="VARCHAR(500)"/>
             <column name="employee_id" type="${uuidType}">
                 <constraints nullable="false"/>
             </column>
@@ -1514,10 +1505,6 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
-            <column name="plan_details" type="TEXT"/>
-            <column name="plan_name" type="varchar(100)">
-                <constraints nullable="false"/>
-            </column>
             <column name="plan_details" type="TEXT"/>
             <column name="plan_name" type="varchar(100)">
                 <constraints nullable="false"/>
@@ -1597,7 +1584,6 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
-            <column name="year_to_date_amount" type="decimal(38,2)"/>
             <column name="year_to_date_amount" type="decimal(38,2)"/>
         </createTable>
         <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="tax_withholding"
@@ -1710,36 +1696,11 @@
                                  referencedTableName="payroll_period"/>
     </changeSet>
 
-    <changeSet id="tenant-072-fktmt404ev4y0yf1rgbha9woyor" author="halimzaaim">
-        <addForeignKeyConstraint baseColumnNames="workflow_id" baseTableName="review_cycle"
-                                 constraintName="FKtmt404ev4y0yf1rgbha9woyor" referencedColumnNames="id"
-                                 referencedTableName="workflow_instance"/>
-    </changeSet>
-
-    <changeSet id="tenant-072-fkhd4t4b0b0ek3gqul1gxm9bn0k" author="halimzaaim">
-        <addForeignKeyConstraint baseColumnNames="cycle_id" baseTableName="review_cycle_departments"
-                                 constraintName="FKhd4t4b0b0ek3gqul1gxm9bn0k" referencedColumnNames="id"
-                                 referencedTableName="review_cycle"/>
-    </changeSet>
-
-    <changeSet id="tenant-072-fk1d6vkt326cdr0kf4xouo56373" author="halimzaaim">
-        <addForeignKeyConstraint baseColumnNames="assignee_id" baseTableName="workflow_deadline"
-                                 constraintName="FK1d6vkt326cdr0kf4xouo56373" referencedColumnNames="id"
-                                 referencedTableName="employee"/>
-    </changeSet>
-
     <changeSet id="tenant-073-uk42tq7ssv6lg8brgwhy9p7kgwv" author="halimzaaim">
         <preConditions onFail="MARK_RAN">
             <not><indexExists tableName="leave_type_rule" indexName="UK42tq7ssv6lg8brgwhy9p7kgwv"/></not>
         </preConditions>
         <addUniqueConstraint tableName="leave_type_rule" columnNames="leave_type, country_id" constraintName="UK42tq7ssv6lg8brgwhy9p7kgwv"/>
-    </changeSet>
-
-    <changeSet id="tenant-073-ukfbb66t6pw81dcgd2jy1qvo7t8" author="halimzaaim">
-        <preConditions onFail="MARK_RAN">
-            <not><indexExists tableName="review_cycle" indexName="UKfbb66t6pw81dcgd2jy1qvo7t8"/></not>
-        </preConditions>
-        <addUniqueConstraint tableName="review_cycle" columnNames="workflow_id" constraintName="UKfbb66t6pw81dcgd2jy1qvo7t8"/>
     </changeSet>
 
 

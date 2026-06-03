@@ -50,6 +50,7 @@
 
     <include file="config/liquibase/changelog/master/00000000000000-master-changelog.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/master/20260218-tenant-country-changelog.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/master/20260603-file-storage-changelog.xml" relativeToChangelogFile="false"/>
 
     <!--  will add incremental liquibase changelogs here -->
 </databaseChangeLog>

@@ -46,9 +46,6 @@
             <column name="auto_approve_hours" type="integer"/>
             <column name="department_id" type="${uuidType}"/>
             <column name="escalate_after_hours" type="integer"/>
-            <column name="auto_approve_hours" type="integer"/>
-            <column name="department_id" type="${uuidType}"/>
-            <column name="escalate_after_hours" type="integer"/>
         </createTable>
         <createIndex tableName="approval_chain_config" indexName="idx_approval_chain_type">
             <column name="approval_type"/>
@@ -84,22 +81,12 @@
             <column name="self_assessment_deadline" type="DATE"/>
             <column name="manager_review_deadline" type="DATE"/>
             <column name="calibration_deadline" type="DATE"/>
-            <column name="communication_deadline" type="DATE"/>
             <column name="created_by" type="VARCHAR(50)">
                 <constraints nullable="false"/>
             </column>
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
-            <column name="is_active" type="${booleanType}">
-                <constraints nullable="false"/>
-            </column>
-            <column name="completed_manager_reviews" type="integer"/>
-            <column name="completed_self_assessments" type="integer"/>
-            <column name="delivered_feedbacks" type="integer"/>
-            <column name="feedback_deadline" type="date"/>
-            <column name="total_employees" type="integer"/>
-            <column name="workflow_id" type="${uuidType}"/>
             <column name="is_active" type="${booleanType}">
                 <constraints nullable="false"/>
             </column>
@@ -155,10 +142,6 @@
             <column name="error_message" type="varchar(1000)"/>
             <column name="outcome" type="varchar(30)"/>
             <column name="priority" type="integer"/>
-            <column name="due_date" type="DATETIME"/>
-            <column name="error_message" type="varchar(1000)"/>
-            <column name="outcome" type="varchar(30)"/>
-            <column name="priority" type="integer"/>
         </createTable>
         <createIndex tableName="workflow_instance" indexName="idx_workflow_entity">
             <column name="entity_id"/>
@@ -199,8 +182,6 @@
             <column name="status" type="VARCHAR(30)">
                 <constraints nullable="false"/>
             </column>
-            <column name="decision" type="VARCHAR(20)"/>
-            <column name="decision_notes" type="VARCHAR(1000)"/>
             <column name="decided_at" type="DATETIME"/>
             <column name="due_date" type="DATETIME"/>
             <column name="created_by" type="VARCHAR(50)">
@@ -209,11 +190,6 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
-            <column name="amount" type="float(53)"/>
-            <column name="approver_comments" type="varchar(1000)"/>
-            <column name="days_count" type="integer"/>
-            <column name="priority" type="integer"/>
-            <column name="submitted_at" type="DATETIME"/>
             <column name="amount" type="float(53)"/>
             <column name="approver_comments" type="varchar(1000)"/>
             <column name="days_count" type="integer"/>
@@ -261,9 +237,6 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
-            <column name="overdue_sent" type="${booleanType}"/>
-            <column name="warning_sent" type="${booleanType}"/>
-            <column name="assignee_id" type="${uuidType}"/>
             <column name="overdue_sent" type="${booleanType}"/>
             <column name="warning_sent" type="${booleanType}"/>
             <column name="assignee_id" type="${uuidType}"/>
@@ -364,26 +337,32 @@
                                  referencedTableName="workflow_instance"/>
     </changeSet>
 
-    <!-- Add FK from performance_review to review_cycle -->
-    <changeSet id="workflow-027-fk-performance-review-cycle" author="halimzaaim">
-        <preConditions onFail="MARK_RAN">
-            <columnExists tableName="performance_review" columnName="review_cycle_id"/>
-        </preConditions>
-        <addForeignKeyConstraint baseColumnNames="review_cycle_id" baseTableName="performance_review"
-                                 constraintName="FK_PERFORMANCE_REVIEW_ON_REVIEW_CYCLE" referencedColumnNames="id"
+    <!-- Cross-file FKs: originated in the base tenant changelog but reference tables created in
+         this file (review_cycle, workflow_instance, workflow_deadline). Moved here so they run
+         after the referenced tables exist. -->
+    <changeSet id="tenant-072-fktmt404ev4y0yf1rgbha9woyor" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="workflow_id" baseTableName="review_cycle"
+                                 constraintName="FKtmt404ev4y0yf1rgbha9woyor" referencedColumnNames="id"
+                                 referencedTableName="workflow_instance"/>
+    </changeSet>
+
+    <changeSet id="tenant-072-fkhd4t4b0b0ek3gqul1gxm9bn0k" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="cycle_id" baseTableName="review_cycle_departments"
+                                 constraintName="FKhd4t4b0b0ek3gqul1gxm9bn0k" referencedColumnNames="id"
                                  referencedTableName="review_cycle"/>
     </changeSet>
 
-    <!-- Add review_cycle_id column to performance_review if it doesn't exist -->
-    <changeSet id="workflow-028-add-review-cycle-to-performance-review" author="halimzaaim">
+    <changeSet id="tenant-072-fk1d6vkt326cdr0kf4xouo56373" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="assignee_id" baseTableName="workflow_deadline"
+                                 constraintName="FK1d6vkt326cdr0kf4xouo56373" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-073-ukfbb66t6pw81dcgd2jy1qvo7t8" author="halimzaaim">
         <preConditions onFail="MARK_RAN">
-            <not>
-                <columnExists tableName="performance_review" columnName="review_cycle_id"/>
-            </not>
+            <not><indexExists tableName="review_cycle" indexName="UKfbb66t6pw81dcgd2jy1qvo7t8"/></not>
         </preConditions>
-        <addColumn tableName="performance_review">
-            <column name="review_cycle_id" type="${uuidType}"/>
-        </addColumn>
+        <addUniqueConstraint tableName="review_cycle" columnNames="workflow_id" constraintName="UKfbb66t6pw81dcgd2jy1qvo7t8"/>
     </changeSet>
 
 </databaseChangeLog>

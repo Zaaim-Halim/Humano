@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- file_storage: centralized blob storage used by DatabaseStorageService.
+         Lives on the master DB (where the @Primary JdbcTemplate routes); per-tenant
+         isolation is enforced via the tenant_id column. -->
+    <changeSet id="20260603-file-storage" author="halimzaaim">
+        <createTable tableName="file_storage">
+            <column name="id" type="VARCHAR(255)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_file_storage"/>
+            </column>
+            <column name="tenant_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="filename" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content_type" type="VARCHAR(255)"/>
+            <column name="directory" type="VARCHAR(255)"/>
+            <column name="file_size" type="BIGINT"/>
+            <column name="content" type="${blobType}"/>
+            <column name="created_at" type="${datetimeType}"/>
+        </createTable>
+        <createIndex tableName="file_storage" indexName="idx_file_storage_tenant">
+            <column name="tenant_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
