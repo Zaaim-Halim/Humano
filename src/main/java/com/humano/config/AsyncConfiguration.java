@@ -1,5 +1,7 @@
 package com.humano.config;
 
+import com.humano.config.multitenancy.TenantAwareTaskDecorator;
+import java.util.concurrent.Executor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
@@ -13,8 +15,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import tech.jhipster.async.ExceptionHandlingAsyncTaskExecutor;
-
-import java.util.concurrent.Executor;
 
 @Configuration
 @EnableAsync
@@ -39,6 +39,9 @@ public class AsyncConfiguration implements AsyncConfigurer {
         executor.setMaxPoolSize(taskExecutionProperties.getPool().getMaxSize());
         executor.setQueueCapacity(taskExecutionProperties.getPool().getQueueCapacity());
         executor.setThreadNamePrefix(taskExecutionProperties.getThreadNamePrefix());
+        // P1.9 / I2: propagate TenantContext + MDC into @Async workers so tenant-scoped
+        // repositories keep routing correctly off the request thread.
+        executor.setTaskDecorator(new TenantAwareTaskDecorator());
         return new ExceptionHandlingAsyncTaskExecutor(executor);
     }
 

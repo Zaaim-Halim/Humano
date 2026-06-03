@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -39,6 +40,9 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
         try {
             String tenantId = tenantResolver.resolveTenant(request);
             TenantContext.setCurrentTenant(tenantId);
+            // P1.9: every log line for the rest of this request carries [tenant=<subdomain>].
+            // The matching TaskDecorator in AsyncConfiguration propagates this to @Async workers.
+            MDC.put(TenantContext.MDC_TENANT_KEY, tenantId);
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Resolved tenant '{}' for request: {} {}", tenantId, request.getMethod(), request.getRequestURI());
@@ -72,6 +76,7 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
         } finally {
             TenantContext.clear();
+            MDC.remove(TenantContext.MDC_TENANT_KEY);
         }
     }
 

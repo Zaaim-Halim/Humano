@@ -15,6 +15,9 @@ public final class TenantContext {
      */
     public static final String SESSION_TENANT_ATTRIBUTE = "humano.tenant";
 
+    /** SLF4J MDC key used by {@code TenantResolutionFilter} and the async {@code TaskDecorator}. */
+    public static final String MDC_TENANT_KEY = "tenant";
+
     /**
      * Reserved subdomain used for platform/admin operations against the master DB. Business
      * endpoints under {@code /api/**} reject this value.

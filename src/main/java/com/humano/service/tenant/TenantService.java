@@ -1,6 +1,7 @@
 package com.humano.service.tenant;
 
 import com.humano.domain.billing.SubscriptionPlan;
+import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.dto.tenant.requests.CreateTenantRequest;
 import com.humano.dto.tenant.requests.UpdateTenantRequest;
@@ -154,6 +155,23 @@ public class TenantService {
         log.debug("Request to get all Tenants");
 
         return tenantRepository.findAll(pageable).map(this::mapToResponse);
+    }
+
+    /**
+     * Get tenants filtered by status with pagination. {@code null} status returns all.
+     */
+    @Transactional(readOnly = true)
+    public Page<TenantResponse> getTenantsByStatus(TenantStatus status, Pageable pageable) {
+        log.debug("Request to get Tenants by status: {}", status);
+        if (status == null) {
+            return tenantRepository.findAll(pageable).map(this::mapToResponse);
+        }
+        return tenantRepository.findByStatus(status, pageable).map(this::mapToResponse);
+    }
+
+    /** Map a {@link Tenant} entity to a response DTO. Used by platform/admin controllers. */
+    public TenantResponse toResponse(Tenant tenant) {
+        return mapToResponse(tenant);
     }
 
     /**
