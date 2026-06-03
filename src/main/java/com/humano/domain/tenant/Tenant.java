@@ -3,6 +3,7 @@ package com.humano.domain.tenant;
 import com.humano.converters.TimeZoneConverter;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.CountryCode;
+import com.humano.domain.enumeration.tenant.ProvisioningStep;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
@@ -52,6 +53,15 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
     @Column(name = "status", nullable = false)
     @NotNull(message = "Tenant status is required")
     private TenantStatus status = TenantStatus.PENDING_SETUP;
+
+    /**
+     * Highest provisioning step this tenant has completed. Used by
+     * {@code TenantProvisioningService} to make provisioning crash-safe and resumable
+     * (see ROADMAP P1.6). {@code null} means we have not yet committed any step.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "provisioning_step", length = 32)
+    private ProvisioningStep provisioningStep;
 
     /**
      * The display name of the tenant.
@@ -185,6 +195,14 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
 
     public void setStatus(TenantStatus status) {
         this.status = status;
+    }
+
+    public ProvisioningStep getProvisioningStep() {
+        return provisioningStep;
+    }
+
+    public void setProvisioningStep(ProvisioningStep provisioningStep) {
+        this.provisioningStep = provisioningStep;
     }
 
     public String getName() {

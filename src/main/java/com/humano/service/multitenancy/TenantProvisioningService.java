@@ -2,12 +2,14 @@ package com.humano.service.multitenancy;
 
 import com.humano.config.multitenancy.MultiTenantProperties;
 import com.humano.config.multitenancy.TenantPasswordCipher;
+import com.humano.domain.enumeration.tenant.ProvisioningStep;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.domain.tenant.TenantDatabaseConfig;
 import com.humano.dto.tenant.TenantRegistrationDTO;
 import com.humano.repository.tenant.TenantDatabaseConfigRepository;
 import com.humano.repository.tenant.TenantRepository;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,73 +62,97 @@ public class TenantProvisioningService {
     }
 
     /**
-     * Provisions a new tenant with a dedicated database.
-     *
-     * @param registrationDTO the tenant registration details
-     * @return the provisioned tenant
+     * Provisions a new tenant with a dedicated database, or resumes an in-progress / failed
+     * provisioning for the same subdomain (P1.6). Each step is idempotent:
+     * <ul>
+     *   <li>tenant + db_config rows are reused if they exist;</li>
+     *   <li>{@code CREATE DATABASE IF NOT EXISTS} / {@code CREATE USER IF NOT EXISTS} in
+     *       {@link TenantDatabaseManager};</li>
+     *   <li>Liquibase skips already-applied changesets via {@code DATABASECHANGELOG};</li>
+     *   <li>{@link TenantInitializationService} guards each seed with an existence check.</li>
+     * </ul>
+     * The highest completed step is persisted on {@code tenant.provisioning_step} after each
+     * successful step so resumes can short-circuit work that's already done.
      */
     @Transactional
     public Tenant provisionTenant(TenantRegistrationDTO registrationDTO) {
-        LOG.info("Starting provisioning for tenant: {}", registrationDTO.getSubdomain());
+        String subdomain = registrationDTO.getSubdomain().toLowerCase();
+        LOG.info("Starting provisioning for tenant: {}", subdomain);
 
-        // Validate subdomain is not already taken
-        if (tenantRepository.existsBySubdomain(registrationDTO.getSubdomain())) {
-            throw new TenantProvisioningException("Subdomain already exists: " + registrationDTO.getSubdomain());
+        Optional<Tenant> existing = tenantRepository.findBySubdomain(subdomain);
+        Tenant tenant;
+        if (existing.isPresent()) {
+            Tenant t = existing.get();
+            TenantStatus status = t.getStatus();
+            // Resume only from non-terminal in-progress states.
+            if (status == TenantStatus.ACTIVE || status == TenantStatus.SUSPENDED) {
+                throw new TenantProvisioningException("Subdomain already exists: " + subdomain);
+            }
+            if (status == TenantStatus.DEACTIVATED || status == TenantStatus.DELETED) {
+                throw new TenantProvisioningException(
+                    "Subdomain '" + subdomain + "' belongs to a deactivated/deleted tenant; pick a different subdomain"
+                );
+            }
+            LOG.info("Resuming provisioning for tenant '{}' from step {}", subdomain, t.getProvisioningStep());
+            tenant = t;
+        } else {
+            tenant = createTenantRecord(registrationDTO);
+            markStep(tenant, ProvisioningStep.TENANT_CREATED);
         }
 
-        // Step 1: Create tenant record in master database
-        Tenant tenant = createTenantRecord(registrationDTO);
-
         try {
-            // Step 2: Select database server (same server, different server, or dedicated)
-            DatabaseServerInfo serverInfo = serverSelector.selectServer(registrationDTO);
-            LOG.info("Selected database server for tenant {}: {}:{}", tenant.getSubdomain(), serverInfo.host(), serverInfo.port());
-
-            // Step 3: Create database configuration
-            TenantDatabaseConfig dbConfig = createDatabaseConfig(tenant, serverInfo);
-            dbConfig = databaseConfigRepository.save(dbConfig);
-            tenant.setDatabaseConfig(dbConfig);
+            // Step 2/3: Select server + create the db_config row (idempotent: reuse existing).
+            TenantDatabaseConfig dbConfig = tenant.getDatabaseConfig();
+            if (dbConfig == null) {
+                DatabaseServerInfo serverInfo = serverSelector.selectServer(registrationDTO);
+                LOG.info("Selected database server for tenant {}: {}:{}", subdomain, serverInfo.host(), serverInfo.port());
+                dbConfig = databaseConfigRepository.save(createDatabaseConfig(tenant, serverInfo));
+                tenant.setDatabaseConfig(dbConfig);
+            }
             tenant.setStatus(TenantStatus.PROVISIONING);
-            tenantRepository.save(tenant);
+            markStep(tenant, ProvisioningStep.CONFIG_CREATED);
 
-            // Step 4: Create the physical database on the selected server
+            // Step 4: physical DB + DB user (CREATE … IF NOT EXISTS, safe to re-run).
             databaseManager.createDatabase(dbConfig);
+            markStep(tenant, ProvisioningStep.DATABASE_CREATED);
 
-            // Step 5: Run migrations on new database
+            // Step 5: Liquibase tracks applied changesets in DATABASECHANGELOG.
             migrationService.runMigrations(tenant);
+            markStep(tenant, ProvisioningStep.MIGRATIONS_RUN);
 
-            // Step 6: Initialize tenant with default data
-            initializationService.initializeTenant(tenant);
+            // Step 6: each seed is guarded by an existence check (see TenantInitializationService).
+            initializationService.initializeTenant(tenant, registrationDTO);
+            markStep(tenant, ProvisioningStep.INITIALIZED);
 
-            // Step 7: Mark tenant as active
+            // Step 7: terminal state.
             tenant.setStatus(TenantStatus.ACTIVE);
+            markStep(tenant, ProvisioningStep.COMPLETED);
             LOG.info(
                 "Successfully provisioned tenant: {} on {}:{}/{}",
-                tenant.getSubdomain(),
+                subdomain,
                 dbConfig.getDbHost(),
                 dbConfig.getDbPort(),
                 dbConfig.getDbName()
             );
-
-            return tenantRepository.save(tenant);
+            return tenant;
         } catch (Exception e) {
-            LOG.error("Failed to provision tenant: {}", tenant.getSubdomain(), e);
-
-            // Rollback: mark tenant as failed and cleanup
+            LOG.error("Failed to provision tenant '{}' at step {}; leaving rows for resume", subdomain, tenant.getProvisioningStep(), e);
             tenant.setStatus(TenantStatus.PROVISIONING_FAILED);
             tenantRepository.save(tenant);
-
-            // Attempt to cleanup the database if it was created
-            if (tenant.getDatabaseConfig() != null) {
-                try {
-                    databaseManager.dropDatabaseIfExists(tenant.getDatabaseConfig());
-                } catch (Exception cleanupEx) {
-                    LOG.error("Failed to cleanup database for tenant: {}", tenant.getSubdomain(), cleanupEx);
-                }
-            }
-
-            throw new TenantProvisioningException("Failed to provision tenant: " + tenant.getSubdomain(), e);
+            // NOTE: we deliberately do NOT dropDatabaseIfExists here — destroying partial state
+            // would defeat the point of resumable provisioning. Operators clean up explicitly
+            // via deprovisionTenant() if the failure is unrecoverable.
+            throw new TenantProvisioningException("Failed to provision tenant: " + subdomain, e);
         }
+    }
+
+    /** Persist the new highest-completed step. Skips downgrades. */
+    private void markStep(Tenant tenant, ProvisioningStep step) {
+        ProvisioningStep current = tenant.getProvisioningStep();
+        if (current == null || step.ordinal() > current.ordinal()) {
+            tenant.setProvisioningStep(step);
+        }
+        tenantRepository.save(tenant);
     }
 
     /**

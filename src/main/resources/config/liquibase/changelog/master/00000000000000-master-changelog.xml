@@ -120,6 +120,12 @@
             </column>
             <column name="booking_policies" type="TEXT"/>
             <column name="hr_policies" type="TEXT"/>
+            <!-- TenantStatus enum (PENDING_SETUP|PROVISIONING|PROVISIONING_FAILED|ACTIVE|SUSPENDED|DEACTIVATED|DELETED) -->
+            <column name="status" type="VARCHAR(32)" defaultValue="PENDING_SETUP">
+                <constraints nullable="false"/>
+            </column>
+            <!-- ProvisioningStep enum (P1.6); highest step completed for crash-safe resume. -->
+            <column name="provisioning_step" type="VARCHAR(32)"/>
             <column name="subscription_plan_id" type="${uuidType}">
                 <constraints nullable="false"/>
             </column>
