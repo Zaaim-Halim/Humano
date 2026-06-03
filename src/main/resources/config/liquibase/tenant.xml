@@ -33,6 +33,12 @@
   <property name="booleanType" value="BOOLEAN" dbms="postgresql"/>
   <property name="booleanType" value="NUMBER(1)" dbms="oracle"/>
 
+  <!-- See master.xml for the rationale. Use with @JdbcTypeCode(SqlTypes.JSON) on the entity. -->
+  <property name="jsonType" value="JSON" dbms="mysql,mariadb,h2"/>
+  <property name="jsonType" value="JSONB" dbms="postgresql"/>
+  <property name="jsonType" value="NVARCHAR(MAX)" dbms="mssql"/>
+  <property name="jsonType" value="CLOB" dbms="oracle"/>
+
     <!--
         =====================================================================================
         TENANT DATABASE CHANGELOG

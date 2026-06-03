@@ -48,6 +48,21 @@
     <property name="booleanType" value="BOOLEAN" dbms="postgresql"/>
     <property name="booleanType" value="NUMBER(1)" dbms="oracle"/>
 
+    <!--
+        jsonType: native JSON storage per dialect. Use with @JdbcTypeCode(SqlTypes.JSON)
+        or Hibernate's JsonType on the entity side so reads/writes serialize correctly.
+          mysql/mariadb → JSON         (MySQL 5.7+ / MariaDB 10.2+; validated, queryable)
+          postgresql    → JSONB        (binary, indexable — prefer over JSON for filtering)
+          h2            → JSON         (H2 2.x)
+          mssql         → NVARCHAR(MAX) (SQL Server stores JSON as nvarchar + ISJSON checks)
+          oracle        → CLOB         (Oracle 12c+ with IS JSON check; 21c+ has native JSON
+                                        but CLOB stays the broadly-compatible choice)
+    -->
+    <property name="jsonType" value="JSON" dbms="mysql,mariadb,h2"/>
+    <property name="jsonType" value="JSONB" dbms="postgresql"/>
+    <property name="jsonType" value="NVARCHAR(MAX)" dbms="mssql"/>
+    <property name="jsonType" value="CLOB" dbms="oracle"/>
+
     <include file="config/liquibase/changelog/master/00000000000000-master-changelog.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/master/20260218-tenant-country-changelog.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/master/20260603-file-storage-changelog.xml" relativeToChangelogFile="false"/>
