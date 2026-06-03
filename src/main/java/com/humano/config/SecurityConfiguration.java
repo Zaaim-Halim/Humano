@@ -85,6 +85,8 @@ public class SecurityConfiguration {
                 csrf
                     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+                    // P2.2: public tenant signup is hit by non-SPA clients that don't carry a CSRF cookie.
+                    .ignoringRequestMatchers(antMatcher("/api/tenant-registration"))
             )
             // Tenant resolution MUST run before any authentication step so the user lookup
             // hits the correct tenant DB. JWT filter (P1.3) will also be inserted before
@@ -114,6 +116,7 @@ public class SecurityConfiguration {
                     .requestMatchers(mvc.pattern("/api/authenticate")).permitAll()
                     .requestMatchers(mvc.pattern("/api/register")).permitAll()
                     .requestMatchers(mvc.pattern("/api/activate")).permitAll()
+                    .requestMatchers(mvc.pattern("/api/tenant-registration")).permitAll()
                     .requestMatchers(mvc.pattern("/api/account/reset-password/init")).permitAll()
                     .requestMatchers(mvc.pattern("/api/account/reset-password/finish")).permitAll()
                     .requestMatchers(mvc.pattern("/api/admin/**")).hasAuthority(AuthoritiesConstants.ADMIN)
