@@ -232,4 +232,4 @@ humano:
     idle-timeout: 600000
     max-lifetime: 1800000
     # Default connection parameters
-    default-connection-params: 'useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8'
+    default-connection-params: 'useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&createDatabaseIfNotExist=true'

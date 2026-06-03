@@ -1742,54 +1742,6 @@
         <addUniqueConstraint tableName="review_cycle" columnNames="workflow_id" constraintName="UKfbb66t6pw81dcgd2jy1qvo7t8"/>
     </changeSet>
 
-    <!-- review_cycle_departments: junction for ReviewCycle.departmentIds @ElementCollection -->
-    <changeSet id="tenant-071-review-cycle-departments" author="halimzaaim">
-        <createTable tableName="review_cycle_departments">
-            <column name="cycle_id" type="${uuidType}">
-                <constraints nullable="false"/>
-            </column>
-            <column name="department_id" type="${uuidType}"/>
-        </createTable>
-    </changeSet>
-
-    <changeSet id="tenant-072-fkfv9tk864k0l489wunop4m1tp7" author="halimzaaim">
-        <addForeignKeyConstraint baseColumnNames="payroll_period_id" baseTableName="payroll_result"
-                                 constraintName="FKfv9tk864k0l489wunop4m1tp7" referencedColumnNames="id"
-                                 referencedTableName="payroll_period"/>
-    </changeSet>
-
-    <changeSet id="tenant-072-fktmt404ev4y0yf1rgbha9woyor" author="halimzaaim">
-        <addForeignKeyConstraint baseColumnNames="workflow_id" baseTableName="review_cycle"
-                                 constraintName="FKtmt404ev4y0yf1rgbha9woyor" referencedColumnNames="id"
-                                 referencedTableName="workflow_instance"/>
-    </changeSet>
-
-    <changeSet id="tenant-072-fkhd4t4b0b0ek3gqul1gxm9bn0k" author="halimzaaim">
-        <addForeignKeyConstraint baseColumnNames="cycle_id" baseTableName="review_cycle_departments"
-                                 constraintName="FKhd4t4b0b0ek3gqul1gxm9bn0k" referencedColumnNames="id"
-                                 referencedTableName="review_cycle"/>
-    </changeSet>
-
-    <changeSet id="tenant-072-fk1d6vkt326cdr0kf4xouo56373" author="halimzaaim">
-        <addForeignKeyConstraint baseColumnNames="assignee_id" baseTableName="workflow_deadline"
-                                 constraintName="FK1d6vkt326cdr0kf4xouo56373" referencedColumnNames="id"
-                                 referencedTableName="employee"/>
-    </changeSet>
-
-    <changeSet id="tenant-073-uk42tq7ssv6lg8brgwhy9p7kgwv" author="halimzaaim">
-        <preConditions onFail="MARK_RAN">
-            <not><indexExists tableName="leave_type_rule" indexName="UK42tq7ssv6lg8brgwhy9p7kgwv"/></not>
-        </preConditions>
-        <addUniqueConstraint tableName="leave_type_rule" columnNames="leave_type, country_id" constraintName="UK42tq7ssv6lg8brgwhy9p7kgwv"/>
-    </changeSet>
-
-    <changeSet id="tenant-073-ukfbb66t6pw81dcgd2jy1qvo7t8" author="halimzaaim">
-        <preConditions onFail="MARK_RAN">
-            <not><indexExists tableName="review_cycle" indexName="UKfbb66t6pw81dcgd2jy1qvo7t8"/></not>
-        </preConditions>
-        <addUniqueConstraint tableName="review_cycle" columnNames="workflow_id" constraintName="UKfbb66t6pw81dcgd2jy1qvo7t8"/>
-    </changeSet>
-
 
 
 

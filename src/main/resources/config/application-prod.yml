@@ -27,13 +27,6 @@ spring:
       enabled: false
     livereload:
       enabled: false
-
-# Required: JASYPT_ENCRYPTOR_PASSWORD env var. No default — boot fails if absent.
-jasypt:
-  encryptor:
-    password: ${JASYPT_ENCRYPTOR_PASSWORD}
-    algorithm: PBEWITHHMACSHA512ANDAES_256
-    iv-generator-classname: org.jasypt.iv.RandomIvGenerator
   datasource:
     master:
       type: com.zaxxer.hikari.HikariDataSource
@@ -81,6 +74,13 @@ jasypt:
     password:
   thymeleaf:
     cache: true
+
+# Required: JASYPT_ENCRYPTOR_PASSWORD env var. No default — boot fails if absent.
+jasypt:
+  encryptor:
+    password: ${JASYPT_ENCRYPTOR_PASSWORD}
+    algorithm: PBEWITHHMACSHA512ANDAES_256
+    iv-generator-classname: org.jasypt.iv.RandomIvGenerator
 
 # ===================================================================
 # To enable TLS in production, generate a certificate using:
