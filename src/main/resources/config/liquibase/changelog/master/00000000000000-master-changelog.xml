@@ -26,7 +26,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="display_name" type="VARCHAR(100)"/>
-            <column name="active" type="BOOLEAN">
+            <column name="active" type="${booleanType}">
                 <constraints nullable="false"/>
             </column>
             <column name="base_price" type="DECIMAL(19, 4)"/>
@@ -60,7 +60,7 @@
             <column name="percentage" type="DECIMAL(5, 2)"/>
             <column name="currency" type="VARCHAR(3)"/>
             <column name="start_date" type="DATETIME"/>
-            <column name="active" type="BOOLEAN">
+            <column name="active" type="${booleanType}">
                 <constraints nullable="false"/>
             </column>
             <column name="max_redemptions" type="INT"/>
@@ -84,7 +84,7 @@
             <column name="code" type="VARCHAR(3)">
                 <constraints nullable="false"/>
             </column>
-            <column name="name" type="VARCHAR(255)">
+            <column name="name" type="varchar(100)">
                 <constraints nullable="false"/>
             </column>
             <column name="symbol" type="VARCHAR(5)"/>
@@ -152,7 +152,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="category" type="VARCHAR(50)"/>
-            <column name="active" type="BOOLEAN">
+            <column name="active" type="${booleanType}">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="VARCHAR(50)">
@@ -201,7 +201,7 @@
             <column name="status" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="auto_renew" type="BOOLEAN">
+            <column name="auto_renew" type="${booleanType}">
                 <constraints nullable="false"/>
             </column>
             <column name="billing_cycle" type="VARCHAR(255)">
@@ -209,7 +209,7 @@
             </column>
             <column name="current_period_start" type="DATETIME"/>
             <column name="current_period_end" type="DATETIME"/>
-            <column name="cancel_at_period_end" type="BOOLEAN"/>
+            <column name="cancel_at_period_end" type="${booleanType}"/>
             <column name="trial_start" type="DATETIME"/>
             <column name="trial_end" type="DATETIME"/>
             <column name="subscription_plan_id" type="${uuidType}">
@@ -327,20 +327,20 @@
             <column name="db_port" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="db_name" type="VARCHAR(100)">
+            <column name="db_name" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="db_username" type="VARCHAR(100)">
+            <column name="db_username" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="db_password" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="connection_params" type="VARCHAR(500)"/>
-            <column name="region" type="VARCHAR(50)"/>
+            <column name="connection_params" type="varchar(255)"/>
+            <column name="region" type="varchar(255)"/>
             <column name="max_pool_size" type="INT" defaultValueNumeric="10"/>
-            <column name="dedicated_server" type="BOOLEAN" defaultValueBoolean="false"/>
-            <column name="server_group" type="VARCHAR(50)"/>
+            <column name="dedicated_server" type="${booleanType}" defaultValueBoolean="false"/>
+            <column name="server_group" type="varchar(255)"/>
             <column name="created_by" type="VARCHAR(50)"/>
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
@@ -364,7 +364,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="config_json" type="VARCHAR(2000)"/>
-            <column name="active" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="active" type="${booleanType}" defaultValueBoolean="true"/>
             <column name="created_by" type="VARCHAR(50)">
                 <constraints nullable="false"/>
             </column>

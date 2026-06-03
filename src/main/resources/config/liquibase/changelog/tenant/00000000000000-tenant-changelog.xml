@@ -110,7 +110,7 @@
             <column name="email" type="VARCHAR(254)">
                 <constraints unique="true" uniqueConstraintName="uc_user_email"/>
             </column>
-            <column name="activated" type="BOOLEAN">
+            <column name="activated" type="${booleanType}">
                 <constraints nullable="false"/>
             </column>
             <column name="lang_key" type="VARCHAR(10)"/>
@@ -205,8 +205,8 @@
             <column name="name" type="VARCHAR(255)">
                 <constraints nullable="false" unique="true" uniqueConstraintName="uc_position_name"/>
             </column>
-            <column name="description" type="VARCHAR(500)"/>
-            <column name="level" type="VARCHAR(50)">
+            <column name="description" type="varchar(255)"/>
+            <column name="level" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="unit_id" type="${uuidType}"/>
@@ -253,7 +253,7 @@
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee"/>
             </column>
             <column name="job_title" type="VARCHAR(255)"/>
-            <column name="phone" type="VARCHAR(50)"/>
+            <column name="phone" type="varchar(255)"/>
             <column name="start_date" type="DATE"/>
             <column name="end_date" type="DATE"/>
             <column name="status" type="VARCHAR(30)">
@@ -268,6 +268,11 @@
                 <constraints nullable="false"/>
             </column>
             <column name="manager_id" type="${uuidType}"/>
+            <!-- Materialized path for the employee org-chart hierarchy (Employee.path).
+                 Required NOT NULL by the entity; nullable=true here only because
+                 Employee.@PrePersist computes it from the manager chain after the row
+                 gets its UUID. -->
+            <column name="path" type="VARCHAR(1000)"/>
         </createTable>
         <addForeignKeyConstraint baseColumnNames="id" baseTableName="employee"
                                  constraintName="FK_EMPLOYEE_ON_USER" referencedColumnNames="id"
@@ -311,10 +316,10 @@
             <column name="id" type="${uuidType}">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_document"/>
             </column>
-            <column name="type" type="VARCHAR(100)">
+            <column name="type" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="file_path" type="VARCHAR(500)">
+            <column name="file_path" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="employee_id" type="${uuidType}">
@@ -407,7 +412,7 @@
             <column name="event_action" type="VARCHAR(50)">
                 <constraints nullable="false"/>
             </column>
-            <column name="description" type="VARCHAR(500)"/>
+            <column name="description" type="varchar(255)"/>
             <column name="attendance_id" type="${uuidType}">
                 <constraints nullable="false"/>
             </column>
@@ -445,7 +450,7 @@
                 <constraints nullable="false"/>
             </column>
             <column name="days_count" type="INT"/>
-            <column name="approver_comments" type="VARCHAR(1000)"/>
+            <column name="approver_comments" type="varchar(255)"/>
             <column name="employee_id" type="${uuidType}">
                 <constraints nullable="false"/>
             </column>
@@ -477,7 +482,7 @@
             <column name="name" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="description" type="VARCHAR(1000)"/>
+            <column name="description" type="varchar(255)"/>
             <column name="start_time" type="DATETIME"/>
             <column name="end_time" type="DATETIME"/>
             <column name="created_by" type="VARCHAR(50)">
@@ -498,7 +503,7 @@
             <column name="date" type="DATE">
                 <constraints nullable="false"/>
             </column>
-            <column name="hours_worked" type="DECIMAL(5,2)">
+            <column name="hours_worked" type="decimal(38,2)">
                 <constraints nullable="false"/>
             </column>
             <column name="project_id" type="${uuidType}"/>
@@ -529,7 +534,7 @@
             <column name="name" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="amount" type="DECIMAL(19,4)">
+            <column name="amount" type="decimal(38,2)">
                 <constraints nullable="false"/>
             </column>
             <column name="description" type="VARCHAR(500)"/>
@@ -570,7 +575,7 @@
             <column name="review_date" type="DATE">
                 <constraints nullable="false"/>
             </column>
-            <column name="comments" type="TEXT"/>
+            <column name="comments" type="tinytext"/>
             <column name="rating" type="INT"/>
             <column name="reviewer_id" type="${uuidType}">
                 <constraints nullable="false"/>
@@ -604,8 +609,8 @@
                 <constraints nullable="false" unique="true" uniqueConstraintName="uc_skill_name"/>
             </column>
             <column name="description" type="VARCHAR(2000)"/>
-            <column name="category" type="VARCHAR(100)"/>
-            <column name="requires_certification" type="BOOLEAN" defaultValueBoolean="false">
+            <column name="category" type="varchar(255)"/>
+            <column name="requires_certification" type="${booleanType}" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="VARCHAR(50)">
@@ -629,7 +634,7 @@
             <column name="acquisition_date" type="DATE"/>
             <column name="expiry_date" type="DATE"/>
             <column name="notes" type="VARCHAR(1000)"/>
-            <column name="is_verified" type="BOOLEAN" defaultValueBoolean="false">
+            <column name="is_verified" type="${booleanType}" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
             <column name="employee_id" type="${uuidType}">
@@ -665,7 +670,7 @@
             <column name="provider" type="VARCHAR(255)"/>
             <column name="start_date" type="DATE"/>
             <column name="end_date" type="DATE"/>
-            <column name="description" type="VARCHAR(1000)"/>
+            <column name="description" type="varchar(255)"/>
             <column name="location" type="VARCHAR(255)"/>
             <column name="certificate" type="VARCHAR(255)"/>
             <column name="created_by" type="VARCHAR(50)">
@@ -683,10 +688,10 @@
             <column name="id" type="${uuidType}">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_training"/>
             </column>
-            <column name="status" type="VARCHAR(30)"/>
-            <column name="description" type="VARCHAR(1000)"/>
+            <column name="status" type="tinyint"/>
+            <column name="description" type="varchar(255)"/>
             <column name="completion_date" type="DATE"/>
-            <column name="feedback" type="VARCHAR(1000)"/>
+            <column name="feedback" type="varchar(255)"/>
             <column name="employee_id" type="${uuidType}">
                 <constraints nullable="false"/>
             </column>
@@ -711,7 +716,7 @@
             <column name="title" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="description" type="VARCHAR(1000)"/>
+            <column name="description" type="varchar(255)"/>
             <column name="start_date" type="DATE"/>
             <column name="end_date" type="DATE"/>
             <column name="created_by" type="VARCHAR(50)">
@@ -763,14 +768,14 @@
             <column name="claim_date" type="DATE">
                 <constraints nullable="false"/>
             </column>
-            <column name="amount" type="DECIMAL(19,4)">
+            <column name="amount" type="decimal(38,2)">
                 <constraints nullable="false"/>
             </column>
             <column name="description" type="TEXT"/>
             <column name="status" type="VARCHAR(30)">
                 <constraints nullable="false"/>
             </column>
-            <column name="receipt_url" type="VARCHAR(500)"/>
+            <column name="receipt_url" type="varchar(255)"/>
             <column name="employee_id" type="${uuidType}">
                 <constraints nullable="false"/>
             </column>
@@ -795,7 +800,7 @@
             <column name="provider_name" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="policy_number" type="VARCHAR(100)">
+            <column name="policy_number" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="start_date" type="DATE">
@@ -804,7 +809,7 @@
             <column name="end_date" type="DATE">
                 <constraints nullable="false"/>
             </column>
-            <column name="coverage_amount" type="DECIMAL(19,4)">
+            <column name="coverage_amount" type="decimal(38,2)">
                 <constraints nullable="false"/>
             </column>
             <column name="status" type="VARCHAR(30)">
@@ -834,7 +839,7 @@
             <column name="date" type="DATE">
                 <constraints nullable="false"/>
             </column>
-            <column name="hours" type="DECIMAL(5,2)">
+            <column name="hours" type="decimal(38,2)">
                 <constraints nullable="false"/>
             </column>
             <column name="type" type="VARCHAR(30)">
@@ -869,10 +874,10 @@
             <column name="id" type="${uuidType}">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_notification"/>
             </column>
-            <column name="message" type="VARCHAR(1000)">
+            <column name="message" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="read" type="BOOLEAN">
+            <column name="read" type="${booleanType}">
                 <constraints nullable="false"/>
             </column>
             <column name="created_at" type="DATETIME">
@@ -903,10 +908,10 @@
             <column name="id" type="${uuidType}">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_portal_settings"/>
             </column>
-            <column name="email_notifications" type="BOOLEAN"/>
-            <column name="sms_notifications" type="BOOLEAN"/>
-            <column name="dashboard_layout" type="VARCHAR(50)"/>
-            <column name="theme" type="VARCHAR(50)"/>
+            <column name="email_notifications" type="${booleanType}"/>
+            <column name="sms_notifications" type="${booleanType}"/>
+            <column name="dashboard_layout" type="varchar(255)"/>
+            <column name="theme" type="varchar(255)"/>
             <column name="employee_id" type="${uuidType}">
                 <constraints nullable="false" unique="true" uniqueConstraintName="uc_portal_settings_employee"/>
             </column>
@@ -928,12 +933,12 @@
             <column name="id" type="${uuidType}">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_position_history"/>
             </column>
-            <column name="old_salary" type="DECIMAL(19,4)"/>
-            <column name="new_salary" type="DECIMAL(19,4)"/>
+            <column name="old_salary" type="decimal(38,2)"/>
+            <column name="new_salary" type="decimal(38,2)"/>
             <column name="effective_date" type="DATE"/>
             <column name="change_type" type="VARCHAR(30)"/>
             <column name="status" type="VARCHAR(30)"/>
-            <column name="reason" type="VARCHAR(500)"/>
+            <column name="reason" type="varchar(255)"/>
             <column name="employee_id" type="${uuidType}"/>
             <column name="old_position_id" type="${uuidType}"/>
             <column name="new_position_id" type="${uuidType}"/>
@@ -1016,7 +1021,7 @@
             <column name="description" type="VARCHAR(1000)"/>
             <column name="due_date" type="DATE"/>
             <column name="completion_date" type="DATE"/>
-            <column name="is_completed" type="BOOLEAN" defaultValueBoolean="false">
+            <column name="is_completed" type="${booleanType}" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
             <column name="completion_notes" type="VARCHAR(1000)"/>
@@ -1053,10 +1058,10 @@
             <column name="frequency" type="VARCHAR(30)">
                 <constraints nullable="false"/>
             </column>
-            <column name="timezone" type="VARCHAR(50)">
+            <column name="timezone" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+            <column name="active" type="${booleanType}" defaultValueBoolean="true">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="VARCHAR(50)">
@@ -1086,7 +1091,7 @@
             <column name="payment_date" type="DATE">
                 <constraints nullable="false"/>
             </column>
-            <column name="closed" type="BOOLEAN" defaultValueBoolean="false">
+            <column name="closed" type="${booleanType}" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
             <column name="calendar_id" type="${uuidType}">
@@ -1157,13 +1162,13 @@
             <column name="measure" type="VARCHAR(30)">
                 <constraints nullable="false"/>
             </column>
-            <column name="taxable" type="BOOLEAN" defaultValueBoolean="false">
+            <column name="taxable" type="${booleanType}" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
-            <column name="contributes_to_social" type="BOOLEAN" defaultValueBoolean="false">
+            <column name="contributes_to_social" type="${booleanType}" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
-            <column name="percentage" type="BOOLEAN" defaultValueBoolean="false">
+            <column name="percentage" type="${booleanType}" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="VARCHAR(50)">
@@ -1172,6 +1177,8 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
+            <column name="calc_phase" type="integer"/>
+            <column name="calc_phase" type="integer"/>
         </createTable>
     </changeSet>
 
@@ -1188,7 +1195,7 @@
             <column name="effective_to" type="DATE"/>
             <column name="priority" type="INT"/>
             <column name="base_formula_ref" type="VARCHAR(255)"/>
-            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+            <column name="active" type="${booleanType}" defaultValueBoolean="true">
                 <constraints nullable="false"/>
             </column>
             <column name="pay_component_id" type="${uuidType}">
@@ -1212,16 +1219,16 @@
             <column name="id" type="${uuidType}">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_result"/>
             </column>
-            <column name="gross" type="DECIMAL(19,4)" defaultValueNumeric="0">
+            <column name="gross" type="decimal(38,2)" defaultValueNumeric="0">
                 <constraints nullable="false"/>
             </column>
-            <column name="total_deductions" type="DECIMAL(19,4)" defaultValueNumeric="0">
+            <column name="total_deductions" type="decimal(38,2)" defaultValueNumeric="0">
                 <constraints nullable="false"/>
             </column>
-            <column name="net" type="DECIMAL(19,4)" defaultValueNumeric="0">
+            <column name="net" type="decimal(38,2)" defaultValueNumeric="0">
                 <constraints nullable="false"/>
             </column>
-            <column name="employer_cost" type="DECIMAL(19,4)" defaultValueNumeric="0">
+            <column name="employer_cost" type="decimal(38,2)" defaultValueNumeric="0">
                 <constraints nullable="false"/>
             </column>
             <column name="run_id" type="${uuidType}">
@@ -1239,6 +1246,12 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
+            <column name="payroll_period_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payroll_period_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
         <addForeignKeyConstraint baseColumnNames="run_id" baseTableName="payroll_result"
                                  constraintName="FK_PAYROLL_RESULT_ON_RUN" referencedColumnNames="id"
@@ -1257,9 +1270,9 @@
             <column name="id" type="${uuidType}">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_line"/>
             </column>
-            <column name="quantity" type="DECIMAL(19,4)"/>
-            <column name="rate" type="DECIMAL(19,4)"/>
-            <column name="amount" type="DECIMAL(19,4)" defaultValueNumeric="0">
+            <column name="quantity" type="decimal(38,2)"/>
+            <column name="rate" type="decimal(38,2)"/>
+            <column name="amount" type="decimal(38,2)" defaultValueNumeric="0">
                 <constraints nullable="false"/>
             </column>
             <column name="sequence" type="INT"/>
@@ -1316,9 +1329,9 @@
             <column name="id" type="${uuidType}">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_input"/>
             </column>
-            <column name="quantity" type="DECIMAL(19,4)"/>
-            <column name="rate" type="DECIMAL(19,4)"/>
-            <column name="amount" type="DECIMAL(19,4)"/>
+            <column name="quantity" type="decimal(38,2)"/>
+            <column name="rate" type="decimal(38,2)"/>
+            <column name="amount" type="decimal(38,2)"/>
             <column name="meta_json" type="TEXT"/>
             <column name="source" type="VARCHAR(50)"/>
             <column name="employee_id" type="${uuidType}">
@@ -1354,7 +1367,7 @@
             <column name="id" type="${uuidType}">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="pk_compensation"/>
             </column>
-            <column name="base_amount" type="DECIMAL(19,4)" defaultValueNumeric="0">
+            <column name="base_amount" type="decimal(38,2)" defaultValueNumeric="0">
                 <constraints nullable="false"/>
             </column>
             <column name="basis" type="VARCHAR(30)">
@@ -1400,18 +1413,18 @@
             <column name="type" type="VARCHAR(30)">
                 <constraints nullable="false"/>
             </column>
-            <column name="amount" type="DECIMAL(19,4)">
+            <column name="amount" type="decimal(38,2)">
                 <constraints nullable="false"/>
             </column>
             <column name="award_date" type="DATE">
                 <constraints nullable="false"/>
             </column>
             <column name="payment_date" type="DATE"/>
-            <column name="is_paid" type="BOOLEAN" defaultValueBoolean="false">
+            <column name="is_paid" type="${booleanType}" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
             <column name="description" type="VARCHAR(500)"/>
-            <column name="is_taxable" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="is_taxable" type="${booleanType}" defaultValueBoolean="true"/>
             <column name="employee_id" type="${uuidType}">
                 <constraints nullable="false"/>
             </column>
@@ -1440,8 +1453,8 @@
             <column name="type" type="VARCHAR(30)">
                 <constraints nullable="false"/>
             </column>
-            <column name="amount" type="DECIMAL(19,4)"/>
-            <column name="percentage" type="DECIMAL(5,2)"/>
+            <column name="amount" type="decimal(38,2)"/>
+            <column name="percentage" type="decimal(38,2)"/>
             <column name="effective_from" type="DATE">
                 <constraints nullable="false"/>
             </column>
@@ -1459,6 +1472,12 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
+            <column name="is_pre_tax" type="${booleanType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_pre_tax" type="${booleanType}">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
         <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="deduction"
                                  constraintName="FK_DEDUCTION_ON_EMPLOYEE" referencedColumnNames="id"
@@ -1477,8 +1496,8 @@
             <column name="type" type="VARCHAR(50)">
                 <constraints nullable="false"/>
             </column>
-            <column name="employer_cost" type="DECIMAL(19,4)" defaultValueNumeric="0"/>
-            <column name="employee_cost" type="DECIMAL(19,4)" defaultValueNumeric="0"/>
+            <column name="employer_cost" type="decimal(38,2)" defaultValueNumeric="0"/>
+            <column name="employee_cost" type="decimal(38,2)" defaultValueNumeric="0"/>
             <column name="effective_from" type="DATE">
                 <constraints nullable="false"/>
             </column>
@@ -1495,6 +1514,14 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
+            <column name="plan_details" type="TEXT"/>
+            <column name="plan_name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="plan_details" type="TEXT"/>
+            <column name="plan_name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
         <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_benefit"
                                  constraintName="FK_EMPLOYEE_BENEFIT_ON_EMPLOYEE" referencedColumnNames="id"
@@ -1550,7 +1577,7 @@
             <column name="type" type="VARCHAR(30)">
                 <constraints nullable="false"/>
             </column>
-            <column name="rate" type="DECIMAL(5,2)">
+            <column name="rate" type="decimal(38,2)">
                 <constraints nullable="false"/>
             </column>
             <column name="effective_from" type="DATE">
@@ -1570,6 +1597,8 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
+            <column name="year_to_date_amount" type="decimal(38,2)"/>
+            <column name="year_to_date_amount" type="decimal(38,2)"/>
         </createTable>
         <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="tax_withholding"
                                  constraintName="FK_TAX_WITHHOLDING_ON_EMPLOYEE" referencedColumnNames="id"
@@ -1624,7 +1653,7 @@
             <column name="deduction_percentage" type="DECIMAL(5,2)">
                 <constraints nullable="false"/>
             </column>
-            <column name="affects_taxable_salary" type="BOOLEAN" defaultValueBoolean="false">
+            <column name="affects_taxable_salary" type="${booleanType}" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
             <column name="country_id" type="${uuidType}">
@@ -1664,5 +1693,115 @@
             <column name="result_id"/>
         </createIndex>
     </changeSet>
+
+    <!-- review_cycle_departments: junction for ReviewCycle.departmentIds @ElementCollection -->
+    <changeSet id="tenant-071-review-cycle-departments" author="halimzaaim">
+        <createTable tableName="review_cycle_departments">
+            <column name="cycle_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="department_id" type="${uuidType}"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="tenant-072-fkfv9tk864k0l489wunop4m1tp7" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="payroll_period_id" baseTableName="payroll_result"
+                                 constraintName="FKfv9tk864k0l489wunop4m1tp7" referencedColumnNames="id"
+                                 referencedTableName="payroll_period"/>
+    </changeSet>
+
+    <changeSet id="tenant-072-fktmt404ev4y0yf1rgbha9woyor" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="workflow_id" baseTableName="review_cycle"
+                                 constraintName="FKtmt404ev4y0yf1rgbha9woyor" referencedColumnNames="id"
+                                 referencedTableName="workflow_instance"/>
+    </changeSet>
+
+    <changeSet id="tenant-072-fkhd4t4b0b0ek3gqul1gxm9bn0k" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="cycle_id" baseTableName="review_cycle_departments"
+                                 constraintName="FKhd4t4b0b0ek3gqul1gxm9bn0k" referencedColumnNames="id"
+                                 referencedTableName="review_cycle"/>
+    </changeSet>
+
+    <changeSet id="tenant-072-fk1d6vkt326cdr0kf4xouo56373" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="assignee_id" baseTableName="workflow_deadline"
+                                 constraintName="FK1d6vkt326cdr0kf4xouo56373" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-073-uk42tq7ssv6lg8brgwhy9p7kgwv" author="halimzaaim">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="leave_type_rule" indexName="UK42tq7ssv6lg8brgwhy9p7kgwv"/></not>
+        </preConditions>
+        <addUniqueConstraint tableName="leave_type_rule" columnNames="leave_type, country_id" constraintName="UK42tq7ssv6lg8brgwhy9p7kgwv"/>
+    </changeSet>
+
+    <changeSet id="tenant-073-ukfbb66t6pw81dcgd2jy1qvo7t8" author="halimzaaim">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="review_cycle" indexName="UKfbb66t6pw81dcgd2jy1qvo7t8"/></not>
+        </preConditions>
+        <addUniqueConstraint tableName="review_cycle" columnNames="workflow_id" constraintName="UKfbb66t6pw81dcgd2jy1qvo7t8"/>
+    </changeSet>
+
+    <!-- review_cycle_departments: junction for ReviewCycle.departmentIds @ElementCollection -->
+    <changeSet id="tenant-071-review-cycle-departments" author="halimzaaim">
+        <createTable tableName="review_cycle_departments">
+            <column name="cycle_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="department_id" type="${uuidType}"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="tenant-072-fkfv9tk864k0l489wunop4m1tp7" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="payroll_period_id" baseTableName="payroll_result"
+                                 constraintName="FKfv9tk864k0l489wunop4m1tp7" referencedColumnNames="id"
+                                 referencedTableName="payroll_period"/>
+    </changeSet>
+
+    <changeSet id="tenant-072-fktmt404ev4y0yf1rgbha9woyor" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="workflow_id" baseTableName="review_cycle"
+                                 constraintName="FKtmt404ev4y0yf1rgbha9woyor" referencedColumnNames="id"
+                                 referencedTableName="workflow_instance"/>
+    </changeSet>
+
+    <changeSet id="tenant-072-fkhd4t4b0b0ek3gqul1gxm9bn0k" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="cycle_id" baseTableName="review_cycle_departments"
+                                 constraintName="FKhd4t4b0b0ek3gqul1gxm9bn0k" referencedColumnNames="id"
+                                 referencedTableName="review_cycle"/>
+    </changeSet>
+
+    <changeSet id="tenant-072-fk1d6vkt326cdr0kf4xouo56373" author="halimzaaim">
+        <addForeignKeyConstraint baseColumnNames="assignee_id" baseTableName="workflow_deadline"
+                                 constraintName="FK1d6vkt326cdr0kf4xouo56373" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-073-uk42tq7ssv6lg8brgwhy9p7kgwv" author="halimzaaim">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="leave_type_rule" indexName="UK42tq7ssv6lg8brgwhy9p7kgwv"/></not>
+        </preConditions>
+        <addUniqueConstraint tableName="leave_type_rule" columnNames="leave_type, country_id" constraintName="UK42tq7ssv6lg8brgwhy9p7kgwv"/>
+    </changeSet>
+
+    <changeSet id="tenant-073-ukfbb66t6pw81dcgd2jy1qvo7t8" author="halimzaaim">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="review_cycle" indexName="UKfbb66t6pw81dcgd2jy1qvo7t8"/></not>
+        </preConditions>
+        <addUniqueConstraint tableName="review_cycle" columnNames="workflow_id" constraintName="UKfbb66t6pw81dcgd2jy1qvo7t8"/>
+    </changeSet>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 </databaseChangeLog>

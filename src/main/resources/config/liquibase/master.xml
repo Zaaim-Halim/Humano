@@ -38,6 +38,16 @@
     <property name="uuidType" value="BINARY(16)" dbms="mssql"/>
     <property name="uuidType" value="RAW(16)" dbms="oracle"/>
 
+    <!--
+        booleanType: matches what each dialect actually stores so Hibernate's
+        ddl-auto=validate doesn't complain. MySQL/MariaDB's BOOLEAN is an alias for
+        TINYINT(1), but Hibernate 6 expects JDBC type BIT for Booleans — so we use BIT(1)
+        there. Oracle has no native boolean; use NUMBER(1).
+    -->
+    <property name="booleanType" value="BIT(1)" dbms="mysql,mariadb,h2,mssql"/>
+    <property name="booleanType" value="BOOLEAN" dbms="postgresql"/>
+    <property name="booleanType" value="NUMBER(1)" dbms="oracle"/>
+
     <include file="config/liquibase/changelog/master/00000000000000-master-changelog.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/master/20260218-tenant-country-changelog.xml" relativeToChangelogFile="false"/>
 

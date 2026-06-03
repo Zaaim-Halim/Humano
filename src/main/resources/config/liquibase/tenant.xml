@@ -27,6 +27,12 @@
   <property name="uuidType" value="BINARY(16)" dbms="mssql"/>
   <property name="uuidType" value="RAW(16)" dbms="oracle"/>
 
+  <!-- See master.xml for the rationale. MySQL/MariaDB BOOLEAN aliases TINYINT(1); use BIT(1)
+       to match Hibernate's expected JDBC type. -->
+  <property name="booleanType" value="BIT(1)" dbms="mysql,mariadb,h2,mssql"/>
+  <property name="booleanType" value="BOOLEAN" dbms="postgresql"/>
+  <property name="booleanType" value="NUMBER(1)" dbms="oracle"/>
+
     <!--
         =====================================================================================
         TENANT DATABASE CHANGELOG

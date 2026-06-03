@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 public class TenantMigrationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantMigrationService.class);
-    private static final String TENANT_CHANGELOG = "classpath:config/liquibase/tenant/tenant.xml";
+    private static final String TENANT_CHANGELOG = "classpath:config/liquibase/tenant.xml";
 
     private final TenantDataSourceProvider dataSourceProvider;
 

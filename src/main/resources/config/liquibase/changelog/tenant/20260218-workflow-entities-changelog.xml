@@ -32,7 +32,7 @@
             <column name="specific_approver_id" type="${uuidType}"/>
             <column name="condition_expression" type="VARCHAR(500)"/>
             <column name="description" type="VARCHAR(500)"/>
-            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+            <column name="is_active" type="${booleanType}" defaultValueBoolean="true">
                 <constraints nullable="false"/>
             </column>
             <column name="min_threshold" type="DOUBLE"/>
@@ -43,6 +43,12 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
+            <column name="auto_approve_hours" type="integer"/>
+            <column name="department_id" type="${uuidType}"/>
+            <column name="escalate_after_hours" type="integer"/>
+            <column name="auto_approve_hours" type="integer"/>
+            <column name="department_id" type="${uuidType}"/>
+            <column name="escalate_after_hours" type="integer"/>
         </createTable>
         <createIndex tableName="approval_chain_config" indexName="idx_approval_chain_type">
             <column name="approval_type"/>
@@ -85,6 +91,24 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
+            <column name="is_active" type="${booleanType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="completed_manager_reviews" type="integer"/>
+            <column name="completed_self_assessments" type="integer"/>
+            <column name="delivered_feedbacks" type="integer"/>
+            <column name="feedback_deadline" type="date"/>
+            <column name="total_employees" type="integer"/>
+            <column name="workflow_id" type="${uuidType}"/>
+            <column name="is_active" type="${booleanType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="completed_manager_reviews" type="integer"/>
+            <column name="completed_self_assessments" type="integer"/>
+            <column name="delivered_feedbacks" type="integer"/>
+            <column name="feedback_deadline" type="date"/>
+            <column name="total_employees" type="integer"/>
+            <column name="workflow_id" type="${uuidType}"/>
         </createTable>
         <createIndex tableName="review_cycle" indexName="idx_review_cycle_phase">
             <column name="phase"/>
@@ -127,6 +151,14 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
+            <column name="due_date" type="DATETIME"/>
+            <column name="error_message" type="varchar(1000)"/>
+            <column name="outcome" type="varchar(30)"/>
+            <column name="priority" type="integer"/>
+            <column name="due_date" type="DATETIME"/>
+            <column name="error_message" type="varchar(1000)"/>
+            <column name="outcome" type="varchar(30)"/>
+            <column name="priority" type="integer"/>
         </createTable>
         <createIndex tableName="workflow_instance" indexName="idx_workflow_entity">
             <column name="entity_id"/>
@@ -177,6 +209,16 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
+            <column name="amount" type="float(53)"/>
+            <column name="approver_comments" type="varchar(1000)"/>
+            <column name="days_count" type="integer"/>
+            <column name="priority" type="integer"/>
+            <column name="submitted_at" type="DATETIME"/>
+            <column name="amount" type="float(53)"/>
+            <column name="approver_comments" type="varchar(1000)"/>
+            <column name="days_count" type="integer"/>
+            <column name="priority" type="integer"/>
+            <column name="submitted_at" type="DATETIME"/>
         </createTable>
         <createIndex tableName="approval_request" indexName="idx_approval_workflow">
             <column name="workflow_id"/>
@@ -209,7 +251,7 @@
             </column>
             <column name="warning_at" type="DATETIME"/>
             <column name="escalation_level" type="INT" defaultValueNumeric="0"/>
-            <column name="is_completed" type="BOOLEAN" defaultValueBoolean="false">
+            <column name="is_completed" type="${booleanType}" defaultValueBoolean="false">
                 <constraints nullable="false"/>
             </column>
             <column name="completed_at" type="DATETIME"/>
@@ -219,6 +261,12 @@
             <column name="created_date" type="DATETIME"/>
             <column name="last_modified_by" type="VARCHAR(50)"/>
             <column name="last_modified_date" type="DATETIME"/>
+            <column name="overdue_sent" type="${booleanType}"/>
+            <column name="warning_sent" type="${booleanType}"/>
+            <column name="assignee_id" type="${uuidType}"/>
+            <column name="overdue_sent" type="${booleanType}"/>
+            <column name="warning_sent" type="${booleanType}"/>
+            <column name="assignee_id" type="${uuidType}"/>
         </createTable>
         <createIndex tableName="workflow_deadline" indexName="idx_deadline_workflow">
             <column name="workflow_id"/>

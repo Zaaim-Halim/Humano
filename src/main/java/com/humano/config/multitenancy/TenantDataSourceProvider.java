@@ -85,6 +85,12 @@ public class TenantDataSourceProvider {
         // Connection test query
         config.setConnectionTestQuery("SELECT 1");
 
+        // Hibernate's hibernate.connection.provider_disables_autocommit=true assumes the pool
+        // hands out connections with autocommit already off. Hikari's default is on; flipping
+        // it matches the master/default-tenant pools and avoids "Can't call rollback when
+        // autocommit=true" inside tenant transactions.
+        config.setAutoCommit(false);
+
         // Additional properties for reliability
         config.addDataSourceProperty("cachePrepStmts", properties.isCachePrepStmts());
         config.addDataSourceProperty("prepStmtCacheSize", properties.getPrepStmtCacheSize());

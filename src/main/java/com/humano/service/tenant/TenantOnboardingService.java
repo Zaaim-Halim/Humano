@@ -62,6 +62,8 @@ public class TenantOnboardingService {
     private final PaymentRepository paymentRepository;
     private final OrganizationRepository organizationRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.humano.service.multitenancy.TenantProvisioningService provisioningService;
+    private final com.humano.repository.shared.UserRepository userRepository;
 
     public TenantOnboardingService(
         TenantRepository tenantRepository,
@@ -70,7 +72,9 @@ public class TenantOnboardingService {
         InvoiceRepository invoiceRepository,
         PaymentRepository paymentRepository,
         OrganizationRepository organizationRepository,
-        ApplicationEventPublisher eventPublisher
+        ApplicationEventPublisher eventPublisher,
+        com.humano.service.multitenancy.TenantProvisioningService provisioningService,
+        com.humano.repository.shared.UserRepository userRepository
     ) {
         this.tenantRepository = tenantRepository;
         this.subscriptionRepository = subscriptionRepository;
@@ -79,6 +83,46 @@ public class TenantOnboardingService {
         this.paymentRepository = paymentRepository;
         this.organizationRepository = organizationRepository;
         this.eventPublisher = eventPublisher;
+        this.provisioningService = provisioningService;
+        this.userRepository = userRepository;
+    }
+
+    /**
+     * Provision the tenant database + seed the admin user via the shared multi-tenant pipeline
+     * (P1.6 resume logic + P1.5 seeding). The master {@code tenant} row already exists from
+     * {@link #createTenant} — {@code provisionTenant} finds it by subdomain and resumes from
+     * the first unfinished step. On return, the admin user is committed in the tenant DB.
+     *
+     * @return the seeded admin user's UUID (looked up inside the new tenant context), or
+     *         {@code null} if the lookup fails — in which case the onboarding response carries
+     *         a {@code null} adminUserId rather than a fake placeholder.
+     */
+    private UUID provisionTenantAndLoadAdminId(Tenant tenant, TenantOnboardingRequest request) {
+        com.humano.dto.tenant.TenantRegistrationDTO dto = new com.humano.dto.tenant.TenantRegistrationDTO();
+        dto.setCompanyName(request.companyName());
+        dto.setDomain(request.domain());
+        dto.setSubdomain(request.subdomain());
+        dto.setTimezone(request.timezone() != null ? request.timezone().getID() : null);
+        dto.setSubscriptionPlan(tenant.getSubscriptionPlan());
+        dto.setAdminEmail(request.adminEmail());
+        dto.setAdminFirstName(request.adminFirstName());
+        dto.setAdminLastName(request.adminLastName());
+        dto.setAdminPassword(request.adminPassword());
+
+        provisioningService.provisionTenant(dto);
+
+        // Look up the seeded admin inside the new tenant's context.
+        String previous = com.humano.config.multitenancy.TenantContext.getCurrentTenant();
+        com.humano.config.multitenancy.TenantContext.setCurrentTenant(tenant.getSubdomain());
+        try {
+            return userRepository.findOneByLogin(request.adminEmail()).map(u -> u.getId()).orElse(null);
+        } finally {
+            if (previous != null) {
+                com.humano.config.multitenancy.TenantContext.setCurrentTenant(previous);
+            } else {
+                com.humano.config.multitenancy.TenantContext.clear();
+            }
+        }
     }
 
     /**
@@ -162,6 +206,7 @@ public class TenantOnboardingService {
         tenant.setTimezone(request.timezone());
         tenant.setSubscriptionPlan(plan);
         tenant.setStatus(TenantStatus.PENDING_SETUP);
+        tenant.setCountry(com.humano.domain.enumeration.CountryCode.valueOf(request.billingCountryCode()));
 
         return tenantRepository.save(tenant);
     }
@@ -215,12 +260,9 @@ public class TenantOnboardingService {
         SubscriptionPlan plan,
         TenantOnboardingRequest request
     ) {
-        // Activate tenant immediately for trial
-        tenant.setStatus(TenantStatus.ACTIVE);
-        tenantRepository.save(tenant);
-
-        // TODO: Create admin user - this would integrate with UserService
-        UUID adminUserId = UUID.randomUUID(); // Placeholder
+        // Provision the physical tenant DB, run migrations, and seed the admin user via P1.5.
+        // provisionTenant transitions tenant.status to ACTIVE on success.
+        UUID adminUserId = provisionTenantAndLoadAdminId(tenant, request);
 
         return TenantOnboardingResponse.forTrialSignup(
             tenant.getId(),
@@ -258,11 +300,11 @@ public class TenantOnboardingService {
         boolean paymentSuccessful = processPayment(invoice, request, totalAmount);
 
         if (paymentSuccessful) {
-            // Activate tenant and subscription
+            // Provision the physical tenant DB + seed admin user; provisionTenant also flips
+            // tenant.status to ACTIVE. We still call activateTenantAndSubscription for the
+            // subscription/invoice side effects (it's idempotent on the tenant row).
+            UUID adminUserId = provisionTenantAndLoadAdminId(tenant, request);
             activateTenantAndSubscription(tenant, subscription, invoice);
-
-            // TODO: Create admin user
-            UUID adminUserId = UUID.randomUUID(); // Placeholder
 
             return TenantOnboardingResponse.forPaidSignup(
                 tenant.getId(),
@@ -284,8 +326,10 @@ public class TenantOnboardingService {
                 request.adminEmail()
             );
         } else {
-            // Return pending payment response
-            UUID adminUserId = UUID.randomUUID(); // Placeholder
+            // Payment didn't go through — leave the tenant unprovisioned (status stays
+            // PENDING_SETUP). Once payment succeeds via the retry endpoint, that flow can
+            // call provisionTenant. No admin user yet.
+            UUID adminUserId = null;
 
             return TenantOnboardingResponse.forPendingPayment(
                 tenant.getId(),
