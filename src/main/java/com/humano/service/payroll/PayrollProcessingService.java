@@ -1145,6 +1145,16 @@ public class PayrollProcessingService {
         );
     }
 
+    /**
+     * Builds the variable map passed to {@link PayrollFormulaEngine#evaluateFormula}.
+     *
+     * <p><strong>Whitelist sync invariant (P3.6).</strong> Every key set here MUST be
+     * either in {@code PayrollFormulaEngine.ALLOWED_VARIABLE_NAMES} or match the
+     * uppercase {@code PayComponentCode}-shaped pattern; otherwise the engine
+     * silently drops it at evaluation time and tenant formulas referencing the
+     * variable see {@code null}. Keep the two lists aligned when adding new context
+     * keys.
+     */
     private Map<String, Object> buildCalculationContext(
         Employee employee,
         Compensation compensation,
