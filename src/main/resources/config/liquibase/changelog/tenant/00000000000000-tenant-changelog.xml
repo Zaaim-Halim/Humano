@@ -1719,6 +1719,28 @@
         </createIndex>
     </changeSet>
 
+    <!-- P3.4: multi-currency conversion at the PayrollRun boundary.
+         - payroll_run.reporting_currency_id: nullable; when set, calc converts each result's
+           native totals into this currency and persists the conversion alongside.
+         - payroll_result.reporting_* + exchange_rate + exchange_rate_date: persisted conversion.
+           Nullable: a same-currency or single-currency run leaves them NULL. -->
+    <changeSet id="tenant-075-payroll-multicurrency" author="halimzaaim">
+        <addColumn tableName="payroll_run">
+            <column name="reporting_currency_id" type="${uuidType}"/>
+        </addColumn>
+        <addForeignKeyConstraint baseColumnNames="reporting_currency_id" baseTableName="payroll_run"
+                                 constraintName="FK_PAYROLL_RUN_ON_REPORTING_CURRENCY" referencedColumnNames="id"
+                                 referencedTableName="currency"/>
+        <addColumn tableName="payroll_result">
+            <column name="reporting_gross" type="DECIMAL(38,2)"/>
+            <column name="reporting_total_deductions" type="DECIMAL(38,2)"/>
+            <column name="reporting_net" type="DECIMAL(38,2)"/>
+            <column name="reporting_employer_cost" type="DECIMAL(38,2)"/>
+            <column name="exchange_rate" type="DECIMAL(19,6)"/>
+            <column name="exchange_rate_date" type="DATE"/>
+        </addColumn>
+    </changeSet>
+
 
 
 

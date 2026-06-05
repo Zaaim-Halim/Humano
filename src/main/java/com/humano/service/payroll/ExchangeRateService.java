@@ -402,6 +402,68 @@ public class ExchangeRateService {
         return stats;
     }
 
+    /**
+     * Snapshot of the rate selected for a conversion: the multiplier itself and the
+     * actual date of the {@link ExchangeRate} row used (which may differ from the
+     * caller's {@code asOfDate} when a most-recent-before fallback was applied).
+     */
+    public record ReportingRate(BigDecimal rate, LocalDate rateDate) {}
+
+    /**
+     * Resolves the rate to use for converting native-currency totals into a reporting
+     * currency at {@code asOfDate}. Used by {@code PayrollProcessingService} (P3.4) to
+     * carry per-employee figures into the run's reporting currency.
+     *
+     * <p>Lookup order:
+     * <ol>
+     *   <li>Exact rate on {@code asOfDate} — returned with {@code rateDate = asOfDate}.</li>
+     *   <li>Most-recent rate strictly before {@code asOfDate} — returned with that row's
+     *       actual {@code date}. If that row is older than {@code maxStalenessDays},
+     *       throws {@link BusinessRuleViolationException}.</li>
+     *   <li>No rate at all — throws {@link BusinessRuleViolationException}.</li>
+     * </ol>
+     *
+     * <p>Same-currency conversions short-circuit to rate=1.0 / date={@code asOfDate}.
+     * Reverse-rate inversion (used by {@link #getRate}) is intentionally NOT applied here:
+     * payroll consolidation should not silently invert a stale reverse rate.
+     */
+    @Transactional(readOnly = true)
+    public ReportingRate getReportingRate(UUID fromCurrencyId, UUID toCurrencyId, LocalDate asOfDate, int maxStalenessDays) {
+        LocalDate effectiveDate = asOfDate != null ? asOfDate : LocalDate.now();
+        if (fromCurrencyId.equals(toCurrencyId)) {
+            return new ReportingRate(BigDecimal.ONE, effectiveDate);
+        }
+        Optional<ExchangeRate> exact = findExactRate(fromCurrencyId, toCurrencyId, effectiveDate);
+        if (exact.isPresent()) {
+            return new ReportingRate(exact.get().getRate(), exact.get().getDate());
+        }
+        Optional<ExchangeRate> fallback = findMostRecentRate(fromCurrencyId, toCurrencyId, effectiveDate);
+        if (fallback.isPresent()) {
+            ExchangeRate r = fallback.get();
+            long staleDays = java.time.temporal.ChronoUnit.DAYS.between(r.getDate(), effectiveDate);
+            if (staleDays > maxStalenessDays) {
+                throw new BusinessRuleViolationException(
+                    "Exchange rate " +
+                    r.getFromCcy().getCode() +
+                    "→" +
+                    r.getToCcy().getCode() +
+                    " is " +
+                    staleDays +
+                    " days stale (max " +
+                    maxStalenessDays +
+                    "); last available on " +
+                    r.getDate() +
+                    ", asOf " +
+                    effectiveDate
+                );
+            }
+            return new ReportingRate(r.getRate(), r.getDate());
+        }
+        throw new BusinessRuleViolationException(
+            "No exchange rate found from currency " + fromCurrencyId + " to " + toCurrencyId + " on or before " + effectiveDate
+        );
+    }
+
     private Optional<ExchangeRate> findExactRate(UUID fromCurrencyId, UUID toCurrencyId, LocalDate date) {
         return exchangeRateRepository
             .findAll(

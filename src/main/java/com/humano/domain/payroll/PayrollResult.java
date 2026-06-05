@@ -121,6 +121,30 @@ public class PayrollResult extends AbstractAuditingEntity<UUID> {
     @NotNull(message = "Payroll period is required")
     private PayrollPeriod payrollPeriod;
 
+    // --- P3.4 multi-currency reporting fields ---
+    // Populated when the parent run carries a reporting currency. All four mirror the
+    // native totals above, expressed in the run's reporting currency at the rate captured
+    // by `exchangeRate` (effective on `exchangeRateDate`, which may differ from
+    // period.paymentDate when a fallback was used). Left NULL when no conversion happened.
+
+    @Column(name = "reporting_gross")
+    private BigDecimal reportingGross;
+
+    @Column(name = "reporting_total_deductions")
+    private BigDecimal reportingTotalDeductions;
+
+    @Column(name = "reporting_net")
+    private BigDecimal reportingNet;
+
+    @Column(name = "reporting_employer_cost")
+    private BigDecimal reportingEmployerCost;
+
+    @Column(name = "exchange_rate", precision = 19, scale = 6)
+    private BigDecimal exchangeRate;
+
+    @Column(name = "exchange_rate_date")
+    private java.time.LocalDate exchangeRateDate;
+
     @Override
     public UUID getId() {
         return id;
@@ -232,6 +256,54 @@ public class PayrollResult extends AbstractAuditingEntity<UUID> {
 
     public void setPayrollPeriod(PayrollPeriod payrollPeriod) {
         this.payrollPeriod = payrollPeriod;
+    }
+
+    public BigDecimal getReportingGross() {
+        return reportingGross;
+    }
+
+    public void setReportingGross(BigDecimal reportingGross) {
+        this.reportingGross = reportingGross;
+    }
+
+    public BigDecimal getReportingTotalDeductions() {
+        return reportingTotalDeductions;
+    }
+
+    public void setReportingTotalDeductions(BigDecimal reportingTotalDeductions) {
+        this.reportingTotalDeductions = reportingTotalDeductions;
+    }
+
+    public BigDecimal getReportingNet() {
+        return reportingNet;
+    }
+
+    public void setReportingNet(BigDecimal reportingNet) {
+        this.reportingNet = reportingNet;
+    }
+
+    public BigDecimal getReportingEmployerCost() {
+        return reportingEmployerCost;
+    }
+
+    public void setReportingEmployerCost(BigDecimal reportingEmployerCost) {
+        this.reportingEmployerCost = reportingEmployerCost;
+    }
+
+    public BigDecimal getExchangeRate() {
+        return exchangeRate;
+    }
+
+    public void setExchangeRate(BigDecimal exchangeRate) {
+        this.exchangeRate = exchangeRate;
+    }
+
+    public java.time.LocalDate getExchangeRateDate() {
+        return exchangeRateDate;
+    }
+
+    public void setExchangeRateDate(java.time.LocalDate exchangeRateDate) {
+        this.exchangeRateDate = exchangeRateDate;
     }
 
     @Override

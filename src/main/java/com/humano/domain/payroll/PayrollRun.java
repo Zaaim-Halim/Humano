@@ -93,6 +93,18 @@ public class PayrollRun extends AbstractAuditingEntity<UUID> {
     @JoinColumn(name = "approved_by")
     private Employee approvedBy;
 
+    /**
+     * Optional reporting currency for cross-currency consolidation (P3.4).
+     * <p>
+     * When set, {@code PayrollProcessingService.calculateEmployeePayroll} converts each
+     * employee's native totals into this currency at the period's {@code paymentDate} and
+     * persists the converted figures on {@link PayrollResult#getReportingGross()} etc.
+     * When null, no conversion is performed (single-currency run).
+     */
+    @ManyToOne
+    @JoinColumn(name = "reporting_currency_id")
+    private Currency reportingCurrency;
+
     @Override
     public UUID getId() {
         return id;
@@ -178,6 +190,14 @@ public class PayrollRun extends AbstractAuditingEntity<UUID> {
 
     public void setApprovedBy(Employee approvedBy) {
         this.approvedBy = approvedBy;
+    }
+
+    public Currency getReportingCurrency() {
+        return reportingCurrency;
+    }
+
+    public void setReportingCurrency(Currency reportingCurrency) {
+        this.reportingCurrency = reportingCurrency;
     }
 
     @Override

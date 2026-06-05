@@ -16,7 +16,16 @@ public record InitiatePayrollRunRequest(
 
     boolean draftMode,
 
-    String notes
+    String notes,
+
+    /**
+     * Optional reporting currency (P3.4). When set, each {@code PayrollResult} in the run
+     * is calculated in the employee's native currency AND converted into this currency
+     * (rate looked up at the period's {@code paymentDate}, with a most-recent-before
+     * fallback bounded by {@code humano.payroll.max-exchange-rate-staleness-days}).
+     * When null, the run is single-currency: native totals only, no conversion.
+     */
+    UUID reportingCurrencyId
 ) {
     public enum PayrollScope {
         ALL,

@@ -241,3 +241,12 @@ humano:
   # to prevent the hourly tick from looping forever on a stuck workflow.
   workflow:
     max-escalation-level: 3
+  # P3.4 — Multi-currency conversion at the PayrollRun boundary.
+  # When PayrollRun.reportingCurrency is set, PayrollProcessingService converts each
+  # employee's native totals into that currency. The rate is looked up on
+  # period.paymentDate; if missing, it falls back to the most-recent-before rate, but
+  # only if that rate's date is within this many days of paymentDate. Older fallbacks
+  # raise a per-employee BusinessRuleViolationException so the calc surfaces a clear
+  # PayrollValidationError instead of silently using a stale rate.
+  payroll:
+    max-exchange-rate-staleness-days: 7

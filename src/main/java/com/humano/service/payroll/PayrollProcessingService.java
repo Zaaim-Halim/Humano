@@ -5,6 +5,7 @@ import com.humano.domain.enumeration.hr.LeaveType;
 import com.humano.domain.enumeration.payroll.*;
 import com.humano.domain.hr.LeaveRequest;
 import com.humano.domain.payroll.*;
+import com.humano.domain.payroll.Currency;
 import com.humano.domain.shared.Employee;
 import com.humano.dto.payroll.request.ApprovePayrollRunRequest;
 import com.humano.dto.payroll.request.InitiatePayrollRunRequest;
@@ -137,6 +138,12 @@ public class PayrollProcessingService {
     private final DeductionService deductionService;
     private final BonusService bonusService;
     private final TaxCalculationService taxCalculationService;
+    private final ExchangeRateService exchangeRateService;
+
+    /** P3.4: maximum days a fallback rate may lag the payment date before the per-employee
+     *  calculation fails with a {@code BusinessRuleViolationException}. */
+    @org.springframework.beans.factory.annotation.Value("${humano.payroll.max-exchange-rate-staleness-days:7}")
+    private int maxExchangeRateStalenessDays;
 
     public PayrollProcessingService(
         PayrollRunRepository payrollRunRepository,
@@ -159,7 +166,8 @@ public class PayrollProcessingService {
         PayrollFormulaEngine formulaEngine,
         DeductionService deductionService,
         BonusService bonusService,
-        TaxCalculationService taxCalculationService
+        TaxCalculationService taxCalculationService,
+        ExchangeRateService exchangeRateService
     ) {
         this.payrollRunRepository = payrollRunRepository;
         this.payrollPeriodRepository = payrollPeriodRepository;
@@ -182,6 +190,7 @@ public class PayrollProcessingService {
         this.deductionService = deductionService;
         this.bonusService = bonusService;
         this.taxCalculationService = taxCalculationService;
+        this.exchangeRateService = exchangeRateService;
     }
 
     /**
@@ -233,7 +242,14 @@ public class PayrollProcessingService {
             .toList();
         Instant payRuleVersion = payRuleRepository.findMaxLastModifiedDate().orElse(null);
         Instant taxBracketVersion = taxBracketRepository.findMaxLastModifiedDate().orElse(null);
-        String hash = generateIdempotencyHash(period.getId(), scope, sortedEmployeeIds, payRuleVersion, taxBracketVersion);
+        String hash = generateIdempotencyHash(
+            period.getId(),
+            scope,
+            sortedEmployeeIds,
+            payRuleVersion,
+            taxBracketVersion,
+            request.reportingCurrencyId()
+        );
 
         // Hash short-circuit  — return any existing run with this hash to honour
         // the "two no-ops" idempotency and prevent the unique-constraint violation at
@@ -272,9 +288,21 @@ public class PayrollProcessingService {
         run.setScope(scope);
         run.setStatus(RunStatus.DRAFT);
         run.setHash(hash);
+        // P3.4: attach reporting currency if requested. Null = single-currency run; no conversion at calc time.
+        if (request.reportingCurrencyId() != null) {
+            Currency reporting = currencyRepository
+                .findById(request.reportingCurrencyId())
+                .orElseThrow(() -> new EntityNotFoundException("Currency (reporting)", request.reportingCurrencyId()));
+            run.setReportingCurrency(reporting);
+        }
 
         run = payrollRunRepository.save(run);
-        log.info("Created payroll run {} with status DRAFT, hash={}", run.getId(), hash);
+        log.info(
+            "Created payroll run {} with status DRAFT, hash={}, reportingCurrency={}",
+            run.getId(),
+            hash,
+            run.getReportingCurrency() == null ? "<native-only>" : run.getReportingCurrency().getCode().name()
+        );
 
         return toRunResponse(run, Collections.emptyList());
     }
@@ -330,14 +358,32 @@ public class PayrollProcessingService {
     private PayrollResult calculateEmployeePayroll(PayrollRun run, PayrollPeriod period, Employee employee) {
         log.debug("Calculating payroll for employee: {}", employee.getId());
 
-        // ---- Resolve or create result, clear previous lines ----
-        PayrollResult result = resolveResult(run, period, employee);
-
         // ---- Resolve compensation (required) ----
+        // Resolved BEFORE resolveResult so a missing-comp failure doesn't leave behind a
+        // recalc victim with its lines already deleted (resolveResult deletes existing
+        // lines on the recalc path).
         Compensation compensation = findActiveCompensation(employee.getId(), period.getEndDate());
         if (compensation == null) {
             throw new BusinessRuleViolationException("No active compensation found for employee " + employee.getId());
         }
+
+        // ---- P3.4: pre-validate reporting rate (fail-fast for recalc safety) ----
+        // If the run has a reporting currency, fetch the rate NOW — before any line
+        // deletion in resolveResult. A stale/missing rate throws here and propagates to
+        // calculatePayroll's per-employee try/catch, which surfaces it as a
+        // PayrollValidationError. The result row + lines are untouched: clean failure.
+        ExchangeRateService.ReportingRate preResolvedRate = null;
+        if (run.getReportingCurrency() != null) {
+            preResolvedRate = exchangeRateService.getReportingRate(
+                compensation.getCurrency().getId(),
+                run.getReportingCurrency().getId(),
+                period.getPaymentDate(),
+                maxExchangeRateStalenessDays
+            );
+        }
+
+        // ---- Resolve or create result, clear previous lines ----
+        PayrollResult result = resolveResult(run, period, employee);
         result.setCurrency(compensation.getCurrency());
 
         // ---- Pipeline state ----
@@ -721,6 +767,8 @@ public class PayrollProcessingService {
         result.setTotalDeductions(totalDeductions);
         result.setNet(netPay);
         result.setEmployerCost(employerCost);
+        // P3.4 — Multi-currency conversion at the run boundary.
+        applyReportingConversion(run, result, period, preResolvedRate, grossPay, totalDeductions, netPay, employerCost);
         result = payrollResultRepository.save(result);
 
         for (PayrollLine line : lines) {
@@ -959,16 +1007,27 @@ public class PayrollProcessingService {
             (Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), runId)
         );
 
+        // P3.4 — when the run has a reporting currency, the summary totals are computed
+        // from the per-result reporting_* columns (all employees expressed in the SAME
+        // currency, so the sum is meaningful). Otherwise the run is single-currency and we
+        // sum native totals as before. A row with reporting fields NULL falls back to its
+        // native amount so a partially-converted run (some employees in reporting ccy,
+        // some not) still produces a finite summary instead of NPEing.
+        boolean useReporting = run.getReportingCurrency() != null;
         BigDecimal totalGross = BigDecimal.ZERO;
         BigDecimal totalDeductions = BigDecimal.ZERO;
         BigDecimal totalNet = BigDecimal.ZERO;
         BigDecimal totalEmployerCost = BigDecimal.ZERO;
 
         for (PayrollResult result : results) {
-            totalGross = totalGross.add(result.getGross());
-            totalDeductions = totalDeductions.add(result.getTotalDeductions());
-            totalNet = totalNet.add(result.getNet());
-            totalEmployerCost = totalEmployerCost.add(result.getEmployerCost());
+            totalGross = totalGross.add(useReporting ? coalesce(result.getReportingGross(), result.getGross()) : result.getGross());
+            totalDeductions = totalDeductions.add(
+                useReporting ? coalesce(result.getReportingTotalDeductions(), result.getTotalDeductions()) : result.getTotalDeductions()
+            );
+            totalNet = totalNet.add(useReporting ? coalesce(result.getReportingNet(), result.getNet()) : result.getNet());
+            totalEmployerCost = totalEmployerCost.add(
+                useReporting ? coalesce(result.getReportingEmployerCost(), result.getEmployerCost()) : result.getEmployerCost()
+            );
         }
 
         // Get breakdown by component
@@ -990,7 +1049,15 @@ public class PayrollProcessingService {
             }
         }
 
-        String currencyCode = results.isEmpty() ? null : results.get(0).getCurrency().getCode().getCode();
+        // P3.4 — currency label reflects what we're summing. Reporting → run's reporting
+        // currency; native → first result's currency (legacy behaviour; meaningful only
+        // when all employees share a native currency).
+        String currencyCode;
+        if (useReporting) {
+            currencyCode = run.getReportingCurrency().getCode().getCode();
+        } else {
+            currencyCode = results.isEmpty() ? null : results.get(0).getCurrency().getCode().getCode();
+        }
 
         return new PayrollRunSummaryResponse(
             runId,
@@ -1165,8 +1232,9 @@ public class PayrollProcessingService {
         log.debug("Validating approval authority for {} on run {}", approver.getId(), run.getId());
     }
 
-    /** Bumped whenever the hash *format* changes so old runs don't collide with new ones. */
-    private static final int HASH_VERSION = 1;
+    /** Bumped whenever the hash *format* changes so old runs don't collide with new ones.
+     *  v2 (P3.4): added {@code reportingCurrencyId} as the final pipe-delimited field. */
+    private static final int HASH_VERSION = 2;
 
     private static final String HASH_DELIM = "|";
 
@@ -1174,14 +1242,15 @@ public class PayrollProcessingService {
      * SHA-256 idempotency hash  over the canonical run inputs. Pure function of its
      * arguments &mdash; no clock, no randomness. Two calls with identical inputs yield
      * identical hashes; any change to employee set / pay-rule version / tax-bracket
-     * version invalidates the hash.
+     * version / reporting currency invalidates the hash.
      */
     private String generateIdempotencyHash(
         UUID periodId,
         String scope,
         List<UUID> sortedEmployeeIds,
         Instant payRuleVersion,
-        Instant taxBracketVersion
+        Instant taxBracketVersion,
+        UUID reportingCurrencyId
     ) {
         StringBuilder payload = new StringBuilder();
         payload.append("v").append(HASH_VERSION).append(HASH_DELIM);
@@ -1192,6 +1261,8 @@ public class PayrollProcessingService {
         payload.append(payRuleVersion == null ? "0" : payRuleVersion.toString());
         payload.append(HASH_DELIM);
         payload.append(taxBracketVersion == null ? "0" : taxBracketVersion.toString());
+        payload.append(HASH_DELIM);
+        payload.append(reportingCurrencyId == null ? "0" : reportingCurrencyId.toString());
         try {
             java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
             byte[] digest = md.digest(payload.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -1252,6 +1323,14 @@ public class PayrollProcessingService {
 
     private static BigDecimal nz(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    /** First non-null of (a, b), or BigDecimal.ZERO if both null. Used by summary methods'
+     *  reporting-vs-native fallback. */
+    private static BigDecimal coalesce(BigDecimal a, BigDecimal b) {
+        if (a != null) return a;
+        if (b != null) return b;
+        return BigDecimal.ZERO;
     }
 
     /**
@@ -1336,6 +1415,57 @@ public class PayrollProcessingService {
                 )
             )
             .toList();
+    }
+
+    /**
+     * P3.4 — converts {@code result}'s native totals into {@code run.reportingCurrency} and
+     * persists them on the result alongside the rate + rate-date used. No-op when:
+     *
+     * <ul>
+     *   <li>{@code run.reportingCurrency} is null (single-currency run),</li>
+     *   <li>the employee's native currency equals the reporting currency (rate=1, captured),</li>
+     * </ul>
+     *
+     * <p>The rate is resolved once via
+     * {@link ExchangeRateService#getReportingRate} at {@code period.paymentDate}, with a
+     * most-recent-before fallback bounded by {@link #maxExchangeRateStalenessDays}. All
+     * four totals are multiplied by the SAME rate so reporting figures stay internally
+     * consistent (i.e. {@code reportingNet = reportingGross − reportingTotalDeductions}
+     * still holds to the precision of the conversion). Throws
+     * {@link BusinessRuleViolationException} on stale/missing rate; the caller's
+     * per-employee try/catch in {@link #calculatePayroll} surfaces the failure as a
+     * {@code PayrollValidationError} so the run completes for other employees.
+     */
+    private void applyReportingConversion(
+        PayrollRun run,
+        PayrollResult result,
+        PayrollPeriod period,
+        ExchangeRateService.ReportingRate snapshot,
+        BigDecimal grossPay,
+        BigDecimal totalDeductions,
+        BigDecimal netPay,
+        BigDecimal employerCost
+    ) {
+        Currency reporting = run.getReportingCurrency();
+        if (reporting == null || snapshot == null) {
+            return;
+        }
+        BigDecimal rate = snapshot.rate();
+        result.setReportingGross(grossPay.multiply(rate).setScale(MONEY_SCALE, MONEY_ROUNDING));
+        result.setReportingTotalDeductions(totalDeductions.multiply(rate).setScale(MONEY_SCALE, MONEY_ROUNDING));
+        result.setReportingNet(netPay.multiply(rate).setScale(MONEY_SCALE, MONEY_ROUNDING));
+        result.setReportingEmployerCost(employerCost.multiply(rate).setScale(MONEY_SCALE, MONEY_ROUNDING));
+        result.setExchangeRate(rate);
+        result.setExchangeRateDate(snapshot.rateDate());
+        if (!period.getPaymentDate().equals(snapshot.rateDate())) {
+            log.info(
+                "Reporting conversion fallback for employee {}: paymentDate={} but rate from {} (≤{} days stale)",
+                result.getEmployee().getId(),
+                period.getPaymentDate(),
+                snapshot.rateDate(),
+                maxExchangeRateStalenessDays
+            );
+        }
     }
 
     /**
@@ -1461,12 +1591,32 @@ public class PayrollProcessingService {
             (Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), run.getId())
         );
 
-        BigDecimal totalGross = results.stream().map(PayrollResult::getGross).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalDeductions = results.stream().map(PayrollResult::getTotalDeductions).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalNet = results.stream().map(PayrollResult::getNet).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalEmployerCost = results.stream().map(PayrollResult::getEmployerCost).reduce(BigDecimal.ZERO, BigDecimal::add);
+        // P3.4 — branch on reporting currency to avoid cross-currency native summation.
+        // See getPayrollRunSummary for the same pattern + null-safe fallback rationale.
+        boolean useReporting = run.getReportingCurrency() != null;
+        BigDecimal totalGross = results
+            .stream()
+            .map(r -> useReporting ? coalesce(r.getReportingGross(), r.getGross()) : r.getGross())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalDeductions = results
+            .stream()
+            .map(r -> useReporting ? coalesce(r.getReportingTotalDeductions(), r.getTotalDeductions()) : r.getTotalDeductions())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalNet = results
+            .stream()
+            .map(r -> useReporting ? coalesce(r.getReportingNet(), r.getNet()) : r.getNet())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalEmployerCost = results
+            .stream()
+            .map(r -> useReporting ? coalesce(r.getReportingEmployerCost(), r.getEmployerCost()) : r.getEmployerCost())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        String currencyCode = results.isEmpty() ? null : results.get(0).getCurrency().getCode().getCode();
+        String currencyCode;
+        if (useReporting) {
+            currencyCode = run.getReportingCurrency().getCode().getCode();
+        } else {
+            currencyCode = results.isEmpty() ? null : results.get(0).getCurrency().getCode().getCode();
+        }
 
         return new PayrollRunResponse(
             run.getId(),
