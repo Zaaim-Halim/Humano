@@ -27,31 +27,47 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class TenantResolutionFilter extends OncePerRequestFilter {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantResolutionFilter.class);
+    private static final String PLATFORM_PREFIX = "/api/platform/";
 
     private final TenantResolver tenantResolver;
+    private final MultiTenantProperties properties;
 
-    public TenantResolutionFilter(TenantResolver tenantResolver) {
+    public TenantResolutionFilter(TenantResolver tenantResolver, MultiTenantProperties properties) {
         this.tenantResolver = tenantResolver;
+        this.properties = properties;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
         throws ServletException, IOException {
+        String path = request.getRequestURI();
+        boolean isPlatform = path.startsWith(PLATFORM_PREFIX);
         try {
-            String tenantId = tenantResolver.resolveTenant(request);
+            // P2.6: /api/platform/** runs under the configured platform tenant so Spring
+            // Security's UserDetailsService loads admins from a real tenant DB (there is no
+            // app_user table in master at v1). Regular requests follow header/subdomain
+            // resolution as before.
+            String tenantId = isPlatform ? properties.getPlatformTenant() : tenantResolver.resolveTenant(request);
             TenantContext.setCurrentTenant(tenantId);
             // P1.9: every log line for the rest of this request carries [tenant=<subdomain>].
             // The matching TaskDecorator in AsyncConfiguration propagates this to @Async workers.
             MDC.put(TenantContext.MDC_TENANT_KEY, tenantId);
 
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Resolved tenant '{}' for request: {} {}", tenantId, request.getMethod(), request.getRequestURI());
+                LOG.debug(
+                    "Resolved tenant '{}' for request: {} {} ({})",
+                    tenantId,
+                    request.getMethod(),
+                    path,
+                    isPlatform ? "platform-forced" : "request-resolved"
+                );
             }
 
-            // Business endpoints (anything under /api/** except platform/onboarding/public,
-            // which shouldNotFilter already excludes) require a real tenant. Reject the
-            // reserved "master" sentinel with 400.
-            if (TenantContext.MASTER.equals(tenantId) && request.getRequestURI().startsWith("/api/")) {
+            // Business endpoints (anything under /api/** except onboarding/public, which
+            // shouldNotFilter excludes) require a real tenant. /api/platform/** is now
+            // forced to the configured platform tenant above, so this only triggers on
+            // regular /api/** paths.
+            if (TenantContext.MASTER.equals(tenantId) && path.startsWith("/api/")) {
                 writeError(
                     response,
                     HttpServletResponse.SC_BAD_REQUEST,
@@ -95,9 +111,10 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        // Skip tenant resolution for platform admin endpoints and public resources
+        // P2.6: /api/platform/** is intentionally NOT excluded — doFilterInternal forces
+        // the tenant context to the configured platform tenant so the UserDetailsService
+        // can resolve the admin principal from that tenant's DB.
         return (
-            path.startsWith("/api/platform/") ||
             path.startsWith("/management/") ||
             path.startsWith("/api/tenant-registration") ||
             path.startsWith("/api/public/") ||

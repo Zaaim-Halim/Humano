@@ -3,6 +3,7 @@ package com.humano.service.hr.workflow.infrastructure;
 import com.humano.domain.hr.WorkflowDeadline;
 import com.humano.domain.hr.WorkflowInstance;
 import com.humano.domain.shared.Employee;
+import com.humano.events.EscalationTriggeredEvent;
 import com.humano.repository.hr.workflow.WorkflowDeadlineRepository;
 import com.humano.repository.hr.workflow.WorkflowInstanceRepository;
 import com.humano.repository.shared.EmployeeRepository;
@@ -13,6 +14,8 @@ import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,17 +34,29 @@ public class DeadlineMonitorService {
     private final WorkflowInstanceRepository workflowInstanceRepository;
     private final EmployeeRepository employeeRepository;
     private final NotificationOrchestrationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
+
+    /**
+     * P5.3 — hard ceiling on auto-escalations per deadline. Prevents the hourly scheduler
+     * from looping forever on a stuck workflow. Past the cap we keep logging but stop
+     * mutating state and publishing events.
+     */
+    private final int maxEscalationLevel;
 
     public DeadlineMonitorService(
         WorkflowDeadlineRepository deadlineRepository,
         WorkflowInstanceRepository workflowInstanceRepository,
         EmployeeRepository employeeRepository,
-        NotificationOrchestrationService notificationService
+        NotificationOrchestrationService notificationService,
+        ApplicationEventPublisher eventPublisher,
+        @Value("${humano.workflow.max-escalation-level:3}") int maxEscalationLevel
     ) {
         this.deadlineRepository = deadlineRepository;
         this.workflowInstanceRepository = workflowInstanceRepository;
         this.employeeRepository = employeeRepository;
         this.notificationService = notificationService;
+        this.eventPublisher = eventPublisher;
+        this.maxEscalationLevel = maxEscalationLevel;
     }
 
     /**
@@ -202,7 +217,8 @@ public class DeadlineMonitorService {
     }
 
     /**
-     * Escalate a deadline.
+     * Escalate a deadline. Respects the configured {@link #maxEscalationLevel} cap (P5.3) —
+     * past the cap this is a no-op so manual reruns can't push a stuck workflow into a loop.
      */
     public void escalate(UUID deadlineId) {
         log.debug("Escalating deadline {}", deadlineId);
@@ -211,13 +227,12 @@ public class DeadlineMonitorService {
             .findById(deadlineId)
             .orElseThrow(() -> EntityNotFoundException.create("WorkflowDeadline", deadlineId));
 
-        deadline.escalate();
-        deadlineRepository.save(deadline);
+        if (deadline.getEscalationLevel() != null && deadline.getEscalationLevel() >= maxEscalationLevel) {
+            log.warn("Deadline {} already at max escalation level {}; refusing further escalation", deadlineId, maxEscalationLevel);
+            return;
+        }
 
-        // Send escalation notification
-        sendEscalationNotification(deadline);
-
-        log.info("Escalated deadline {} to level {}", deadlineId, deadline.getEscalationLevel());
+        applyEscalation(deadline);
     }
 
     /**
@@ -229,20 +244,38 @@ public class DeadlineMonitorService {
     }
 
     /**
-     * Check and escalate overdue deadline if needed.
+     * Check and escalate overdue deadline if needed. Bounded by {@link #maxEscalationLevel}
+     * so the hourly scheduler can't loop forever on a stuck workflow (P5.3).
      */
     private void checkAndEscalate(WorkflowDeadline deadline) {
+        int currentLevel = deadline.getEscalationLevel() != null ? deadline.getEscalationLevel() : 0;
+        if (currentLevel >= maxEscalationLevel) {
+            return; // Past the cap; quiet no-op so we don't log-spam on the hourly tick.
+        }
+
         Instant now = Instant.now();
         long hoursOverdue = ChronoUnit.HOURS.between(deadline.getDeadlineAt(), now);
+        // Escalate every 24 hours overdue, clamped to the cap.
+        int expectedEscalationLevel = Math.min((int) (hoursOverdue / 24), maxEscalationLevel);
 
-        // Escalate every 24 hours overdue
-        int expectedEscalationLevel = (int) (hoursOverdue / 24);
-
-        if (expectedEscalationLevel > deadline.getEscalationLevel()) {
-            deadline.escalate();
-            deadlineRepository.save(deadline);
-            sendEscalationNotification(deadline);
+        if (expectedEscalationLevel > currentLevel) {
+            applyEscalation(deadline);
         }
+    }
+
+    /**
+     * Single chokepoint for committing an escalation: bumps the level, persists, notifies,
+     * and publishes {@link EscalationTriggeredEvent} so other listeners can react without
+     * coupling to this service. Callers must verify the cap before invoking.
+     */
+    private void applyEscalation(WorkflowDeadline deadline) {
+        deadline.escalate();
+        WorkflowDeadline saved = deadlineRepository.save(deadline);
+        sendEscalationNotification(saved);
+        UUID assigneeId = saved.getAssignee() != null ? saved.getAssignee().getId() : null;
+        UUID workflowId = saved.getWorkflowInstance() != null ? saved.getWorkflowInstance().getId() : null;
+        eventPublisher.publishEvent(EscalationTriggeredEvent.of(saved.getId(), workflowId, saved.getEscalationLevel(), assigneeId));
+        log.info("Escalated deadline {} to level {} (cap={})", saved.getId(), saved.getEscalationLevel(), maxEscalationLevel);
     }
 
     /**

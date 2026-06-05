@@ -1,10 +1,13 @@
 package com.humano.service.multitenancy;
 
 import com.humano.config.multitenancy.TenantContext;
+import com.humano.domain.enumeration.hr.ApprovalType;
+import com.humano.domain.enumeration.hr.ApproverType;
 import com.humano.domain.enumeration.payroll.Frequency;
 import com.humano.domain.enumeration.payroll.Kind;
 import com.humano.domain.enumeration.payroll.Measurement;
 import com.humano.domain.enumeration.payroll.PayComponentCode;
+import com.humano.domain.hr.ApprovalChainConfig;
 import com.humano.domain.payroll.PayComponent;
 import com.humano.domain.payroll.PayrollCalendar;
 import com.humano.domain.shared.Authority;
@@ -12,11 +15,13 @@ import com.humano.domain.shared.Permission;
 import com.humano.domain.shared.User;
 import com.humano.domain.tenant.Tenant;
 import com.humano.dto.tenant.TenantRegistrationDTO;
+import com.humano.repository.hr.workflow.ApprovalChainConfigRepository;
 import com.humano.repository.payroll.PayComponentRepository;
 import com.humano.repository.payroll.PayrollCalendarRepository;
 import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.PermissionRepository;
 import com.humano.repository.shared.UserRepository;
+import com.humano.service.hr.workflow.ApprovalChainValidator;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -65,11 +70,28 @@ public class TenantInitializationService {
         DEFAULT_PERMISSIONS.put("BILLING_VIEW", Set.of("ROLE_ADMIN"));
     }
 
+    /**
+     * Default approval chains seeded for every new tenant (P5.2). Two-step DIRECT_MANAGER →
+     * DEPARTMENT_HEAD for the three workflows the orchestrator currently supports
+     * end-to-end. Other {@link ApprovalType} values (TRAINING_REQUEST, POSITION_TRANSFER,
+     * SALARY_ADJUSTMENT, TIMESHEET_APPROVAL) are deliberately left empty so they fail loud
+     * on first use until a tenant deliberately configures them — silently auto-approving
+     * a salary adjustment would be worse than a clear "no chain configured" error.
+     */
+    private static final List<ApproverType> DEFAULT_CHAIN_STEPS = List.of(ApproverType.DIRECT_MANAGER, ApproverType.DEPARTMENT_HEAD);
+
+    private static final List<ApprovalType> DEFAULT_CHAIN_TYPES = List.of(
+        ApprovalType.LEAVE_REQUEST,
+        ApprovalType.EXPENSE_CLAIM,
+        ApprovalType.OVERTIME_REQUEST
+    );
+
     private final AuthorityRepository authorityRepository;
     private final PermissionRepository permissionRepository;
     private final UserRepository userRepository;
     private final PayrollCalendarRepository payrollCalendarRepository;
     private final PayComponentRepository payComponentRepository;
+    private final ApprovalChainConfigRepository approvalChainConfigRepository;
     private final PasswordEncoder passwordEncoder;
     private final TransactionTemplate tenantTx;
 
@@ -79,6 +101,7 @@ public class TenantInitializationService {
         UserRepository userRepository,
         PayrollCalendarRepository payrollCalendarRepository,
         PayComponentRepository payComponentRepository,
+        ApprovalChainConfigRepository approvalChainConfigRepository,
         PasswordEncoder passwordEncoder,
         @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager
     ) {
@@ -87,6 +110,7 @@ public class TenantInitializationService {
         this.userRepository = userRepository;
         this.payrollCalendarRepository = payrollCalendarRepository;
         this.payComponentRepository = payComponentRepository;
+        this.approvalChainConfigRepository = approvalChainConfigRepository;
         this.passwordEncoder = passwordEncoder;
         this.tenantTx = new TransactionTemplate(tenantTransactionManager);
     }
@@ -178,9 +202,41 @@ public class TenantInitializationService {
     private void seedDefaultConfiguration(Tenant tenant) {
         seedDefaultPayrollCalendar(tenant);
         seedDefaultPayComponents();
+        seedDefaultApprovalChains(tenant);
         // LeaveTypeRule requires Country rows seeded into the tenant DB before we can FK to
         // them. Deferred to its own seed pass once the country reference dataset is loaded
         // by Liquibase (see ROADMAP §3 / P3.3).
+    }
+
+    /**
+     * Seed two-step DIRECT_MANAGER → DEPARTMENT_HEAD chains for LEAVE_REQUEST,
+     * EXPENSE_CLAIM, OVERTIME_REQUEST (P5.2). Idempotent: skips any approval type
+     * that already has at least one active step (tenant has already configured it).
+     * Validates the result via {@link ApprovalChainValidator} so a future tweak that
+     * introduces a sequence gap fails the provisioning loudly instead of stalling
+     * the orchestrator at runtime.
+     */
+    private void seedDefaultApprovalChains(Tenant tenant) {
+        for (ApprovalType type : DEFAULT_CHAIN_TYPES) {
+            if (approvalChainConfigRepository.existsByApprovalTypeAndActiveTrue(type)) {
+                LOG.debug("Approval chain for {} already present on tenant '{}'; skipping", type, tenant.getSubdomain());
+                continue;
+            }
+            for (int i = 0; i < DEFAULT_CHAIN_STEPS.size(); i++) {
+                ApprovalChainConfig step = new ApprovalChainConfig();
+                step.setApprovalType(type);
+                step.setSequenceOrder(i + 1);
+                step.setApproverType(DEFAULT_CHAIN_STEPS.get(i));
+                step.setActive(true);
+                step.setDescription("Seeded default " + type.name() + " step " + (i + 1));
+                approvalChainConfigRepository.save(step);
+            }
+            ApprovalChainValidator.validate(
+                type,
+                approvalChainConfigRepository.findByApprovalTypeAndActiveTrueOrderBySequenceOrderAsc(type)
+            );
+            LOG.info("Seeded default approval chain for {} on tenant '{}'", type, tenant.getSubdomain());
+        }
     }
 
     private void seedDefaultPayrollCalendar(Tenant tenant) {

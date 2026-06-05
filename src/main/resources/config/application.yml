@@ -233,3 +233,11 @@ humano:
     max-lifetime: 1800000
     # Default connection parameters
     default-connection-params: 'useSSL=true&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&createDatabaseIfNotExist=true'
+    # P2.6 — Subdomain of the tenant DB whose ROLE_ADMIN principals can call /api/platform/**.
+    # TenantResolutionFilter forces this tenant context for all platform requests. Override per
+    # environment via PLATFORM_TENANT env var if a dedicated admin tenancy is provisioned.
+    platform-tenant: ${PLATFORM_TENANT:default}
+  # P5.3 — Workflow scheduler bounds. DeadlineMonitorService caps auto-escalation depth
+  # to prevent the hourly tick from looping forever on a stuck workflow.
+  workflow:
+    max-escalation-level: 3
