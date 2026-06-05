@@ -1703,6 +1703,21 @@
         <addUniqueConstraint tableName="leave_type_rule" columnNames="leave_type, country_id" constraintName="UK42tq7ssv6lg8brgwhy9p7kgwv"/>
     </changeSet>
 
+    <!-- P3.3: composite indexes for the tax_bracket and tax_withholding active-row lookups
+         driven by PayrollProcessingService step 7 / step 8. The leading column is the most
+         selective (country / employee) so the index also serves the existing FK joins. -->
+    <changeSet id="tenant-074-tax-lookup-indexes" author="halimzaaim">
+        <createIndex tableName="tax_bracket" indexName="idx_tax_bracket_lookup">
+            <column name="country_id"/>
+            <column name="tax_code"/>
+            <column name="valid_from"/>
+        </createIndex>
+        <createIndex tableName="tax_withholding" indexName="idx_tax_withholding_lookup">
+            <column name="employee_id"/>
+            <column name="type"/>
+            <column name="effective_from"/>
+        </createIndex>
+    </changeSet>
 
 
 

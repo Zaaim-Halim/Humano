@@ -68,8 +68,9 @@ public class TaxCalculationService {
     }
 
     /**
-     * Calculates progressive tax for a given taxable income.
-     * Uses the bracket system to compute tax with proper marginal rates.
+     * Calculates progressive tax for a given taxable income (REST-facing entry point).
+     * Looks up the active brackets, delegates the math to {@link #calculateProgressiveTax},
+     * and assembles the per-bracket breakdown DTO.
      */
     @Transactional(readOnly = true)
     public TaxCalculationResponse calculateTax(
@@ -81,71 +82,39 @@ public class TaxCalculationService {
     ) {
         log.debug("Calculating {} tax for income {} in country {}", taxCode, taxableIncome, countryId);
 
-        List<TaxBracket> brackets = getActiveBracketsEntities(countryId, taxCode, asOfDate);
+        List<TaxBracket> brackets = getActiveBracketsForCalculation(countryId, taxCode, asOfDate);
         if (brackets.isEmpty()) {
             throw new BusinessRuleViolationException("No active tax brackets found for " + taxCode + " in country " + countryId);
         }
 
-        // Sort brackets by lower bound
-        brackets.sort(Comparator.comparing(TaxBracket::getLower));
+        BigDecimal totalTax = calculateProgressiveTax(taxableIncome, brackets);
 
+        // Per-bracket breakdown for the REST response — mirrors the slicing in
+        // calculateProgressiveTax so the response matches the total.
         List<TaxCalculationResponse.TaxBracketApplication> bracketBreakdown = new ArrayList<>();
-        BigDecimal totalTax = BigDecimal.ZERO;
-        BigDecimal remainingIncome = taxableIncome;
-
+        BigDecimal remaining = taxableIncome == null ? BigDecimal.ZERO : taxableIncome;
         for (TaxBracket bracket : brackets) {
-            if (remainingIncome.compareTo(BigDecimal.ZERO) <= 0) {
-                break;
-            }
-
-            if (taxableIncome.compareTo(bracket.getLower()) <= 0) {
-                continue;
-            }
-
-            // Calculate taxable amount in this bracket
-            BigDecimal bracketWidth = bracket.getUpper().subtract(bracket.getLower());
-            BigDecimal taxableInBracket;
-
-            if (taxableIncome.compareTo(bracket.getUpper()) >= 0) {
-                // Income exceeds this bracket
-                taxableInBracket = bracketWidth;
-            } else {
-                // Income falls within this bracket
-                taxableInBracket = taxableIncome.subtract(bracket.getLower());
-            }
-
-            // Ensure we don't tax negative amounts
-            if (taxableInBracket.compareTo(BigDecimal.ZERO) <= 0) {
-                continue;
-            }
-
-            BigDecimal taxForBracket = taxableInBracket.multiply(bracket.getRate()).setScale(2, RoundingMode.HALF_UP);
-
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal width = bracket.getUpper().subtract(bracket.getLower());
+            BigDecimal slice = remaining.min(width);
+            if (slice.compareTo(BigDecimal.ZERO) <= 0) continue;
+            BigDecimal sliceTax = slice
+                .multiply(bracket.getRate())
+                .add(bracket.getFixedPart() == null ? BigDecimal.ZERO : bracket.getFixedPart())
+                .setScale(2, RoundingMode.HALF_UP);
             bracketBreakdown.add(
                 new TaxCalculationResponse.TaxBracketApplication(
                     bracket.getLower(),
                     bracket.getUpper(),
-                    bracket.getRate().multiply(BigDecimal.valueOf(100)), // Convert to percentage
-                    taxableInBracket,
-                    taxForBracket
+                    bracket.getRate().multiply(BigDecimal.valueOf(100)),
+                    slice,
+                    sliceTax
                 )
             );
-
-            totalTax = totalTax.add(taxForBracket);
+            remaining = remaining.subtract(slice);
         }
 
-        // Add fixed part from the highest applicable bracket
-        Optional<TaxBracket> applicableBracket = brackets
-            .stream()
-            .filter(b -> taxableIncome.compareTo(b.getLower()) > 0)
-            .max(Comparator.comparing(TaxBracket::getLower));
-
-        if (applicableBracket.isPresent() && applicableBracket.get().getFixedPart() != null) {
-            // Note: Fixed part is typically already included in progressive calculation
-            // This is for systems that use fixed + marginal approach
-        }
-
-        BigDecimal effectiveTaxRate = taxableIncome.compareTo(BigDecimal.ZERO) > 0
+        BigDecimal effectiveTaxRate = taxableIncome != null && taxableIncome.compareTo(BigDecimal.ZERO) > 0
             ? totalTax.divide(taxableIncome, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
             : BigDecimal.ZERO;
 
@@ -161,14 +130,72 @@ public class TaxCalculationService {
     }
 
     /**
+     * Pure progressive-tax math: given a taxable income and a set of brackets, slice the
+     * income across the brackets in ascending lower-bound order and accumulate the tax.
+     *
+     * <p>Per the §P3.3 spec:
+     * <pre>
+     *   sort brackets by lower
+     *   remaining = taxableIncome
+     *   tax = 0
+     *   for each bracket:
+     *     if remaining <= 0: break
+     *     slice = min(remaining, bracket.upper - bracket.lower)
+     *     tax += slice * bracket.rate + bracket.fixedPart
+     *     remaining -= slice
+     *   return tax
+     * </pre>
+     *
+     * <p><b>Assumption.</b> The bracket set is contiguous (each bracket's {@code lower}
+     * equals the previous bracket's {@code upper}) — the standard taxation convention.
+     * Tenants seeding non-contiguous brackets will see income that falls in a "gap"
+     * taxed as if it fell in the next bracket up.
+     *
+     * <p><b>fixedPart usage.</b> The spec's literal recipe adds {@code bracket.fixedPart}
+     * once per processed bracket, modelling a per-bracket flat fee. If your jurisdiction
+     * uses {@code fixedPart} as "precomputed cumulative tax of all lower brackets"
+     * (an optimisation for single-bracket lookup), seed all rows with
+     * {@code fixedPart = 0} to avoid double-counting.
+     *
+     * <p>Returns 0 for null or non-positive {@code taxableIncome}, and for an empty
+     * bracket list. Result is scaled to 2 decimals (HALF_UP).
+     */
+    public BigDecimal calculateProgressiveTax(BigDecimal taxableIncome, List<TaxBracket> brackets) {
+        if (taxableIncome == null || taxableIncome.compareTo(BigDecimal.ZERO) <= 0 || brackets == null || brackets.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        List<TaxBracket> sorted = new ArrayList<>(brackets);
+        sorted.sort(Comparator.comparing(TaxBracket::getLower));
+        BigDecimal remaining = taxableIncome;
+        BigDecimal tax = BigDecimal.ZERO;
+        for (TaxBracket bracket : sorted) {
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal width = bracket.getUpper().subtract(bracket.getLower());
+            BigDecimal slice = remaining.min(width);
+            BigDecimal sliceTax = slice
+                .multiply(bracket.getRate())
+                .add(bracket.getFixedPart() == null ? BigDecimal.ZERO : bracket.getFixedPart());
+            tax = tax.add(sliceTax);
+            remaining = remaining.subtract(slice);
+        }
+        return tax.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
      * Gets all active tax brackets for a country and tax code.
      */
     @Transactional(readOnly = true)
     public List<TaxBracketResponse> getActiveBrackets(UUID countryId, TaxCode taxCode, LocalDate asOfDate) {
-        return getActiveBracketsEntities(countryId, taxCode, asOfDate).stream().map(this::toResponse).collect(Collectors.toList());
+        return getActiveBracketsForCalculation(countryId, taxCode, asOfDate).stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    private List<TaxBracket> getActiveBracketsEntities(UUID countryId, TaxCode taxCode, LocalDate asOfDate) {
+    /**
+     * Returns the {@link TaxBracket} entities active for ({@code countryId, taxCode}) on
+     * {@code asOfDate} (defaults to today if null). Public so {@link PayrollProcessingService}
+     * step 7 can call it without duplicating the spec query.
+     */
+    @Transactional(readOnly = true)
+    public List<TaxBracket> getActiveBracketsForCalculation(UUID countryId, TaxCode taxCode, LocalDate asOfDate) {
         LocalDate effectiveDate = asOfDate != null ? asOfDate : LocalDate.now();
 
         return taxBracketRepository.findAll(

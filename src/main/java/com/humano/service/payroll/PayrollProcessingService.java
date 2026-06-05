@@ -65,10 +65,14 @@ import org.springframework.transaction.annotation.Transactional;
  *   │
  *   ├─ Step  6 ─ Taxable income marker     (gross − pre-tax − non-taxable earnings)
  *   │
- *   ├─ Step  7 ─ Income tax        ◀── PLACEHOLDER slot
- *   │            (positioned; no line emitted until TaxBracket integration)
+ *   ├─ Step  7 ─ Income tax
+ *   │            progressive TaxBracket(country, PIT, period.endDate)
+ *   │             × taxableIncome  →  line tagged TAX_PIT (gross deduction)
  *   │
- *   ├─ Step  8 ─ Other withholdings ◀── PLACEHOLDER slot
+ *   ├─ Step  8 ─ Other withholdings
+ *   │            active TaxWithholding(employee, type != INCOME_TAX, period.endDate)
+ *   │             × rate% × gross  →  line per row tagged TAX_PIT
+ *   │            YTD update happens at POST time only (§P3.3 rule).
  *   │
  *   ├─ Step  9 ─ Employee benefit costs
  *   │            EmployeeBenefit (ACTIVE, overlap period)
@@ -93,10 +97,9 @@ import org.springframework.transaction.annotation.Transactional;
  * every money value is rounded with {@link #MONEY_ROUNDING} at scale {@link #MONEY_SCALE}.
  * This is what gives the "stable across runs and human-readable" acceptance teeth.
  *
- * <p><strong>Out-of-scope hooks (lanes guarded).</strong> Steps 7/8 are positioned but
- * empty &mdash; country-aware progressive tax is a future task. Multi-currency
- * conversion at the run boundary is another future task. Idempotency-hash content should
- * not be extended without careful consideration. Don't widen here.
+ * <p><strong>Out-of-scope hooks (lanes guarded).</strong> Multi-currency conversion at
+ * the run boundary is a future task. Idempotency-hash content should not be extended
+ * without careful consideration. Don't widen here.
  */
 @Service
 @Transactional
@@ -129,9 +132,11 @@ public class PayrollProcessingService {
     private final LeaveTypeRuleRepository leaveTypeRuleRepository;
     private final LeaveRequestRepository leaveRequestRepository;
     private final TaxBracketRepository taxBracketRepository;
+    private final TaxWithholdingRepository taxWithholdingRepository;
     private final PayrollFormulaEngine formulaEngine;
     private final DeductionService deductionService;
     private final BonusService bonusService;
+    private final TaxCalculationService taxCalculationService;
 
     public PayrollProcessingService(
         PayrollRunRepository payrollRunRepository,
@@ -150,9 +155,11 @@ public class PayrollProcessingService {
         LeaveTypeRuleRepository leaveTypeRuleRepository,
         LeaveRequestRepository leaveRequestRepository,
         TaxBracketRepository taxBracketRepository,
+        TaxWithholdingRepository taxWithholdingRepository,
         PayrollFormulaEngine formulaEngine,
         DeductionService deductionService,
-        BonusService bonusService
+        BonusService bonusService,
+        TaxCalculationService taxCalculationService
     ) {
         this.payrollRunRepository = payrollRunRepository;
         this.payrollPeriodRepository = payrollPeriodRepository;
@@ -170,9 +177,11 @@ public class PayrollProcessingService {
         this.leaveTypeRuleRepository = leaveTypeRuleRepository;
         this.leaveRequestRepository = leaveRequestRepository;
         this.taxBracketRepository = taxBracketRepository;
+        this.taxWithholdingRepository = taxWithholdingRepository;
         this.formulaEngine = formulaEngine;
         this.deductionService = deductionService;
         this.bonusService = bonusService;
+        this.taxCalculationService = taxCalculationService;
     }
 
     /**
@@ -342,6 +351,7 @@ public class PayrollProcessingService {
         BigDecimal nonTaxableEarnings = BigDecimal.ZERO;
         BigDecimal preTaxDeductions = BigDecimal.ZERO;
         BigDecimal postTaxDeductions = BigDecimal.ZERO;
+        BigDecimal taxWithheld = BigDecimal.ZERO;
         BigDecimal employerCharges = BigDecimal.ZERO;
         BigDecimal benefitEmployerCost = BigDecimal.ZERO;
 
@@ -543,28 +553,95 @@ public class PayrollProcessingService {
 
         // ============================================================
         // Step 6 — Taxable income marker
-        //   NOTE: PayComponent.taxable defaults to false, so a tenant that
-        //   doesn't explicitly seed `BASIC.taxable=true` will treat base salary as
-        //   non-taxable and step 7 will compute tax against the wrong base. A future
-        //   task must either (a) ensure TenantInitializationService seeds BASIC with taxable=true,
-        //   or (b) flip the entity default to true. Today this only affects the value
-        //   logged by step 7's placeholder — no behavioural impact.
+        //   TenantInitializationService seeds BASIC with taxable=true, so base salary is
+        //   counted into the taxable base. Components whose taxable=false (today: BONUS)
+        //   accumulate into nonTaxableEarnings and reduce the taxable base accordingly.
         // ============================================================
         BigDecimal taxableIncome = grossPay.subtract(preTaxDeductions).subtract(nonTaxableEarnings).max(BigDecimal.ZERO);
         context.put("taxableIncome", taxableIncome);
 
         // ============================================================
-        // Step 7 — Income tax  ◀── PLACEHOLDER
+        // Step 7 — Income tax (progressive, country-aware)
+        //   Looks up the active TaxBracket rows for (employee.country, PIT, period.endDate)
+        //   and applies the spec'd progressive algorithm. The emitted line is tagged with
+        //   PayComponentCode.TAX_PIT; the explain prefix "Step 7 — Income tax" is the
+        //   contract the post-time YTD reader (updateYearToDateOnPost) keys off.
         // ============================================================
-        log.debug(
-            "Step 7 — income tax placeholder slot (taxableIncome={}); progressive TaxBracket lookup is a future task",
-            fmt(taxableIncome)
-        );
+        PayComponent taxPitComponent = componentsByCode.get(PayComponentCode.TAX_PIT);
+        if (employee.getCountry() == null) {
+            log.debug("Step 7 — income tax skipped: employee {} has no country", employee.getId());
+        } else if (taxPitComponent == null) {
+            log.warn("Step 7 — income tax skipped: no TAX_PIT PayComponent seeded");
+        } else {
+            List<TaxBracket> brackets = taxCalculationService.getActiveBracketsForCalculation(
+                employee.getCountry().getId(),
+                TaxCode.PIT,
+                period.getEndDate()
+            );
+            if (brackets.isEmpty()) {
+                log.debug(
+                    "Step 7 — no active PIT brackets for country {} on {}; taxableIncome={}",
+                    employee.getCountry().getCode(),
+                    period.getEndDate(),
+                    fmt(taxableIncome)
+                );
+            } else {
+                BigDecimal incomeTax = taxCalculationService.calculateProgressiveTax(taxableIncome, brackets);
+                if (incomeTax.signum() > 0) {
+                    String explain =
+                        "Step 7 — Income tax (PIT, country=" +
+                        employee.getCountry().getCode() +
+                        ", taxableIncome=" +
+                        fmt(taxableIncome) +
+                        ", brackets=" +
+                        brackets.size() +
+                        "): " +
+                        fmt(incomeTax);
+                    lines.add(emitLine(result, taxPitComponent, null, null, incomeTax, seq.next(), explain));
+                    taxWithheld = taxWithheld.add(incomeTax);
+                    // Once we've emitted a bracket-driven tax line, exclude TAX_PIT from the
+                    // step 10 formula loop so a tenant that ALSO seeded a TAX_PIT PayRule
+                    // doesn't get tax counted twice in net pay. (When no bracket line was
+                    // emitted, leave TAX_PIT eligible so a formula-only fallback still works.)
+                    handledComponentIds.add(taxPitComponent.getId());
+                }
+            }
+        }
 
         // ============================================================
-        // Step 8 — Other withholdings  ◀── PLACEHOLDER
+        // Step 8 — Other withholdings (TaxWithholding rows; non-INCOME_TAX)
+        //   INCOME_TAX is handled by step 7's bracket calc; iterating it here would
+        //   double-count. Each surviving row contributes a line via rate% × gross.
+        //   Explain prefix "Step 8 — Withholding (<TYPE>" is the contract for the
+        //   post-time YTD reader.
         // ============================================================
-        log.debug("Step 8 — withholdings placeholder slot; TaxWithholding ledger update is a future task");
+        List<TaxWithholding> activeWithholdings = activeWithholdingsForPeriod(employee, period.getEndDate());
+        for (TaxWithholding w : activeWithholdings) {
+            if (w.getType() == TaxType.INCOME_TAX) continue;
+            BigDecimal amt = computeWithholdingAmount(w, grossPay);
+            if (amt.signum() == 0) continue;
+            if (taxPitComponent == null) {
+                log.warn("Step 8 — withholding {} ({}) skipped: no TAX_PIT PayComponent seeded", w.getId(), w.getType());
+                continue;
+            }
+            // Same double-count guard as step 7: once a step-8 line lands, step 10's
+            // formula loop should not re-process TAX_PIT.
+            handledComponentIds.add(taxPitComponent.getId());
+            String explain =
+                "Step 8 — Withholding (" +
+                w.getType() +
+                ", " +
+                fmt(w.getRate()) +
+                "% × gross " +
+                fmt(grossPay) +
+                " = " +
+                fmt(amt) +
+                ", authority=" +
+                w.getTaxAuthority() +
+                ")";
+            lines.add(emitLine(result, taxPitComponent, null, w.getRate(), amt, seq.next(), explain));
+            taxWithheld = taxWithheld.add(amt);
+        }
 
         // ============================================================
         // Step 9 — Employee benefit costs
@@ -619,8 +696,10 @@ public class PayrollProcessingService {
 
         // ============================================================
         // Step 11 — NET PAY marker
+        //   totalDeductions includes preTax, postTax, AND step 7/8 withholdings
+        //   (taxWithheld) so net = gross − everything-withheld-from-the-employee.
         // ============================================================
-        BigDecimal totalDeductions = preTaxDeductions.add(postTaxDeductions);
+        BigDecimal totalDeductions = preTaxDeductions.add(postTaxDeductions).add(taxWithheld);
         BigDecimal netPay = grossPay.subtract(totalDeductions);
 
         // ============================================================
@@ -650,10 +729,11 @@ public class PayrollProcessingService {
         payrollLineRepository.saveAll(lines);
 
         log.debug(
-            "Pipeline done for employee {}: gross={}, taxable={}, totalDeductions={}, net={}, employerCost={}, lines={}",
+            "Pipeline done for employee {}: gross={}, taxable={}, taxWithheld={}, totalDeductions={}, net={}, employerCost={}, lines={}",
             employee.getId(),
             fmt(grossPay),
             fmt(taxableIncome),
+            fmt(taxWithheld),
             fmt(totalDeductions),
             fmt(netPay),
             fmt(employerCost),
@@ -723,6 +803,10 @@ public class PayrollProcessingService {
 
     /**
      * Posts an approved payroll run, making it final.
+     *
+     * <p>§P3.3 contract: YTD totals on {@link TaxWithholding} rows are updated <b>only here</b>
+     * (POSTED transition). DRAFT/CALCULATED/APPROVED runs leave YTD untouched so a
+     * recalculated or rejected run never poisons the year-to-date ledger.
      */
     public PayrollRunResponse postPayrollRun(UUID runId) {
         log.info("Posting payroll run: {}", runId);
@@ -736,6 +820,11 @@ public class PayrollProcessingService {
         run.setStatus(RunStatus.POSTED);
         run = payrollRunRepository.save(run);
 
+        // §P3.3: YTD update happens before the period closes, but after the run is
+        // marked POSTED so a partial failure leaves the run state coherent with the
+        // ledger write attempts.
+        updateYearToDateOnPost(run);
+
         // Close the period
         PayrollPeriod period = run.getPeriod();
         period.setClosed(true);
@@ -744,6 +833,119 @@ public class PayrollProcessingService {
         log.info("Payroll run {} posted and period {} closed", run.getId(), period.getId());
 
         return toRunResponse(run, Collections.emptyList());
+    }
+
+    /**
+     * Walks the persisted lines of every {@link PayrollResult} in this run, isolates the
+     * step-7 income tax line and step-8 withholding lines (both tagged
+     * {@link PayComponentCode#TAX_PIT}; differentiated by {@code explain} prefix), and
+     * adds the amounts to the matching {@link TaxWithholding#yearToDateAmount}.
+     *
+     * <p>The {@code explain}-prefix protocol is the load-bearing contract between step 7/8
+     * line emission (in {@link #calculateEmployeePayroll}) and this reader. Don't change
+     * one without the other.
+     *
+     * <p>Per-line resolution semantics:
+     * <ul>
+     *   <li><b>Step 7 line</b> ({@code explain} starts with {@code "Step 7"}) → looks up
+     *       the employee's active {@link TaxType#INCOME_TAX} row at {@code period.endDate}
+     *       and adds {@code line.amount} to its YTD.</li>
+     *   <li><b>Step 8 lines</b> ({@code explain} starts with {@code "Step 8 — Withholding ("})
+     *       → parses the {@link TaxType} out of the parenthetical, looks up that type's
+     *       active row, and adds {@code line.amount} to its YTD.</li>
+     * </ul>
+     *
+     * <p>If no active row is configured for a tax type that produced a line, the amount is
+     * logged but skipped — the line still appears on the payslip; the YTD ledger just
+     * doesn't get a sink for it. This is the "tenant has not set up the bookkeeping side"
+     * gap, not a calc bug.
+     */
+    private void updateYearToDateOnPost(PayrollRun run) {
+        LocalDate asOfDate = run.getPeriod().getEndDate();
+        final UUID runId = run.getId();
+        List<PayrollResult> results = payrollResultRepository.findAll(
+            (Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), runId)
+        );
+        int incomeTaxUpdates = 0;
+        int otherWithholdingUpdates = 0;
+        for (PayrollResult result : results) {
+            Employee employee = result.getEmployee();
+            final UUID resultId = result.getId();
+            List<PayrollLine> lines = payrollLineRepository.findAll(
+                (Specification<PayrollLine>) (root, query, cb) -> cb.equal(root.get("result").get("id"), resultId)
+            );
+            BigDecimal incomeTaxAmount = BigDecimal.ZERO;
+            Map<TaxType, BigDecimal> withholdingByType = new EnumMap<>(TaxType.class);
+            for (PayrollLine line : lines) {
+                if (line.getComponent() == null || line.getComponent().getCode() != PayComponentCode.TAX_PIT) continue;
+                String explain = line.getExplain() == null ? "" : line.getExplain();
+                BigDecimal amt = nz(line.getAmount());
+                if (explain.startsWith("Step 7")) {
+                    incomeTaxAmount = incomeTaxAmount.add(amt);
+                } else if (explain.startsWith("Step 8 — Withholding (")) {
+                    int start = "Step 8 — Withholding (".length();
+                    int end = explain.indexOf(",", start);
+                    if (end > start) {
+                        try {
+                            TaxType type = TaxType.valueOf(explain.substring(start, end).trim());
+                            withholdingByType.merge(type, amt, BigDecimal::add);
+                        } catch (IllegalArgumentException ex) {
+                            log.warn("Unparseable TaxType in line {} explain '{}'", line.getId(), explain);
+                        }
+                    }
+                }
+            }
+            if (incomeTaxAmount.signum() > 0 && bumpYtdForType(employee.getId(), TaxType.INCOME_TAX, incomeTaxAmount, asOfDate)) {
+                incomeTaxUpdates++;
+            }
+            for (Map.Entry<TaxType, BigDecimal> e : withholdingByType.entrySet()) {
+                if (bumpYtdForType(employee.getId(), e.getKey(), e.getValue(), asOfDate)) {
+                    otherWithholdingUpdates++;
+                }
+            }
+        }
+        log.info(
+            "Post YTD update on run {}: incomeTaxUpdates={}, otherWithholdingUpdates={}, resultsScanned={}",
+            runId,
+            incomeTaxUpdates,
+            otherWithholdingUpdates,
+            results.size()
+        );
+    }
+
+    /**
+     * Adds {@code amount} to the active {@link TaxWithholding} row of ({@code employeeId},
+     * {@code type}) on {@code asOfDate}. Returns {@code true} when a row was found and
+     * updated, {@code false} when no row exists (logged at DEBUG since this is a
+     * tenant-config gap, not a runtime error).
+     */
+    private boolean bumpYtdForType(UUID employeeId, TaxType type, BigDecimal amount, LocalDate asOfDate) {
+        Optional<TaxWithholding> row = taxWithholdingRepository
+            .findAll(
+                (Specification<TaxWithholding>) (root, query, cb) ->
+                    cb.and(
+                        cb.equal(root.get("employee").get("id"), employeeId),
+                        cb.equal(root.get("type"), type),
+                        cb.lessThanOrEqualTo(root.get("effectiveFrom"), asOfDate),
+                        cb.or(cb.isNull(root.get("effectiveTo")), cb.greaterThanOrEqualTo(root.get("effectiveTo"), asOfDate))
+                    )
+            )
+            .stream()
+            .findFirst();
+        if (row.isEmpty()) {
+            log.debug(
+                "Post YTD update: no active TaxWithholding row for employee {} type {}; {} not added to YTD ledger",
+                employeeId,
+                type,
+                fmt(amount)
+            );
+            return false;
+        }
+        TaxWithholding w = row.get();
+        BigDecimal current = w.getYearToDateAmount() == null ? BigDecimal.ZERO : w.getYearToDateAmount();
+        w.setYearToDateAmount(current.add(amount));
+        taxWithholdingRepository.save(w);
+        return true;
     }
 
     /**
@@ -1134,6 +1336,38 @@ public class PayrollProcessingService {
                 )
             )
             .toList();
+    }
+
+    /**
+     * Active {@link TaxWithholding} rows for an employee at the given as-of date. Sorted
+     * by (type, id) for determinism.
+     */
+    private List<TaxWithholding> activeWithholdingsForPeriod(Employee employee, LocalDate asOfDate) {
+        return taxWithholdingRepository
+            .findAll(
+                (Specification<TaxWithholding>) (root, query, cb) ->
+                    cb.and(
+                        cb.equal(root.get("employee").get("id"), employee.getId()),
+                        cb.lessThanOrEqualTo(root.get("effectiveFrom"), asOfDate),
+                        cb.or(cb.isNull(root.get("effectiveTo")), cb.greaterThanOrEqualTo(root.get("effectiveTo"), asOfDate))
+                    )
+            )
+            .stream()
+            .sorted(Comparator.comparing(TaxWithholding::getType).thenComparing(TaxWithholding::getId))
+            .toList();
+    }
+
+    /**
+     * Computes the withheld amount for a {@link TaxWithholding} row: {@code rate% × gross}.
+     * The rate is stored as a percentage 0..100 on the entity (see
+     * {@link TaxWithholding#getRate()}).
+     */
+    private BigDecimal computeWithholdingAmount(TaxWithholding w, BigDecimal gross) {
+        if (w.getRate() == null || w.getRate().signum() == 0 || gross == null || gross.signum() == 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal ratio = w.getRate().divide(BigDecimal.valueOf(100), RATE_SCALE, MONEY_ROUNDING);
+        return gross.multiply(ratio).setScale(MONEY_SCALE, MONEY_ROUNDING);
     }
 
     /**
