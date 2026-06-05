@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Published when a workflow deadline is escalated to the next level (P5.3).
+ * Published when a workflow deadline is escalated to the next level .
  *
  * <p>Listeners can side-effect on this — notify managers, dispatch reminders, surface
  * dashboards — without {@code DeadlineMonitorService} taking a hard dependency on every

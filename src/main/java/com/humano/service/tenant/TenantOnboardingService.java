@@ -88,10 +88,10 @@ public class TenantOnboardingService {
     }
 
     /**
-     * Provision the tenant database + seed the admin user via the shared multi-tenant pipeline
-     * (P1.6 resume logic + P1.5 seeding). The master {@code tenant} row already exists from
-     * {@link #createTenant} — {@code provisionTenant} finds it by subdomain and resumes from
-     * the first unfinished step. On return, the admin user is committed in the tenant DB.
+     * Provision the tenant database + seed the admin user via the shared multi-tenant pipeline.
+     * The master {@code tenant} row already exists from {@link #createTenant} — the provisioning
+     * process finds it by subdomain and resumes from the first unfinished step.
+     * On return, the admin user is committed in the tenant DB.
      *
      * @return the seeded admin user's UUID (looked up inside the new tenant context), or
      *         {@code null} if the lookup fails — in which case the onboarding response carries
@@ -260,8 +260,8 @@ public class TenantOnboardingService {
         SubscriptionPlan plan,
         TenantOnboardingRequest request
     ) {
-        // Provision the physical tenant DB, run migrations, and seed the admin user via P1.5.
-        // provisionTenant transitions tenant.status to ACTIVE on success.
+        // Provision the physical tenant DB, run migrations, and seed the admin user.
+        // Tenant transitions to ACTIVE on success.
         UUID adminUserId = provisionTenantAndLoadAdminId(tenant, request);
 
         return TenantOnboardingResponse.forTrialSignup(

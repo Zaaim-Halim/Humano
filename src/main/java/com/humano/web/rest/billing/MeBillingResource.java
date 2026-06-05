@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Self-service billing reads scoped to the calling tenant (P2.4). Available to any
+ * Self-service billing reads scoped to the calling tenant. Available to any
  * authenticated user belonging to the tenant — the SPA uses this for the billing/
  * subscription panel without needing {@code ROLE_ADMIN}. Mutations stay on the per-
  * aggregate admin-gated resources.

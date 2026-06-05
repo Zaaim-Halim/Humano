@@ -22,7 +22,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
 
 /**
- * Tax withholdings (P2.5).
+ * Tax withholdings .
  */
 @RestController
 @RequestMapping("/api/payroll/tax-withholdings")

@@ -18,20 +18,19 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
 
 /**
- * Payslip queries (P2.5). Generation entry points live on {@link PayrollRunResource}
+ * Payslip queries. Generation entry points live on {@link PayrollRunResource}
  * (whole-run) and {@link PayrollResultResource} (single result).
  * <p>
- * The PDF binary endpoint {@link #downloadPdf} is wired but returns 501 until P3.5 lands
- * the PDF generator; once {@code Payslip.pdfUrl} is populated, this method can stream from
+ * The PDF binary endpoint {@link #downloadPdf} is wired but returns 501 until
+ * the PDF generator is implemented; once {@code Payslip.pdfUrl} is populated, this method can stream from
  * the per-tenant storage backend without further changes to the surface.
  * <p>
  * Authorization: this resource is intentionally <strong>not</strong> opened to
  * {@code EMPLOYEE}. None of the read methods below check caller-vs-target, so granting
  * the bare role would let any authenticated employee read a colleague's payslip by
  * iterating UUIDs (IDOR on the most sensitive data in the system). Real self-service
- * &mdash; "GET my own payslips" with a {@code caller == employeeId} check &mdash; lands
- * with P6.1 (method-level permission tightening). Until then keep the class-level grant
- * narrow.
+ * &mdash; "GET my own payslips" with a {@code caller == employeeId} check &mdash; is a future enhancement.
+ * Until then keep the class-level grant narrow.
  */
 @RestController
 @RequestMapping("/api/payroll/payslips")
@@ -94,7 +93,7 @@ public class PayslipResource {
     }
 
     /**
-     * Streams the payslip PDF. Returns 501 until P3.5 wires the PDF generator and
+     * Streams the payslip PDF. Returns 501 until the PDF generator is implemented and
      * populates {@code Payslip.pdfUrl}; the route exists so downstream code can be
      * written against the stable URL.
      */
@@ -104,12 +103,14 @@ public class PayslipResource {
         if (slip.pdfUrl() == null || slip.pdfUrl().isBlank()) {
             ProblemDetail pd = ProblemDetail.forStatus(501);
             pd.setTitle("Payslip PDF not yet generated");
-            pd.setDetail("Payslip " + id + " has no PDF on file; PDF generation requires roadmap task P3.5.");
+            pd.setDetail("Payslip " + id + " has no PDF on file; PDF generation is a future enhancement.");
             return ResponseEntity.status(501).body(pd);
         }
         ProblemDetail pd = ProblemDetail.forStatus(501);
         pd.setTitle("PDF streaming not yet wired");
-        pd.setDetail("Payslip " + id + " has a recorded pdfUrl (" + slip.pdfUrl() + ") but streaming via StorageFactory is part of P3.5.");
+        pd.setDetail(
+            "Payslip " + id + " has a recorded pdfUrl (" + slip.pdfUrl() + ") but streaming via StorageFactory is a future enhancement."
+        );
         return ResponseEntity.status(501).body(pd);
     }
 }

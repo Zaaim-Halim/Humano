@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Tenant self-service REST endpoints (ROADMAP P2.3). Operates against master DB rows that
+ * Tenant self-service REST endpoints . Operates against master DB rows that
  * describe the current tenant — never against the tenant's own DB. The tenant is identified
  * via {@link TenantContext} which {@code TenantResolutionFilter} populates from the request
  * subdomain or {@code X-Tenant-ID} header.

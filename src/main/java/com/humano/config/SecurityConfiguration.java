@@ -85,12 +85,11 @@ public class SecurityConfiguration {
                 csrf
                     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
-                    // P2.2: public tenant signup is hit by non-SPA clients that don't carry a CSRF cookie.
+                    // Public tenant signup is hit by non-SPA clients that don't carry a CSRF cookie.
                     .ignoringRequestMatchers(antMatcher("/api/tenant-registration"))
             )
             // Tenant resolution MUST run before any authentication step so the user lookup
-            // hits the correct tenant DB. JWT filter (P1.3) will also be inserted before
-            // UsernamePasswordAuthenticationFilter, after this one.
+            // hits the correct tenant DB.
             .addFilterBefore(tenantResolutionFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(new SpaWebFilter(), BasicAuthenticationFilter.class)
             .headers(headers ->
@@ -145,9 +144,9 @@ public class SecurityConfiguration {
                     .loginPage("/")
                     .loginProcessingUrl("/api/authentication")
                     .successHandler((request, response, authentication) -> {
-                        // P1.3 (pragmatic v1): bind the authenticated session to the tenant the
-                        // login was performed against, so subsequent requests with a mismatched
-                        // X-Tenant-ID / subdomain are rejected by TenantResolutionFilter (401).
+                        // Bind the authenticated session to the tenant the login was performed against,
+                        // so subsequent requests with a mismatched X-Tenant-ID / subdomain are rejected
+                        // by TenantResolutionFilter (401).
                         String tenant = TenantContext.getCurrentTenant();
                         if (tenant != null && !TenantContext.MASTER.equals(tenant)) {
                             request.getSession().setAttribute(TenantContext.SESSION_TENANT_ATTRIBUTE, tenant);

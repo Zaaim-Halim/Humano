@@ -6,9 +6,8 @@ import org.springframework.core.task.TaskDecorator;
 
 /**
  * Propagates {@link TenantContext} + the SLF4J MDC across the boundary from the request
- * thread to a {@code @Async} worker thread (ROADMAP P1.9 / invariant I2). Without this,
- * tenant-scoped repositories invoked from an async listener would lose their context and
- * hit the master DB (or fail).
+ * thread to a {@code @Async} worker thread. Without this, tenant-scoped repositories
+ * invoked from an async listener would lose their context and hit the master DB (or fail).
  */
 public class TenantAwareTaskDecorator implements TaskDecorator {
 

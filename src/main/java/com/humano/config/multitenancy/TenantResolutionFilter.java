@@ -43,13 +43,13 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         boolean isPlatform = path.startsWith(PLATFORM_PREFIX);
         try {
-            // P2.6: /api/platform/** runs under the configured platform tenant so Spring
+            // /api/platform/** runs under the configured platform tenant so Spring
             // Security's UserDetailsService loads admins from a real tenant DB (there is no
             // app_user table in master at v1). Regular requests follow header/subdomain
             // resolution as before.
             String tenantId = isPlatform ? properties.getPlatformTenant() : tenantResolver.resolveTenant(request);
             TenantContext.setCurrentTenant(tenantId);
-            // P1.9: every log line for the rest of this request carries [tenant=<subdomain>].
+            // Every log line for the rest of this request carries [tenant=<subdomain>].
             // The matching TaskDecorator in AsyncConfiguration propagates this to @Async workers.
             MDC.put(TenantContext.MDC_TENANT_KEY, tenantId);
 
@@ -111,7 +111,7 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        // P2.6: /api/platform/** is intentionally NOT excluded — doFilterInternal forces
+        // /api/platform/** is intentionally NOT excluded — doFilterInternal forces
         // the tenant context to the configured platform tenant so the UserDetailsService
         // can resolve the admin principal from that tenant's DB.
         return (

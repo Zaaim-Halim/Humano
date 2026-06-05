@@ -23,7 +23,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
 
 /**
- * Bonuses (P2.5).
+ * Bonuses .
  */
 @RestController
 @RequestMapping("/api/payroll/bonuses")

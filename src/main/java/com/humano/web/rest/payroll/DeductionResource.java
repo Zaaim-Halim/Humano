@@ -23,7 +23,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
 
 /**
- * Deductions (P2.5).
+ * Deductions resource — manage employee deductions.
  */
 @RestController
 @RequestMapping("/api/payroll/deductions")

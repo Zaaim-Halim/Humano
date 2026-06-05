@@ -17,7 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Invoices for the current tenant (P2.4). Every endpoint scopes to the resolved current
+ * Invoices for the current tenant. Every endpoint scopes to the resolved current
  * tenant; cross-tenant listing lives at {@link PlatformBillingResource}.
  */
 @RestController

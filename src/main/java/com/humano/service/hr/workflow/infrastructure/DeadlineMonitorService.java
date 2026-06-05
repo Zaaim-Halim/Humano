@@ -37,7 +37,7 @@ public class DeadlineMonitorService {
     private final ApplicationEventPublisher eventPublisher;
 
     /**
-     * P5.3 — hard ceiling on auto-escalations per deadline. Prevents the hourly scheduler
+     * Hard ceiling on auto-escalations per deadline. Prevents the hourly scheduler
      * from looping forever on a stuck workflow. Past the cap we keep logging but stop
      * mutating state and publishing events.
      */
@@ -217,7 +217,7 @@ public class DeadlineMonitorService {
     }
 
     /**
-     * Escalate a deadline. Respects the configured {@link #maxEscalationLevel} cap (P5.3) —
+     * Escalate a deadline. Respects the configured {@link #maxEscalationLevel} cap —
      * past the cap this is a no-op so manual reruns can't push a stuck workflow into a loop.
      */
     public void escalate(UUID deadlineId) {
@@ -245,7 +245,7 @@ public class DeadlineMonitorService {
 
     /**
      * Check and escalate overdue deadline if needed. Bounded by {@link #maxEscalationLevel}
-     * so the hourly scheduler can't loop forever on a stuck workflow (P5.3).
+     * so the hourly scheduler can't loop forever on a stuck workflow.
      */
     private void checkAndEscalate(WorkflowDeadline deadline) {
         int currentLevel = deadline.getEscalationLevel() != null ? deadline.getEscalationLevel() : 0;

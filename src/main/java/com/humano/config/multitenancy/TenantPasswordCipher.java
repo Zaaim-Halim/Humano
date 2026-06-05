@@ -5,7 +5,7 @@ import org.jasypt.encryption.StringEncryptor;
 import org.springframework.stereotype.Component;
 
 /**
- * Symmetric encryption + secure generation of tenant database passwords (P1.4).
+ * Symmetric encryption + secure generation of tenant database passwords.
  *
  * <p>Encryption is delegated to the auto-configured {@link StringEncryptor} from
  * {@code jasypt-spring-boot-starter} (PBE; key sourced from {@code jasypt.encryptor.password}

@@ -178,7 +178,7 @@ public class PayrollProcessingService {
     /**
      * Initiates a new payroll run for a specific period.
      *
-     * <h3>Idempotency contract (P3.2)</h3>
+     * <h3>Idempotency contract</h3>
      * The hash is now deterministic over {@code (periodId, scope, sortedEmployeeIds,
      * payRuleVersion, taxBracketVersion)}. Two identical calls produce the same hash, so
      * the <em>hash short-circuit</em> below returns the existing run instead of
@@ -188,7 +188,7 @@ public class PayrollProcessingService {
      * hash-scoped) is preserved &mdash; it fires when a DRAFT exists for a DIFFERENT
      * input set (so the hashes differ) and {@code draftMode=false}.
      *
-     * <p><b>Deviation from spec wording.</b> ROADMAP P3.2 names the short-circuit set as
+     * <p><b>Deviation from spec wording.</b> The specification names the short-circuit set as
      * {@code CALCULATED/APPROVED/POSTED}; we widen it to ALL statuses so the acceptance
      * "a DB unique-violation on payroll_run.hash cannot occur via the service path"
      * also holds in {@code draftMode}, where the period-DRAFT guard is skipped.
@@ -226,7 +226,7 @@ public class PayrollProcessingService {
         Instant taxBracketVersion = taxBracketRepository.findMaxLastModifiedDate().orElse(null);
         String hash = generateIdempotencyHash(period.getId(), scope, sortedEmployeeIds, payRuleVersion, taxBracketVersion);
 
-        // Hash short-circuit (P3.2) — return any existing run with this hash to honour
+        // Hash short-circuit  — return any existing run with this hash to honour
         // the "two no-ops" idempotency and prevent the unique-constraint violation at
         // save time.
         Optional<PayrollRun> existingByHash = payrollRunRepository
@@ -315,7 +315,7 @@ public class PayrollProcessingService {
     }
 
     /**
-     * Calculates payroll for a single employee following the canonical §2.2 pipeline (P3.1).
+     * Calculates payroll for a single employee following the canonical §2.2 pipeline .
      * See the class-level sequence diagram for the contract.
      */
     private PayrollResult calculateEmployeePayroll(PayrollRun run, PayrollPeriod period, Employee employee) {
@@ -969,7 +969,7 @@ public class PayrollProcessingService {
     private static final String HASH_DELIM = "|";
 
     /**
-     * SHA-256 idempotency hash (P3.2) over the canonical run inputs. Pure function of its
+     * SHA-256 idempotency hash  over the canonical run inputs. Pure function of its
      * arguments &mdash; no clock, no randomness. Two calls with identical inputs yield
      * identical hashes; any change to employee set / pay-rule version / tax-bracket
      * version invalidates the hash.

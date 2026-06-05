@@ -13,7 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Pay rules (P2.5). Rules are owned by their pay component; this resource exposes the
+ * Pay rules . Rules are owned by their pay component; this resource exposes the
  * rule-only operations from {@link PayComponentService} under a dedicated path.
  */
 @RestController

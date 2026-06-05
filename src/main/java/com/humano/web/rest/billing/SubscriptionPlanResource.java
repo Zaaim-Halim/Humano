@@ -19,7 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Subscription-plan catalog (P2.4). Plans are platform-level config; reads are open to
+ * Subscription-plan catalog. Plans are platform-level config; reads are open to
  * any authenticated user (so tenants can render upgrade UIs), mutations require
  * {@code ROLE_ADMIN}.
  */

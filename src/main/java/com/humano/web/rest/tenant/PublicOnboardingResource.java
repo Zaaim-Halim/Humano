@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Public, unauthenticated tenant signup (ROADMAP P2.2). Delegates to the existing
+ * Public, unauthenticated tenant signup. Delegates to the existing
  * {@link TenantOnboardingService#onboardTenant(TenantOnboardingRequest)} which provisions
  * the tenant, creates the admin user, and issues an initial invoice + subscription.
  *
@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
  * pre-fetched CSRF cookie. Tenant resolution is also skipped — {@code TenantResolutionFilter}
  * excludes {@code /api/tenant-registration} so the call hits the master DB.
  *
- * <p>Rate limiting (5/min/IP) is wired separately in P6.4.
+ * <p>Rate limiting is wired separately in the security configuration.
  */
 @RestController
 @RequestMapping("/api/tenant-registration")

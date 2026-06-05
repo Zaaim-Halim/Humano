@@ -18,7 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Tax brackets and tax calculation (P2.5).
+ * Tax brackets and tax calculation .
  */
 @RestController
 @RequestMapping("/api/payroll/tax-brackets")

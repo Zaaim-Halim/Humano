@@ -57,7 +57,7 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
     /**
      * Highest provisioning step this tenant has completed. Used by
      * {@code TenantProvisioningService} to make provisioning crash-safe and resumable
-     * (see ROADMAP P1.6). {@code null} means we have not yet committed any step.
+     * (see ROADMAP —. {@code null} means we have not yet committed any step.
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "provisioning_step", length = 32)

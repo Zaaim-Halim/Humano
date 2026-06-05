@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Validates approval-chain configurations (P5.2).
+ * Validates approval-chain configurations.
  *
  * <p>Rules:
  * <ol>

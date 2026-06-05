@@ -22,7 +22,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
 
 /**
- * Pay components &mdash; reusable earning/deduction/employer-charge buckets (P2.5).
+ * Pay components &mdash; reusable earning/deduction/employer-charge buckets.
  * Their executable rules live on {@link PayRuleResource}.
  */
 @RestController

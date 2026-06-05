@@ -19,10 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
  * Service for orchestrating notifications across all workflows.
  * Handles sending notifications for approvals, tasks, deadlines, and workflow events.
  *
- * <p>P5.4 — two channels are wired here: an in-app row inserted into
+ * <p>Two channels are wired here: an in-app row inserted into
  * {@code employee_notification}, and an email dispatched through {@link MailService}
- * (which is {@code @Async}, so the SMTP call escapes the caller's transaction per
- * invariant I5). Push notifications are deferred until the mobile client lands.
+ * (which is {@code @Async}, so the SMTP call escapes the caller's transaction).
+ * Push notifications are deferred until the mobile client lands.
  */
 @Service
 @Transactional

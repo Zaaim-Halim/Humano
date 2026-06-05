@@ -18,7 +18,7 @@ public class MultiTenantProperties {
     private String driverClassName = "com.mysql.cj.jdbc.Driver";
 
     /**
-     * P2.6 — Subdomain of the tenant DB that hosts the platform-admin principal.
+     * Subdomain of the tenant DB that hosts the platform-admin principal.
      * Requests to {@code /api/platform/**} are forced to run under this tenant context so
      * Spring Security's {@code UserDetailsService} loads admins from a real tenant DB
      * (there is intentionally no {@code app_user} table in the master DB at v1).
@@ -26,7 +26,7 @@ public class MultiTenantProperties {
      * <p><b>Operational note.</b> This is a single-node-of-trust convention: anyone with
      * {@code ROLE_ADMIN} in this tenant can call every {@code /api/platform/**} endpoint.
      * Treat the platform tenant as a dedicated admin tenancy — do not seed real business
-     * data into it. Promote to a dedicated master-DB admin table (P2.6 option (a)) once a
+     * data into it. Promote to a dedicated master-DB admin table once a
      * "support staff can log into any tenant" need lands.
      */
     private String platformTenant = "default";

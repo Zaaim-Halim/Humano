@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 /**
  * On {@link ApplicationReadyEvent}, run the tenant Liquibase changelog against every
  * {@link TenantStatus#ACTIVE} tenant so adding a new tenant changeset and restarting does
- * not silently leave existing tenants on the old schema (ROADMAP P1.7).
+ * not silently leave existing tenants on the old schema .
  *
  * <p>Why {@code @EventListener(ApplicationReadyEvent.class)} and not {@code @PostConstruct}:
  * tenants are read from the master DB, which itself only finishes its async Liquibase pass

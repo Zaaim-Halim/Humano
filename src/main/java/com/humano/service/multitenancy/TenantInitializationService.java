@@ -40,7 +40,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Seeds a freshly-migrated tenant database with the data required for the tenant admin to
  * sign in and begin operating: default roles + permissions, the admin user, and minimum
- * payroll reference data (P1.5).
+ * payroll reference data .
  *
  * <p>All writes go to the tenant DB. We bracket the work with
  * {@link TenantContext#setCurrentTenant} so {@code TenantRoutingDataSource} resolves to
@@ -58,7 +58,7 @@ public class TenantInitializationService {
 
     /**
      * Baseline permission codes + which roles get them. Keep the alphabet small — finer-grained
-     * permissions can come later via {@code PermissionsConstants} (P6.1). Order is preserved by
+     * permissions can come later via {@code PermissionsConstants} . Order is preserved by
      * {@link LinkedHashMap} so the bind step is deterministic.
      */
     private static final Map<String, Set<String>> DEFAULT_PERMISSIONS = new LinkedHashMap<>();
@@ -71,7 +71,7 @@ public class TenantInitializationService {
     }
 
     /**
-     * Default approval chains seeded for every new tenant (P5.2). Two-step DIRECT_MANAGER →
+     * Default approval chains seeded for every new tenant . Two-step DIRECT_MANAGER →
      * DEPARTMENT_HEAD for the three workflows the orchestrator currently supports
      * end-to-end. Other {@link ApprovalType} values (TRAINING_REQUEST, POSITION_TRANSFER,
      * SALARY_ADJUSTMENT, TIMESHEET_APPROVAL) are deliberately left empty so they fail loud
@@ -117,7 +117,7 @@ public class TenantInitializationService {
 
     /**
      * Seed the tenant DB. Idempotent: existing roles/permissions/users/calendars/components
-     * are left in place, so it's safe to re-run on a partially-provisioned tenant (P1.6).
+     * are left in place, so it's safe to re-run on a partially-provisioned tenant .
      */
     public void initializeTenant(Tenant tenant, TenantRegistrationDTO registration) {
         LOG.info("Initializing tenant '{}' with default data", tenant.getSubdomain());
@@ -205,12 +205,12 @@ public class TenantInitializationService {
         seedDefaultApprovalChains(tenant);
         // LeaveTypeRule requires Country rows seeded into the tenant DB before we can FK to
         // them. Deferred to its own seed pass once the country reference dataset is loaded
-        // by Liquibase (see ROADMAP §3 / P3.3).
+        // by Liquibase (see ROADMAP §3 / —.
     }
 
     /**
      * Seed two-step DIRECT_MANAGER → DEPARTMENT_HEAD chains for LEAVE_REQUEST,
-     * EXPENSE_CLAIM, OVERTIME_REQUEST (P5.2). Idempotent: skips any approval type
+     * EXPENSE_CLAIM, OVERTIME_REQUEST . Idempotent: skips any approval type
      * that already has at least one active step (tenant has already configured it).
      * Validates the result via {@link ApprovalChainValidator} so a future tweak that
      * introduces a sequence gap fails the provisioning loudly instead of stalling

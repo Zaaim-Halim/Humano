@@ -69,7 +69,7 @@ public class TenantProvisioningService {
 
     /**
      * Provisions a new tenant with a dedicated database, or resumes an in-progress / failed
-     * provisioning for the same subdomain (P1.6 / P1.10). Each step is idempotent:
+     * provisioning for the same subdomain (P1.6 / —. Each step is idempotent:
      * <ul>
      *   <li>tenant + db_config rows are reused if they exist;</li>
      *   <li>{@code CREATE DATABASE IF NOT EXISTS} / {@code CREATE USER IF NOT EXISTS} in

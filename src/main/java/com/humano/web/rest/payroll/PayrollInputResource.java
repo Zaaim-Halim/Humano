@@ -21,7 +21,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
 
 /**
- * Per-period payroll inputs &mdash; OT hours, allowances, ad-hoc overrides (P2.5).
+ * Per-period payroll inputs &mdash; OT hours, allowances, ad-hoc overrides .
  */
 @RestController
 @RequestMapping("/api/payroll/inputs")

@@ -221,7 +221,7 @@ public class PayslipService {
 
     /**
      * Finds the payslip belonging to a given run + employee. Used by the
-     * {@code GET /api/payroll/runs/{id}/payslips/{employeeId}} surface (P2.5).
+     * {@code GET /api/payroll/runs/{id}/payslips/{employeeId}} endpoint.
      */
     @Transactional(readOnly = true)
     public Optional<PayslipResponse> findByRunAndEmployee(UUID runId, UUID employeeId) {
@@ -241,7 +241,7 @@ public class PayslipService {
     /**
      * Returns the rich {@link PayrollResultResponse} for a single result, including
      * line breakdown. Exposes the internal {@code buildResultDetails} mapper for the
-     * {@code /api/payroll/results/{id}} REST surface (P2.5).
+     * {@code /api/payroll/results/{id}} endpoint.
      */
     @Transactional(readOnly = true)
     public PayrollResultResponse getResultDetails(UUID resultId) {
@@ -263,7 +263,7 @@ public class PayslipService {
 
     /**
      * Lists all payroll results for a given run. Used by
-     * {@code GET /api/payroll/runs/{id}/results} (P2.5).
+     * {@code GET /api/payroll/runs/{id}/results} endpoint.
      */
     @Transactional(readOnly = true)
     public List<PayrollResultResponse> getResultsForRun(UUID runId) {

@@ -11,7 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Currencies (P2.5). Read-only reference data &mdash; the catalog is seeded via
+ * Currencies . Read-only reference data &mdash; the catalog is seeded via
  * Liquibase / {@code TenantInitializationService} and not exposed for mutation here.
  */
 @RestController

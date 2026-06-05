@@ -10,7 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Per-employee payroll result detail (P2.5). Results are produced by a run; this resource
+ * Per-employee payroll result detail . Results are produced by a run; this resource
  * exposes a single result's line breakdown and a payslip-generation entry point.
  */
 @RestController

@@ -17,7 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Payroll calendars (P2.5). Periods are managed via {@link PayrollPeriodResource}.
+ * Payroll calendars . Periods are managed via {@link PayrollPeriodResource}.
  */
 @RestController
 @RequestMapping("/api/payroll/calendars")

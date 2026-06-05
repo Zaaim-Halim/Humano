@@ -22,7 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Payroll run lifecycle (P2.5): DRAFT &rarr; CALCULATED &rarr; APPROVED &rarr; POSTED.
+ * Payroll run lifecycle : DRAFT &rarr; CALCULATED &rarr; APPROVED &rarr; POSTED.
  * <p>
  * The PDF download path {@code GET /runs/{id}/payslips/{employeeId}} returns the payslip
  * JSON; the binary PDF stream is at {@code /api/payroll/payslips/{id}/pdf} and waits on

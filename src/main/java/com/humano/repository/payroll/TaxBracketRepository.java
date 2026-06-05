@@ -16,7 +16,7 @@ import org.springframework.stereotype.Repository;
 public interface TaxBracketRepository extends JpaRepository<TaxBracket, UUID>, JpaSpecificationExecutor<TaxBracket> {
     /**
      * Returns the most recent {@code lastModifiedDate} across every {@link TaxBracket}
-     * row, or {@link Optional#empty()} if the table is empty. Used by P3.2 to derive the
+     * row, or {@link Optional#empty()} if the table is empty. Used to derive the
      * {@code taxBracketVersion} input to the payroll-run idempotency hash.
      */
     @Query("SELECT MAX(t.audit.lastModifiedDate) FROM TaxBracket t")

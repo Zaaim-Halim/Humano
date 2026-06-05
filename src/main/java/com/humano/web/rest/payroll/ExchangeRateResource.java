@@ -20,7 +20,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
 
 /**
- * Exchange rates (P2.5). The point-of-use {@code convert(...)} entry point lives on
+ * Exchange rates . The point-of-use {@code convert(...)} entry point lives on
  * {@link CurrencyConversionResource} at {@code /api/payroll/conversions}.
  */
 @RestController

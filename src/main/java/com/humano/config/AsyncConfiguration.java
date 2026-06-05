@@ -39,7 +39,7 @@ public class AsyncConfiguration implements AsyncConfigurer {
         executor.setMaxPoolSize(taskExecutionProperties.getPool().getMaxSize());
         executor.setQueueCapacity(taskExecutionProperties.getPool().getQueueCapacity());
         executor.setThreadNamePrefix(taskExecutionProperties.getThreadNamePrefix());
-        // P1.9 / I2: propagate TenantContext + MDC into @Async workers so tenant-scoped
+        // Propagate TenantContext + MDC into @Async workers so tenant-scoped
         // repositories keep routing correctly off the request thread.
         executor.setTaskDecorator(new TenantAwareTaskDecorator());
         return new ExceptionHandlingAsyncTaskExecutor(executor);

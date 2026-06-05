@@ -12,8 +12,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Standalone currency conversion helper at the exact path required by P2.5
- * ({@code POST /api/payroll/conversions}). Wraps {@code ExchangeRateService.convert}.
+ * Standalone currency conversion helper ({@code POST /api/payroll/conversions}).
+ * Wraps {@code ExchangeRateService.convert}.
  */
 @RestController
 @RequestMapping("/api/payroll/conversions")

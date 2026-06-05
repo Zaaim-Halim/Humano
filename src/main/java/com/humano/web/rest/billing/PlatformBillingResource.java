@@ -16,10 +16,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Cross-tenant billing reads for platform admins (P2.4). Lives under
- * {@code /api/platform/billing/**} so it inherits the platform-tenant routing convention
- * (P2.6) and is gated by {@code ROLE_ADMIN}. No mutations here — tenant-scoped writes
- * stay on the per-tenant resources to keep ownership checks consistent.
+ * Cross-tenant billing reads for platform admins. Lives under
+ * {@code /api/platform/billing/**} and is gated by {@code ROLE_ADMIN}.
+ * No mutations here — tenant-scoped writes stay on the per-tenant resources to keep ownership checks consistent.
  */
 @RestController
 @RequestMapping("/api/platform/billing")

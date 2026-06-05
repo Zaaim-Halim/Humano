@@ -16,7 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Subscription management for the current tenant (P2.4). All endpoints scope to the
+ * Subscription management for the current tenant. All endpoints scope to the
  * current tenant via {@link TenantIdResolver} so a tenant admin can never read or mutate
  * another tenant's subscription. Cross-tenant listing is exposed separately at
  * {@code /api/platform/billing/subscriptions} ({@link PlatformBillingResource}).

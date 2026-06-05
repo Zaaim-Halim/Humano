@@ -20,7 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Payments for the current tenant (P2.4). Payments are scoped indirectly via their parent
+ * Payments for the current tenant. Payments are scoped indirectly via their parent
  * invoice — we resolve the invoice first to verify it belongs to the current tenant before
  * letting any mutation through.
  */

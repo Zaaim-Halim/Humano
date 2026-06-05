@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Platform-admin REST endpoints for the tenant lifecycle (ROADMAP P2.1). Always operates
+ * Platform-admin REST endpoints for the tenant lifecycle . Always operates
  * against the master DB — {@code TenantResolutionFilter#shouldNotFilter} excludes
  * {@code /api/platform/**} so no tenant context is set.
  */
@@ -58,7 +58,7 @@ public class PlatformTenantResource {
         this.dataSourceProvider = dataSourceProvider;
     }
 
-    /** Provision a new tenant. Idempotent / resumable for matching subdomain (P1.6). */
+    /** Provision a new tenant. Idempotent / resumable for matching subdomain . */
     @PostMapping
     public ResponseEntity<TenantResponse> provision(@Valid @RequestBody TenantRegistrationDTO request) {
         LOG.info("REST request to provision tenant subdomain={}", request.getSubdomain());

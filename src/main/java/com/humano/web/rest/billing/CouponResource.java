@@ -16,7 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Coupon management (P2.4). Coupons are platform-level constructs (tenants don't issue
+ * Coupon management. Coupons are platform-level constructs (tenants don't issue
  * their own); all endpoints require {@code ROLE_ADMIN}. The {@code POST /redeem/{code}}
  * endpoint is the only one any authenticated user can hit — it consumes a coupon and
  * returns the redemption state, intended to be wired into a subscription or invoice flow

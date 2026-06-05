@@ -20,7 +20,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
 
 /**
- * Payroll periods (P2.5). All period operations live under {@link PayrollCalendarService};
+ * Payroll periods . All period operations live under {@link PayrollCalendarService};
  * this resource only exposes them under a stable path for the SPA.
  */
 @RestController

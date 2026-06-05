@@ -23,7 +23,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
 
 /**
- * Employee compensation (P2.5).
+ * Employee compensation .
  */
 @RestController
 @RequestMapping("/api/payroll/compensations")
