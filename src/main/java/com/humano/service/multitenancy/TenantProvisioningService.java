@@ -13,8 +13,11 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Orchestrates the complete tenant provisioning workflow:
@@ -40,6 +43,7 @@ public class TenantProvisioningService {
     private final DatabaseServerSelector serverSelector;
     private final MultiTenantProperties properties;
     private final TenantPasswordCipher passwordCipher;
+    private final TransactionTemplate masterTx;
 
     public TenantProvisioningService(
         TenantRepository tenantRepository,
@@ -49,7 +53,8 @@ public class TenantProvisioningService {
         TenantInitializationService initializationService,
         DatabaseServerSelector serverSelector,
         MultiTenantProperties properties,
-        TenantPasswordCipher passwordCipher
+        TenantPasswordCipher passwordCipher,
+        @Qualifier("masterTransactionManager") PlatformTransactionManager masterTransactionManager
     ) {
         this.tenantRepository = tenantRepository;
         this.databaseConfigRepository = databaseConfigRepository;
@@ -59,11 +64,12 @@ public class TenantProvisioningService {
         this.serverSelector = serverSelector;
         this.properties = properties;
         this.passwordCipher = passwordCipher;
+        this.masterTx = new TransactionTemplate(masterTransactionManager);
     }
 
     /**
      * Provisions a new tenant with a dedicated database, or resumes an in-progress / failed
-     * provisioning for the same subdomain (P1.6). Each step is idempotent:
+     * provisioning for the same subdomain (P1.6 / P1.10). Each step is idempotent:
      * <ul>
      *   <li>tenant + db_config rows are reused if they exist;</li>
      *   <li>{@code CREATE DATABASE IF NOT EXISTS} / {@code CREATE USER IF NOT EXISTS} in
@@ -71,62 +77,87 @@ public class TenantProvisioningService {
      *   <li>Liquibase skips already-applied changesets via {@code DATABASECHANGELOG};</li>
      *   <li>{@link TenantInitializationService} guards each seed with an existence check.</li>
      * </ul>
-     * The highest completed step is persisted on {@code tenant.provisioning_step} after each
-     * successful step so resumes can short-circuit work that's already done.
+     *
+     * <p><b>P1.10 — crash safety.</b> This method is deliberately NOT {@code @Transactional}.
+     * The DDL inside {@link TenantDatabaseManager#createDatabase} and the Liquibase run inside
+     * {@link TenantMigrationService#runMigrations} autocommit and so escape any wrapping JPA
+     * transaction. If a master TX were wrapping this method, {@code markStep} writes would
+     * buffer until method return, and the {@code catch} block's
+     * {@code setStatus(PROVISIONING_FAILED) + save} would roll back with the rest — leaving
+     * the physical tenant DB on disk but no master row to resume from.
+     *
+     * <p>Instead, each master-DB mutation runs in its own short {@link TransactionTemplate}
+     * commit bound to {@code masterTransactionManager}, between which the long-running DDL
+     * / migration / seed steps execute. On exception we commit a final
+     * {@code PROVISIONING_FAILED} status update independently.
      */
-    @Transactional
     public Tenant provisionTenant(TenantRegistrationDTO registrationDTO) {
         String subdomain = registrationDTO.getSubdomain().toLowerCase();
         LOG.info("Starting provisioning for tenant: {}", subdomain);
 
-        Optional<Tenant> existing = tenantRepository.findBySubdomain(subdomain);
-        Tenant tenant;
-        if (existing.isPresent()) {
-            Tenant t = existing.get();
-            TenantStatus status = t.getStatus();
-            // Resume only from non-terminal in-progress states.
-            if (status == TenantStatus.ACTIVE || status == TenantStatus.SUSPENDED) {
-                throw new TenantProvisioningException("Subdomain already exists: " + subdomain);
+        // Step 1: resolve OR create the master tenant row. Committed independently.
+        UUID tenantId = masterTx.execute(tx -> {
+            Optional<Tenant> existing = tenantRepository.findBySubdomain(subdomain);
+            if (existing.isPresent()) {
+                Tenant t = existing.get();
+                TenantStatus status = t.getStatus();
+                // Resume only from non-terminal in-progress states.
+                if (status == TenantStatus.ACTIVE || status == TenantStatus.SUSPENDED) {
+                    throw new TenantProvisioningException("Subdomain already exists: " + subdomain);
+                }
+                if (status == TenantStatus.DEACTIVATED || status == TenantStatus.DELETED) {
+                    throw new TenantProvisioningException(
+                        "Subdomain '" + subdomain + "' belongs to a deactivated/deleted tenant; pick a different subdomain"
+                    );
+                }
+                LOG.info("Resuming provisioning for tenant '{}' from step {}", subdomain, t.getProvisioningStep());
+                return t.getId();
             }
-            if (status == TenantStatus.DEACTIVATED || status == TenantStatus.DELETED) {
-                throw new TenantProvisioningException(
-                    "Subdomain '" + subdomain + "' belongs to a deactivated/deleted tenant; pick a different subdomain"
-                );
-            }
-            LOG.info("Resuming provisioning for tenant '{}' from step {}", subdomain, t.getProvisioningStep());
-            tenant = t;
-        } else {
-            tenant = createTenantRecord(registrationDTO);
-            markStep(tenant, ProvisioningStep.TENANT_CREATED);
-        }
+            Tenant created = createTenantRecord(registrationDTO);
+            applyStep(created, ProvisioningStep.TENANT_CREATED);
+            return tenantRepository.save(created).getId();
+        });
 
         try {
-            // Step 2/3: Select server + create the db_config row (idempotent: reuse existing).
-            TenantDatabaseConfig dbConfig = tenant.getDatabaseConfig();
-            if (dbConfig == null) {
-                DatabaseServerInfo serverInfo = serverSelector.selectServer(registrationDTO);
-                LOG.info("Selected database server for tenant {}: {}:{}", subdomain, serverInfo.host(), serverInfo.port());
-                dbConfig = databaseConfigRepository.save(createDatabaseConfig(tenant, serverInfo));
-                tenant.setDatabaseConfig(dbConfig);
-            }
-            tenant.setStatus(TenantStatus.PROVISIONING);
-            markStep(tenant, ProvisioningStep.CONFIG_CREATED);
+            // Step 2/3: select server + create the db_config row + flip status to PROVISIONING.
+            // All three persist together in one committed tx so a crash between them is impossible.
+            TenantDatabaseConfig dbConfig = masterTx.execute(tx -> {
+                Tenant t = loadTenant(tenantId);
+                TenantDatabaseConfig cfg = t.getDatabaseConfig();
+                if (cfg == null) {
+                    DatabaseServerInfo serverInfo = serverSelector.selectServer(registrationDTO);
+                    LOG.info("Selected database server for tenant {}: {}:{}", subdomain, serverInfo.host(), serverInfo.port());
+                    cfg = databaseConfigRepository.save(createDatabaseConfig(t, serverInfo));
+                    t.setDatabaseConfig(cfg);
+                }
+                t.setStatus(TenantStatus.PROVISIONING);
+                applyStep(t, ProvisioningStep.CONFIG_CREATED);
+                tenantRepository.save(t);
+                return cfg;
+            });
 
-            // Step 4: physical DB + DB user (CREATE … IF NOT EXISTS, safe to re-run).
+            // Step 4: physical DB + DB user (CREATE … IF NOT EXISTS, safe to re-run). DDL, no tx.
             databaseManager.createDatabase(dbConfig);
-            markStep(tenant, ProvisioningStep.DATABASE_CREATED);
+            markStep(tenantId, ProvisioningStep.DATABASE_CREATED);
 
-            // Step 5: Liquibase tracks applied changesets in DATABASECHANGELOG.
-            migrationService.runMigrations(tenant);
-            markStep(tenant, ProvisioningStep.MIGRATIONS_RUN);
+            // Step 5: Liquibase tracks applied changesets in DATABASECHANGELOG. Runs its own
+            // connection/transaction internally; not part of any master tx.
+            Tenant snapshotForMigration = loadInTx(tenantId);
+            migrationService.runMigrations(snapshotForMigration);
+            markStep(tenantId, ProvisioningStep.MIGRATIONS_RUN);
 
-            // Step 6: each seed is guarded by an existence check (see TenantInitializationService).
-            initializationService.initializeTenant(tenant, registrationDTO);
-            markStep(tenant, ProvisioningStep.INITIALIZED);
+            // Step 6: tenant-DB seed. initializeTenant drives its own TransactionTemplate bound
+            // to tenantTransactionManager — independent from the master TM used here.
+            initializationService.initializeTenant(snapshotForMigration, registrationDTO);
+            markStep(tenantId, ProvisioningStep.INITIALIZED);
 
-            // Step 7: terminal state.
-            tenant.setStatus(TenantStatus.ACTIVE);
-            markStep(tenant, ProvisioningStep.COMPLETED);
+            // Step 7: terminal state. Commit the ACTIVE flip + COMPLETED step together.
+            Tenant finalTenant = masterTx.execute(tx -> {
+                Tenant t = loadTenant(tenantId);
+                t.setStatus(TenantStatus.ACTIVE);
+                applyStep(t, ProvisioningStep.COMPLETED);
+                return tenantRepository.save(t);
+            });
             LOG.info(
                 "Successfully provisioned tenant: {} on {}:{}/{}",
                 subdomain,
@@ -134,11 +165,23 @@ public class TenantProvisioningService {
                 dbConfig.getDbPort(),
                 dbConfig.getDbName()
             );
-            return tenant;
+            return finalTenant;
         } catch (Exception e) {
-            LOG.error("Failed to provision tenant '{}' at step {}; leaving rows for resume", subdomain, tenant.getProvisioningStep(), e);
-            tenant.setStatus(TenantStatus.PROVISIONING_FAILED);
-            tenantRepository.save(tenant);
+            ProvisioningStep lastStep = safeReadStep(tenantId);
+            LOG.error("Failed to provision tenant '{}' at step {}; leaving rows for resume", subdomain, lastStep, e);
+            // Persist PROVISIONING_FAILED in its own committed tx so the failure state survives
+            // even if the original failure aborted whatever tx the calling layer had open.
+            try {
+                masterTx.executeWithoutResult(tx -> {
+                    Tenant t = tenantRepository.findById(tenantId).orElse(null);
+                    if (t != null) {
+                        t.setStatus(TenantStatus.PROVISIONING_FAILED);
+                        tenantRepository.save(t);
+                    }
+                });
+            } catch (Exception inner) {
+                LOG.error("Also failed to persist PROVISIONING_FAILED status for tenant '{}'", subdomain, inner);
+            }
             // NOTE: we deliberately do NOT dropDatabaseIfExists here — destroying partial state
             // would defeat the point of resumable provisioning. Operators clean up explicitly
             // via deprovisionTenant() if the failure is unrecoverable.
@@ -146,13 +189,40 @@ public class TenantProvisioningService {
         }
     }
 
-    /** Persist the new highest-completed step. Skips downgrades. */
-    private void markStep(Tenant tenant, ProvisioningStep step) {
+    /** Look up a tenant by id inside the current tx; fail loudly if it's gone. */
+    private Tenant loadTenant(UUID id) {
+        return tenantRepository.findById(id).orElseThrow(() -> new TenantProvisioningException("Tenant disappeared mid-provision: " + id));
+    }
+
+    /** Wrap a tenant load in its own short tx — used when we need a snapshot to hand off to a non-tx step. */
+    private Tenant loadInTx(UUID id) {
+        return masterTx.execute(tx -> loadTenant(id));
+    }
+
+    /** Apply the new highest-completed step to an attached entity. Skips downgrades. */
+    private void applyStep(Tenant tenant, ProvisioningStep step) {
         ProvisioningStep current = tenant.getProvisioningStep();
         if (current == null || step.ordinal() > current.ordinal()) {
             tenant.setProvisioningStep(step);
         }
-        tenantRepository.save(tenant);
+    }
+
+    /** Standalone committed write: reload, apply, save. Use between non-tx pipeline steps. */
+    private void markStep(UUID tenantId, ProvisioningStep step) {
+        masterTx.executeWithoutResult(tx -> {
+            Tenant t = loadTenant(tenantId);
+            applyStep(t, step);
+            tenantRepository.save(t);
+        });
+    }
+
+    /** Best-effort read for log context after a failure. Never throws. */
+    private ProvisioningStep safeReadStep(UUID tenantId) {
+        try {
+            return masterTx.execute(tx -> tenantRepository.findById(tenantId).map(Tenant::getProvisioningStep).orElse(null));
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     /**

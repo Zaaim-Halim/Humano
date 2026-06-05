@@ -12,13 +12,16 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Filesystem-backed storage. Instantiated per tenant by {@code StorageFactory} with the
- * tenant's configured root location, so this is intentionally not a Spring
- * {@code @Component}.
+ * Filesystem-backed storage. Instantiated per tenant by {@link StorageFactory} with the
+ * tenant's configured root location, so this is intentionally not a Spring {@code @Component}.
+ * <p>
+ * {@code storageKey} contract: the {@code store(...)} methods return a path
+ * <strong>relative</strong> to {@link #rootLocation} so the key survives root moves and stays
+ * meaningful in {@link com.humano.domain.storage.StoredFile#getStorageKey()}. All reads / deletes
+ * resolve the relative key against the current root.
  */
 public class FilesystemStorageService implements FileStorageService {
 
@@ -26,12 +29,6 @@ public class FilesystemStorageService implements FileStorageService {
 
     private final Path rootLocation;
 
-    /**
-     * Create a new FilesystemStorageService with the given root location.
-     * This constructor can be called programmatically with a specific path for each tenant.
-     *
-     * @param rootLocation the root storage location path
-     */
     public FilesystemStorageService(Path rootLocation) {
         this.rootLocation = rootLocation.toAbsolutePath().normalize();
 
@@ -47,9 +44,7 @@ public class FilesystemStorageService implements FileStorageService {
     @Override
     public String store(MultipartFile file, String directory) throws IOException {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        String originalFilename = file.getOriginalFilename();
-        String filename = UUID.randomUUID().toString() + "-" + timestamp + getExtension(originalFilename);
-
+        String filename = UUID.randomUUID() + "-" + timestamp + getExtension(file.getOriginalFilename());
         return store(file, directory, filename);
     }
 
@@ -58,54 +53,32 @@ public class FilesystemStorageService implements FileStorageService {
         if (file.isEmpty()) {
             throw new StorageException("Failed to store empty file " + filename);
         }
-
-        Path targetDir = createDirectoryIfNeeded(directory);
-        Path destinationFile = targetDir.resolve(Paths.get(filename)).normalize().toAbsolutePath();
-
-        if (!destinationFile.getParent().startsWith(this.rootLocation)) {
-            // This is a security check to prevent storing files outside the root location
-            throw new StorageException("Cannot store file outside current directory.");
+        Path destination = resolveSafe(directory, filename);
+        Files.createDirectories(destination.getParent());
+        try (InputStream in = file.getInputStream()) {
+            Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
         }
-
-        try (InputStream inputStream = file.getInputStream()) {
-            Files.copy(inputStream, destinationFile, StandardCopyOption.REPLACE_EXISTING);
-        }
-
-        log.debug("Stored file {} in filesystem", destinationFile);
-        return destinationFile.toString();
+        return toRelativeKey(destination);
     }
 
     @Override
     public String store(InputStream inputStream, String directory, String filename, String contentType) throws IOException {
-        Path targetDir = createDirectoryIfNeeded(directory);
-        Path destinationFile = targetDir.resolve(Paths.get(filename)).normalize().toAbsolutePath();
-
-        if (!destinationFile.getParent().startsWith(this.rootLocation)) {
-            throw new StorageException("Cannot store file outside current directory.");
-        }
-
-        Files.copy(inputStream, destinationFile, StandardCopyOption.REPLACE_EXISTING);
-        log.debug("Stored file {} in filesystem", destinationFile);
-
-        return destinationFile.toString();
+        Path destination = resolveSafe(directory, filename);
+        Files.createDirectories(destination.getParent());
+        Files.copy(inputStream, destination, StandardCopyOption.REPLACE_EXISTING);
+        return toRelativeKey(destination);
     }
 
     @Override
     public Optional<InputStream> retrieve(String fileReference) throws IOException {
-        Path filePath = Paths.get(fileReference);
-
-        if (Files.exists(filePath)) {
-            return Optional.of(Files.newInputStream(filePath));
-        }
-
-        return Optional.empty();
+        Path filePath = resolveKey(fileReference);
+        return Files.exists(filePath) ? Optional.of(Files.newInputStream(filePath)) : Optional.empty();
     }
 
     @Override
     public boolean delete(String fileReference) {
         try {
-            Path filePath = Paths.get(fileReference);
-            return Files.deleteIfExists(filePath);
+            return Files.deleteIfExists(resolveKey(fileReference));
         } catch (IOException e) {
             log.error("Error deleting file: {}", fileReference, e);
             return false;
@@ -114,22 +87,41 @@ public class FilesystemStorageService implements FileStorageService {
 
     @Override
     public boolean exists(String fileReference) {
-        Path filePath = Paths.get(fileReference);
-        return Files.exists(filePath);
+        return Files.exists(resolveKey(fileReference));
     }
 
     @Override
     public Optional<String> getUrl(String fileReference) {
-        // For filesystem storage, URLs are not directly available
-        // You would typically need to expose these through a web server
+        // Filesystem has no native URL; a controller endpoint serves bytes by StoredFile id.
         return Optional.empty();
     }
 
-    private Path createDirectoryIfNeeded(String directory) throws IOException {
-        Path targetDir = directory != null && !directory.isBlank() ? this.rootLocation.resolve(directory) : this.rootLocation;
+    /** Resolve {@code directory}+{@code filename} under {@link #rootLocation} with a traversal guard. */
+    private Path resolveSafe(String directory, String filename) {
+        Path base = (directory != null && !directory.isBlank()) ? this.rootLocation.resolve(directory) : this.rootLocation;
+        Path target = base.resolve(Paths.get(filename)).normalize().toAbsolutePath();
+        if (!target.startsWith(this.rootLocation)) {
+            throw new StorageException("Cannot store file outside root location: " + filename);
+        }
+        return target;
+    }
 
-        Files.createDirectories(targetDir);
-        return targetDir;
+    /**
+     * Resolve a stored relative key back to an absolute path. Accepts legacy absolute paths too
+     * (returned by older versions of this service) for forward compatibility; new writes always
+     * persist relative keys.
+     */
+    private Path resolveKey(String key) {
+        Path p = Paths.get(key);
+        Path resolved = (p.isAbsolute() ? p : this.rootLocation.resolve(p)).normalize();
+        if (!resolved.startsWith(this.rootLocation)) {
+            throw new StorageException("Resolved path escapes root location: " + key);
+        }
+        return resolved;
+    }
+
+    private String toRelativeKey(Path absolute) {
+        return this.rootLocation.relativize(absolute).toString();
     }
 
     private String getExtension(String filename) {

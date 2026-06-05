@@ -1,25 +1,29 @@
 package com.humano.service.storage;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.domain.tenant.TenantStorageConfig;
+import com.humano.domain.tenant.storage.FilesystemStorageDetails;
+import com.humano.domain.tenant.storage.StorageConfigDetails;
+import com.humano.repository.storage.FileBlobRepository;
 import com.humano.repository.tenant.TenantStorageConfigRepository;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Factory service that provides the appropriate FileStorageService implementation
- * based on tenant configuration.
+ * Returns the {@link FileStorageService} for the current tenant, instantiated from the
+ * tenant's active {@link TenantStorageConfig}.
+ * <p>
+ * Caches one service per tenant id; {@link #invalidate(UUID)} drops the cache entry so the
+ * next call picks up a changed config (call from {@code TenantStorageConfigService} on
+ * activate/deactivate/delete).
  */
 @Service
 public class StorageFactory {
@@ -28,150 +32,78 @@ public class StorageFactory {
 
     private final TenantStorageConfigRepository tenantStorageConfigRepository;
     private final TenantIdResolver tenantIdResolver;
-    private final ObjectMapper objectMapper;
-    private final JdbcTemplate jdbcTemplate;
-
-    // Default values from application properties as fallbacks
-    private final String defaultStorageType;
+    private final FileBlobRepository fileBlobRepository;
     private final String defaultFilesystemRootLocation;
 
-    // Cache of tenant-specific storage services to avoid recreating them for each request
-    private final Map<UUID, FileStorageService> storageServiceCache = new HashMap<>();
+    private final Map<UUID, FileStorageService> storageServiceCache = new ConcurrentHashMap<>();
 
     public StorageFactory(
         TenantStorageConfigRepository tenantStorageConfigRepository,
         TenantIdResolver tenantIdResolver,
-        ObjectMapper objectMapper,
-        JdbcTemplate jdbcTemplate,
-        @Value("${app.file-storage.type:filesystem}") String defaultStorageType,
+        FileBlobRepository fileBlobRepository,
         @Value("${app.file-storage.filesystem.root-location:./uploads}") String defaultFilesystemRootLocation
     ) {
         this.tenantStorageConfigRepository = tenantStorageConfigRepository;
         this.tenantIdResolver = tenantIdResolver;
-        this.objectMapper = objectMapper;
-        this.jdbcTemplate = jdbcTemplate;
-        this.defaultStorageType = defaultStorageType;
+        this.fileBlobRepository = fileBlobRepository;
         this.defaultFilesystemRootLocation = defaultFilesystemRootLocation;
     }
 
     /**
-     * Get the storage service for the current tenant.
-     *
-     * @return the FileStorageService implementation for the current tenant
-     * @throws StorageException if the storage service cannot be created
+     * Resolve the active backend for the current tenant. Falls back to filesystem (rooted at
+     * {@code app.file-storage.filesystem.root-location/{tenantId}}) when the tenant has no
+     * active {@link TenantStorageConfig} yet.
      */
     public FileStorageService getStorageService() {
-        // Resolve current subdomain → master-DB tenant UUID
         UUID tenantId;
         try {
             tenantId = tenantIdResolver.requireCurrentTenantId();
         } catch (RuntimeException e) {
             throw new StorageException("No tenant context available for storage operations", e);
         }
+        return storageServiceCache.computeIfAbsent(tenantId, this::build);
+    }
 
-        // Check if we already have a cached storage service for this tenant
-        if (storageServiceCache.containsKey(tenantId)) {
-            return storageServiceCache.get(tenantId);
-        }
+    /** Drop the cached service for {@code tenantId}; next {@link #getStorageService()} rebuilds. */
+    public void invalidate(UUID tenantId) {
+        if (tenantId == null) return;
+        storageServiceCache.remove(tenantId);
+    }
 
-        // Find the tenant's storage configuration
+    private FileStorageService build(UUID tenantId) {
         Optional<TenantStorageConfig> configOpt = tenantStorageConfigRepository.findByTenant_IdAndActiveTrue(tenantId);
-
-        // Create the appropriate storage service based on the tenant's configuration
-        FileStorageService service;
-        if (configOpt.isPresent()) {
-            TenantStorageConfig config = configOpt.get();
-            service = createStorageService(config);
-            log.info("Created storage service for tenant {} using provider: {}", tenantId, config.getStorageType());
-        } else {
-            // Fall back to default configuration
-            log.warn("No storage configuration found for tenant {}, using default: {}", tenantId, defaultStorageType);
-            service = createDefaultStorageService();
+        if (configOpt.isEmpty()) {
+            log.warn("No active storage configuration for tenant {}, defaulting to filesystem", tenantId);
+            return defaultFilesystem(tenantId);
         }
-
-        // Cache the service for future use
-        storageServiceCache.put(tenantId, service);
+        TenantStorageConfig config = configOpt.get();
+        FileStorageService service = createFor(config);
+        log.info("Built {} storage backend for tenant {}", config.getBackend(), tenantId);
         return service;
     }
 
-    /**
-     * Create a storage service based on tenant configuration.
-     *
-     * @param config the tenant storage configuration
-     * @return the appropriate FileStorageService implementation
-     * @throws StorageException if the storage service cannot be created
-     */
-    private FileStorageService createStorageService(TenantStorageConfig config) {
-        try {
-            switch (config.getStorageType()) {
-                case FILESYSTEM:
-                    return createFilesystemStorageService(config);
-                case DATABASE:
-                    return createDatabaseStorageService(config);
-                case S3:
-                    throw new StorageException("S3 storage not yet implemented");
-                case AZURE:
-                    throw new StorageException("Azure Blob storage not yet implemented");
-                default:
-                    throw new StorageException("Unsupported storage type: " + config.getStorageType());
-            }
-        } catch (Exception e) {
-            throw new StorageException("Failed to create storage service for tenant", e);
+    private FileStorageService createFor(TenantStorageConfig config) {
+        StorageConfigDetails details = config.getConfig();
+        if (details == null) {
+            throw new StorageException("TenantStorageConfig " + config.getId() + " has no backend details");
         }
+        return switch (details.type()) {
+            case DATABASE -> new DatabaseStorageService(fileBlobRepository);
+            case FILESYSTEM -> new FilesystemStorageService(resolveFsRoot((FilesystemStorageDetails) details, config));
+            case S3 -> throw new StorageException("S3 storage not yet implemented");
+            case AZURE -> throw new StorageException("Azure Blob storage not yet implemented");
+        };
     }
 
-    /**
-     * Create a filesystem storage service based on tenant configuration.
-     *
-     * @param config the tenant storage configuration
-     * @return a FilesystemStorageService configured for the tenant
-     */
-    private FileStorageService createFilesystemStorageService(TenantStorageConfig config) {
-        String rootLocation = config.getStorageLocation();
-        if (rootLocation == null || rootLocation.isEmpty()) {
-            rootLocation = defaultFilesystemRootLocation + "/" + config.getTenant().getId();
+    private Path resolveFsRoot(FilesystemStorageDetails fs, TenantStorageConfig config) {
+        String root = fs.rootPath();
+        if (root == null || root.isBlank()) {
+            root = defaultFilesystemRootLocation + "/" + config.getTenant().getId();
         }
-
-        Path storagePath = Paths.get(rootLocation);
-        return new FilesystemStorageService(storagePath);
+        return Paths.get(root);
     }
 
-    /**
-     * Create a database storage service based on tenant configuration.
-     *
-     * @param config the tenant storage configuration
-     * @return a DatabaseStorageService configured for the tenant
-     */
-    private FileStorageService createDatabaseStorageService(TenantStorageConfig config) {
-        // Tenant filtering is applied by DatabaseStorageService via TenantIdResolver.
-        return new DatabaseStorageService(jdbcTemplate, tenantIdResolver);
-    }
-
-    /**
-     * Create a default storage service based on application properties.
-     *
-     * @return the default FileStorageService implementation
-     * @throws StorageException if the storage service cannot be created
-     */
-    private FileStorageService createDefaultStorageService() {
-        // Simple default using filesystem storage with tenant subfolder
-        UUID tenantId = tenantIdResolver.requireCurrentTenantId();
-        String tenantPath = defaultFilesystemRootLocation + "/" + tenantId;
-        return new FilesystemStorageService(Paths.get(tenantPath));
-    }
-
-    /**
-     * Parse a JSON string into a Map.
-     *
-     * @param json the JSON string to parse
-     * @return a Map of configuration values
-     * @throws JsonProcessingException if the JSON cannot be parsed
-     */
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> parseConfigJson(String json) throws JsonProcessingException {
-        if (json == null || json.isEmpty()) {
-            return new HashMap<>();
-        }
-        return objectMapper.readValue(json, HashMap.class);
+    private FileStorageService defaultFilesystem(UUID tenantId) {
+        return new FilesystemStorageService(Paths.get(defaultFilesystemRootLocation, tenantId.toString()));
     }
 }

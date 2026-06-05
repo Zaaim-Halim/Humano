@@ -1,12 +1,19 @@
 package com.humano.service.tenant;
 
+import com.humano.domain.enumeration.storage.StorageBackendType;
 import com.humano.domain.tenant.Tenant;
 import com.humano.domain.tenant.TenantStorageConfig;
+import com.humano.domain.tenant.storage.AzureStorageDetails;
+import com.humano.domain.tenant.storage.DatabaseStorageDetails;
+import com.humano.domain.tenant.storage.FilesystemStorageDetails;
+import com.humano.domain.tenant.storage.S3StorageDetails;
+import com.humano.domain.tenant.storage.StorageConfigDetails;
 import com.humano.dto.tenant.requests.CreateTenantStorageConfigRequest;
 import com.humano.dto.tenant.responses.TenantStorageConfigResponse;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.repository.tenant.TenantStorageConfigRepository;
 import com.humano.service.errors.EntityNotFoundException;
+import com.humano.service.storage.StorageFactory;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,10 +33,16 @@ public class TenantStorageConfigService {
 
     private final TenantStorageConfigRepository tenantStorageConfigRepository;
     private final TenantRepository tenantRepository;
+    private final StorageFactory storageFactory;
 
-    public TenantStorageConfigService(TenantStorageConfigRepository tenantStorageConfigRepository, TenantRepository tenantRepository) {
+    public TenantStorageConfigService(
+        TenantStorageConfigRepository tenantStorageConfigRepository,
+        TenantRepository tenantRepository,
+        StorageFactory storageFactory
+    ) {
         this.tenantStorageConfigRepository = tenantStorageConfigRepository;
         this.tenantRepository = tenantRepository;
+        this.storageFactory = storageFactory;
     }
 
     /**
@@ -48,15 +61,60 @@ public class TenantStorageConfigService {
 
         TenantStorageConfig config = new TenantStorageConfig();
         config.setTenant(tenant);
-        config.setStorageType(request.storageType());
-        config.setStorageLocation(request.storageLocation());
-        config.setConfigJson(request.configJson());
+
+        // Build the StorageConfigDetails based on the request's storageType
+        StorageConfigDetails configDetails = buildStorageConfigDetails(request);
+        config.setConfig(configDetails);
+
         config.setActive(true);
 
         TenantStorageConfig savedConfig = tenantStorageConfigRepository.save(config);
         log.info("Created tenant storage config with ID: {}", savedConfig.getId());
 
+        // The newly-active config supersedes any cached backend the factory held for this tenant.
+        storageFactory.invalidate(tenant.getId());
+
         return mapToResponse(savedConfig);
+    }
+
+    private StorageConfigDetails buildStorageConfigDetails(CreateTenantStorageConfigRequest request) {
+        StorageBackendType backend = request.storageBackend();
+        return switch (backend) {
+            case DATABASE -> {
+                var defaults = DatabaseStorageDetails.defaults();
+                long maxFile = request.maxFileSizeMb() != null ? request.maxFileSizeMb() * 1024L * 1024L : defaults.maxFileSizeBytes();
+                long maxTotal = request.maxStorageGb() != null
+                    ? request.maxStorageGb() * 1024L * 1024L * 1024L
+                    : defaults.maxTotalSizeBytes();
+                yield new DatabaseStorageDetails(maxFile, maxTotal);
+            }
+            case FILESYSTEM -> {
+                var defaults = FilesystemStorageDetails.defaults();
+                long maxBytes = request.maxFileSizeMb() != null ? request.maxFileSizeMb() * 1024L * 1024L : defaults.maxFileSizeBytes();
+                String path = request.filesystemPath() != null ? request.filesystemPath() : defaults.rootPath();
+                yield new FilesystemStorageDetails(path, maxBytes);
+            }
+            case S3 -> new S3StorageDetails(
+                requireNonBlank(request.s3Bucket(), "s3Bucket"),
+                requireNonBlank(request.s3Region(), "s3Region"),
+                request.s3AccessKey(),
+                request.s3SecretKey(),
+                request.maxFileSizeMb() != null ? request.maxFileSizeMb() * 1024L * 1024L : 5L * 1024 * 1024 * 1024
+            );
+            case AZURE -> new AzureStorageDetails(
+                requireNonBlank(request.azureAccountName(), "azureAccountName"),
+                requireNonBlank(request.azureContainer(), "azureContainer"),
+                request.azureConnectionString(),
+                request.maxFileSizeMb() != null ? request.maxFileSizeMb() * 1024L * 1024L : 5000L * 1024 * 1024
+            );
+        };
+    }
+
+    private static String requireNonBlank(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " is required for this storage backend");
+        }
+        return value;
     }
 
     /**
@@ -126,7 +184,9 @@ public class TenantStorageConfigService {
                     });
 
                 config.setActive(true);
-                return mapToResponse(tenantStorageConfigRepository.save(config));
+                TenantStorageConfigResponse resp = mapToResponse(tenantStorageConfigRepository.save(config));
+                storageFactory.invalidate(config.getTenant().getId());
+                return resp;
             })
             .orElseThrow(() -> EntityNotFoundException.create("TenantStorageConfig", id));
     }
@@ -145,7 +205,9 @@ public class TenantStorageConfigService {
             .findById(id)
             .map(config -> {
                 config.setActive(false);
-                return mapToResponse(tenantStorageConfigRepository.save(config));
+                TenantStorageConfigResponse resp = mapToResponse(tenantStorageConfigRepository.save(config));
+                storageFactory.invalidate(config.getTenant().getId());
+                return resp;
             })
             .orElseThrow(() -> EntityNotFoundException.create("TenantStorageConfig", id));
     }
@@ -159,20 +221,30 @@ public class TenantStorageConfigService {
     public void deleteStorageConfig(UUID id) {
         log.debug("Request to delete TenantStorageConfig: {}", id);
 
-        if (!tenantStorageConfigRepository.existsById(id)) {
-            throw EntityNotFoundException.create("TenantStorageConfig", id);
-        }
+        TenantStorageConfig existing = tenantStorageConfigRepository
+            .findById(id)
+            .orElseThrow(() -> EntityNotFoundException.create("TenantStorageConfig", id));
+        UUID tenantId = existing.getTenant().getId();
         tenantStorageConfigRepository.deleteById(id);
+        storageFactory.invalidate(tenantId);
         log.info("Deleted tenant storage config with ID: {}", id);
     }
 
     private TenantStorageConfigResponse mapToResponse(TenantStorageConfig config) {
+        StorageConfigDetails details = config.getConfig();
+        Long maxFileSizeBytes = null;
+        Long maxTotalSizeBytes = null;
+        if (details instanceof DatabaseStorageDetails dbDetails) {
+            maxFileSizeBytes = dbDetails.maxFileSizeBytes();
+            maxTotalSizeBytes = dbDetails.maxTotalSizeBytes();
+        }
         return new TenantStorageConfigResponse(
             config.getId(),
             config.getTenant().getId(),
             config.getTenant().getName(),
-            config.getStorageType(),
-            config.getStorageLocation(),
+            config.getBackend(),
+            maxFileSizeBytes,
+            maxTotalSizeBytes,
             config.isActive(),
             config.getCreatedBy(),
             config.getCreatedDate(),

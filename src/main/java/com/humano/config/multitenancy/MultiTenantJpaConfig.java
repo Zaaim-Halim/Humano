@@ -66,7 +66,8 @@ public class MultiTenantJpaConfig {
         em.setPackagesToScan(
             "com.humano.domain.shared", // User, Authority
             "com.humano.domain.hr", // HR entities
-            "com.humano.domain.payroll" // Payroll entities
+            "com.humano.domain.payroll", // Payroll entities
+            "com.humano.domain.storage" // StoredFile metadata + FileBlob bytes (DATABASE backend)
         );
         em.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         em.setPersistenceUnitName("tenant");
@@ -141,7 +142,9 @@ class MasterRepositoryConfig {}
  */
 @Configuration
 @EnableJpaRepositories(
-    basePackages = { "com.humano.repository.hr", "com.humano.repository.payroll", "com.humano.repository.shared" },
+    basePackages = {
+        "com.humano.repository.hr", "com.humano.repository.payroll", "com.humano.repository.shared", "com.humano.repository.storage", // StoredFileRepository, FileBlobRepository (tenant DB)
+    },
     entityManagerFactoryRef = "tenantEntityManagerFactory",
     transactionManagerRef = "tenantTransactionManager"
 )

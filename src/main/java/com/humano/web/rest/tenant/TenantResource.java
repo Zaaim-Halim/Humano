@@ -121,9 +121,17 @@ public class TenantResource {
         // Scope to the current tenant regardless of payload.
         CreateTenantStorageConfigRequest scoped = new CreateTenantStorageConfigRequest(
             currentTenantId(),
-            request.storageType(),
-            request.storageLocation(),
-            request.configJson()
+            request.storageBackend(),
+            request.maxFileSizeMb(),
+            request.maxStorageGb(),
+            request.filesystemPath(),
+            request.s3Bucket(),
+            request.s3Region(),
+            request.s3AccessKey(),
+            request.s3SecretKey(),
+            request.azureAccountName(),
+            request.azureContainer(),
+            request.azureConnectionString()
         );
         return storageConfigService.createStorageConfig(scoped);
     }

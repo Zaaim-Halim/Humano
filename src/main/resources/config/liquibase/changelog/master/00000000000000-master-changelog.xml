@@ -348,7 +348,10 @@
         </createTable>
     </changeSet>
 
-    <!-- tenant_storage_config - depends on tenant -->
+    <!-- tenant_storage_config - depends on tenant.
+         `backend` mirrors `config.type()` for SQL-level filtering without parsing the JSON.
+         `config` holds the typed sealed StorageConfigDetails (DATABASE/FILESYSTEM/S3/AZURE);
+         it may carry credentials, so it should never be returned in REST responses. -->
     <changeSet id="master-011-tenant-storage-config" author="halimzaaim">
         <createTable tableName="tenant_storage_config">
             <column name="id" type="${uuidType}">
@@ -357,14 +360,16 @@
             <column name="tenant_id" type="${uuidType}">
                 <constraints nullable="false"/>
             </column>
-            <column name="storage_type" type="VARCHAR(50)">
+            <column name="backend" type="VARCHAR(16)">
                 <constraints nullable="false"/>
             </column>
-            <column name="storage_location" type="VARCHAR(255)">
+            <column name="config" type="${jsonType}">
                 <constraints nullable="false"/>
             </column>
-            <column name="config_json" type="VARCHAR(2000)"/>
-            <column name="active" type="${booleanType}" defaultValueBoolean="true"/>
+            <column name="active" type="${booleanType}" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="BIGINT"/>
             <column name="created_by" type="VARCHAR(50)">
                 <constraints nullable="false"/>
             </column>
@@ -496,6 +501,7 @@
     <changeSet id="master-043-idx-tenant-storage-config-tenant" author="halimzaaim">
         <createIndex tableName="tenant_storage_config" indexName="idx_tenant_storage_config_tenant">
             <column name="tenant_id"/>
+            <column name="active"/>
         </createIndex>
     </changeSet>
 

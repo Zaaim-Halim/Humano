@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Storage module — metadata + DB-backend bytes. See com.humano.domain.storage.* and
+         com.humano.service.storage.* for the runtime model.
+
+         stored_file holds metadata for every file the platform tracks, regardless of where the
+         bytes physically live (backend column points to that). file_blob holds the actual
+         bytes for the DATABASE backend; storage_key on stored_file equals file_blob.id when
+         backend = DATABASE. Filesystem/S3/Azure rows reference paths/keys outside this DB. -->
+    <changeSet id="storage-001-stored-file" author="halimzaaim">
+        <createTable tableName="stored_file">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_stored_file"/>
+            </column>
+            <column name="context" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_type" type="VARCHAR(64)"/>
+            <column name="owner_id" type="${uuidType}"/>
+            <column name="original_filename" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content_type" type="VARCHAR(127)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="size_bytes" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="checksum_sha256" type="VARCHAR(64)"/>
+            <column name="visibility" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="backend" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="storage_key" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="public_token" type="VARCHAR(64)">
+                <constraints unique="true" uniqueConstraintName="uc_stored_file_public_token"/>
+            </column>
+            <column name="uploaded_by" type="${uuidType}"/>
+            <column name="deleted_at" type="${datetimeType}"/>
+            <column name="version" type="BIGINT"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="storage-002-stored-file-indexes" author="halimzaaim">
+        <createIndex tableName="stored_file" indexName="idx_stored_file_owner">
+            <column name="owner_type"/>
+            <column name="owner_id"/>
+        </createIndex>
+        <createIndex tableName="stored_file" indexName="idx_stored_file_context">
+            <column name="context"/>
+        </createIndex>
+        <createIndex tableName="stored_file" indexName="idx_stored_file_public_token">
+            <column name="public_token"/>
+        </createIndex>
+        <createIndex tableName="stored_file" indexName="idx_stored_file_deleted_at">
+            <column name="deleted_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="storage-003-file-blob" author="halimzaaim">
+        <createTable tableName="file_blob">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_file_blob"/>
+            </column>
+            <column name="content" type="LONGBLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="size_bytes" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

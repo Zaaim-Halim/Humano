@@ -1,211 +1,99 @@
 package com.humano.service.storage;
 
-import com.humano.config.multitenancy.TenantIdResolver;
+import com.humano.domain.storage.FileBlob;
+import com.humano.repository.storage.FileBlobRepository;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Blob;
-import java.sql.SQLException;
-import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.support.SqlLobValue;
-import org.springframework.jdbc.support.lob.DefaultLobHandler;
-import org.springframework.jdbc.support.lob.LobHandler;
-import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Implementation of FileStorageService that stores files directly in a database.
- * Supports tenant-specific storage isolation.
+ * DATABASE backend — stores bytes in the tenant DB's {@code file_blob} table via
+ * {@link FileBlobRepository}.
+ * <p>
+ * Tenant isolation is provided by the routing data source (the JPA repo participates in the
+ * current tenant's connection), so this class does not filter by {@code tenant_id} and does
+ * not need a {@code TenantIdResolver}.
+ * <p>
+ * Returned {@code storageKey} is the {@link FileBlob#getId()} as a string — the matching
+ * {@link com.humano.domain.storage.StoredFile} row uses this to find the bytes. Filename /
+ * content-type / directory passed to the {@code store(...)} overloads are ignored here; that
+ * metadata belongs on {@code StoredFile}, not on the blob row.
+ * <p>
+ * Instantiated by {@link StorageFactory}; intentionally not a Spring {@code @Component}.
  */
-@Component
 public class DatabaseStorageService implements FileStorageService {
 
     private static final Logger log = LoggerFactory.getLogger(DatabaseStorageService.class);
 
-    private final JdbcTemplate jdbcTemplate;
-    private final TenantIdResolver tenantIdResolver;
-    private final LobHandler lobHandler;
+    private final FileBlobRepository fileBlobRepository;
 
-    public DatabaseStorageService(JdbcTemplate jdbcTemplate, TenantIdResolver tenantIdResolver) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.tenantIdResolver = tenantIdResolver;
-        this.lobHandler = new DefaultLobHandler();
-        log.info("Database storage service initialized");
-    }
-
-    /**
-     * Resolve the current tenant's UUID via {@link TenantIdResolver}.
-     * Throws if no tenant context is set on this thread.
-     *
-     * @return the current tenant ID
-     * @throws IllegalStateException if no tenant context is set
-     */
-    private UUID getCurrentTenantId() {
-        return tenantIdResolver.requireCurrentTenantId();
+    public DatabaseStorageService(FileBlobRepository fileBlobRepository) {
+        this.fileBlobRepository = fileBlobRepository;
     }
 
     @Override
     public String store(MultipartFile file, String directory) throws IOException {
-        UUID tenantId = getCurrentTenantId();
-        String id = UUID.randomUUID().toString();
-        String sql =
-            "INSERT INTO file_storage (id, tenant_id, filename, content_type, directory, file_size, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        try {
-            jdbcTemplate.update(
-                sql,
-                id,
-                tenantId.toString(),
-                file.getOriginalFilename(),
-                file.getContentType(),
-                directory,
-                file.getSize(),
-                new SqlLobValue(file.getInputStream(), (int) file.getSize(), lobHandler),
-                LocalDateTime.now()
-            );
-            log.debug("File stored with ID: {}", id);
-            return id;
-        } catch (Exception e) {
-            log.error("Error storing file", e);
-            throw new IOException("Failed to store file", e);
-        }
+        return persist(file.getBytes());
     }
 
     @Override
     public String store(MultipartFile file, String directory, String filename) throws IOException {
-        UUID tenantId = getCurrentTenantId();
-        String id = UUID.randomUUID().toString();
-        String sql =
-            "INSERT INTO file_storage (id, tenant_id, filename, content_type, directory, file_size, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        try {
-            jdbcTemplate.update(
-                sql,
-                id,
-                tenantId.toString(),
-                filename,
-                file.getContentType(),
-                directory,
-                file.getSize(),
-                new SqlLobValue(file.getInputStream(), (int) file.getSize(), lobHandler),
-                LocalDateTime.now()
-            );
-            log.debug("File stored with ID: {} and custom filename: {}", id, filename);
-            return id;
-        } catch (Exception e) {
-            log.error("Error storing file with custom filename", e);
-            throw new IOException("Failed to store file", e);
-        }
+        return persist(file.getBytes());
     }
 
     @Override
     public String store(InputStream inputStream, String directory, String filename, String contentType) throws IOException {
-        UUID tenantId = getCurrentTenantId();
-        String id = UUID.randomUUID().toString();
-        String sql =
-            "INSERT INTO file_storage (id, tenant_id, filename, content_type, directory, file_size, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        try {
-            // We need to load the input stream into memory to get its size
-            // This could be inefficient for large files - consider alternatives for production use
-            byte[] bytes = inputStream.readAllBytes();
-            long fileSize = bytes.length;
+        return persist(inputStream.readAllBytes());
+    }
 
-            jdbcTemplate.update(
-                sql,
-                id,
-                tenantId.toString(),
-                filename,
-                contentType,
-                directory,
-                fileSize,
-                new SqlLobValue(new ByteArrayInputStream(bytes), (int) fileSize, lobHandler),
-                LocalDateTime.now()
-            );
-            log.debug("File stored from input stream with ID: {}", id);
-            return id;
-        } catch (Exception e) {
-            log.error("Error storing file from input stream", e);
-            throw new IOException("Failed to store file from input stream", e);
-        }
+    private String persist(byte[] bytes) {
+        FileBlob blob = new FileBlob();
+        blob.setContent(bytes);
+        blob.setSizeBytes(bytes.length);
+        FileBlob saved = fileBlobRepository.save(blob);
+        log.debug("Stored file_blob id={} ({} bytes)", saved.getId(), saved.getSizeBytes());
+        return saved.getId().toString();
     }
 
     @Override
-    public Optional<InputStream> retrieve(String fileReference) throws IOException {
-        UUID tenantId = getCurrentTenantId();
-        try {
-            String sql = "SELECT content FROM file_storage WHERE id = ? AND tenant_id = ?";
-            Blob blob = jdbcTemplate.queryForObject(sql, new Object[] { fileReference, tenantId.toString() }, Blob.class);
-
-            if (blob != null) {
-                return Optional.of(blob.getBinaryStream());
-            } else {
-                return Optional.empty();
-            }
-        } catch (SQLException e) {
-            log.error("SQL error while retrieving file", e);
-            throw new IOException("Failed to retrieve file", e);
-        } catch (Exception e) {
-            log.error("Error retrieving file", e);
-            return Optional.empty();
-        }
+    public Optional<InputStream> retrieve(String fileReference) {
+        UUID id = parseId(fileReference);
+        if (id == null) return Optional.empty();
+        return fileBlobRepository.findById(id).map(b -> new ByteArrayInputStream(b.getContent()));
     }
 
     @Override
     public boolean delete(String fileReference) {
-        UUID tenantId = getCurrentTenantId();
-        try {
-            String sql = "DELETE FROM file_storage WHERE id = ? AND tenant_id = ?";
-            int rowsAffected = jdbcTemplate.update(sql, fileReference, tenantId.toString());
-
-            return rowsAffected > 0;
-        } catch (Exception e) {
-            log.error("Error deleting file", e);
-            return false;
-        }
+        UUID id = parseId(fileReference);
+        if (id == null) return false;
+        if (!fileBlobRepository.existsById(id)) return false;
+        fileBlobRepository.deleteById(id);
+        return true;
     }
 
     @Override
     public boolean exists(String fileReference) {
-        UUID tenantId = getCurrentTenantId();
-        try {
-            String sql = "SELECT COUNT(*) FROM file_storage WHERE id = ? AND tenant_id = ?";
-            Integer count = jdbcTemplate.queryForObject(sql, Integer.class, fileReference, tenantId.toString());
-            return count != null && count > 0;
-        } catch (Exception e) {
-            log.error("Error checking if file exists", e);
-            return false;
-        }
+        UUID id = parseId(fileReference);
+        return id != null && fileBlobRepository.existsById(id);
     }
 
     @Override
     public Optional<String> getUrl(String fileReference) {
-        // Database storage doesn't provide direct URLs
-        // This could be implemented by creating a controller endpoint that serves files by ID
-        // For now, returning empty since we don't have direct URL access
+        // DB-backed bytes have no native URL; a controller endpoint serves them by StoredFile id.
         return Optional.empty();
     }
 
-    /**
-     * Get metadata for a stored file.
-     *
-     * This is a helper method not defined in the FileStorageService interface.
-     *
-     * @param fileId the file identifier
-     * @return optional metadata if file exists
-     */
-    public Optional<Map<String, Object>> getMetadata(String fileId) {
-        UUID tenantId = getCurrentTenantId();
+    private static UUID parseId(String fileReference) {
+        if (fileReference == null || fileReference.isBlank()) return null;
         try {
-            String sql = "SELECT filename, content_type, directory, file_size, created_at FROM file_storage WHERE id = ? AND tenant_id = ?";
-            Map<String, Object> row = jdbcTemplate.queryForMap(sql, fileId, tenantId.toString());
-            return Optional.of(row);
-        } catch (Exception e) {
-            log.error("Error fetching file metadata", e);
-            return Optional.empty();
+            return UUID.fromString(fileReference);
+        } catch (IllegalArgumentException ignored) {
+            return null;
         }
     }
 }

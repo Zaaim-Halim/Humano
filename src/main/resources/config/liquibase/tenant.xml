@@ -53,6 +53,9 @@
     <!-- Workflow entities changelog (approval, workflow, review cycle) -->
     <include file="config/liquibase/changelog/tenant/20260218-workflow-entities-changelog.xml" relativeToChangelogFile="false"/>
 
+    <!-- Storage module: stored_file metadata + file_blob bytes (DATABASE backend) -->
+    <include file="config/liquibase/changelog/tenant/20260603-stored-file-changelog.xml" relativeToChangelogFile="false"/>
+
     <!--  will add tenant liquibase changelogs here -->
 
 </databaseChangeLog>
