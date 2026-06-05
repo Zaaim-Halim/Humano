@@ -220,6 +220,61 @@ public class PayslipService {
     }
 
     /**
+     * Finds the payslip belonging to a given run + employee. Used by the
+     * {@code GET /api/payroll/runs/{id}/payslips/{employeeId}} surface (P2.5).
+     */
+    @Transactional(readOnly = true)
+    public Optional<PayslipResponse> findByRunAndEmployee(UUID runId, UUID employeeId) {
+        return payslipRepository
+            .findAll(
+                (Specification<Payslip>) (root, query, cb) ->
+                    cb.and(
+                        cb.equal(root.get("result").get("run").get("id"), runId),
+                        cb.equal(root.get("result").get("employee").get("id"), employeeId)
+                    )
+            )
+            .stream()
+            .findFirst()
+            .map(this::toResponse);
+    }
+
+    /**
+     * Returns the rich {@link PayrollResultResponse} for a single result, including
+     * line breakdown. Exposes the internal {@code buildResultDetails} mapper for the
+     * {@code /api/payroll/results/{id}} REST surface (P2.5).
+     */
+    @Transactional(readOnly = true)
+    public PayrollResultResponse getResultDetails(UUID resultId) {
+        PayrollResult result = resultRepository
+            .findById(resultId)
+            .orElseThrow(() -> new EntityNotFoundException("PayrollResult", resultId));
+        PayrollRun run = result.getRun();
+        PayrollPeriod period = result.getPayrollPeriod();
+        List<PayrollLine> lines = lineRepository.findAll(
+            (Specification<PayrollLine>) (root, query, cb) -> {
+                if (query != null) {
+                    query.orderBy(cb.asc(root.get("sequence")));
+                }
+                return cb.equal(root.get("result").get("id"), resultId);
+            }
+        );
+        return buildResultDetails(result, run, period, lines);
+    }
+
+    /**
+     * Lists all payroll results for a given run. Used by
+     * {@code GET /api/payroll/runs/{id}/results} (P2.5).
+     */
+    @Transactional(readOnly = true)
+    public List<PayrollResultResponse> getResultsForRun(UUID runId) {
+        return resultRepository
+            .findAll((Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), runId))
+            .stream()
+            .map(r -> getResultDetails(r.getId()))
+            .toList();
+    }
+
+    /**
      * Updates the PDF URL for a payslip after PDF generation.
      */
     public PayslipResponse updatePdfUrl(UUID payslipId, String pdfUrl) {
