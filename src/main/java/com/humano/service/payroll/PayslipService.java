@@ -568,7 +568,7 @@ public class PayslipService {
                 line.getRate(),
                 line.getAmount(),
                 line.getSequence() != null ? line.getSequence() : 0,
-                null // explanation
+                line.getExplain()
             );
 
             switch (line.getComponent().getKind()) {
