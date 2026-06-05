@@ -58,7 +58,8 @@ public class InvoiceResource {
             request.invoiceNumber(),
             request.amount(),
             request.taxAmount(),
-            request.dueDate()
+            request.dueDate(),
+            request.couponCode()
         );
         InvoiceResponse created = invoiceService.createInvoice(safe);
         return ResponseEntity.created(URI.create("/api/billing/invoices/" + created.id())).body(created);

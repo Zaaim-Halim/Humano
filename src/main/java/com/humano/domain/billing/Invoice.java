@@ -89,6 +89,26 @@ public class Invoice extends AbstractAuditingEntity<UUID> {
     private BigDecimal taxRate;
 
     /**
+     * Amount discounted from this invoice via a coupon (P4.5). Subtracted from
+     * {@code amount} before tax is applied; the persisted {@code amount} is the
+     * <em>pre-discount</em> subtotal so the invoice fully discloses the original
+     * price + the saving.
+     * <p>
+     * Nullable: invoices issued without a coupon leave it empty.
+     */
+    @Column(name = "discount_amount", precision = 19, scale = 4)
+    private BigDecimal discountAmount;
+
+    /**
+     * Snapshot of the coupon code applied to this invoice (P4.5). Stored by value (not
+     * FK) so a later coupon deletion / rename doesn't break invoice audit.
+     * <p>
+     * Nullable: invoices issued without a coupon leave it empty.
+     */
+    @Column(name = "coupon_code", length = 50)
+    private String couponCode;
+
+    /**
      * The final amount including tax to be paid by the tenant.
      * <p>
      * This is the sum of the base amount and tax amount.
@@ -219,6 +239,22 @@ public class Invoice extends AbstractAuditingEntity<UUID> {
 
     public void setTaxRate(BigDecimal taxRate) {
         this.taxRate = taxRate;
+    }
+
+    public BigDecimal getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public void setDiscountAmount(BigDecimal discountAmount) {
+        this.discountAmount = discountAmount;
+    }
+
+    public String getCouponCode() {
+        return couponCode;
+    }
+
+    public void setCouponCode(String couponCode) {
+        this.couponCode = couponCode;
     }
 
     public BigDecimal getTotalAmount() {

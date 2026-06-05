@@ -24,5 +24,13 @@ public record CreateInvoiceRequest(
 
     @DecimalMin(value = "0.0", message = "Tax amount cannot be negative") BigDecimal taxAmount,
 
-    @NotNull(message = "Due date is required") Instant dueDate
+    @NotNull(message = "Due date is required") Instant dueDate,
+
+    /**
+     * Optional coupon code to apply to this invoice (P4.5). When supplied, the
+     * coupon is validated + redeemed (incrementing {@code timesRedeemed}); the
+     * resolved discount is subtracted from {@code amount} before tax is computed.
+     * Invalid / expired / exhausted coupons return HTTP 400.
+     */
+    @Size(max = 50, message = "Coupon code cannot exceed 50 characters") String couponCode
 ) {}

@@ -34,17 +34,20 @@ public class InvoiceService {
     private final TenantRepository tenantRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final BillingTaxResolver taxResolver;
+    private final CouponService couponService;
 
     public InvoiceService(
         InvoiceRepository invoiceRepository,
         TenantRepository tenantRepository,
         SubscriptionRepository subscriptionRepository,
-        BillingTaxResolver taxResolver
+        BillingTaxResolver taxResolver,
+        CouponService couponService
     ) {
         this.invoiceRepository = invoiceRepository;
         this.tenantRepository = tenantRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.taxResolver = taxResolver;
+        this.couponService = couponService;
     }
 
     /**
@@ -65,11 +68,24 @@ public class InvoiceService {
             .findById(request.subscriptionId())
             .orElseThrow(() -> EntityNotFoundException.create("Subscription", request.subscriptionId()));
 
+        Instant issueDate = Instant.now();
+
+        // P4.5: if the request carries a coupon code, validate + redeem and compute the
+        // discount BEFORE tax. The discount lowers the taxable base (standard practice:
+        // tax applies on the price actually paid, not on the sticker price).
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        String couponCode = null;
+        if (request.couponCode() != null && !request.couponCode().isBlank()) {
+            CouponService.CouponApplication applied = couponService.applyToAmount(request.couponCode(), request.amount());
+            discountAmount = applied.discountAmount();
+            couponCode = applied.coupon().getCode();
+        }
+        BigDecimal taxableSubtotal = request.amount().subtract(discountAmount);
+
         // P4.1: when the caller didn't supply taxAmount, look up the country rate via
         // BillingTaxResolver. An explicit caller-supplied value still wins — admins
         // creating manual / adjusted invoices may want to override (e.g. a credit-note
         // negative-tax row, or a tax-exempt scenario).
-        Instant issueDate = Instant.now();
         BigDecimal taxAmount;
         BigDecimal taxRate;
         if (request.taxAmount() != null) {
@@ -79,19 +95,21 @@ public class InvoiceService {
             BillingTaxResolver.TaxResult tax = taxResolver.resolve(
                 tenant.getCountry(),
                 subscription.getSubscriptionPlan(),
-                request.amount(),
+                taxableSubtotal,
                 issueDate.atZone(java.time.ZoneOffset.UTC).toLocalDate()
             );
             taxAmount = tax.amount();
             taxRate = tax.rate();
         }
-        BigDecimal totalAmount = request.amount().add(taxAmount);
+        BigDecimal totalAmount = taxableSubtotal.add(taxAmount);
 
         Invoice invoice = new Invoice();
         invoice.setTenant(tenant);
         invoice.setSubscription(subscription);
         invoice.setInvoiceNumber(request.invoiceNumber());
         invoice.setAmount(request.amount());
+        invoice.setDiscountAmount(discountAmount.signum() > 0 ? discountAmount : null);
+        invoice.setCouponCode(couponCode);
         invoice.setTaxAmount(taxAmount);
         invoice.setTaxRate(taxRate);
         invoice.setTotalAmount(totalAmount);

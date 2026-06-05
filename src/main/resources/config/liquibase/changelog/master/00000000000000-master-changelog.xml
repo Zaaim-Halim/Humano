@@ -551,4 +551,14 @@
         </addColumn>
     </changeSet>
 
+    <!-- P4.5: persist coupon application on the invoice. Both columns are nullable —
+         only invoices that consumed a coupon carry them. The coupon code is a
+         *snapshot*: a later coupon deletion / rename doesn't break invoice audit. -->
+    <changeSet id="master-046-invoice-discount" author="halimzaaim">
+        <addColumn tableName="billing_invoice">
+            <column name="discount_amount" type="DECIMAL(19,4)"/>
+            <column name="coupon_code" type="VARCHAR(50)"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>
