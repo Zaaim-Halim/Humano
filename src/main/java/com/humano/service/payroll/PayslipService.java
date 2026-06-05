@@ -1,6 +1,7 @@
 package com.humano.service.payroll;
 
 import com.humano.domain.payroll.*;
+import com.humano.domain.payroll.Currency;
 import com.humano.domain.shared.Employee;
 import com.humano.dto.payroll.request.PayslipSearchRequest;
 import com.humano.dto.payroll.response.PayrollResultResponse;
@@ -10,7 +11,13 @@ import com.humano.repository.payroll.specification.PayslipSpecification;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
+import com.humano.service.storage.FileStorageService;
+import com.humano.service.storage.StorageFactory;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -40,19 +47,25 @@ public class PayslipService {
     private final PayrollRunRepository runRepository;
     private final PayrollLineRepository lineRepository;
     private final EmployeeRepository employeeRepository;
+    private final PayslipPdfGenerator pdfGenerator;
+    private final StorageFactory storageFactory;
 
     public PayslipService(
         PayslipRepository payslipRepository,
         PayrollResultRepository resultRepository,
         PayrollRunRepository runRepository,
         PayrollLineRepository lineRepository,
-        EmployeeRepository employeeRepository
+        EmployeeRepository employeeRepository,
+        PayslipPdfGenerator pdfGenerator,
+        StorageFactory storageFactory
     ) {
         this.payslipRepository = payslipRepository;
         this.resultRepository = resultRepository;
         this.runRepository = runRepository;
         this.lineRepository = lineRepository;
         this.employeeRepository = employeeRepository;
+        this.pdfGenerator = pdfGenerator;
+        this.storageFactory = storageFactory;
     }
 
     /**
@@ -285,6 +298,150 @@ public class PayslipService {
 
         log.info("Updated PDF URL for payslip {}", payslipId);
         return toResponse(payslip);
+    }
+
+    // ===================================================================
+    // P3.5 — Payslip PDF generation, storage, and streaming
+    // ===================================================================
+
+    /** Subdirectory inside the per-tenant storage backend where rendered PDFs land. */
+    private static final String PDF_STORAGE_DIRECTORY = "payslips";
+
+    /** Returned by {@link #downloadPdf} to carry both the stream and the filename header. */
+    public record PdfDownload(InputStream content, String filename) {}
+
+    /**
+     * Generates the PDF for {@code payslipId} via {@link PayslipPdfGenerator}, stores it
+     * under {@code payslips/{number}.pdf} in the current tenant's storage backend (via
+     * {@link StorageFactory}), and records the returned reference on
+     * {@link Payslip#getPdfUrl()}. Returns the updated {@link PayslipResponse}.
+     *
+     * <p>Idempotent: if {@code Payslip.pdfUrl} is already set AND the underlying file
+     * still exists in storage, the existing reference is returned unchanged. If the
+     * recorded reference dangles (storage row deleted out-of-band), the PDF is
+     * re-rendered and the reference overwritten.
+     */
+    public PayslipResponse generateAndStorePdf(UUID payslipId) {
+        Payslip payslip = payslipRepository.findById(payslipId).orElseThrow(() -> new EntityNotFoundException("Payslip", payslipId));
+        FileStorageService storage = storageFactory.getStorageService();
+
+        if (payslip.getPdfUrl() != null && !payslip.getPdfUrl().isBlank() && storage.exists(payslip.getPdfUrl())) {
+            log.debug("Payslip {} already has stored PDF ({}); skipping regeneration", payslipId, payslip.getPdfUrl());
+            return toResponse(payslip);
+        }
+
+        PayslipPdfGenerator.PayslipPdfModel model = buildPdfModel(payslip);
+        byte[] pdfBytes = pdfGenerator.generate(model);
+        String reference;
+        try (InputStream in = new ByteArrayInputStream(pdfBytes)) {
+            reference = storage.store(in, PDF_STORAGE_DIRECTORY, payslip.getNumber() + ".pdf", "application/pdf");
+        } catch (IOException e) {
+            throw new BusinessRuleViolationException("Failed to store payslip PDF: " + e.getMessage());
+        }
+
+        payslip.setPdfUrl(reference);
+        payslip = payslipRepository.save(payslip);
+        log.info("Generated + stored PDF for payslip {} → {} ({} bytes)", payslipId, reference, pdfBytes.length);
+        return toResponse(payslip);
+    }
+
+    /**
+     * Returns the rendered PDF for {@code payslipId} as a stream. Generates + stores on
+     * first call (when {@code pdfUrl} is null/blank or the stored file is missing); on
+     * subsequent calls streams the existing artifact.
+     *
+     * <p>Caller (REST resource) is responsible for setting {@code Content-Type:
+     * application/pdf} and the {@code Content-Disposition} header — this method returns
+     * the suggested filename via the {@link PdfDownload} record.
+     */
+    @Transactional
+    public PdfDownload downloadPdf(UUID payslipId) {
+        Payslip initial = payslipRepository.findById(payslipId).orElseThrow(() -> new EntityNotFoundException("Payslip", payslipId));
+        FileStorageService storage = storageFactory.getStorageService();
+        final Payslip current;
+        if (initial.getPdfUrl() == null || initial.getPdfUrl().isBlank() || !storage.exists(initial.getPdfUrl())) {
+            generateAndStorePdf(payslipId);
+            current = payslipRepository.findById(payslipId).orElseThrow(() -> new EntityNotFoundException("Payslip", payslipId));
+        } else {
+            current = initial;
+        }
+        final String reference = current.getPdfUrl();
+        InputStream content;
+        try {
+            content = storage
+                .retrieve(reference)
+                .orElseThrow(() ->
+                    new BusinessRuleViolationException("PDF for payslip " + payslipId + " not found at reference " + reference)
+                );
+        } catch (IOException e) {
+            throw new BusinessRuleViolationException("Failed to retrieve payslip PDF: " + e.getMessage());
+        }
+        return new PdfDownload(content, current.getNumber() + ".pdf");
+    }
+
+    /**
+     * Builds the flat data model the PDF renderer needs. Pulls the persisted result +
+     * lines from the DB; partitions lines by {@link com.humano.domain.enumeration.payroll.Kind}
+     * the same way {@link #buildResultDetails} does so the PDF mirrors the JSON view.
+     */
+    private PayslipPdfGenerator.PayslipPdfModel buildPdfModel(Payslip payslip) {
+        PayrollResult result = payslip.getResult();
+        Employee employee = result.getEmployee();
+        PayrollPeriod period = result.getPayrollPeriod();
+        PayrollRun run = result.getRun();
+        List<PayrollLine> lines = lineRepository.findAll(
+            (Specification<PayrollLine>) (root, query, cb) -> {
+                if (query != null) {
+                    query.orderBy(cb.asc(root.get("sequence")));
+                }
+                return cb.equal(root.get("result").get("id"), result.getId());
+            }
+        );
+        List<PayslipPdfGenerator.PayslipPdfModel.LineItem> earnings = new ArrayList<>();
+        List<PayslipPdfGenerator.PayslipPdfModel.LineItem> deductions = new ArrayList<>();
+        List<PayslipPdfGenerator.PayslipPdfModel.LineItem> employerCharges = new ArrayList<>();
+        for (PayrollLine line : lines) {
+            PayslipPdfGenerator.PayslipPdfModel.LineItem item = new PayslipPdfGenerator.PayslipPdfModel.LineItem(
+                line.getComponent().getCode().name(),
+                line.getComponent().getName(),
+                line.getQuantity(),
+                line.getRate(),
+                line.getAmount(),
+                line.getExplain()
+            );
+            switch (line.getComponent().getKind()) {
+                case EARNING -> earnings.add(item);
+                case DEDUCTION -> deductions.add(item);
+                case EMPLOYER_CHARGE -> employerCharges.add(item);
+            }
+        }
+        Currency reporting = run.getReportingCurrency();
+        return new PayslipPdfGenerator.PayslipPdfModel(
+            payslip.getNumber(),
+            run.getId(),
+            employee.getFirstName() + " " + employee.getLastName(),
+            employee.getLogin(),
+            employee.getDepartment() != null ? employee.getDepartment().getName() : null,
+            employee.getPosition() != null ? employee.getPosition().getName() : null,
+            period.getCode(),
+            period.getStartDate(),
+            period.getEndDate(),
+            period.getPaymentDate(),
+            result.getCurrency() != null ? result.getCurrency().getCode().getCode() : null,
+            earnings,
+            deductions,
+            employerCharges,
+            result.getGross(),
+            result.getTotalDeductions(),
+            result.getNet(),
+            reporting != null ? reporting.getCode().getCode() : null,
+            result.getReportingGross(),
+            result.getReportingTotalDeductions(),
+            result.getReportingNet(),
+            result.getExchangeRate(),
+            result.getExchangeRateDate(),
+            Instant.now().toString()
+        );
     }
 
     /**

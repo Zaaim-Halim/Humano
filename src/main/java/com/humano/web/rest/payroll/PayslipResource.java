@@ -7,10 +7,11 @@ import com.humano.service.payroll.PayslipService;
 import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ProblemDetail;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -19,11 +20,9 @@ import tech.jhipster.web.util.PaginationUtil;
 
 /**
  * Payslip queries. Generation entry points live on {@link PayrollRunResource}
- * (whole-run) and {@link PayrollResultResource} (single result).
- * <p>
- * The PDF binary endpoint {@link #downloadPdf} is wired but returns 501 until
- * the PDF generator is implemented; once {@code Payslip.pdfUrl} is populated, this method can stream from
- * the per-tenant storage backend without further changes to the surface.
+ * (whole-run) and {@link PayrollResultResource} (single result). The PDF binary
+ * endpoint {@link #downloadPdf} renders (or re-serves the cached artifact) and streams
+ * it from the per-tenant storage backend (P3.5).
  * <p>
  * Authorization: this resource is intentionally <strong>not</strong> opened to
  * {@code EMPLOYEE}. None of the read methods below check caller-vs-target, so granting
@@ -93,24 +92,19 @@ public class PayslipResource {
     }
 
     /**
-     * Streams the payslip PDF. Returns 501 until the PDF generator is implemented and
-     * populates {@code Payslip.pdfUrl}; the route exists so downstream code can be
-     * written against the stable URL.
+     * Streams the payslip PDF for {@code id}. On first call the PDF is rendered from the
+     * Thymeleaf template, stored in the tenant's storage backend, and the reference
+     * recorded on {@code Payslip.pdfUrl}; subsequent calls stream the cached artifact.
+     *
+     * <p>Returns {@code Content-Type: application/pdf} with a {@code Content-Disposition:
+     * attachment; filename="{payslipNumber}.pdf"} header.
      */
     @GetMapping("/{id}/pdf")
-    public ResponseEntity<ProblemDetail> downloadPdf(@PathVariable UUID id) {
-        PayslipResponse slip = payslipService.getPayslip(id);
-        if (slip.pdfUrl() == null || slip.pdfUrl().isBlank()) {
-            ProblemDetail pd = ProblemDetail.forStatus(501);
-            pd.setTitle("Payslip PDF not yet generated");
-            pd.setDetail("Payslip " + id + " has no PDF on file; PDF generation is a future enhancement.");
-            return ResponseEntity.status(501).body(pd);
-        }
-        ProblemDetail pd = ProblemDetail.forStatus(501);
-        pd.setTitle("PDF streaming not yet wired");
-        pd.setDetail(
-            "Payslip " + id + " has a recorded pdfUrl (" + slip.pdfUrl() + ") but streaming via StorageFactory is a future enhancement."
-        );
-        return ResponseEntity.status(501).body(pd);
+    public ResponseEntity<InputStreamResource> downloadPdf(@PathVariable UUID id) {
+        PayslipService.PdfDownload download = payslipService.downloadPdf(id);
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + download.filename() + "\"")
+            .body(new InputStreamResource(download.content()));
     }
 }

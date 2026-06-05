@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,10 +26,20 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Payroll run lifecycle : DRAFT &rarr; CALCULATED &rarr; APPROVED &rarr; POSTED.
- * <p>
- * The PDF download path {@code GET /runs/{id}/payslips/{employeeId}} returns the payslip
- * JSON; the binary PDF stream is at {@code /api/payroll/payslips/{id}/pdf} and waits on
- * PDF generation implementation.
+ *
+ * <p>Payslip access by run + employee (P2.5 / P3.5):
+ *
+ * <ul>
+ *   <li>{@code GET /runs/{id}/payslips/{employeeId}} returns the payslip <strong>JSON</strong>
+ *       (metadata + line breakdown).</li>
+ *   <li>{@code GET /runs/{id}/payslips/{employeeId}/pdf} streams the rendered PDF
+ *       binary &mdash; matches the literal ROADMAP P3.5 acceptance URL. Delegates to
+ *       {@link PayslipService#downloadPdf(UUID)} after resolving the payslip via
+ *       {@link PayslipService#findByRunAndEmployee(UUID, UUID)}.</li>
+ *   <li>The id-scoped {@code GET /api/payroll/payslips/{id}/pdf} on
+ *       {@link PayslipResource} is the canonical streaming endpoint; the route above is
+ *       a thin alias so the acceptance URL works.</li>
+ * </ul>
  */
 @RestController
 @RequestMapping("/api/payroll/runs")
@@ -116,5 +129,27 @@ public class PayrollRunResource {
                 pd.setDetail("No payslip exists for run " + id + " and employee " + employeeId);
                 return ResponseEntity.status(404).body(pd);
             });
+    }
+
+    /**
+     * P3.5 acceptance URL: streams the rendered PDF for a (run, employee) pair. Resolves
+     * the payslip the same way {@link #payslipFor} does (404 when missing) and delegates
+     * to {@link PayslipService#downloadPdf}, which generates-on-first-call and serves the
+     * cached artifact on subsequent calls.
+     */
+    @GetMapping("/{id}/payslips/{employeeId}/pdf")
+    public ResponseEntity<?> payslipPdfFor(@PathVariable UUID id, @PathVariable UUID employeeId) {
+        var slipOpt = payslipService.findByRunAndEmployee(id, employeeId);
+        if (slipOpt.isEmpty()) {
+            ProblemDetail pd = ProblemDetail.forStatus(404);
+            pd.setTitle("Payslip not found");
+            pd.setDetail("No payslip exists for run " + id + " and employee " + employeeId);
+            return ResponseEntity.status(404).body(pd);
+        }
+        PayslipService.PdfDownload download = payslipService.downloadPdf(slipOpt.get().id());
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + download.filename() + "\"")
+            .body(new InputStreamResource(download.content()));
     }
 }

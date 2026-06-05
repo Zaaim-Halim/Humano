@@ -1,0 +1,255 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title th:text="|Payslip ${model.payslipNumber}|">Payslip</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 18mm 16mm;
+      }
+      body {
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 10pt;
+        color: #222;
+      }
+      h1 {
+        font-size: 16pt;
+        margin: 0 0 4pt 0;
+      }
+      h2 {
+        font-size: 11pt;
+        margin: 14pt 0 4pt 0;
+        border-bottom: 1pt solid #aaa;
+        padding-bottom: 2pt;
+      }
+      .meta {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8pt;
+      }
+      .meta td {
+        padding: 2pt 6pt;
+        vertical-align: top;
+      }
+      .meta .label {
+        color: #666;
+        width: 28%;
+      }
+      table.lines {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 4pt;
+      }
+      table.lines th,
+      table.lines td {
+        border-bottom: 0.5pt solid #ccc;
+        padding: 3pt 4pt;
+        text-align: left;
+      }
+      table.lines th {
+        background: #f3f3f3;
+        font-weight: bold;
+      }
+      table.lines td.num {
+        text-align: right;
+        font-family: 'Courier New', monospace;
+      }
+      table.lines th.num {
+        text-align: right;
+      }
+      .explain {
+        color: #777;
+        font-size: 8.5pt;
+      }
+      .totals {
+        width: 100%;
+        margin-top: 14pt;
+        border-top: 1.5pt solid #333;
+      }
+      .totals td {
+        padding: 4pt 6pt;
+      }
+      .totals td.label {
+        text-align: right;
+        width: 70%;
+        color: #333;
+      }
+      .totals td.amount {
+        text-align: right;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+      }
+      .totals tr.net td {
+        background: #e8f0ff;
+        font-size: 11.5pt;
+      }
+      .footer {
+        margin-top: 20pt;
+        font-size: 8pt;
+        color: #888;
+        text-align: center;
+      }
+      .reporting {
+        background: #fafafa;
+        padding: 6pt 8pt;
+        margin-top: 10pt;
+        border: 0.5pt dashed #aaa;
+      }
+      .reporting td.label {
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 th:text="|Payslip ${model.payslipNumber}|">Payslip PS-2025-08-001</h1>
+
+    <table class="meta">
+      <tr>
+        <td class="label">Employee</td>
+        <td th:text="${model.employeeName}">Jane Doe</td>
+        <td class="label">Period</td>
+        <td th:text="${model.periodCode}">2025-08</td>
+      </tr>
+      <tr>
+        <td class="label">Employee code</td>
+        <td th:text="${model.employeeCode}">jdoe</td>
+        <td class="label">Pay window</td>
+        <td><span th:text="${model.periodStart}">2025-08-01</span> to <span th:text="${model.periodEnd}">2025-08-31</span></td>
+      </tr>
+      <tr>
+        <td class="label">Department</td>
+        <td th:text="${model.department} ?: '—'">Engineering</td>
+        <td class="label">Payment date</td>
+        <td th:text="${model.paymentDate}">2025-09-05</td>
+      </tr>
+      <tr>
+        <td class="label">Position</td>
+        <td th:text="${model.position} ?: '—'">Senior Engineer</td>
+        <td class="label">Currency</td>
+        <td th:text="${model.currencyCode}">USD</td>
+      </tr>
+    </table>
+
+    <h2>Earnings</h2>
+    <table class="lines" th:if="${!#lists.isEmpty(model.earnings)}">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Description</th>
+          <th class="num">Quantity</th>
+          <th class="num">Rate</th>
+          <th class="num">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="line : ${model.earnings}">
+          <td th:text="${line.code}">BASIC</td>
+          <td>
+            <span th:text="${line.name}">Basic salary</span>
+            <div class="explain" th:if="${line.explain}" th:text="${line.explain}">Step 1 — Base salary ...</div>
+          </td>
+          <td class="num" th:text="${line.quantity} ?: ''"></td>
+          <td class="num" th:text="${line.rate} ?: ''"></td>
+          <td class="num" th:text="${line.amount}">10000.00</td>
+        </tr>
+      </tbody>
+    </table>
+    <p th:if="${#lists.isEmpty(model.earnings)}" style="color: #999">(no earning lines)</p>
+
+    <h2>Deductions &amp; Withholdings</h2>
+    <table class="lines" th:if="${!#lists.isEmpty(model.deductions)}">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Description</th>
+          <th class="num">Quantity</th>
+          <th class="num">Rate</th>
+          <th class="num">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="line : ${model.deductions}">
+          <td th:text="${line.code}">TAX_PIT</td>
+          <td>
+            <span th:text="${line.name}">Income tax</span>
+            <div class="explain" th:if="${line.explain}" th:text="${line.explain}">Step 7 — Income tax ...</div>
+          </td>
+          <td class="num" th:text="${line.quantity} ?: ''"></td>
+          <td class="num" th:text="${line.rate} ?: ''"></td>
+          <td class="num" th:text="${line.amount}">1500.00</td>
+        </tr>
+      </tbody>
+    </table>
+    <p th:if="${#lists.isEmpty(model.deductions)}" style="color: #999">(no deduction lines)</p>
+
+    <table class="totals">
+      <tr>
+        <td class="label">Gross pay</td>
+        <td class="amount"><span th:text="${model.gross}">10000.00</span> <span th:text="${model.currencyCode}">USD</span></td>
+      </tr>
+      <tr>
+        <td class="label">Total deductions</td>
+        <td class="amount">-<span th:text="${model.totalDeductions}">2500.00</span> <span th:text="${model.currencyCode}">USD</span></td>
+      </tr>
+      <tr class="net">
+        <td class="label"><strong>NET PAY</strong></td>
+        <td class="amount"><span th:text="${model.net}">7500.00</span> <span th:text="${model.currencyCode}">USD</span></td>
+      </tr>
+    </table>
+
+    <!-- Reporting-currency block (P3.4) — only shown when conversion was applied. -->
+    <table class="totals reporting" th:if="${model.reportingCurrencyCode}">
+      <tr>
+        <td colspan="2" style="color: #555">
+          Consolidated in <strong th:text="${model.reportingCurrencyCode}">EUR</strong> at rate
+          <span th:text="${model.exchangeRate}">0.92</span> (effective <span th:text="${model.exchangeRateDate}">2025-09-05</span>)
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Reporting gross</td>
+        <td class="amount">
+          <span th:text="${model.reportingGross}">9200.00</span> <span th:text="${model.reportingCurrencyCode}">EUR</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Reporting deductions</td>
+        <td class="amount">
+          -<span th:text="${model.reportingTotalDeductions}">2300.00</span> <span th:text="${model.reportingCurrencyCode}">EUR</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Reporting net</td>
+        <td class="amount">
+          <span th:text="${model.reportingNet}">6900.00</span> <span th:text="${model.reportingCurrencyCode}">EUR</span>
+        </td>
+      </tr>
+    </table>
+
+    <h2 th:if="${!#lists.isEmpty(model.employerCharges)}">Employer charges (informational)</h2>
+    <table class="lines" th:if="${!#lists.isEmpty(model.employerCharges)}">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Description</th>
+          <th class="num">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="line : ${model.employerCharges}">
+          <td th:text="${line.code}">EMPLOYER_CHARGE</td>
+          <td>
+            <span th:text="${line.name}">Social contributions</span>
+            <div class="explain" th:if="${line.explain}" th:text="${line.explain}">Step 12 — Employer charge ...</div>
+          </td>
+          <td class="num" th:text="${line.amount}">800.00</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      Generated <span th:text="${model.generatedAt}">2025-09-05T08:00:00Z</span> | Payslip
+      <span th:text="${model.payslipNumber}">PS-2025-08-001</span> | Run <span th:text="${model.runId}">run-uuid</span>
+    </div>
+  </body>
+</html>
