@@ -16,7 +16,7 @@ import org.springframework.stereotype.Repository;
 public interface PayRuleRepository extends JpaRepository<PayRule, UUID>, JpaSpecificationExecutor<PayRule> {
     /**
      * Returns the most recent {@code lastModifiedDate} across every {@link PayRule} row,
-     * or {@link Optional#empty()} if the table is empty. Used by P3.2 to derive the
+     * or {@link Optional#empty()} if the table is empty. Used to derive the
      * {@code payRuleVersion} input to the payroll-run idempotency hash &mdash; a single
      * modification anywhere in the rule set advances the version, invalidating the
      * idempotency of any prior run.

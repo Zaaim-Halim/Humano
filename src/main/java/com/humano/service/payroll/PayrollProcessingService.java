@@ -34,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Core service for payroll processing &mdash; run initiation, per-employee calculation,
  * approval workflow, and posting.
  *
- * <h2>Per-employee calculation pipeline (P3.1, contract from ROADMAP §2.2)</h2>
+ * <h2>Per-employee calculation pipeline (contract)</h2>
  *
  * <pre>
  *   resolveResult(run, period, employee)
@@ -65,10 +65,10 @@ import org.springframework.transaction.annotation.Transactional;
  *   │
  *   ├─ Step  6 ─ Taxable income marker     (gross − pre-tax − non-taxable earnings)
  *   │
- *   ├─ Step  7 ─ Income tax        ◀── PLACEHOLDER slot, P3.3 owns
+ *   ├─ Step  7 ─ Income tax        ◀── PLACEHOLDER slot
  *   │            (positioned; no line emitted until TaxBracket integration)
  *   │
- *   ├─ Step  8 ─ Other withholdings ◀── PLACEHOLDER slot, P3.3 owns
+ *   ├─ Step  8 ─ Other withholdings ◀── PLACEHOLDER slot
  *   │
  *   ├─ Step  9 ─ Employee benefit costs
  *   │            EmployeeBenefit (ACTIVE, overlap period)
@@ -94,9 +94,9 @@ import org.springframework.transaction.annotation.Transactional;
  * This is what gives the "stable across runs and human-readable" acceptance teeth.
  *
  * <p><strong>Out-of-scope hooks (lanes guarded).</strong> Steps 7/8 are positioned but
- * empty &mdash; P3.3 (country-aware progressive tax) implements them. Multi-currency
- * conversion at the run boundary is P3.4. Idempotency-hash content is P3.2. Don't widen
- * here.
+ * empty &mdash; country-aware progressive tax is a future task. Multi-currency
+ * conversion at the run boundary is another future task. Idempotency-hash content should
+ * not be extended without careful consideration. Don't widen here.
  */
 @Service
 @Transactional
@@ -208,7 +208,7 @@ public class PayrollProcessingService {
         // resolution `calculatePayroll` will use so the hash reflects what will actually
         // be processed.
         //
-        // P3.2 breadcrumb: `request.excludedEmployeeIds()` is intentionally NOT in the
+        // Breadcrumb: `request.excludedEmployeeIds()` is intentionally NOT in the
         // hash today because `getEmployeesForScope` ignores it (and so does
         // `calculatePayroll`). The day exclusions / real scope filtering land, they
         // MUST be added to the hash here — otherwise two genuinely-different
@@ -455,7 +455,7 @@ public class PayrollProcessingService {
         //   preTax/postTax (driven by LeaveTypeRule.affectsTaxableSalary) — they DO NOT
         //   reduce `gross`. This keeps §2.2's "Gross = Σ earning lines" invariant and
         //   models unpaid leave as a separate deduction line on the payslip rather than
-        //   a silent earnings reduction. Reviewers / P3.3 should know this is deliberate.
+        //   a silent earnings reduction. Reviewers should know this is deliberate.
         // ============================================================
         PayComponent leaveDeductionComponent = componentsByCode.get(PayComponentCode.DEDUCTION);
         if (employee.getCountry() == null) {
@@ -543,10 +543,10 @@ public class PayrollProcessingService {
 
         // ============================================================
         // Step 6 — Taxable income marker
-        //   NOTE for P3.3: PayComponent.taxable defaults to false, so a tenant that
+        //   NOTE: PayComponent.taxable defaults to false, so a tenant that
         //   doesn't explicitly seed `BASIC.taxable=true` will treat base salary as
-        //   non-taxable and step 7 will compute tax against the wrong base. P3.3 must
-        //   either (a) ensure TenantInitializationService seeds BASIC with taxable=true,
+        //   non-taxable and step 7 will compute tax against the wrong base. A future
+        //   task must either (a) ensure TenantInitializationService seeds BASIC with taxable=true,
         //   or (b) flip the entity default to true. Today this only affects the value
         //   logged by step 7's placeholder — no behavioural impact.
         // ============================================================
@@ -554,17 +554,17 @@ public class PayrollProcessingService {
         context.put("taxableIncome", taxableIncome);
 
         // ============================================================
-        // Step 7 — Income tax  ◀── PLACEHOLDER, P3.3 owns (TaxBracket)
+        // Step 7 — Income tax  ◀── PLACEHOLDER
         // ============================================================
         log.debug(
-            "Step 7 — income tax placeholder slot (taxableIncome={}); P3.3 implements progressive TaxBracket lookup",
+            "Step 7 — income tax placeholder slot (taxableIncome={}); progressive TaxBracket lookup is a future task",
             fmt(taxableIncome)
         );
 
         // ============================================================
-        // Step 8 — Other withholdings  ◀── PLACEHOLDER, P3.3 owns (TaxWithholding, YTD)
+        // Step 8 — Other withholdings  ◀── PLACEHOLDER
         // ============================================================
-        log.debug("Step 8 — withholdings placeholder slot; P3.3 implements TaxWithholding ledger update");
+        log.debug("Step 8 — withholdings placeholder slot; TaxWithholding ledger update is a future task");
 
         // ============================================================
         // Step 9 — Employee benefit costs
@@ -1005,7 +1005,7 @@ public class PayrollProcessingService {
     }
 
     // =========================================================================
-    // P3.1 pipeline helpers — money formatting, line emission, source queries
+    // Pipeline helpers — money formatting, line emission, source queries
     // =========================================================================
 
     /**
@@ -1186,7 +1186,7 @@ public class PayrollProcessingService {
      * Returns the formula-driven PayComponents of a given kind, excluding any already
      * emitted in an earlier step, sorted by ({@code calcPhase} asc, {@code code} asc) so
      * the line order is stable across runs &mdash; with {@code code} as the unique
-     * tiebreaker required by the P3.1 determinism contract.
+     * tiebreaker required by the determinism contract.
      */
     private List<PayComponent> sortedComponentsByKind(Collection<PayComponent> components, Kind kind, Set<UUID> excludeIds) {
         return components

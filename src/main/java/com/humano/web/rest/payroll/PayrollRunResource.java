@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
  * <p>
  * The PDF download path {@code GET /runs/{id}/payslips/{employeeId}} returns the payslip
  * JSON; the binary PDF stream is at {@code /api/payroll/payslips/{id}/pdf} and waits on
- * P3.5 (PDF generator).
+ * PDF generation implementation.
  */
 @RestController
 @RequestMapping("/api/payroll/runs")
@@ -102,7 +102,7 @@ public class PayrollRunResource {
 
     /**
      * Returns the payslip metadata (JSON) for a given run + employee. The {@code pdfUrl}
-     * field is populated once P3.5 lands the PDF generator. To stream the actual PDF
+     * field is populated once the PDF generator is implemented. To stream the actual PDF
      * bytes, see {@link PayslipResource#downloadPdf}.
      */
     @GetMapping("/{id}/payslips/{employeeId}")

@@ -69,7 +69,7 @@ public class TenantProvisioningService {
 
     /**
      * Provisions a new tenant with a dedicated database, or resumes an in-progress / failed
-     * provisioning for the same subdomain (P1.6 / —. Each step is idempotent:
+     * provisioning for the same subdomain. Each step is idempotent:
      * <ul>
      *   <li>tenant + db_config rows are reused if they exist;</li>
      *   <li>{@code CREATE DATABASE IF NOT EXISTS} / {@code CREATE USER IF NOT EXISTS} in
@@ -78,7 +78,7 @@ public class TenantProvisioningService {
      *   <li>{@link TenantInitializationService} guards each seed with an existence check.</li>
      * </ul>
      *
-     * <p><b>P1.10 — crash safety.</b> This method is deliberately NOT {@code @Transactional}.
+     * <p><b>Crash safety.</b> This method is deliberately NOT {@code @Transactional}.
      * The DDL inside {@link TenantDatabaseManager#createDatabase} and the Liquibase run inside
      * {@link TenantMigrationService#runMigrations} autocommit and so escape any wrapping JPA
      * transaction. If a master TX were wrapping this method, {@code markStep} writes would
