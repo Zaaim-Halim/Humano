@@ -76,6 +76,19 @@ public class Invoice extends AbstractAuditingEntity<UUID> {
     private BigDecimal taxAmount;
 
     /**
+     * Effective tax rate captured at invoice-issuance time (P4.1).
+     * <p>
+     * Persisted as a decimal ratio (0..1; 0.2000 means 20%). Recording the rate
+     * alongside the amount means a future change to {@code country_tax_rate} doesn't
+     * retroactively shift the historical invoice — operators can reconcile against
+     * what was actually charged.
+     * <p>
+     * Nullable: pre-P4.1 invoices and tax-exempt cases leave it empty.
+     */
+    @Column(name = "tax_rate", precision = 5, scale = 4)
+    private BigDecimal taxRate;
+
+    /**
      * The final amount including tax to be paid by the tenant.
      * <p>
      * This is the sum of the base amount and tax amount.
@@ -198,6 +211,14 @@ public class Invoice extends AbstractAuditingEntity<UUID> {
 
     public void setTaxAmount(BigDecimal taxAmount) {
         this.taxAmount = taxAmount;
+    }
+
+    public BigDecimal getTaxRate() {
+        return taxRate;
+    }
+
+    public void setTaxRate(BigDecimal taxRate) {
+        this.taxRate = taxRate;
     }
 
     public BigDecimal getTotalAmount() {

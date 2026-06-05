@@ -44,15 +44,18 @@ public class BillingLifecycleService {
     private final SubscriptionRepository subscriptionRepository;
     private final InvoiceRepository invoiceRepository;
     private final TenantRepository tenantRepository;
+    private final BillingTaxResolver taxResolver;
 
     public BillingLifecycleService(
         SubscriptionRepository subscriptionRepository,
         InvoiceRepository invoiceRepository,
-        TenantRepository tenantRepository
+        TenantRepository tenantRepository,
+        BillingTaxResolver taxResolver
     ) {
         this.subscriptionRepository = subscriptionRepository;
         this.invoiceRepository = invoiceRepository;
         this.tenantRepository = tenantRepository;
+        this.taxResolver = taxResolver;
     }
 
     // ========== SCHEDULED TASKS ==========
@@ -217,18 +220,29 @@ public class BillingLifecycleService {
      */
     private Invoice generateRenewalInvoice(Subscription subscription) {
         BigDecimal amount = calculateRenewalAmount(subscription);
-        BigDecimal taxAmount = BigDecimal.ZERO; // TODO: Implement tax calculation
-        BigDecimal totalAmount = amount.add(taxAmount);
+        Instant issueDate = Instant.now();
+        // P4.1: resolve country VAT/sales-tax via BillingTaxResolver. The lookup uses the
+        // tenant's country code at the invoice issue date; both the rate AND the derived
+        // amount are persisted on the invoice so a future country-rate change won't
+        // retroactively shift this historical record.
+        BillingTaxResolver.TaxResult tax = taxResolver.resolve(
+            subscription.getTenant().getCountry(),
+            subscription.getSubscriptionPlan(),
+            amount,
+            issueDate.atZone(java.time.ZoneOffset.UTC).toLocalDate()
+        );
+        BigDecimal totalAmount = amount.add(tax.amount());
 
         Invoice invoice = new Invoice();
         invoice.setTenant(subscription.getTenant());
         invoice.setSubscription(subscription);
         invoice.setInvoiceNumber(generateInvoiceNumber());
         invoice.setAmount(amount);
-        invoice.setTaxAmount(taxAmount);
+        invoice.setTaxAmount(tax.amount());
+        invoice.setTaxRate(tax.rate());
         invoice.setTotalAmount(totalAmount);
         invoice.setStatus(InvoiceStatus.PENDING);
-        invoice.setIssueDate(Instant.now());
+        invoice.setIssueDate(issueDate);
         invoice.setDueDate(subscription.getCurrentPeriodEnd());
 
         return invoiceRepository.save(invoice);

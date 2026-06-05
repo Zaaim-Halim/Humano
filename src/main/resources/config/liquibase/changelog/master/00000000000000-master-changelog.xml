@@ -505,4 +505,50 @@
         </createIndex>
     </changeSet>
 
+    <!-- P4.1: country_tax_rate table + invoice.tax_rate column.
+         BillingTaxResolver consults country_tax_rate at invoice-generation time using the
+         tenant's ISO country code + the invoice issue date; the resolved rate AND the
+         derived tax amount are persisted on the invoice so a downstream rate change
+         doesn't retroactively shift already-issued invoices. The unique constraint on
+         (country_code, valid_from) lets us keep historical rate rows side-by-side. -->
+    <changeSet id="master-044-country-tax-rate" author="halimzaaim">
+        <createTable tableName="country_tax_rate">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_country_tax_rate"/>
+            </column>
+            <column name="country_code" type="VARCHAR(2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tax_name" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tax_rate" type="DECIMAL(5,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valid_from" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valid_to" type="DATE"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addUniqueConstraint tableName="country_tax_rate"
+                             columnNames="country_code, valid_from"
+                             constraintName="uc_country_tax_rate_country_from"/>
+        <createIndex tableName="country_tax_rate" indexName="idx_country_tax_rate_lookup">
+            <column name="country_code"/>
+            <column name="valid_from"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="master-045-invoice-tax-rate" author="halimzaaim">
+        <addColumn tableName="billing_invoice">
+            <column name="tax_rate" type="DECIMAL(5,4)"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

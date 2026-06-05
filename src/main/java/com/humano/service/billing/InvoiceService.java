@@ -33,15 +33,18 @@ public class InvoiceService {
     private final InvoiceRepository invoiceRepository;
     private final TenantRepository tenantRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final BillingTaxResolver taxResolver;
 
     public InvoiceService(
         InvoiceRepository invoiceRepository,
         TenantRepository tenantRepository,
-        SubscriptionRepository subscriptionRepository
+        SubscriptionRepository subscriptionRepository,
+        BillingTaxResolver taxResolver
     ) {
         this.invoiceRepository = invoiceRepository;
         this.tenantRepository = tenantRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.taxResolver = taxResolver;
     }
 
     /**
@@ -62,7 +65,26 @@ public class InvoiceService {
             .findById(request.subscriptionId())
             .orElseThrow(() -> EntityNotFoundException.create("Subscription", request.subscriptionId()));
 
-        BigDecimal taxAmount = request.taxAmount() != null ? request.taxAmount() : BigDecimal.ZERO;
+        // P4.1: when the caller didn't supply taxAmount, look up the country rate via
+        // BillingTaxResolver. An explicit caller-supplied value still wins — admins
+        // creating manual / adjusted invoices may want to override (e.g. a credit-note
+        // negative-tax row, or a tax-exempt scenario).
+        Instant issueDate = Instant.now();
+        BigDecimal taxAmount;
+        BigDecimal taxRate;
+        if (request.taxAmount() != null) {
+            taxAmount = request.taxAmount();
+            taxRate = null; // explicit override; no canonical rate to record
+        } else {
+            BillingTaxResolver.TaxResult tax = taxResolver.resolve(
+                tenant.getCountry(),
+                subscription.getSubscriptionPlan(),
+                request.amount(),
+                issueDate.atZone(java.time.ZoneOffset.UTC).toLocalDate()
+            );
+            taxAmount = tax.amount();
+            taxRate = tax.rate();
+        }
         BigDecimal totalAmount = request.amount().add(taxAmount);
 
         Invoice invoice = new Invoice();
@@ -71,9 +93,10 @@ public class InvoiceService {
         invoice.setInvoiceNumber(request.invoiceNumber());
         invoice.setAmount(request.amount());
         invoice.setTaxAmount(taxAmount);
+        invoice.setTaxRate(taxRate);
         invoice.setTotalAmount(totalAmount);
         invoice.setStatus(InvoiceStatus.PENDING);
-        invoice.setIssueDate(Instant.now());
+        invoice.setIssueDate(issueDate);
         invoice.setDueDate(request.dueDate());
 
         Invoice savedInvoice = invoiceRepository.save(invoice);
