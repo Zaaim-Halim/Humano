@@ -588,4 +588,15 @@
         </addColumn>
     </changeSet>
 
+    <!-- P4.5: coupon snapshot on Subscription. Persists the coupon code the
+         tenant signed up with so the first renewal invoice can re-apply it.
+         Snapshot (not FK) — a later coupon rename / deletion doesn't break
+         subscription history. Redemption happens at invoice issuance via
+         CouponService.applyToAmount; the column is purely a memo. -->
+    <changeSet id="master-049-subscription-coupon" author="halimzaaim">
+        <addColumn tableName="billing_subscription">
+            <column name="coupon_code" type="VARCHAR(50)"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

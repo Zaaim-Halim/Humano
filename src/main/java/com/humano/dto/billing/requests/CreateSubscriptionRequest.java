@@ -2,6 +2,7 @@ package com.humano.dto.billing.requests;
 
 import com.humano.domain.enumeration.billing.BillingCycle;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -17,5 +18,15 @@ public record CreateSubscriptionRequest(
 
     Boolean autoRenew,
 
-    Instant trialEnd
+    Instant trialEnd,
+
+    /**
+     * P4.5 — Optional coupon code applied to this subscription. Validated at
+     * creation (throws HTTP 400 on unknown / inactive / expired / exhausted
+     * codes) and snapshotted onto {@code Subscription.couponCode} so the first
+     * renewal invoice can re-use it. Redemption (the {@code timesRedeemed}
+     * bump) happens at invoice issuance via
+     * {@code CouponService.applyToAmount}, not here — pre-validation only.
+     */
+    @Size(max = 50, message = "Coupon code cannot exceed 50 characters") String couponCode
 ) {}

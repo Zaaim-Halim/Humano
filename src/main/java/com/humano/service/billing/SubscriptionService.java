@@ -35,15 +35,18 @@ public class SubscriptionService {
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final TenantRepository tenantRepository;
+    private final CouponService couponService;
 
     public SubscriptionService(
         SubscriptionRepository subscriptionRepository,
         SubscriptionPlanRepository subscriptionPlanRepository,
-        TenantRepository tenantRepository
+        TenantRepository tenantRepository,
+        CouponService couponService
     ) {
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionPlanRepository = subscriptionPlanRepository;
         this.tenantRepository = tenantRepository;
+        this.couponService = couponService;
     }
 
     /**
@@ -72,6 +75,16 @@ public class SubscriptionService {
             .findById(request.subscriptionPlanId())
             .orElseThrow(() -> EntityNotFoundException.create("SubscriptionPlan", request.subscriptionPlanId()));
 
+        // P4.5 — pre-validate the coupon BEFORE persisting anything. validateOnly
+        // throws BadRequestAlertException (HTTP 400) for unknown / inactive / expired
+        // / exhausted codes without bumping timesRedeemed. Redemption happens at
+        // the first invoice issuance via CouponService.applyToAmount.
+        String snapshotCouponCode = null;
+        if (request.couponCode() != null && !request.couponCode().isBlank()) {
+            var validated = couponService.validateOnly(request.couponCode());
+            snapshotCouponCode = validated.code();
+        }
+
         Instant now = Instant.now();
         Subscription subscription = new Subscription();
         subscription.setTenant(tenant);
@@ -80,6 +93,7 @@ public class SubscriptionService {
         subscription.setAutoRenew(request.autoRenew() != null ? request.autoRenew() : true);
         subscription.setStartDate(now);
         subscription.setCurrentPeriodStart(now);
+        subscription.setCouponCode(snapshotCouponCode);
 
         // Set current period end based on billing cycle
         Instant periodEnd =

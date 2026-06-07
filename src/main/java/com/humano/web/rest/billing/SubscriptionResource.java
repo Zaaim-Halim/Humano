@@ -54,7 +54,8 @@ public class SubscriptionResource {
             request.subscriptionPlanId(),
             request.billingCycle(),
             request.autoRenew(),
-            request.trialEnd()
+            request.trialEnd(),
+            request.couponCode()
         );
         SubscriptionResponse created = subscriptionService.createSubscription(safe);
         return ResponseEntity.created(URI.create("/api/billing/subscriptions/" + created.id())).body(created);

@@ -154,6 +154,16 @@ public class Subscription extends AbstractAuditingEntity<UUID> {
     private Instant lastDunningAt;
 
     /**
+     * P4.5 — Snapshot of the coupon code the tenant signed up with. Not a
+     * foreign key on purpose: a later rename / deletion of the {@code Coupon}
+     * row doesn't break this subscription's history. The actual redemption
+     * happens at invoice issuance via {@code CouponService.applyToAmount} —
+     * this column is a memo so the first renewal invoice can re-use the code.
+     */
+    @Column(name = "coupon_code", length = 50)
+    private String couponCode;
+
+    /**
      * The subscription plan associated with this subscription.
      * <p>
      * Defines the feature set and base pricing for this subscription.
@@ -326,6 +336,14 @@ public class Subscription extends AbstractAuditingEntity<UUID> {
 
     public void setLastDunningAt(Instant lastDunningAt) {
         this.lastDunningAt = lastDunningAt;
+    }
+
+    public String getCouponCode() {
+        return couponCode;
+    }
+
+    public void setCouponCode(String couponCode) {
+        this.couponCode = couponCode;
     }
 
     public SubscriptionPlan getSubscriptionPlan() {

@@ -17,6 +17,102 @@
 
 ## Part 0 — Session log (most recent first)
 
+### 2026-06-07 — P4.5: coupon snapshot on Subscription + renewal re-apply
+
+Took the next open task. Most of P4.5 was already wired in a prior
+session — `master-046-invoice-discount` adds `billing_invoice
+.discount_amount + coupon_code`, `Invoice` has matching accessors,
+`CreateInvoiceRequest.couponCode` is plumbed, and
+`InvoiceService.createInvoice` already validates + applies via
+`CouponService.applyToAmount`. `CouponService` already has full
+validation (active / expired / not-started / max-redemptions) with
+typed 400 ProblemDetail responses. What was missing — the
+**subscription-creation** half of "Apply at subscription creation OR
+invoice issuance" — is now wired, plus the renewal path reads the
+snapshot.
+
+**Schema** (`master-049-subscription-coupon`).
+`billing_subscription.coupon_code VARCHAR(50)` nullable. Snapshot,
+not FK: a later rename or deletion of the `Coupon` row doesn't
+poison subscription history. The column is purely a memo so the
+renewal invoice path knows which code the tenant signed up with.
+
+**Entity (`Subscription.couponCode`).** Plain `String` field with
+getter/setter; no `@NotNull` constraints (most subscriptions don't
+have a coupon).
+
+**`CreateSubscriptionRequest.couponCode`** — new optional field,
+`@Size(max = 50)`. The `SubscriptionResource.create` body-rewriting
+guard (overrides `tenantId` with the resolved current tenant) had to
+also propagate `couponCode` through the safe-DTO rebuild — without
+that change the field would be silently dropped (compile error
+caught the mismatch).
+
+**`SubscriptionService.createSubscription`** wiring:
+
+1. Inject `CouponService`.
+2. Before persisting anything, if `request.couponCode()` is supplied
+   call `couponService.validateOnly(code)`. Throws
+   `BadRequestAlertException` (HTTP 400) for unknown / inactive /
+   expired / not-yet-started / max-redemptions codes. No redemption
+   yet — that's at invoice issuance.
+3. Snapshot the canonical code (from the validated coupon, not the
+   raw request) onto `Subscription.couponCode`.
+
+Pre-validation only (no `applyToAmount` here) is deliberate:
+subscription creation doesn't generate an invoice in the current
+flow (`BillingLifecycleService.generateRenewalInvoice` issues the
+first one some days before `currentPeriodEnd`). Redeeming at create
+would credit the coupon before the tenant ever owes anything — wrong
+shape. The store-then-redeem-at-invoice model matches Stripe's
+"apply coupon now, see discount on first invoice" UX.
+
+**`BillingLifecycleService.generateRenewalInvoice` wiring:**
+
+1. Inject `CouponService`.
+2. Before tax resolution, if `subscription.getCouponCode()` is
+   non-blank, call `couponService.applyToAmount(code, amount)` to
+   compute the discount AND atomically bump `timesRedeemed`.
+3. On `RuntimeException` (coupon now expired or hit
+   max-redemptions in the interim), proceed at full price + clear
+   the subscription snapshot so a future tick doesn't keep trying.
+   `log.warn` so the operator sees the auto-clear.
+4. `taxableSubtotal = amount − discount`;
+   `Invoice.discountAmount`, `Invoice.couponCode`, `Invoice.amount`
+   (sticker), `Invoice.taxAmount` all persist consistently.
+5. Tax is computed on `taxableSubtotal` (the price actually paid),
+   not on `amount` — standard rule. The P4.1 `BillingTaxResolver`
+   contract is unchanged; only the input value moved.
+
+**Acceptance (spec text).** "A 20% off coupon reduces a $100 invoice
+to $80; expired coupon is rejected with HTTP 400."
+
+- **20% off $100 → $80.** `CouponService.computeDiscount` for
+  `PERCENT` type: `ratio = 20/100 = 0.200000` (scale 6 HALF_UP);
+  `discount = 100 × 0.200000 = 20.0000` (scale 4 HALF_UP).
+  `taxableSubtotal = 100 − 20 = 80`. Verified by reading the math
+  off the code — pure function of inputs.
+- **Expired coupon rejected.** `findAndValidate` throws
+  `BadRequestAlertException("Coupon has expired", ...,
+"couponexpired")` when `expiryDate.isBefore(now)`. JHipster's
+  `BadRequestAlertException` maps to HTTP 400 with a typed
+  ProblemDetail body — the spec literal.
+
+Live end-to-end (real EU tenant subscription + seeded plan +
+seeded coupon) deferred to fixture seeding (same pattern as P3.x
+/ P4.1 / P4.2 / P4.3 / P4.4).
+
+**Verification.** `./mvnw -DskipTests compile` green (initial run
+broke on `SubscriptionResource.create` re-building the DTO with
+five args instead of six — fixed by adding `request.couponCode()`).
+`./mvnw test` → **36/36 green** — Part 4 invariant honoured.
+Schema `master-049-subscription-coupon` is a single nullable
+column add — Liquibase replay-safe.
+
+**Closes Phase 4.** Every task P4.1–P4.5 is now `[x]`.
+
+---
+
 ### 2026-06-07 — P4.4: dunning state machine on PAST_DUE subscriptions
 
 Took the next open task. `PAST_DUE → ... → CANCELLED` progression is now
@@ -734,7 +830,7 @@ working formula tenants can paste into a PayRule):
   `#pct(#min(#grossSalary, 176100), 6.2)`
 - UK PAYE banded 2025/26 with personal allowance:
   `#band(#max(0, #grossSalary - 12570),
-  {{0, 37700, 0.20}, {37700, 112430, 0.40}, {112430, 9999999, 0.45}})`
+{{0, 37700, 0.20}, {37700, 112430, 0.40}, {112430, 9999999, 0.45}})`
 - Seniority bonus 5%/year capped at 30%:
   `#pct(#baseSalary, #min(5 * #employeeYearsOfService, 30))`
 - Switzerland nearest-5-centime rounding:
@@ -2276,77 +2372,78 @@ seconds`, `/management/health` → 200. Boot passing is real
   - **Done.** Three pieces — algorithm, calc-pipeline wiring,
     post-time ledger:
 
-        1. **`TaxCalculationService.calculateProgressiveTax(taxableIncome,
+         1. **`TaxCalculationService.calculateProgressiveTax(taxableIncome,
 
     brackets)`** — new public method implementing the spec algorithm
-   verbatim. Sorts by `lower`, walks brackets with `remaining =
+verbatim. Sorts by `lower`, walks brackets with `remaining =
     taxableIncome`decreasing by`slice = min(remaining, upper −
     lower)`each iteration, adds`slice \* rate + fixedPart`per
-   bracket. Returns 0 for null/non-positive income or empty
-   bracket list; result scaled to 2 decimals (HALF_UP). The
-   existing public`calculateTax(...)`REST entry point was
-   refactored to delegate to this method so the per-bracket
-   breakdown DTO matches the total byte-for-byte. Also added the
-   public`getActiveBracketsForCalculation(countryId, taxCode,
+bracket. Returns 0 for null/non-positive income or empty
+bracket list; result scaled to 2 decimals (HALF_UP). The
+existing public`calculateTax(...)`REST entry point was
+refactored to delegate to this method so the per-bracket
+breakdown DTO matches the total byte-for-byte. Also added the
+public`getActiveBracketsForCalculation(countryId, taxCode,
     asOfDate)`so`PayrollProcessingService`can reuse the same
-   query specification.
+    query specification.
+
 2. **PayrollProcessingService steps 7 / 8 wired.** Step 7 looks up
-   brackets for`(employee.country, TaxCode.PIT, period.endDate)`       and emits a`TAX_PIT`-tagged line with `explain="Step 7 —
-    Income tax (PIT, country=XX, taxableIncome=…, brackets=N): …"`.
+   brackets for`(employee.country, TaxCode.PIT, period.endDate)` and emits a`TAX_PIT`-tagged line with `explain="Step 7 —
+  Income tax (PIT, country=XX, taxableIncome=…, brackets=N): …"`.
    Step 8 iterates active `TaxWithholding`rows for the employee,
    skips`INCOME_TAX`(handled by step 7; iterating would double-
    count), and emits one`TAX_PIT`-tagged line per surviving row
-   via the new `computeWithholdingAmount(w, gross) = rate% × gross`       helper. New`taxWithheld`accumulator threads into
-  `totalDeductions`so`net = gross − everything-withheld`. Three
+   via the new `computeWithholdingAmount(w, gross) = rate% × gross` helper. New`taxWithheld`accumulator threads into
+   `totalDeductions`so`net = gross − everything-withheld`. Three
    skip paths on step 7 (no country, no `TAX_PIT`PayComponent,
    no active brackets) each get a clear log line.
-3. **YTD update at POST only.** New`updateYearToDateOnPost(run)`       invoked from`postPayrollRun`AFTER status flip to POSTED and
+3. **YTD update at POST only.** New`updateYearToDateOnPost(run)` invoked from`postPayrollRun`AFTER status flip to POSTED and
    BEFORE the period.closed write. DRAFT / CALCULATED / APPROVED
    leave YTD untouched (key §P3.3 rule). The method walks
    persisted`PayrollLine`rows, partitions by`explain` prefix
    (`"Step 7 …"`→ INCOME_TAX,`"Step 8 — Withholding (<TYPE>,"`→
    that TYPE), and`bumpYtdForType(employeeId, type, amount,
-    asOfDate)`adds to the employee's active row. Missing rows are
+  asOfDate)`adds to the employee's active row. Missing rows are
    logged at DEBUG (tenant config gap, not runtime error). An
    INFO line at the end gives operators
-  `incomeTaxUpdates / otherWithholdingUpdates / resultsScanned`
-    totals.
+   `incomeTaxUpdates / otherWithholdingUpdates / resultsScanned`
+   totals.
 
-  - **Why parse `explain` instead of re-computing.** Recomputing at POST
-    would drift if config changed between CALCULATE and POST. Walking
-    persisted lines guarantees YTD always matches what's on the
-    payslip. The `Step 7 / Step 8 — Withholding (<TYPE>,` parsing
-    protocol is documented in the reader's Javadoc as load-bearing.
+- **Why parse `explain` instead of re-computing.** Recomputing at POST
+  would drift if config changed between CALCULATE and POST. Walking
+  persisted lines guarantees YTD always matches what's on the
+  payslip. The `Step 7 / Step 8 — Withholding (<TYPE>,` parsing
+  protocol is documented in the reader's Javadoc as load-bearing.
 
-  - **Indexes (changeset `tenant-074-tax-lookup-indexes`).**
-    `tax_bracket(country_id, tax_code, valid_from)` and
-    `tax_withholding(employee_id, type, effective_from)`. Both lead
-    with the FK column so the index also serves existing FK joins.
-    Verified in MySQL — both `SHOW INDEX` queries return the expected
-    three-column shape and the DATABASECHANGELOG row is present.
+- **Indexes (changeset `tenant-074-tax-lookup-indexes`).**
+  `tax_bracket(country_id, tax_code, valid_from)` and
+  `tax_withholding(employee_id, type, effective_from)`. Both lead
+  with the FK column so the index also serves existing FK joins.
+  Verified in MySQL — both `SHOW INDEX` queries return the expected
+  three-column shape and the DATABASECHANGELOG row is present.
 
-  - **fixedPart caveat (documented inline).** The literal spec adds
-    `bracket.fixedPart` once per processed bracket — modelling a
-    per-bracket flat fee. Tenants using the "precomputed cumulative
-    tax of all lower brackets" optimisation should seed
-    `fixedPart = 0` to avoid double-counting. Javadoc on
-    `calculateProgressiveTax` explains.
+- **fixedPart caveat (documented inline).** The literal spec adds
+  `bracket.fixedPart` once per processed bracket — modelling a
+  per-bracket flat fee. Tenants using the "precomputed cumulative
+  tax of all lower brackets" optimisation should seed
+  `fixedPart = 0` to avoid double-counting. Javadoc on
+  `calculateProgressiveTax` explains.
 
-  - **Acceptance.** Fixture-based assertion: a 50k income through a
-    0-20k @0%, 20k-40k @20%, 40k+ @30% schedule yields `20000*0.20 +
+- **Acceptance.** Fixture-based assertion: a 50k income through a
+  0-20k @0%, 20k-40k @20%, 40k+ @30% schedule yields `20000*0.20 +
 10000*0.30 = 7000`. Verified standalone outside the app
-    (reproducing the algorithm verbatim) — returns exactly **7000.00**
-    for 50k, plus intermediate stops match (30k → 2000.00, 40k →
-    4000.00). Same structural-evidence basis as P3.1 / P3.2 (tests
-    out of scope per Part 4).
+  (reproducing the algorithm verbatim) — returns exactly **7000.00**
+  for 50k, plus intermediate stops match (30k → 2000.00, 40k →
+  4000.00). Same structural-evidence basis as P3.1 / P3.2 (tests
+  out of scope per Part 4).
 
-  - **Verification.** `./mvnw -DskipTests compile` green at 586 source
-    files (green again after the step-10 double-count fix). Booted
-    against dev MySQL: `Started HumanoApp in 6.146 seconds` from the
-    log. The new `TaxCalculationService` injection, the new criteria
-    queries (`activeWithholdingsForPeriod`, `bumpYtdForType`), and the
-    `tenant-074` changeset all apply cleanly; DB-side indexes verified
-    via `SHOW INDEX FROM tax_bracket / tax_withholding`.
+- **Verification.** `./mvnw -DskipTests compile` green at 586 source
+  files (green again after the step-10 double-count fix). Booted
+  against dev MySQL: `Started HumanoApp in 6.146 seconds` from the
+  log. The new `TaxCalculationService` injection, the new criteria
+  queries (`activeWithholdingsForPeriod`, `bumpYtdForType`), and the
+  `tenant-074` changeset all apply cleanly; DB-side indexes verified
+  via `SHOW INDEX FROM tax_bracket / tax_withholding`.
 
 - [x] **P3.4 — Multi-currency conversion at PayrollRun boundary**
 
@@ -2359,34 +2456,35 @@ seconds`, `/management/health` → 200. Boot passing is real
 
     reporting_total_deductions / reporting_net /
     reporting_employer_cost`(DECIMAL(38,2)),`exchange_rate`       (DECIMAL(19,6)),`exchange_rate_date`(DATE).
+
 2. **New`ExchangeRateService.getReportingRate(from, to, asOf,
-    maxStalenessDays)`→`ReportingRate(rate, rateDate)`record.**
+  maxStalenessDays)`→`ReportingRate(rate, rateDate)`record.**
    Lookup: same-currency → (1.0, asOf); exact rate on asOf →
    returned; most-recent-before asOf → returned IF within
    staleness, else`BusinessRuleViolationException`with "is X
    days stale" message; no rate at all → exception.
    **Deliberate deviation from spec wording**: spec names
-  `ExchangeRateService.convert(...)`; we built a dedicated
+   `ExchangeRateService.convert(...)`; we built a dedicated
    primitive because (a) the same rate is applied to all four
    totals (preserves `reportingNet = reportingGross −
-    reportingTotalDeductions`); (b) we deliberately dropped the
+  reportingTotalDeductions`); (b) we deliberately dropped the
    reverse-rate inversion path (silent + lossy for payroll
    bookkeeping); (c) staleness guarding is owned here.
    **Consequence:** tenants must seed rates in the exact native
    → reporting direction.
 3. **Calc pipeline.** `PayrollProcessingService`injects
-  `ExchangeRateService`+`@Value("${humano.payroll.
-    max-exchange-rate-staleness-days:7}")`.
+   `ExchangeRateService`+`@Value("${humano.payroll.
+  max-exchange-rate-staleness-days:7}")`.
    `calculateEmployeePayroll`reordered: compensation lookup +
    reporting-rate pre-validation now happen BEFORE
-  `resolveResult`so a stale-rate failure on recalc doesn't
+   `resolveResult`so a stale-rate failure on recalc doesn't
    leave an orphaned result row with deleted lines. The new
-  `applyReportingConversion(...)`takes the pre-resolved
-  `ReportingRate`snapshot, multiplies all four totals by the
+   `applyReportingConversion(...)`takes the pre-resolved
+   `ReportingRate`snapshot, multiplies all four totals by the
    same`rate`, and persists the conversion. Logs at INFO when
    `paymentDate ≠ rateDate`so fallback drift is visible.
 4. **Run-level consolidation (advisor-flagged fix).**
-  `toRunResponse`and`getPayrollRunSummary`previously summed
+   `toRunResponse`and`getPayrollRunSummary`previously summed
    native amounts across all results and labelled with the
    first employee's currency — meaningless for cross-currency
    runs. Both now branch on`run.getReportingCurrency()`: when
@@ -2397,55 +2495,56 @@ seconds`, `/management/health` → 200. Boot passing is real
 5. **Hash bumped to v2.**`generateIdempotencyHash`now
    includes`reportingCurrencyId`as a pipe-delimited field
    under the new`HASH_VERSION = 2`. Two otherwise-identical
-    runs that target different reporting currencies hash
-    differently — required for idempotency to mean what it
-    claims.
+   runs that target different reporting currencies hash
+   differently — required for idempotency to mean what it
+   claims.
 
-  - **Per-employee vs run-level fail (documented deviation).** Spec
-    says "fail the run if older than X". We surface stale/missing
-    rates as **per-employee** `PayrollValidationError` rows; the
-    run still reaches CALCULATED with errors. Rationale:
-    different employees need different rates; one stuck rate
-    shouldn't strand every other employee. Spec literal (abort
-    whole calc) is defensible but more disruptive — chose the
-    softer per-employee path for v1.
+- **Per-employee vs run-level fail (documented deviation).** Spec
+  says "fail the run if older than X". We surface stale/missing
+  rates as **per-employee** `PayrollValidationError` rows; the
+  run still reaches CALCULATED with errors. Rationale:
+  different employees need different rates; one stuck rate
+  shouldn't strand every other employee. Spec literal (abort
+  whole calc) is defensible but more disruptive — chose the
+  softer per-employee path for v1.
 
-  - **API surface.** `InitiatePayrollRunRequest` got optional
-    `UUID reportingCurrencyId` (null = single-currency, legacy
-    behaviour preserved). `PayrollRunResponse.currencyCode` is
-    context-aware: reporting currency for cross-currency runs,
-    first result's native code for single-currency.
+- **API surface.** `InitiatePayrollRunRequest` got optional
+  `UUID reportingCurrencyId` (null = single-currency, legacy
+  behaviour preserved). `PayrollRunResponse.currencyCode` is
+  context-aware: reporting currency for cross-currency runs,
+  first result's native code for single-currency.
 
-  - **Acceptance.** "A run with EUR and USD employees produces
-    reporting totals in run's currency; mismatch in rate falls back
-    deterministically." Verified structurally: (a) per-result
-    reporting totals are persisted using the same rate captured at
-    calc time; (b) `getPayrollRunSummary` and `toRunResponse` sum
-    reporting columns + label with the run's reporting currency
-    when set; (c) `getReportingRate` falls back to most-recent-
-    before only within `maxStalenessDays`, throws otherwise. Live
-    EUR+USD fixture run waits on seeded employees + rates (tests
-    out-of-scope per Part 4, consistent with P3.1 / P3.2 / P3.3).
+- **Acceptance.** "A run with EUR and USD employees produces
+  reporting totals in run's currency; mismatch in rate falls back
+  deterministically." Verified structurally: (a) per-result
+  reporting totals are persisted using the same rate captured at
+  calc time; (b) `getPayrollRunSummary` and `toRunResponse` sum
+  reporting columns + label with the run's reporting currency
+  when set; (c) `getReportingRate` falls back to most-recent-
+  before only within `maxStalenessDays`, throws otherwise. Live
+  EUR+USD fixture run waits on seeded employees + rates (tests
+  out-of-scope per Part 4, consistent with P3.1 / P3.2 / P3.3).
 
-  - **Verification.** `./mvnw -DskipTests compile` green at 586
-    source files. Booted twice against dev MySQL; the final boot
-    after all advisor-fixes reports `Started HumanoApp in 5.714
+- **Verification.** `./mvnw -DskipTests compile` green at 586
+  source files. Booted twice against dev MySQL; the final boot
+  after all advisor-fixes reports `Started HumanoApp in 5.714
 seconds` and `curl /management/health → 200`. Schema verified
-    in MySQL: all seven new columns present on the right tables,
-    `DATABASECHANGELOG` carries the `tenant-075-payroll-
+  in MySQL: all seven new columns present on the right tables,
+  `DATABASECHANGELOG` carries the `tenant-075-payroll-
 multicurrency` row.
 
 - [x] **P3.5 — Payslip PDF generation**
 
   - **Done.** Five pieces:
 
-        1. **Renderer choice + deps.** OpenHTMLtoPDF 1.0.10 (PDFBox backend),
-           added as `openhtmltopdf-core / openhtmltopdf-pdfbox /
+         1. **Renderer choice + deps.** OpenHTMLtoPDF 1.0.10 (PDFBox backend),
+            added as `openhtmltopdf-core / openhtmltopdf-pdfbox /
 
     openhtmltopdf-slf4j`in`pom.xml`. Picked over raw OpenPDF/PDFBox
-   for CSS support without writing low-level layout code.
+    for CSS support without writing low-level layout code.
+
 2. **`PayslipPdfGenerator`service.** Stateless, takes a flat
-  `PayslipPdfModel`record (no JPA entities), renders via
+   `PayslipPdfModel`record (no JPA entities), renders via
    autowired`SpringTemplateEngine`, post-processes through
    `sanitizeForXmlAndBase14(html)`, feeds to `PdfRendererBuilder`,
    returns `byte[]`. Wraps all rendering errors in
@@ -2454,7 +2553,7 @@ multicurrency` row.
    `src/main/resources/templates/payroll/payslip.html`. A4 page,
    base-14 Helvetica, sections for header / earnings / deductions /
    totals / optional reporting-currency block (P3.4) / employer
-   charges / footer. Uses `th:text`for substitution and`th:if`       for the reporting block.
+   charges / footer. Uses `th:text`for substitution and`th:if` for the reporting block.
 4. **Storage + lazy generation in`PayslipService`.** New
    `generateAndStorePdf(payslipId)`(idempotent — re-checks
    existence) and`downloadPdf(payslipId)`(generate-on-first-call
@@ -2463,51 +2562,51 @@ multicurrency` row.
    backend via`StorageFactory.getStorageService()`. Reference
    persisted to `Payslip.pdfUrl`. 5. **REST endpoints.** Two routes stream the PDF:
 
-    - `GET /api/payroll/payslips/{id}/pdf`— canonical, on
-      `PayslipResource`. Replaces the prior P2.5 501 stub.
-    - `GET /api/payroll/runs/{id}/payslips/{employeeId}/pdf`— alias
-      on`PayrollRunResource` to match the literal ROADMAP P3.5
-      acceptance URL.
+   - `GET /api/payroll/payslips/{id}/pdf`— canonical, on
+     `PayslipResource`. Replaces the prior P2.5 501 stub.
+   - `GET /api/payroll/runs/{id}/payslips/{employeeId}/pdf`— alias
+     on`PayrollRunResource` to match the literal ROADMAP P3.5
+     acceptance URL.
 
-  - **Advisor-flagged blockers fixed BEFORE flipping.**
-    _(1)_ Thymeleaf's HTML5 serializer emits named entities for
-    non-ASCII characters; OpenHTMLtoPDF's TRaX XML parser rejects
-    them with `SAXParseException: entity "mdash" not declared` —
-    every PDF request would 500. Compounding, base-14 Helvetica
-    (WinAnsi) can't render em-dash / minus / middot / smart quotes.
-    Fix: `PayslipPdfGenerator.sanitizeForXmlAndBase14(html)`
-    post-processes the rendered HTML and replaces both named
-    entities AND literal Unicode glyphs with ASCII/numeric
-    equivalents before handing to OpenHTMLtoPDF. Scope-limited:
-    real Unicode typography would need an embedded font (out of
-    scope for v1).
-    _(2)_ Original wiring put the PDF at
-    `/api/payroll/payslips/{id}/pdf` only; the spec's literal
-    acceptance URL is `/api/payroll/runs/{id}/payslips/{employeeId}`.
-    Added the `.../pdf` variant on `PayrollRunResource` so the
-    acceptance URL actually returns a PDF.
+- **Advisor-flagged blockers fixed BEFORE flipping.**
+  _(1)_ Thymeleaf's HTML5 serializer emits named entities for
+  non-ASCII characters; OpenHTMLtoPDF's TRaX XML parser rejects
+  them with `SAXParseException: entity "mdash" not declared` —
+  every PDF request would 500. Compounding, base-14 Helvetica
+  (WinAnsi) can't render em-dash / minus / middot / smart quotes.
+  Fix: `PayslipPdfGenerator.sanitizeForXmlAndBase14(html)`
+  post-processes the rendered HTML and replaces both named
+  entities AND literal Unicode glyphs with ASCII/numeric
+  equivalents before handing to OpenHTMLtoPDF. Scope-limited:
+  real Unicode typography would need an embedded font (out of
+  scope for v1).
+  _(2)_ Original wiring put the PDF at
+  `/api/payroll/payslips/{id}/pdf` only; the spec's literal
+  acceptance URL is `/api/payroll/runs/{id}/payslips/{employeeId}`.
+  Added the `.../pdf` variant on `PayrollRunResource` so the
+  acceptance URL actually returns a PDF.
 
-  - **Acceptance verification (real-template smoke).** Throwaway
-    `/tmp` scratch program renders the real template against a
-    synthetic model via `SpringTemplateEngine` (SpEL, not OGNL —
-    the bare engine doesn't have OGNL on the project classpath),
-    runs the same `sanitizeForXmlAndBase14` step the production
-    generator runs, feeds the result to `PdfRendererBuilder`,
-    parses the bytes back via PDFBox text extraction. All 18
-    model tokens present in the extracted text (employee, period,
-    line codes, amounts, currencies, exchange rate, sanitized
-    explain prefixes). PDF starts with `%PDF-`, ends with `%%EOF`,
-    1k+ bytes. This is the verification that proves "valid PDF
-    with employee, period, lines, totals" — the spec's acceptance
-    text. Scratch program deleted; per Part 4 no committed test
-    added.
+- **Acceptance verification (real-template smoke).** Throwaway
+  `/tmp` scratch program renders the real template against a
+  synthetic model via `SpringTemplateEngine` (SpEL, not OGNL —
+  the bare engine doesn't have OGNL on the project classpath),
+  runs the same `sanitizeForXmlAndBase14` step the production
+  generator runs, feeds the result to `PdfRendererBuilder`,
+  parses the bytes back via PDFBox text extraction. All 18
+  model tokens present in the extracted text (employee, period,
+  line codes, amounts, currencies, exchange rate, sanitized
+  explain prefixes). PDF starts with `%PDF-`, ends with `%%EOF`,
+  1k+ bytes. This is the verification that proves "valid PDF
+  with employee, period, lines, totals" — the spec's acceptance
+  text. Scratch program deleted; per Part 4 no committed test
+  added.
 
-  - **Verification.** `./mvnw -DskipTests compile` green at 587
-    source files. Booted against dev MySQL — `Started HumanoApp
+- **Verification.** `./mvnw -DskipTests compile` green at 587
+  source files. Booted against dev MySQL — `Started HumanoApp
 in 5.716 seconds`, `curl /management/health → 200`. All three
-    relevant routes (canonical PDF, acceptance PDF, legacy JSON)
-    return 401 under the auth gate; master-context guard still
-    rejects them without `X-Tenant-ID`. Unblocks P2.5.
+  relevant routes (canonical PDF, acceptance PDF, legacy JSON)
+  return 401 under the auth gate; master-context guard still
+  rejects them without `X-Tenant-ID`. Unblocks P2.5.
 
 - [x] **P3.6 — `PayRule` SpEL evaluation hardening (expanded to a curated function library)**
 
@@ -2751,34 +2850,29 @@ target/classes`).
 
 - [x] **P4.4 — Dunning state machine**
 
-  - **Done.** Five pieces:
-    1. **Schema** (`master-048-subscription-dunning`):
-       `billing_subscription.dunning_attempt INT NOT NULL DEFAULT 0`,
-       `billing_subscription.last_dunning_at DATETIME` nullable.
-       Counter ratchets per tick; `last_dunning_at` gates same-UTC-day
-       re-runs.
-    2. **`Subscription` entity** — `dunningAttempt` + `lastDunningAt`
-       fields with null-coalescing getter on the counter.
-    3. **`DunningService`** — new `@Service` with
-       `@Scheduled(cron = "${humano.billing.dunning.cron:0 0 6 * * *}")`.
-       `runDunningCycle` loads PAST_DUE subs and processes each in its
-       own `@Transactional` boundary. `processSubscription(sub)`
-       gates idempotency on calendar day, bumps the counter, attempts
-       `PaymentService.retryPayment(paymentId, externalPaymentId)` on
-       the latest FAILED Payment whose id is Stripe-shaped
-       (re-uses the original PaymentIntent as the retry token).
-       On successful retry the row's status returns to ACTIVE and
-       the counter resets to 0. On `dunningAttempt >= maxAttempts`,
-       transitions to CANCELLED + publishes
-       `SubscriptionCancelledEvent`. Outcome enum
-       (`ADVANCED / RETRIED_SUCCESS / CANCELLED / SKIPPED`)
-       surfaces in per-cycle log totals.
-    4. **`SubscriptionCancelledEvent`** new record under `events/`
-       with typed `Reason` (`USER / DUNNING_EXHAUSTED /
-TRIAL_EXPIRED / OPERATOR`).
-    5. **`TenantEventListener.handleSubscriptionCancelled`** new
-       `@Async` listener that resolves the billing email and fires
-       `BillingMailService.sendSubscriptionCancelled(...)`.
+  - **Done.** Five pieces: 1. **Schema** (`master-048-subscription-dunning`):
+    `billing_subscription.dunning_attempt INT NOT NULL DEFAULT 0`,
+    `billing_subscription.last_dunning_at DATETIME` nullable.
+    Counter ratchets per tick; `last_dunning_at` gates same-UTC-day
+    re-runs. 2. **`Subscription` entity** — `dunningAttempt` + `lastDunningAt`
+    fields with null-coalescing getter on the counter. 3. **`DunningService`** — new `@Service` with
+    `@Scheduled(cron = "${humano.billing.dunning.cron:0 0 6 * * *}")`.
+    `runDunningCycle` loads PAST_DUE subs and processes each in its
+    own `@Transactional` boundary. `processSubscription(sub)`
+    gates idempotency on calendar day, bumps the counter, attempts
+    `PaymentService.retryPayment(paymentId, externalPaymentId)` on
+    the latest FAILED Payment whose id is Stripe-shaped
+    (re-uses the original PaymentIntent as the retry token).
+    On successful retry the row's status returns to ACTIVE and
+    the counter resets to 0. On `dunningAttempt >= maxAttempts`,
+    transitions to CANCELLED + publishes
+    `SubscriptionCancelledEvent`. Outcome enum
+    (`ADVANCED / RETRIED_SUCCESS / CANCELLED / SKIPPED`)
+    surfaces in per-cycle log totals. 4. **`SubscriptionCancelledEvent`** new record under `events/`
+    with typed `Reason` (`USER / DUNNING_EXHAUSTED /
+TRIAL_EXPIRED / OPERATOR`). 5. **`TenantEventListener.handleSubscriptionCancelled`** new
+    `@Async` listener that resolves the billing email and fires
+    `BillingMailService.sendSubscriptionCancelled(...)`.
   - **State-model deviation (documented).** Spec wording
     `PAST_DUE → DUNNING_1 → DUNNING_2 → CANCELLED` is implemented as
     `status = PAST_DUE` throughout the cycle + a `dunningAttempt`
@@ -2811,10 +2905,61 @@ TRIAL_EXPIRED / OPERATOR`).
     — Part 4 invariant honoured. Schema changeset adds nullable /
     defaulted columns so it's Liquibase replay-safe.
 
-- [ ] **P4.5 — Coupon application end-to-end**
-  - **File:** `service/billing/CouponService.java`
-  - **Steps:** Apply at subscription creation OR invoice issuance; record `Invoice.discountAmount`; validate `expiresAt`, `usageLimit`, `usedCount`.
-  - **Acceptance:** A 20% off coupon reduces a `$100` invoice to `$80`; expired coupon is rejected with HTTP 400.
+- [x] **P4.5 — Coupon application end-to-end**
+
+  - **Done.** Both halves of "Apply at subscription creation OR
+    invoice issuance" are wired. Most of the invoice-issuance side
+    landed in an earlier session — `master-046-invoice-discount`
+    already adds `billing_invoice.discount_amount + coupon_code`;
+    `Invoice` carries the accessors; `CreateInvoiceRequest.couponCode`
+    is plumbed; `InvoiceService.createInvoice` already calls
+    `CouponService.applyToAmount` when a code is supplied.
+    `CouponService` already has full validation (active / expired /
+    not-started / max-redemptions) with typed 400 ProblemDetail
+    responses (`BadRequestAlertException`). What this session added:
+    1. **Schema** (`master-049-subscription-coupon`):
+       `billing_subscription.coupon_code VARCHAR(50)` nullable.
+       Snapshot, not FK (a later rename / deletion of the Coupon row
+       doesn't poison history).
+    2. **`Subscription.couponCode`** field + getter/setter.
+    3. **`CreateSubscriptionRequest.couponCode`** new optional
+       field (`@Size(max=50)`). `SubscriptionResource.create`'s
+       safe-DTO rebuild propagates it through.
+    4. **`SubscriptionService.createSubscription`** pre-validates
+       via `couponService.validateOnly(code)` (throws 400 on bad
+       coupon, no redemption), snapshots the canonical code onto
+       the new column.
+    5. **`BillingLifecycleService.generateRenewalInvoice`** reads
+       `subscription.getCouponCode()` and calls
+       `couponService.applyToAmount` to compute the discount + bump
+       `timesRedeemed`. On stale-coupon exception, proceeds at full
+       price + clears the snapshot so future ticks don't keep
+       trying. Tax is computed on `taxableSubtotal = amount −
+discount`, not on the sticker price.
+  - **Pre-validate-at-create / redeem-at-invoice deliberate split.**
+    Subscription creation doesn't generate an invoice in the
+    current flow (the first invoice is issued days before
+    `currentPeriodEnd` by `BillingLifecycleService.processRenewal`).
+    Redeeming the coupon at sign-up would credit it before the
+    tenant ever owes anything. The split matches Stripe's
+    "apply coupon now, see discount on first invoice" UX.
+  - **Acceptance (spec text).** "A 20% off coupon reduces a $100
+    invoice to $80; expired coupon is rejected with HTTP 400."
+    - **20% off $100 → $80.** `CouponService.computeDiscount` for
+      `PERCENT`: `ratio = 20/100 = 0.200000` (scale 6 HALF_UP);
+      `discount = 100 × 0.200000 = 20.0000` (scale 4 HALF_UP);
+      `taxableSubtotal = 80`. Verified off the code — pure
+      function of inputs.
+    - **Expired coupon → 400.** `findAndValidate` throws
+      `BadRequestAlertException("Coupon has expired", ...,
+"couponexpired")` when `expiryDate.isBefore(now)`. JHipster's
+      `BadRequestAlertException` maps to HTTP 400 with a typed
+      ProblemDetail body.
+  - **Verification.** `./mvnw -DskipTests compile` green (one
+    compile error caught the `SubscriptionResource.create` safe-DTO
+    rebuild needing to forward `couponCode` too — fixed). `./mvnw
+test` → **36/36 green** — Part 4 invariant honoured. Schema is
+    a single nullable column add.
 
 ---
 

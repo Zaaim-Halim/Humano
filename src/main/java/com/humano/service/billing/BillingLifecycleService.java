@@ -47,6 +47,7 @@ public class BillingLifecycleService {
     private final BillingTaxResolver taxResolver;
     private final BillingMailService billingMailService;
     private final TenantAdminEmailResolver adminEmailResolver;
+    private final CouponService couponService;
 
     public BillingLifecycleService(
         SubscriptionRepository subscriptionRepository,
@@ -54,7 +55,8 @@ public class BillingLifecycleService {
         TenantRepository tenantRepository,
         BillingTaxResolver taxResolver,
         BillingMailService billingMailService,
-        TenantAdminEmailResolver adminEmailResolver
+        TenantAdminEmailResolver adminEmailResolver,
+        CouponService couponService
     ) {
         this.subscriptionRepository = subscriptionRepository;
         this.invoiceRepository = invoiceRepository;
@@ -62,6 +64,7 @@ public class BillingLifecycleService {
         this.taxResolver = taxResolver;
         this.billingMailService = billingMailService;
         this.adminEmailResolver = adminEmailResolver;
+        this.couponService = couponService;
     }
 
     // ========== SCHEDULED TASKS ==========
@@ -230,6 +233,35 @@ public class BillingLifecycleService {
     private Invoice generateRenewalInvoice(Subscription subscription) {
         BigDecimal amount = calculateRenewalAmount(subscription);
         Instant issueDate = Instant.now();
+
+        // P4.5 — re-apply the coupon the tenant signed up with, if still valid.
+        // applyToAmount bumps timesRedeemed atomically; if the coupon has expired
+        // or hit max redemptions in the interim, the renewal proceeds at full
+        // price (we DON'T fail the renewal on a stale coupon — the original
+        // sticker price is what's owed). Log + clear the snapshot so a future
+        // tick doesn't keep trying.
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        String couponSnapshot = subscription.getCouponCode();
+        String couponCodeOnInvoice = null;
+        if (couponSnapshot != null && !couponSnapshot.isBlank()) {
+            try {
+                CouponService.CouponApplication applied = couponService.applyToAmount(couponSnapshot, amount);
+                discountAmount = applied.discountAmount();
+                couponCodeOnInvoice = applied.coupon().getCode();
+                log.info("Renewal coupon {} applied to subscription {}: -{}", couponSnapshot, subscription.getId(), discountAmount);
+            } catch (RuntimeException e) {
+                log.warn(
+                    "Renewal coupon {} no longer valid for subscription {} ({}); proceeding at full price and clearing snapshot",
+                    couponSnapshot,
+                    subscription.getId(),
+                    e.getMessage()
+                );
+                subscription.setCouponCode(null);
+                subscriptionRepository.save(subscription);
+            }
+        }
+        BigDecimal taxableSubtotal = amount.subtract(discountAmount);
+
         // P4.1: resolve country VAT/sales-tax via BillingTaxResolver. The lookup uses the
         // tenant's country code at the invoice issue date; both the rate AND the derived
         // amount are persisted on the invoice so a future country-rate change won't
@@ -237,16 +269,18 @@ public class BillingLifecycleService {
         BillingTaxResolver.TaxResult tax = taxResolver.resolve(
             subscription.getTenant().getCountry(),
             subscription.getSubscriptionPlan(),
-            amount,
+            taxableSubtotal,
             issueDate.atZone(java.time.ZoneOffset.UTC).toLocalDate()
         );
-        BigDecimal totalAmount = amount.add(tax.amount());
+        BigDecimal totalAmount = taxableSubtotal.add(tax.amount());
 
         Invoice invoice = new Invoice();
         invoice.setTenant(subscription.getTenant());
         invoice.setSubscription(subscription);
         invoice.setInvoiceNumber(generateInvoiceNumber());
         invoice.setAmount(amount);
+        invoice.setDiscountAmount(discountAmount.signum() > 0 ? discountAmount : null);
+        invoice.setCouponCode(couponCodeOnInvoice);
         invoice.setTaxAmount(tax.amount());
         invoice.setTaxRate(tax.rate());
         invoice.setTotalAmount(totalAmount);
