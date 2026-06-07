@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import com.humano.IntegrationTest;
 import com.humano.domain.shared.User;
 import com.humano.repository.shared.UserRepository;
-import com.humano.service.UserService;
+import com.humano.service.admin.UserAccountService;
 import java.util.Locale;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -36,7 +36,7 @@ class DomainUserDetailsServiceIT {
     private UserRepository userRepository;
 
     @Autowired
-    private UserService userService;
+    private UserAccountService userAccountService;
 
     @Autowired
     @Qualifier("userDetailsService")
@@ -87,9 +87,9 @@ class DomainUserDetailsServiceIT {
 
     @AfterEach
     void cleanup() {
-        userService.deleteUser(USER_ONE_LOGIN);
-        userService.deleteUser(USER_TWO_LOGIN);
-        userService.deleteUser(USER_THREE_LOGIN);
+        userAccountService.deleteUser(USER_ONE_LOGIN);
+        userAccountService.deleteUser(USER_TWO_LOGIN);
+        userAccountService.deleteUser(USER_THREE_LOGIN);
     }
 
     @Test

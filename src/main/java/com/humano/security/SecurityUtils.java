@@ -1,22 +1,21 @@
 package com.humano.security;
 
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Stream;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.stream.Stream;
-
 /**
  * Utility class for Spring Security.
  */
 public final class SecurityUtils {
 
-    private SecurityUtils() {
-    }
+    private SecurityUtils() {}
 
     /**
      * Get the login of the current user.
@@ -26,6 +25,26 @@ public final class SecurityUtils {
     public static Optional<String> getCurrentUserLogin() {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         return Optional.ofNullable(extractPrincipal(securityContext.getAuthentication()));
+    }
+
+    /**
+     * Get the UUID of the current authenticated user.
+     * <p>
+     * Resolved from the {@link AuthenticatedUser} principal that
+     * {@link DomainUserDetailsService} attaches at login — no DB lookup at
+     * read time. Returns empty when the principal is not an
+     * {@code AuthenticatedUser} (anonymous request, system context,
+     * pre-{@code AuthenticatedUser} test fixture).
+     */
+    public static Optional<UUID> getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return Optional.empty();
+        }
+        if (authentication.getPrincipal() instanceof AuthenticatedUser authenticatedUser) {
+            return Optional.ofNullable(authenticatedUser.getId());
+        }
+        return Optional.empty();
     }
 
     private static String extractPrincipal(Authentication authentication) {

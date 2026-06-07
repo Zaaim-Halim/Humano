@@ -1,5 +1,6 @@
 package com.humano.service.payroll;
 
+import com.humano.aop.audit.Auditable;
 import com.humano.domain.enumeration.hr.LeaveStatus;
 import com.humano.domain.enumeration.hr.LeaveType;
 import com.humano.domain.enumeration.payroll.*;
@@ -856,6 +857,7 @@ public class PayrollProcessingService {
      * (POSTED transition). DRAFT/CALCULATED/APPROVED runs leave YTD untouched so a
      * recalculated or rejected run never poisons the year-to-date ledger.
      */
+    @Auditable(action = "PAYROLL_POSTED", targetType = "PayrollRun", targetIdExpression = "#runId")
     public PayrollRunResponse postPayrollRun(UUID runId) {
         log.info("Posting payroll run: {}", runId);
 

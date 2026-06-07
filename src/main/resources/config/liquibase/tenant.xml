@@ -56,6 +56,9 @@
     <!-- Storage module: stored_file metadata + file_blob bytes (DATABASE backend) -->
     <include file="config/liquibase/changelog/tenant/20260603-stored-file-changelog.xml" relativeToChangelogFile="false"/>
 
+    <!-- P6.2 — Append-only audit_event log for sensitive HR/payroll actions -->
+    <include file="config/liquibase/changelog/tenant/20260607-audit-event-changelog.xml" relativeToChangelogFile="false"/>
+
     <!--  will add tenant liquibase changelogs here -->
 
 </databaseChangeLog>

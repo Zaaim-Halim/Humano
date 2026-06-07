@@ -1,8 +1,8 @@
 package com.humano.web.rest;
 
-import com.humano.dto.UserDTO;
+import com.humano.dto.admin.responses.PublicUserResponse;
 import com.humano.security.annotation.RequireAuthenticated;
-import com.humano.service.UserService;
+import com.humano.service.admin.UserAccountService;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -20,6 +20,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
 
+/**
+ * Tenant-wide user directory — any authenticated user in the tenant can
+ * read this. Returns the minimal {@link PublicUserResponse} (id + login)
+ * so picker UIs can render actor identifiers without leaking email or
+ * activation state.
+ */
 @RestController
 @RequestMapping("/api")
 public class PublicUserResource {
@@ -30,27 +36,20 @@ public class PublicUserResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(PublicUserResource.class);
 
-    private final UserService userService;
+    private final UserAccountService userAccountService;
 
-    public PublicUserResource(UserService userService) {
-        this.userService = userService;
+    public PublicUserResource(UserAccountService userAccountService) {
+        this.userAccountService = userAccountService;
     }
 
-    /**
-     * {@code GET /users} : get all users with only public information - calling this method is allowed for anyone.
-     *
-     * @param pageable the pagination information.
-     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body all users.
-     */
     @GetMapping("/users")
     @RequireAuthenticated
-    public ResponseEntity<List<UserDTO>> getAllPublicUsers(@org.springdoc.core.annotations.ParameterObject Pageable pageable) {
+    public ResponseEntity<List<PublicUserResponse>> getAllPublicUsers(@org.springdoc.core.annotations.ParameterObject Pageable pageable) {
         LOG.debug("REST request to get all public User names");
         if (!onlyContainsAllowedProperties(pageable)) {
             return ResponseEntity.badRequest().build();
         }
-
-        final Page<UserDTO> page = userService.getAllPublicUsers(pageable);
+        Page<PublicUserResponse> page = userAccountService.getPublicDirectory(pageable).map(PublicUserResponse::fromUser);
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return new ResponseEntity<>(page.getContent(), headers, HttpStatus.OK);
     }

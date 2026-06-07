@@ -67,7 +67,8 @@ public class MultiTenantJpaConfig {
             "com.humano.domain.shared", // User, Authority
             "com.humano.domain.hr", // HR entities
             "com.humano.domain.payroll", // Payroll entities
-            "com.humano.domain.storage" // StoredFile metadata + FileBlob bytes (DATABASE backend)
+            "com.humano.domain.storage", // StoredFile metadata + FileBlob bytes (DATABASE backend)
+            "com.humano.domain.audit" // P6.2 — AuditEvent (append-only)
         );
         em.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         em.setPersistenceUnitName("tenant");
@@ -143,7 +144,11 @@ class MasterRepositoryConfig {}
 @Configuration
 @EnableJpaRepositories(
     basePackages = {
-        "com.humano.repository.hr", "com.humano.repository.payroll", "com.humano.repository.shared", "com.humano.repository.storage", // StoredFileRepository, FileBlobRepository (tenant DB)
+        "com.humano.repository.hr",
+        "com.humano.repository.payroll",
+        "com.humano.repository.shared",
+        "com.humano.repository.storage", // StoredFileRepository, FileBlobRepository (tenant DB)
+        "com.humano.repository.audit", // P6.2 — AuditEventRepository (tenant DB)
     },
     entityManagerFactoryRef = "tenantEntityManagerFactory",
     transactionManagerRef = "tenantTransactionManager"

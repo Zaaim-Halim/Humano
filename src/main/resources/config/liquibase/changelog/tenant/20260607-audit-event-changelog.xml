@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- P6.2 — Per-tenant audit_event log for sensitive HR/payroll actions.
+
+         Append-only by design: enforced at the ORM layer via @Immutable
+         on com.humano.domain.audit.AuditEvent and at the DB layer via
+         MySQL/MariaDB triggers that SIGNAL on any UPDATE/DELETE attempt.
+         H2 dev/test boots do NOT carry the DB-level guard — the ORM layer
+         is the only protection there; treat H2 audit data as advisory.
+
+         actor_user_id holds the principal's UUID resolved from the
+         AuthenticatedUser principal that DomainUserDetailsService attaches
+         at login — no DB lookup at write time. Not declared as a FK to
+         app_user(id): the audit row must outlive the actor's row (a user
+         can be hard-deleted while their audit history remains intact),
+         and a missing-user failure must never roll back the audited action.
+
+         payload_json carries before/after snapshots, target attributes,
+         decision metadata — anything the caller wants to attach. Stored
+         as JSON via the existing ${jsonType} property + Hibernate's
+         @JdbcTypeCode(SqlTypes.JSON) on the entity. -->
+    <changeSet id="audit-001-audit-event" author="halimzaaim">
+        <createTable tableName="audit_event">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_audit_event"/>
+            </column>
+            <column name="actor_user_id" type="${uuidType}"/>
+            <column name="action" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="target_type" type="VARCHAR(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="target_id" type="VARCHAR(128)"/>
+            <column name="payload_json" type="${jsonType}"/>
+            <column name="occurred_at" type="${datetimeType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ip" type="VARCHAR(45)"/>
+            <column name="user_agent" type="VARCHAR(512)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="audit-002-audit-event-indexes" author="halimzaaim">
+        <createIndex tableName="audit_event" indexName="idx_audit_event_target">
+            <column name="target_type"/>
+            <column name="target_id"/>
+        </createIndex>
+        <createIndex tableName="audit_event" indexName="idx_audit_event_action_time">
+            <column name="action"/>
+            <column name="occurred_at"/>
+        </createIndex>
+        <createIndex tableName="audit_event" indexName="idx_audit_event_actor">
+            <column name="actor_user_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- DB-level append-only enforcement. Scoped to MySQL/MariaDB because H2 has no
+         SIGNAL SQLSTATE and would reject the syntax. On H2 (dev/test) the only guard
+         is @Immutable at the ORM layer, which prevents UPDATE but not DELETE. -->
+    <changeSet id="audit-003-audit-event-immutable-trigger" author="halimzaaim" dbms="mysql,mariadb">
+        <sql endDelimiter="//">
+            CREATE TRIGGER audit_event_no_update BEFORE UPDATE ON audit_event
+            FOR EACH ROW
+            BEGIN
+                SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'audit_event is append-only';
+            END//
+            CREATE TRIGGER audit_event_no_delete BEFORE DELETE ON audit_event
+            FOR EACH ROW
+            BEGIN
+                SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'audit_event is append-only';
+            END//
+        </sql>
+        <rollback>
+            <sql>DROP TRIGGER IF EXISTS audit_event_no_update;</sql>
+            <sql>DROP TRIGGER IF EXISTS audit_event_no_delete;</sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

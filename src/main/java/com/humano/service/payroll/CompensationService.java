@@ -14,12 +14,14 @@ import com.humano.repository.payroll.CompensationRepository;
 import com.humano.repository.payroll.CurrencyRepository;
 import com.humano.repository.payroll.specification.CompensationSpecification;
 import com.humano.repository.shared.EmployeeRepository;
+import com.humano.service.audit.AuditEventService;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.LinkedHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -42,17 +44,20 @@ public class CompensationService {
     private final EmployeeRepository employeeRepository;
     private final PositionRepository positionRepository;
     private final CurrencyRepository currencyRepository;
+    private final AuditEventService auditEventService;
 
     public CompensationService(
         CompensationRepository compensationRepository,
         EmployeeRepository employeeRepository,
         PositionRepository positionRepository,
-        CurrencyRepository currencyRepository
+        CurrencyRepository currencyRepository,
+        AuditEventService auditEventService
     ) {
         this.compensationRepository = compensationRepository;
         this.employeeRepository = employeeRepository;
         this.positionRepository = positionRepository;
         this.currencyRepository = currencyRepository;
+        this.auditEventService = auditEventService;
     }
 
     /**
@@ -138,8 +143,23 @@ public class CompensationService {
         );
         newCompensation.setEffectiveFrom(request.effectiveFrom());
 
+        BigDecimal previousAmount = currentCompensation.getBaseAmount();
         newCompensation = compensationRepository.save(newCompensation);
-        log.info("Adjusted salary for employee {} from {} to {}", request.employeeId(), currentCompensation.getBaseAmount(), newAmount);
+        log.info("Adjusted salary for employee {} from {} to {}", request.employeeId(), previousAmount, newAmount);
+
+        // P6.2 — explicit audit with before/after, since the aspect only sees
+        // the after-state. Joins this @Transactional boundary; a rollback of
+        // the salary change rolls back the audit row.
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("before", previousAmount);
+        payload.put("after", newAmount);
+        payload.put("currency", newCompensation.getCurrency().getCode());
+        payload.put("employeeId", request.employeeId().toString());
+        payload.put("effectiveFrom", request.effectiveFrom().toString());
+        if (request.adjustmentPercentage() != null) {
+            payload.put("adjustmentPercentage", request.adjustmentPercentage());
+        }
+        auditEventService.record("COMPENSATION_ADJUSTED", "Compensation", newCompensation.getId().toString(), payload);
 
         return toResponse(newCompensation);
     }
