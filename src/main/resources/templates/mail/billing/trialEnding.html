@@ -1,0 +1,19 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}" lang="en">
+  <head>
+    <title th:text="#{email.billing.trial-ending.title}">Trial ending soon</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  </head>
+  <body>
+    <p th:text="#{email.billing.trial-ending.greeting(${tenantName})}">Hi,</p>
+    <p th:text="#{email.billing.trial-ending.body(${daysRemaining}, ${trialEndsAt})}">Your trial ends in N days.</p>
+    <p>
+      <a th:with="url=(@{|${baseUrl}/billing/plans|})" th:href="${url}" th:text="${url}">Choose a plan</a>
+    </p>
+    <p>
+      <span th:text="#{email.billing.text2}">Regards,</span>
+      <br />
+      <em th:text="#{email.signature}">Humano Team.</em>
+    </p>
+  </body>
+</html>

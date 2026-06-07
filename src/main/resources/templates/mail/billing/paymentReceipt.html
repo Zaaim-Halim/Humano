@@ -1,0 +1,30 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}" lang="en">
+  <head>
+    <title th:text="#{email.billing.payment-receipt.title}">Payment receipt</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  </head>
+  <body>
+    <p th:text="#{email.billing.payment-receipt.greeting(${tenantName})}">Hi,</p>
+    <p th:text="#{email.billing.payment-receipt.body}">Thanks — your payment cleared:</p>
+    <ul>
+      <li>
+        <strong th:text="#{email.billing.payment-receipt.invoice}">Invoice:</strong>
+        <span th:text="${invoiceNumber}">INV-...</span>
+      </li>
+      <li>
+        <strong th:text="#{email.billing.payment-receipt.amount}">Amount:</strong>
+        <span th:text="${amount} + ' ' + ${currency}">100.00 EUR</span>
+      </li>
+      <li th:if="${externalPaymentId != null}">
+        <strong th:text="#{email.billing.payment-receipt.reference}">Reference:</strong>
+        <span th:text="${externalPaymentId}">pi_...</span>
+      </li>
+    </ul>
+    <p>
+      <span th:text="#{email.billing.text2}">Regards,</span>
+      <br />
+      <em th:text="#{email.signature}">Humano Team.</em>
+    </p>
+  </body>
+</html>

@@ -45,17 +45,23 @@ public class BillingLifecycleService {
     private final InvoiceRepository invoiceRepository;
     private final TenantRepository tenantRepository;
     private final BillingTaxResolver taxResolver;
+    private final BillingMailService billingMailService;
+    private final TenantAdminEmailResolver adminEmailResolver;
 
     public BillingLifecycleService(
         SubscriptionRepository subscriptionRepository,
         InvoiceRepository invoiceRepository,
         TenantRepository tenantRepository,
-        BillingTaxResolver taxResolver
+        BillingTaxResolver taxResolver,
+        BillingMailService billingMailService,
+        TenantAdminEmailResolver adminEmailResolver
     ) {
         this.subscriptionRepository = subscriptionRepository;
         this.invoiceRepository = invoiceRepository;
         this.tenantRepository = tenantRepository;
         this.taxResolver = taxResolver;
+        this.billingMailService = billingMailService;
+        this.adminEmailResolver = adminEmailResolver;
     }
 
     // ========== SCHEDULED TASKS ==========
@@ -211,7 +217,10 @@ public class BillingLifecycleService {
         Invoice invoice = generateRenewalInvoice(subscription);
         log.info("Generated renewal invoice {} for subscription: {}", invoice.getInvoiceNumber(), subscription.getId());
 
-        // Send renewal notification
+        // P4.3 — Two emails for one event by design: the invoice-issued copy gives the tenant
+        // payment-ready details (number, due date, link to pay); the subscription-renewed copy
+        // confirms the renewal status. Both go to the same admin email.
+        sendInvoiceIssuedNotification(invoice);
         sendRenewalNotification(subscription, invoice);
     }
 
@@ -373,36 +382,119 @@ public class BillingLifecycleService {
         return String.format("INV-%d-%05d", Instant.now().getEpochSecond() / 86400, counter % 100000);
     }
 
-    // ========== NOTIFICATION STUBS ==========
-    // These would integrate with MailService or a notification system
+    // ========== NOTIFICATION HOOKS (P4.3) ==========
+    // Each method resolves the tenant admin email via TenantAdminEmailResolver and
+    // dispatches via BillingMailService. MailService.sendEmail is @Async so these
+    // calls do not block the surrounding scheduled job or transaction.
 
     private void sendRenewalNotification(Subscription subscription, Invoice invoice) {
         log.debug("Sending renewal notification for subscription: {}", subscription.getId());
-        // TODO: Implement email notification
+        resolveEmail(subscription.getTenant()).ifPresent(email ->
+            billingMailService.sendSubscriptionRenewed(
+                email,
+                subscription.getTenant().getName(),
+                planLabel(subscription),
+                subscription.getCurrentPeriodEnd(),
+                invoice.getTotalAmount(),
+                invoiceCurrency(invoice)
+            )
+        );
     }
 
     private void sendTrialExpiryWarning(Subscription subscription) {
         log.debug("Sending trial expiry warning for subscription: {}", subscription.getId());
-        // TODO: Implement email notification
+        Instant trialEnd = subscription.getTrialEnd();
+        if (trialEnd == null) return;
+        long daysRemaining = Math.max(0, ChronoUnit.DAYS.between(Instant.now(), trialEnd));
+        resolveEmail(subscription.getTenant()).ifPresent(email ->
+            billingMailService.sendTrialEnding(email, subscription.getTenant().getName(), trialEnd, daysRemaining)
+        );
     }
 
     private void sendTrialExpiredNotification(Subscription subscription) {
         log.debug("Sending trial expired notification for subscription: {}", subscription.getId());
-        // TODO: Implement email notification
+        // Reuse the trial-ending template with daysRemaining=0; the wording in the
+        // template covers both "ends soon" and "ended" cases via the formatted date.
+        Instant trialEnd = subscription.getTrialEnd();
+        resolveEmail(subscription.getTenant()).ifPresent(email ->
+            billingMailService.sendTrialEnding(email, subscription.getTenant().getName(), trialEnd, 0L)
+        );
     }
 
     private void sendPaymentReminder(Invoice invoice) {
         log.debug("Sending payment reminder for invoice: {}", invoice.getId());
-        // TODO: Implement email notification
+        resolveEmail(invoice.getTenant()).ifPresent(email ->
+            billingMailService.sendInvoiceIssued(
+                email,
+                invoice.getTenant().getName(),
+                invoice.getInvoiceNumber(),
+                invoice.getTotalAmount(),
+                invoiceCurrency(invoice),
+                invoice.getDueDate()
+            )
+        );
     }
 
     private void sendSuspensionNotification(Tenant tenant, Subscription subscription) {
         log.debug("Sending suspension notification for tenant: {}", tenant.getId());
-        // TODO: Implement email notification
+        // No bespoke "suspended" template in v1 — re-use the cancellation shape with
+        // an "effective now" date. Distinct templates can land when the user-facing
+        // copy diverges; for now, sharing keeps the surface small.
+        resolveEmail(tenant).ifPresent(email ->
+            billingMailService.sendSubscriptionCancelled(email, tenant.getName(), planLabel(subscription), Instant.now())
+        );
     }
 
     private void sendCancellationConfirmation(Subscription subscription) {
         log.debug("Sending cancellation confirmation for subscription: {}", subscription.getId());
-        // TODO: Implement email notification
+        resolveEmail(subscription.getTenant()).ifPresent(email ->
+            billingMailService.sendSubscriptionCancelled(
+                email,
+                subscription.getTenant().getName(),
+                planLabel(subscription),
+                subscription.getCurrentPeriodEnd() != null ? subscription.getCurrentPeriodEnd() : Instant.now()
+            )
+        );
+    }
+
+    /** Sends the invoice-issued email triggered by renewal-invoice creation. */
+    void sendInvoiceIssuedNotification(Invoice invoice) {
+        resolveEmail(invoice.getTenant()).ifPresent(email ->
+            billingMailService.sendInvoiceIssued(
+                email,
+                invoice.getTenant().getName(),
+                invoice.getInvoiceNumber(),
+                invoice.getTotalAmount(),
+                invoiceCurrency(invoice),
+                invoice.getDueDate()
+            )
+        );
+    }
+
+    private java.util.Optional<String> resolveEmail(Tenant tenant) {
+        if (tenant == null || tenant.getSubdomain() == null) {
+            return java.util.Optional.empty();
+        }
+        java.util.Optional<String> resolved = adminEmailResolver.resolveBillingContact(tenant.getSubdomain());
+        if (resolved.isEmpty()) {
+            log.warn(
+                "No billing contact resolved for tenant '{}' (subdomain '{}') — email skipped",
+                tenant.getName(),
+                tenant.getSubdomain()
+            );
+        }
+        return resolved;
+    }
+
+    private static String planLabel(Subscription subscription) {
+        if (subscription == null || subscription.getSubscriptionPlan() == null) {
+            return "—";
+        }
+        var plan = subscription.getSubscriptionPlan();
+        return plan.getDisplayName() != null ? plan.getDisplayName() : plan.getSubscriptionType().name();
+    }
+
+    private static String invoiceCurrency(Invoice invoice) {
+        return invoice.getCurrency() != null ? invoice.getCurrency() : "USD";
     }
 }

@@ -36,4 +36,16 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findOneWithAuthoritiesByEmailIgnoreCase(String email);
 
     Page<User> findAllByIdNotNullAndActivatedIsTrue(Pageable pageable);
+
+    /**
+     * P4.3 — Lookup the first activated user holding the named authority, ordered
+     * by creation date. Used to resolve the tenant's primary contact email for
+     * billing notifications, where the principal is "whoever was seeded as the
+     * admin during onboarding" (P1.5). Returns {@code Optional.empty()} for
+     * tenants where no admin row exists (provisioning crashed mid-flow, etc.).
+     */
+    @Query(
+        "SELECT u FROM User u JOIN u.authorities a WHERE a.name = :authority " + "AND u.activated = true ORDER BY u.audit.createdDate ASC"
+    )
+    List<User> findActivatedByAuthority(@Param("authority") String authority);
 }

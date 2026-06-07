@@ -1,0 +1,20 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}" lang="en">
+  <head>
+    <title th:text="#{email.billing.welcome.title}">Welcome to Humano</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  </head>
+  <body>
+    <p th:text="#{email.billing.welcome.greeting(${firstName})}">Hi,</p>
+    <p th:text="#{email.billing.welcome.body(${tenantName})}">Your workspace is ready.</p>
+    <p th:if="${trial}" th:text="#{email.billing.welcome.trial}">You're on a free trial.</p>
+    <p>
+      <a th:with="url=(@{|${baseUrl}/login|})" th:href="${url}" th:text="${url}">Sign in</a>
+    </p>
+    <p>
+      <span th:text="#{email.billing.welcome.text2}">Regards,</span>
+      <br />
+      <em th:text="#{email.signature}">Humano Team.</em>
+    </p>
+  </body>
+</html>

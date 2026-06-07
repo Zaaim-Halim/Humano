@@ -1,0 +1,33 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}" lang="en">
+  <head>
+    <title th:text="#{email.billing.payment-failed.title}">Payment failed</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  </head>
+  <body>
+    <p th:text="#{email.billing.payment-failed.greeting(${tenantName})}">Hi,</p>
+    <p th:text="#{email.billing.payment-failed.body}">A payment could not be completed:</p>
+    <ul>
+      <li>
+        <strong th:text="#{email.billing.payment-failed.invoice}">Invoice:</strong>
+        <span th:text="${invoiceNumber}">INV-...</span>
+      </li>
+      <li>
+        <strong th:text="#{email.billing.payment-failed.amount}">Amount:</strong>
+        <span th:text="${amount} + ' ' + ${currency}">100.00 EUR</span>
+      </li>
+      <li>
+        <strong th:text="#{email.billing.payment-failed.reason}">Reason:</strong>
+        <span th:text="${failureReason}">Insufficient funds</span>
+      </li>
+    </ul>
+    <p>
+      <a th:with="url=(@{|${baseUrl}/billing/payment-methods|})" th:href="${url}" th:text="${url}">Update payment method</a>
+    </p>
+    <p>
+      <span th:text="#{email.billing.text2}">Regards,</span>
+      <br />
+      <em th:text="#{email.signature}">Humano Team.</em>
+    </p>
+  </body>
+</html>

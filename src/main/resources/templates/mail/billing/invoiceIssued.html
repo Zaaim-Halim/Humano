@@ -1,0 +1,35 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}" lang="en">
+  <head>
+    <title th:text="#{email.billing.invoice-issued.title}">New invoice from Humano</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  </head>
+  <body>
+    <p th:text="#{email.billing.invoice-issued.greeting(${tenantName})}">Hi,</p>
+    <p>
+      <span th:text="#{email.billing.invoice-issued.body}">A new invoice has been issued:</span>
+    </p>
+    <ul>
+      <li>
+        <strong th:text="#{email.billing.invoice-issued.number}">Invoice number:</strong>
+        <span th:text="${invoiceNumber}">INV-...</span>
+      </li>
+      <li>
+        <strong th:text="#{email.billing.invoice-issued.total}">Total:</strong>
+        <span th:text="${totalAmount} + ' ' + ${currency}">100.00 EUR</span>
+      </li>
+      <li>
+        <strong th:text="#{email.billing.invoice-issued.due}">Due:</strong>
+        <span th:text="${dueDate}">2026-06-30</span>
+      </li>
+    </ul>
+    <p>
+      <a th:with="url=(@{|${baseUrl}/billing/invoices|})" th:href="${url}" th:text="${url}">View invoice</a>
+    </p>
+    <p>
+      <span th:text="#{email.billing.text2}">Regards,</span>
+      <br />
+      <em th:text="#{email.signature}">Humano Team.</em>
+    </p>
+  </body>
+</html>

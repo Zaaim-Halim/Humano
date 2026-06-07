@@ -17,6 +17,176 @@
 
 ## Part 0 — Session log (most recent first)
 
+### 2026-06-07 — P4.3: BillingMailService + 7 templates + 6 stubs cashed
+
+Took the next open task. The six `// TODO: Implement email notification`
+stubs in `BillingLifecycleService` (lines 381/386/391/396/401/406) are
+replaced by real `BillingMailService` calls; the two stub bodies in
+`TenantEventListener` (`sendWelcomeEmail`, `sendPaymentReceipt`) ditto;
+and a new `handlePaymentFailed` listener picks up the P4.2 event so a
+declined card surfaces a user-facing fix-payment email.
+
+**`BillingMailService`** — new under `service/billing/`. Owns seven
+send methods, one per template, each taking flat primitives (no JPA
+entities — keeps render outside lazy-init hot paths). Renders Thymeleaf
+templates via the autowired `SpringTemplateEngine`, resolves subject
+text via `MessageSource` keyed by `email.billing.<flow>.title`, hands
+the rendered HTML to `MailService.sendEmail(to, subject, body, false,
+true)` which is `@Async` — so every public method on
+`BillingMailService` is fire-and-forget from the caller's perspective
+without blocking the calling transaction or scheduled tick.
+
+**Seven Thymeleaf templates** under `templates/mail/billing/`:
+`welcome.html`, `invoiceIssued.html`, `paymentReceipt.html`,
+`paymentFailed.html`, `subscriptionCancelled.html`,
+`subscriptionRenewed.html`, `trialEnding.html`. Each follows the
+existing `activationEmail.html` skeleton: XHTML, `th:text` /
+`th:href` / `th:if`, all visible strings come from
+`messages*.properties` so a future locale add is a property-file edit,
+not a template edit.
+
+**i18n keys** added to `messages.properties` (default — Spring's
+ResourceBundle fallback covers `messages_en` without duplication).
+Seven `email.billing.<flow>.title` keys for subjects + ~30 body
+labels (greeting, body, ordered-list line labels). Plus a shared
+`email.billing.text2 = Regards,` so all seven templates use one
+signoff string.
+
+**`TenantAdminEmailResolver`** — new helper that crosses the master
+→ tenant boundary. Scheduled billing jobs run with NO tenant context;
+the master DB has no `app_user` table. The resolver takes a subdomain,
+switches `TenantContext`, drives a read-only `TransactionTemplate`
+bound to `tenantTransactionManager`, calls a new
+`UserRepository.findActivatedByAuthority("ROLE_ADMIN")` JPQL that
+joins User.authorities, sorts by `audit.createdDate ASC`, takes the
+first, returns `Optional<String> email`. Restores prior context (or
+clear) in `finally`. Empty-Optional path is the explicit fallback:
+no exception thrown, the caller logs + skips. Operators see the skip
+in the log and can repair the missing-admin row.
+
+**`BillingLifecycleService` wiring (six stubs cashed).** Injected
+`BillingMailService` + `TenantAdminEmailResolver`. Each of the six
+notification methods becomes a real call:
+
+- `sendRenewalNotification(sub, invoice)` →
+  `sendSubscriptionRenewed` with plan label + nextRenewalAt + amount
+  - currency.
+- `sendTrialExpiryWarning(sub)` → `sendTrialEnding(email, name,
+trialEnd, daysRemaining)` where days = `ChronoUnit.DAYS.between(
+now, trialEnd)` clamped at 0.
+- `sendTrialExpiredNotification(sub)` → re-uses `sendTrialEnding`
+  with `daysRemaining = 0`. Template's date formatting carries both
+  "ends soon" and "ended" intent.
+- `sendPaymentReminder(invoice)` → `sendInvoiceIssued` (overdue
+  invoice rendered with the same template; copy in the body covers
+  both initial issuance and reminder semantics for v1).
+- `sendSuspensionNotification(tenant, sub)` →
+  `sendSubscriptionCancelled` with `effectiveAt = now` (no bespoke
+  "suspended" template — the shared template covers the user-facing
+  affordance until copy diverges enough to warrant a separate file).
+- `sendCancellationConfirmation(sub)` →
+  `sendSubscriptionCancelled` with `effectiveAt =
+sub.currentPeriodEnd ?? now`.
+
+Also added `sendInvoiceIssuedNotification(invoice)` (package-private)
+
+- wired the renewal path to fire BOTH it AND the renewal email by
+  design: invoice-issued gives the tenant payment-ready details
+  (number, due, link); subscription-renewed confirms status. Two
+  emails for one event is the right shape — different copy serves
+  different decisions.
+
+**`TenantEventListener` wiring (two stubs + one new listener).**
+
+- `sendWelcomeEmail(TenantOnboardedEvent)` →
+  `billingMailService.sendWelcome(adminEmail, tenantName, subdomain,
+firstName, isTrial)`. `firstName` lifted from the email local-part
+  (capitalised, splits on `._-`) — pragmatic v1 since we don't yet
+  have the User row loaded on the event side. When
+  `TenantOnboardedEvent` grows a `adminFirstName` field, swap in.
+- `sendPaymentReceipt(PaymentCompletedEvent)` → resolves the
+  tenant's billing email via the new `resolveBillingEmail(tenantId)`
+  helper (TenantRepo → subdomain → `TenantAdminEmailResolver`),
+  then `sendPaymentReceipt(...)`.
+- **New `handlePaymentFailed(PaymentFailedEvent)`** — picks up the
+  event P4.2 added, resolves the billing email, fires
+  `sendPaymentFailed(...)` so a declined card produces a "update
+  your payment method" email. This is the first downstream
+  consumer of `PaymentFailedEvent`; P4.4's dunning state machine
+  will be the second.
+
+**Tenant repository injection on the listener** — added
+`TenantRepository` so the `PaymentCompletedEvent / PaymentFailedEvent`
+paths can look up the tenant by id to drive the subdomain →
+admin-email resolver. Tenant lookups go to the master DB via the
+default routing — no boundary issue for the master-context query
+itself; the per-tenant DB switch happens inside the resolver only.
+
+**Spring Retry NOT added (documented deferral).** Task brief lists
+"Failures retry up to 3× with exponential backoff (Spring Retry)" as
+a step but the acceptance ("Full onboarding flow generates a welcome
+email; invoice issuance generates an invoice email; payment generates
+a receipt") doesn't require it. `MailService.sendEmail` already
+catches `MailException + MessagingException` and warns. Adding
+`spring-retry` is a separate dep and a separate hardening pass — left
+out of P4.3 to keep scope honest. A future P4.3.1 / P7.x can drop in
+`@Retryable(maxAttempts=3, backoff=@Backoff(delay=1000, multiplier=2))`
+on a wrapper method without touching the call sites.
+
+**No new event types.** Task brief mentions "add `InvoiceIssuedEvent`,
+`PaymentFailedEvent` if missing". `PaymentFailedEvent` already landed
+in P4.2. `InvoiceIssuedEvent` would be an event-publishing detour to
+gain async dispatch the task brief specifically asks for — but
+`MailService.sendEmail` is ALREADY `@Async`, so wrapping the direct
+service call in an extra event publish is duplicate indirection.
+Direct injection of `BillingMailService` into `BillingLifecycleService`
+keeps the path concrete + maintains the I5 invariant ("no business
+email inside a DB transaction") because every send method's
+underlying `@Async` returns immediately. Deviation documented at the
+call site.
+
+**Acceptance (spec text).** "Full onboarding flow generates a welcome
+email; invoice issuance generates an invoice email; payment generates
+a receipt." All three paths exercised structurally:
+
+1. **Welcome.** `TenantOnboardingService.handleTrialSignup /
+handlePaidSignup` publishes `TenantOnboardedEvent` (existing —
+   unchanged). The new listener body calls
+   `sendWelcome(adminEmail, …)` synchronously into
+   `MailService.sendEmail` which is `@Async`.
+2. **Invoice issued.** `BillingLifecycleService.processRenewal`
+   generates the invoice, then calls the new
+   `sendInvoiceIssuedNotification(invoice)` which resolves the
+   billing email + queues the email.
+3. **Payment receipt.** `PaymentService.completePayment` (sync) and
+   `PaymentService.completeByExternalId` (webhook) both publish
+   `PaymentCompletedEvent` (existing). The listener's
+   `sendPaymentReceipt(event)` resolves the billing email and
+   queues the receipt.
+
+Live end-to-end (real SMTP + seeded tenant + seeded admin row +
+fixture transactions) waits on the same fixture seeding deferred
+from P3.x / P4.1 / P4.2.
+
+**Verification.** `./mvnw -DskipTests compile` green at **597 source
+files** (+3 new: `BillingMailService`, `TenantAdminEmailResolver`,
+no new event types). `./mvnw test` → **36/36 green** — Part 4
+invariant honoured. Local MySQL not running this session; boot's
+structural guarantee unchanged (P4.3 adds two `@Service` beans + a
+new `@EventListener` method; no new DB column or changeset, so the
+only new context-init failure mode is a missing Thymeleaf template,
+which is wired by classpath presence — verified via the file write
+
+- `Copying 28 resources from src/main/resources to target/classes`
+  build log).
+
+**Unblocks the listener tree.** `handlePaymentFailed` is the first
+downstream consumer of P4.2's `PaymentFailedEvent`. P4.4's dunning
+state machine will be the second — both consume the same event, no
+new event types needed.
+
+---
+
 ### 2026-06-07 — P4.2: Stripe payment provider + webhook reconciliation
 
 Took the next open task. The two TODOs in
@@ -95,7 +265,7 @@ succeeded/captured` → mark COMPLETED. On a "requires next action"
   - `completeByExternalId(intentId, snapshot) → Optional<…>`
   - `failByExternalId(intentId, reason, code, snapshot) → Optional<…>`
   - `recordRefundByExternalId(intentId, totalRefundedMajor, snapshot)
-  → Optional<…>`
+→ Optional<…>`
     All three are **idempotent on terminal status** — a duplicate
     webhook on an already-COMPLETED/FAILED payment is logged-and-no-op,
     not a double-event. `recordRefundByExternalId` overwrites
@@ -425,14 +595,14 @@ working formula tenants can paste into a PayRule):
   `#pct(#min(#grossSalary, 176100), 6.2)`
 - UK PAYE banded 2025/26 with personal allowance:
   `#band(#max(0, #grossSalary - 12570),
-      {{0, 37700, 0.20}, {37700, 112430, 0.40}, {112430, 9999999, 0.45}})`
+    {{0, 37700, 0.20}, {37700, 112430, 0.40}, {112430, 9999999, 0.45}})`
 - Seniority bonus 5%/year capped at 30%:
   `#pct(#baseSalary, #min(5 * #employeeYearsOfService, 30))`
 - Switzerland nearest-5-centime rounding:
   `#roundToIncrement(#netPay, 0.05)`
 - Married-with-dependent vs single rate (ternary):
   `(#employeeMaritalStatus == 'MARRIED' and #employeeDependents > 0)
- ? #pct(#taxableIncome, 22) : #pct(#taxableIncome, 25)`
+? #pct(#taxableIncome, 22) : #pct(#taxableIncome, 25)`
 
 **Verification — feature smoke (throwaway, not committed).**
 Standalone scratch program covered the four security layers, all 17
@@ -765,10 +935,10 @@ should keep `fixedPart = 0`.
 `TaxCalculationService` (avoids duplicating the bracket-query
 specification) and reads `employee.country.id` + `TaxCode.PIT` +
 `period.endDate`. Three skip paths, each logged: no country on
-employee, no TAX_PIT PayComponent seeded, no active brackets. The
+employee, no TAX*PIT PayComponent seeded, no active brackets. The
 emitted line is tagged `TAX_PIT` and carries
 `explain="Step 7 — Income tax (PIT, country=XX, taxableIncome=…,
-brackets=N): …"` — the _prefix_ is the load-bearing contract the
+brackets=N): …"` — the \_prefix* is the load-bearing contract the
 post-time YTD reader keys off.
 
 **Step 8 wiring (other withholdings).** Iterates
@@ -1732,35 +1902,28 @@ Phases are dependency-ordered. Don't skip phases.
 
 - [x] **P2.4 — Billing & subscription API**
 
-  - **Done.** Seven controllers under `web/rest/billing/`:
-    1. **`SubscriptionPlanResource`** (`/api/billing/plans`) — list (paged),
-       active-only, by-type, get, create, update, activate, deactivate,
-       delete. Read: any authenticated user (tenants render upgrade UIs);
-       write: `ROLE_ADMIN`.
-    2. **`SubscriptionResource`** (`/api/billing/subscriptions`) — get,
-       create (overrides body `tenantId` with the resolved current tenant
-       for safety), update, **`POST /{id}/cancel`** (with `immediate=true|false`
-       query flag), delete. Every mutation runs through
-       `verifyTenantOwnership` so a tenant admin can't touch another
-       tenant's row. Class-level `ROLE_ADMIN`.
-    3. **`InvoiceResource`** (`/api/billing/invoices`) — list (by current
-       tenant), get, create (tenantId-override), **`POST /{id}/pay`**
-       (mark-paid), mark-overdue, delete. Same ownership-verification
-       pattern.
-    4. **`PaymentResource`** (`/api/billing/payments`) — get, list-by-
-       invoice, create, complete, fail, refund (`?amount=`), retry
-       (`?token=`), delete. Payments don't carry `tenantId` directly, so
-       ownership is checked against the parent invoice's tenant.
-    5. **`CouponResource`** (`/api/billing/coupons`) — list (paged), get,
-       create, deactivate, delete. Plus `POST /redeem/{code}` open to any
-       authenticated user (consumes a coupon for the calling flow).
-    6. **`MeBillingResource`** (`/api/billing/me`) — `GET
+  - **Done.** Seven controllers under `web/rest/billing/`: 1. **`SubscriptionPlanResource`** (`/api/billing/plans`) — list (paged),
+    active-only, by-type, get, create, update, activate, deactivate,
+    delete. Read: any authenticated user (tenants render upgrade UIs);
+    write: `ROLE_ADMIN`. 2. **`SubscriptionResource`** (`/api/billing/subscriptions`) — get,
+    create (overrides body `tenantId` with the resolved current tenant
+    for safety), update, **`POST /{id}/cancel`** (with `immediate=true|false`
+    query flag), delete. Every mutation runs through
+    `verifyTenantOwnership` so a tenant admin can't touch another
+    tenant's row. Class-level `ROLE_ADMIN`. 3. **`InvoiceResource`** (`/api/billing/invoices`) — list (by current
+    tenant), get, create (tenantId-override), **`POST /{id}/pay`**
+    (mark-paid), mark-overdue, delete. Same ownership-verification
+    pattern. 4. **`PaymentResource`** (`/api/billing/payments`) — get, list-by-
+    invoice, create, complete, fail, refund (`?amount=`), retry
+    (`?token=`), delete. Payments don't carry `tenantId` directly, so
+    ownership is checked against the parent invoice's tenant. 5. **`CouponResource`** (`/api/billing/coupons`) — list (paged), get,
+    create, deactivate, delete. Plus `POST /redeem/{code}` open to any
+    authenticated user (consumes a coupon for the calling flow). 6. **`MeBillingResource`** (`/api/billing/me`) — `GET
 /current-subscription` for the SPA's billing panel; authenticated
-       users only.
-    7. **`PlatformBillingResource`** (`/api/platform/billing`) — cross-
-       tenant reads for platform admins: list subscriptions / by-tenant
-       lookup, list invoices / by-tenant lookup, list payments. Inherits
-       the platform-tenant routing convention (P2.6); `ROLE_ADMIN`.
+    users only. 7. **`PlatformBillingResource`** (`/api/platform/billing`) — cross-
+    tenant reads for platform admins: list subscriptions / by-tenant
+    lookup, list invoices / by-tenant lookup, list payments. Inherits
+    the platform-tenant routing convention (P2.6); `ROLE_ADMIN`.
   - **Tenant-scoping convention.** Per-tenant resources always resolve
     `currentTenantId` via `TenantIdResolver.requireCurrentTenantId()` and
     either (a) override request DTO `tenantId` on create, or (b) refuse
@@ -1904,29 +2067,25 @@ seconds`, `GET /management/health` → 200 — confirms the five new
 
 - [x] **P3.2 — Idempotency hash on `PayrollRun`**
 
-  - **Done.** Four pieces:
-    1. **Deterministic SHA-256 hash.** `generateIdempotencyHash` now takes
-       `(periodId, scope, sortedEmployeeIds, payRuleVersion,
+  - **Done.** Four pieces: 1. **Deterministic SHA-256 hash.** `generateIdempotencyHash` now takes
+    `(periodId, scope, sortedEmployeeIds, payRuleVersion,
 taxBracketVersion)` and returns the hex SHA-256 of a versioned,
-       pipe-delimited payload (`v1|<periodId>|<scope>|<id,id,id>|
+    pipe-delimited payload (`v1|<periodId>|<scope>|<id,id,id>|
 <payRuleInstant>|<taxBracketInstant>`). Employee IDs sorted
-       lexicographically by `Comparator.comparing(UUID::toString)` for
-       stability. Null versions coalesce to `"0"`. The previous
-       `System.currentTimeMillis()` non-determinism is gone.
-    2. **Config-version queries.** `PayRuleRepository.findMaxLastModifiedDate()`
-       and `TaxBracketRepository.findMaxLastModifiedDate()` added as
-       `@Query("SELECT MAX(p.audit.lastModifiedDate) FROM PayRule p")` /
-       same shape for TaxBracket. Returns `Optional<Instant>` so empty
-       tables coalesce cleanly.
-    3. **Hash short-circuit.** `initiatePayrollRun` now computes the
-       hash, then looks up any existing `PayrollRun` with that hash and
-       returns it via `toRunResponse` instead of creating a new one. The
-       look-up runs BEFORE the period-DRAFT guard so a same-hash re-call
-       is a clean no-op rather than a "draft already exists" error.
-    4. **Period-DRAFT guard preserved.** The original by-period DRAFT
-       check still fires when a DRAFT with a DIFFERENT hash exists (i.e.
-       the inputs really did change, but a stale DRAFT is still around)
-       and `draftMode=false`.
+    lexicographically by `Comparator.comparing(UUID::toString)` for
+    stability. Null versions coalesce to `"0"`. The previous
+    `System.currentTimeMillis()` non-determinism is gone. 2. **Config-version queries.** `PayRuleRepository.findMaxLastModifiedDate()`
+    and `TaxBracketRepository.findMaxLastModifiedDate()` added as
+    `@Query("SELECT MAX(p.audit.lastModifiedDate) FROM PayRule p")` /
+    same shape for TaxBracket. Returns `Optional<Instant>` so empty
+    tables coalesce cleanly. 3. **Hash short-circuit.** `initiatePayrollRun` now computes the
+    hash, then looks up any existing `PayrollRun` with that hash and
+    returns it via `toRunResponse` instead of creating a new one. The
+    look-up runs BEFORE the period-DRAFT guard so a same-hash re-call
+    is a clean no-op rather than a "draft already exists" error. 4. **Period-DRAFT guard preserved.** The original by-period DRAFT
+    check still fires when a DRAFT with a DIFFERENT hash exists (i.e.
+    the inputs really did change, but a stale DRAFT is still around)
+    and `draftMode=false`.
   - **Deviation from spec wording (documented inline).** ROADMAP §P3.2
     step 3 says the short-circuit only covers `CALCULATED / APPROVED /
 POSTED`. We widened it to ALL statuses, DRAFT included. The reason:
@@ -1978,43 +2137,41 @@ seconds`, `/management/health` → 200. Boot passing is real
   - **Done.** Three pieces — algorithm, calc-pipeline wiring,
     post-time ledger:
 
-    1. **`TaxCalculationService.calculateProgressiveTax(taxableIncome,
-brackets)`** — new public method implementing the spec algorithm
+        1. **`TaxCalculationService.calculateProgressiveTax(taxableIncome,
+
+    brackets)`** — new public method implementing the spec algorithm
        verbatim. Sorts by `lower`, walks brackets with `remaining =
-taxableIncome` decreasing by `slice = min(remaining, upper −
-lower)` each iteration, adds `slice * rate + fixedPart` per
+    taxableIncome`decreasing by`slice = min(remaining, upper −
+    lower)`each iteration, adds`slice \* rate + fixedPart`per
        bracket. Returns 0 for null/non-positive income or empty
        bracket list; result scaled to 2 decimals (HALF_UP). The
-       existing public `calculateTax(...)` REST entry point was
+       existing public`calculateTax(...)`REST entry point was
        refactored to delegate to this method so the per-bracket
        breakdown DTO matches the total byte-for-byte. Also added the
-       public `getActiveBracketsForCalculation(countryId, taxCode,
-asOfDate)` so `PayrollProcessingService` can reuse the same
+       public`getActiveBracketsForCalculation(countryId, taxCode,
+    asOfDate)`so`PayrollProcessingService`can reuse the same
        query specification.
     2. **PayrollProcessingService steps 7 / 8 wired.** Step 7 looks up
-       brackets for `(employee.country, TaxCode.PIT, period.endDate)`
-       and emits a `TAX_PIT`-tagged line with `explain="Step 7 —
-Income tax (PIT, country=XX, taxableIncome=…, brackets=N): …"`.
-       Step 8 iterates active `TaxWithholding` rows for the employee,
-       skips `INCOME_TAX` (handled by step 7; iterating would double-
-       count), and emits one `TAX_PIT`-tagged line per surviving row
-       via the new `computeWithholdingAmount(w, gross) = rate% × gross`
-       helper. New `taxWithheld` accumulator threads into
-       `totalDeductions` so `net = gross − everything-withheld`. Three
-       skip paths on step 7 (no country, no `TAX_PIT` PayComponent,
+       brackets for`(employee.country, TaxCode.PIT, period.endDate)`       and emits a`TAX_PIT`-tagged line with `explain="Step 7 —
+    Income tax (PIT, country=XX, taxableIncome=…, brackets=N): …"`.
+       Step 8 iterates active `TaxWithholding`rows for the employee,
+       skips`INCOME_TAX`(handled by step 7; iterating would double-
+       count), and emits one`TAX_PIT`-tagged line per surviving row
+       via the new `computeWithholdingAmount(w, gross) = rate% × gross`       helper. New`taxWithheld`accumulator threads into
+      `totalDeductions`so`net = gross − everything-withheld`. Three
+       skip paths on step 7 (no country, no `TAX_PIT`PayComponent,
        no active brackets) each get a clear log line.
-    3. **YTD update at POST only.** New `updateYearToDateOnPost(run)`
-       invoked from `postPayrollRun` AFTER status flip to POSTED and
+    3. **YTD update at POST only.** New`updateYearToDateOnPost(run)`       invoked from`postPayrollRun`AFTER status flip to POSTED and
        BEFORE the period.closed write. DRAFT / CALCULATED / APPROVED
        leave YTD untouched (key §P3.3 rule). The method walks
-       persisted `PayrollLine` rows, partitions by `explain` prefix
-       (`"Step 7 …"` → INCOME_TAX, `"Step 8 — Withholding (<TYPE>,"` →
-       that TYPE), and `bumpYtdForType(employeeId, type, amount,
-asOfDate)` adds to the employee's active row. Missing rows are
+       persisted`PayrollLine`rows, partitions by`explain` prefix
+       (`"Step 7 …"`→ INCOME_TAX,`"Step 8 — Withholding (<TYPE>,"`→
+       that TYPE), and`bumpYtdForType(employeeId, type, amount,
+    asOfDate)`adds to the employee's active row. Missing rows are
        logged at DEBUG (tenant config gap, not runtime error). An
        INFO line at the end gives operators
-       `incomeTaxUpdates / otherWithholdingUpdates / resultsScanned`
-       totals.
+      `incomeTaxUpdates / otherWithholdingUpdates / resultsScanned`
+    totals.
 
   - **Why parse `explain` instead of re-computing.** Recomputing at POST
     would drift if config changed between CALCULATE and POST. Walking
@@ -2057,53 +2214,53 @@ asOfDate)` adds to the employee's active row. Missing rows are
   - **Done.** Five pieces — schema, rate primitive, calc wiring,
     summary consolidation, hash bump:
 
-    1. **Schema (`tenant-075-payroll-multicurrency`).** Seven
-       nullable columns: `payroll_run.reporting_currency_id` (FK →
-       currency.id); `payroll_result.reporting_gross /
-reporting_total_deductions / reporting_net /
-reporting_employer_cost` (DECIMAL(38,2)), `exchange_rate`
-       (DECIMAL(19,6)), `exchange_rate_date` (DATE).
-    2. **New `ExchangeRateService.getReportingRate(from, to, asOf,
-maxStalenessDays)` → `ReportingRate(rate, rateDate)` record.**
+        1. **Schema (`tenant-075-payroll-multicurrency`).** Seven
+           nullable columns: `payroll_run.reporting_currency_id` (FK →
+           currency.id); `payroll_result.reporting_gross /
+
+    reporting_total_deductions / reporting_net /
+    reporting_employer_cost`(DECIMAL(38,2)),`exchange_rate`       (DECIMAL(19,6)),`exchange_rate_date`(DATE).
+    2. **New`ExchangeRateService.getReportingRate(from, to, asOf,
+    maxStalenessDays)`→`ReportingRate(rate, rateDate)`record.**
        Lookup: same-currency → (1.0, asOf); exact rate on asOf →
        returned; most-recent-before asOf → returned IF within
-       staleness, else `BusinessRuleViolationException` with "is X
+       staleness, else`BusinessRuleViolationException`with "is X
        days stale" message; no rate at all → exception.
        **Deliberate deviation from spec wording**: spec names
-       `ExchangeRateService.convert(...)`; we built a dedicated
+      `ExchangeRateService.convert(...)`; we built a dedicated
        primitive because (a) the same rate is applied to all four
        totals (preserves `reportingNet = reportingGross −
-reportingTotalDeductions`); (b) we deliberately dropped the
+    reportingTotalDeductions`); (b) we deliberately dropped the
        reverse-rate inversion path (silent + lossy for payroll
        bookkeeping); (c) staleness guarding is owned here.
        **Consequence:** tenants must seed rates in the exact native
        → reporting direction.
-    3. **Calc pipeline.** `PayrollProcessingService` injects
-       `ExchangeRateService` + `@Value("${humano.payroll.
-max-exchange-rate-staleness-days:7}")`.
-       `calculateEmployeePayroll` reordered: compensation lookup +
+    3. **Calc pipeline.** `PayrollProcessingService`injects
+      `ExchangeRateService`+`@Value("${humano.payroll.
+    max-exchange-rate-staleness-days:7}")`.
+       `calculateEmployeePayroll`reordered: compensation lookup +
        reporting-rate pre-validation now happen BEFORE
-       `resolveResult` so a stale-rate failure on recalc doesn't
+      `resolveResult`so a stale-rate failure on recalc doesn't
        leave an orphaned result row with deleted lines. The new
-       `applyReportingConversion(...)` takes the pre-resolved
-       `ReportingRate` snapshot, multiplies all four totals by the
-       same `rate`, and persists the conversion. Logs at INFO when
-       `paymentDate ≠ rateDate` so fallback drift is visible.
+      `applyReportingConversion(...)`takes the pre-resolved
+      `ReportingRate`snapshot, multiplies all four totals by the
+       same`rate`, and persists the conversion. Logs at INFO when
+       `paymentDate ≠ rateDate`so fallback drift is visible.
     4. **Run-level consolidation (advisor-flagged fix).**
-       `toRunResponse` and `getPayrollRunSummary` previously summed
+      `toRunResponse`and`getPayrollRunSummary`previously summed
        native amounts across all results and labelled with the
        first employee's currency — meaningless for cross-currency
-       runs. Both now branch on `run.getReportingCurrency()`: when
-       set, sum the `reporting*` fields (null-coalesced) and label
+       runs. Both now branch on`run.getReportingCurrency()`: when
+       set, sum the `reporting\*`fields (null-coalesced) and label
        with the reporting currency code; when null, keep the legacy
        native-sum path. This is what makes the acceptance
        observable through the read API.
-    5. **Hash bumped to v2.** `generateIdempotencyHash` now
-       includes `reportingCurrencyId` as a pipe-delimited field
-       under the new `HASH_VERSION = 2`. Two otherwise-identical
-       runs that target different reporting currencies hash
-       differently — required for idempotency to mean what it
-       claims.
+    5. **Hash bumped to v2.**`generateIdempotencyHash`now
+       includes`reportingCurrencyId`as a pipe-delimited field
+       under the new`HASH_VERSION = 2`. Two otherwise-identical
+    runs that target different reporting currencies hash
+    differently — required for idempotency to mean what it
+    claims.
 
   - **Per-employee vs run-level fail (documented deviation).** Spec
     says "fail the run if older than X". We surface stale/missing
@@ -2143,13 +2300,14 @@ multicurrency` row.
 
   - **Done.** Five pieces:
 
-    1. **Renderer choice + deps.** OpenHTMLtoPDF 1.0.10 (PDFBox backend),
-       added as `openhtmltopdf-core / openhtmltopdf-pdfbox /
-openhtmltopdf-slf4j` in `pom.xml`. Picked over raw OpenPDF/PDFBox
+        1. **Renderer choice + deps.** OpenHTMLtoPDF 1.0.10 (PDFBox backend),
+           added as `openhtmltopdf-core / openhtmltopdf-pdfbox /
+
+    openhtmltopdf-slf4j`in`pom.xml`. Picked over raw OpenPDF/PDFBox
        for CSS support without writing low-level layout code.
-    2. **`PayslipPdfGenerator` service.** Stateless, takes a flat
-       `PayslipPdfModel` record (no JPA entities), renders via
-       autowired `SpringTemplateEngine`, post-processes through
+    2. **`PayslipPdfGenerator`service.** Stateless, takes a flat
+      `PayslipPdfModel`record (no JPA entities), renders via
+       autowired`SpringTemplateEngine`, post-processes through
        `sanitizeForXmlAndBase14(html)`, feeds to `PdfRendererBuilder`,
        returns `byte[]`. Wraps all rendering errors in
        `PdfGenerationException`.
@@ -2157,21 +2315,20 @@ openhtmltopdf-slf4j` in `pom.xml`. Picked over raw OpenPDF/PDFBox
        `src/main/resources/templates/payroll/payslip.html`. A4 page,
        base-14 Helvetica, sections for header / earnings / deductions /
        totals / optional reporting-currency block (P3.4) / employer
-       charges / footer. Uses `th:text` for substitution and `th:if`
-       for the reporting block.
-    4. **Storage + lazy generation in `PayslipService`.** New
-       `generateAndStorePdf(payslipId)` (idempotent — re-checks
-       existence) and `downloadPdf(payslipId)` (generate-on-first-call
+       charges / footer. Uses `th:text`for substitution and`th:if`       for the reporting block.
+    4. **Storage + lazy generation in`PayslipService`.** New
+       `generateAndStorePdf(payslipId)`(idempotent — re-checks
+       existence) and`downloadPdf(payslipId)`(generate-on-first-call
        via lazy path; serves cached artifact on subsequent calls).
-       Files land under `payslips/{number}.pdf` in the current tenant's
-       backend via `StorageFactory.getStorageService()`. Reference
+       Files land under`payslips/{number}.pdf`in the current tenant's
+       backend via`StorageFactory.getStorageService()`. Reference
        persisted to `Payslip.pdfUrl`.
     5. **REST endpoints.** Two routes stream the PDF:
-       - `GET /api/payroll/payslips/{id}/pdf` — canonical, on
-         `PayslipResource`. Replaces the prior P2.5 501 stub.
-       - `GET /api/payroll/runs/{id}/payslips/{employeeId}/pdf` — alias
-         on `PayrollRunResource` to match the literal ROADMAP P3.5
-         acceptance URL.
+       - `GET /api/payroll/payslips/{id}/pdf`— canonical, on
+        `PayslipResource`. Replaces the prior P2.5 501 stub.
+       - `GET /api/payroll/runs/{id}/payslips/{employeeId}/pdf`— alias
+         on`PayrollRunResource` to match the literal ROADMAP P3.5
+    acceptance URL.
 
   - **Advisor-flagged blockers fixed BEFORE flipping.**
     _(1)_ Thymeleaf's HTML5 serializer emits named entities for
@@ -2281,34 +2438,31 @@ test` → **36/36 green** (Part 4's standing invariant honoured
 
 - [x] **P4.1 — Implement tax calculation in `BillingLifecycleService`**
 
-  - **Done.** Three pieces:
-    1. **`BillingTaxResolver` service** — `resolve(CountryCode,
+  - **Done.** Three pieces: 1. **`BillingTaxResolver` service** — `resolve(CountryCode,
 SubscriptionPlan, BigDecimal subtotal, LocalDate asOfDate) →
 TaxResult(rate, amount, name)`. v1 ignores `SubscriptionPlan`
-       (slot reserved for future per-plan branching). Math is
-       `subtotal × rate, setScale(4, HALF_UP)` matching the
-       `billing_invoice.amount` column scale. Missing-rate returns a
-       zero result + WARN log rather than throwing so an unseeded
-       country doesn't bounce invoice issuance. Bound to the master
-       transaction manager.
-    2. **Master-DB schema** — changesets `master-044-country-tax-rate`
-       (new table: country_code, tax_name, tax_rate DECIMAL(5,4),
-       valid_from, valid_to, unique on (country_code, valid_from),
-       composite lookup index) and `master-045-invoice-tax-rate`
-       (`billing_invoice.tax_rate DECIMAL(5,4)`). Effective-date
-       window supports historical rate tracking — when a country's
-       VAT changes, the operator inserts a new row with
-       `valid_from = new effective date` and updates the prior row's
-       `valid_to`.
-    3. **Wiring** — both invoice creation paths consult the resolver.
-       `BillingLifecycleService.generateRenewalInvoice` (the spec
-       target) passes tenant country + plan + amount + issue date.
-       `InvoiceService.createInvoice` (REST-driven) consults the
-       resolver when the request omits `taxAmount`; an explicit
-       caller-supplied value still wins as an admin override
-       (credit notes, tax-exempt scenarios). `invoice.taxAmount`,
-       `invoice.taxRate`, and `invoice.totalAmount` all land
-       consistent.
+    (slot reserved for future per-plan branching). Math is
+    `subtotal × rate, setScale(4, HALF_UP)` matching the
+    `billing_invoice.amount` column scale. Missing-rate returns a
+    zero result + WARN log rather than throwing so an unseeded
+    country doesn't bounce invoice issuance. Bound to the master
+    transaction manager. 2. **Master-DB schema** — changesets `master-044-country-tax-rate`
+    (new table: country_code, tax_name, tax_rate DECIMAL(5,4),
+    valid_from, valid_to, unique on (country_code, valid_from),
+    composite lookup index) and `master-045-invoice-tax-rate`
+    (`billing_invoice.tax_rate DECIMAL(5,4)`). Effective-date
+    window supports historical rate tracking — when a country's
+    VAT changes, the operator inserts a new row with
+    `valid_from = new effective date` and updates the prior row's
+    `valid_to`. 3. **Wiring** — both invoice creation paths consult the resolver.
+    `BillingLifecycleService.generateRenewalInvoice` (the spec
+    target) passes tenant country + plan + amount + issue date.
+    `InvoiceService.createInvoice` (REST-driven) consults the
+    resolver when the request omits `taxAmount`; an explicit
+    caller-supplied value still wins as an admin override
+    (credit notes, tax-exempt scenarios). `invoice.taxAmount`,
+    `invoice.taxRate`, and `invoice.totalAmount` all land
+    consistent.
   - **Acceptance.** "Invoice for an EU customer reflects the country's
     VAT." Seeded FR VAT 20% effective 2025-01-01 in master DB;
     resolver math verified standalone (FR/DE/edge-case rounding all
@@ -2322,45 +2476,39 @@ TaxResult(rate, amount, name)`. v1 ignores `SubscriptionPlan`
 
 - [x] **P4.2 — Payment provider integration (Stripe)**
 
-  - **Done.** Six pieces:
-    1. **`com.stripe:stripe-java:28.4.0`** added to `pom.xml`.
-    2. **`PaymentProvider` interface** in `service/billing/payment/`
-       — `charge / refund / createSetupIntent`. Result records carry
-       `transactionId / status / providerMetadata`. Idempotency is
-       contract-level (caller-supplied dedupe key).
-    3. **`StripePaymentProvider`** —
-       `@ConditionalOnProperty("humano.billing.stripe.secret-key")`,
-       so the bean is absent when no `STRIPE_SECRET_KEY` is set and
-       the app boots clean in dev. PaymentIntents API with
-       `confirm=true` + automatic-payment-methods (no redirects).
-       Major↔minor unit conversion ×/÷100 HALF_UP scale=2.
-       `PaymentProviderException.Kind` (`DECLINED / TRANSIENT /
+  - **Done.** Six pieces: 1. **`com.stripe:stripe-java:28.4.0`** added to `pom.xml`. 2. **`PaymentProvider` interface** in `service/billing/payment/`
+    — `charge / refund / createSetupIntent`. Result records carry
+    `transactionId / status / providerMetadata`. Idempotency is
+    contract-level (caller-supplied dedupe key). 3. **`StripePaymentProvider`** —
+    `@ConditionalOnProperty("humano.billing.stripe.secret-key")`,
+    so the bean is absent when no `STRIPE_SECRET_KEY` is set and
+    the app boots clean in dev. PaymentIntents API with
+    `confirm=true` + automatic-payment-methods (no redirects).
+    Major↔minor unit conversion ×/÷100 HALF_UP scale=2.
+    `PaymentProviderException.Kind` (`DECLINED / TRANSIENT /
 CONFIGURATION / AUTHENTICATION / UNKNOWN`) typed for
-       caller-side retry policy.
-    4. **`Payment.providerMetadata`** new JSON column via
-       `master-047-payment-provider-metadata`. Entity uses
-       `@JdbcTypeCode(SqlTypes.JSON) Map<String, Object>` matching
-       the existing `WorkflowInstance.context` pattern.
-       `externalPaymentId` continues to hold the Stripe
-       PaymentIntent id (the task brief's "transactionId" role).
-    5. **`PaymentService`** wiring — `ObjectProvider<PaymentProvider>`
-       injected; when present, `refundPayment` and `retryPayment`
-       call the provider, persist response in `providerMetadata`,
-       and publish the new **`PaymentFailedEvent`** on a typed
-       failure. When absent, the legacy simulate-success path
-       remains so dev callers exercising the REST surface still get
-       a predictable outcome. Three new webhook entry points
-       (`completeByExternalId`, `failByExternalId`,
-       `recordRefundByExternalId`) — all idempotent on terminal
-       status so duplicate Stripe deliveries are safe.
-    6. **`StripeWebhookResource`** at
-       `POST /api/billing/webhooks/stripe`. Verifies `Stripe-Signature`
-       via `Webhook.constructEvent`; routes `payment_intent.succeeded
+    caller-side retry policy. 4. **`Payment.providerMetadata`** new JSON column via
+    `master-047-payment-provider-metadata`. Entity uses
+    `@JdbcTypeCode(SqlTypes.JSON) Map<String, Object>` matching
+    the existing `WorkflowInstance.context` pattern.
+    `externalPaymentId` continues to hold the Stripe
+    PaymentIntent id (the task brief's "transactionId" role). 5. **`PaymentService`** wiring — `ObjectProvider<PaymentProvider>`
+    injected; when present, `refundPayment` and `retryPayment`
+    call the provider, persist response in `providerMetadata`,
+    and publish the new **`PaymentFailedEvent`** on a typed
+    failure. When absent, the legacy simulate-success path
+    remains so dev callers exercising the REST surface still get
+    a predictable outcome. Three new webhook entry points
+    (`completeByExternalId`, `failByExternalId`,
+    `recordRefundByExternalId`) — all idempotent on terminal
+    status so duplicate Stripe deliveries are safe. 6. **`StripeWebhookResource`** at
+    `POST /api/billing/webhooks/stripe`. Verifies `Stripe-Signature`
+    via `Webhook.constructEvent`; routes `payment_intent.succeeded
 / payment_intent.payment_failed / charge.refunded`. Failures
-       inside handlers ack 200 + ERROR-log to avoid Stripe's 3-day
-       retry storm (deliberate deviation from "fail loudly" —
-       operator handles via log, not retry queue). Missing webhook
-       secret → 503; missing/invalid signature → 400.
+    inside handlers ack 200 + ERROR-log to avoid Stripe's 3-day
+    retry storm (deliberate deviation from "fail loudly" —
+    operator handles via log, not retry queue). Missing webhook
+    secret → 503; missing/invalid signature → 400.
   - **Filter/security wiring.** `SecurityConfiguration` adds
     `/api/billing/webhooks/**` to both `permitAll` and
     `csrf.ignoringRequestMatchers`. `TenantResolutionFilter
@@ -2389,15 +2537,82 @@ ${STRIPE_WEBHOOK_SECRET:}`. Empty defaults keep dev boot working;
     without env vars, so the only new context-init surface is the
     StripeWebhookResource (no DB dependency).
 
-- [ ] **P4.3 — Email notifications via `MailService` + Thymeleaf**
+- [x] **P4.3 — Email notifications via `MailService` + Thymeleaf**
 
-  - **Why:** 6 TODOs in `BillingLifecycleService` plus stub `TenantEventListener.sendWelcomeEmail`.
-  - **Steps:**
-    1. Templates: `src/main/resources/templates/mail/{welcome,invoice-issued,payment-receipt,payment-failed,subscription-cancelled,subscription-renewed,trial-ending}.html`.
-    2. `BillingMailService` wraps `MailService` with these template names.
-    3. Subscribe to existing events (`TenantOnboardedEvent`, `PaymentCompletedEvent`, etc.); add `InvoiceIssuedEvent`, `PaymentFailedEvent` if missing.
-    4. All email sends are inside `@Async` listeners. Failures retry up to 3× with exponential backoff (Spring Retry).
-  - **Acceptance:** Full onboarding flow generates a welcome email; invoice issuance generates an invoice email; payment generates a receipt.
+  - **Done.** Four pieces:
+    1. **Seven Thymeleaf templates** under
+       `templates/mail/billing/`: `welcome`, `invoiceIssued`,
+       `paymentReceipt`, `paymentFailed`, `subscriptionCancelled`,
+       `subscriptionRenewed`, `trialEnding`. Each follows the existing
+       `activationEmail.html` skeleton (XHTML + `th:text` /
+       `th:href` / `th:if`); all visible strings live in
+       `messages*.properties` keyed by
+       `email.billing.<flow>.<label>`.
+    2. **`BillingMailService`** — owns the seven send methods. Takes
+       flat primitives (no JPA entities), renders via the autowired
+       `SpringTemplateEngine`, resolves subject text via
+       `MessageSource`, hands the result to `MailService.sendEmail`
+       which is `@Async`. Per-call dispatch is fire-and-forget from
+       the caller; the surrounding transaction is unblocked
+       (invariant I5).
+    3. **`TenantAdminEmailResolver`** — crosses master → tenant
+       boundary. Switches `TenantContext`, drives a read-only
+       `TransactionTemplate` bound to `tenantTransactionManager`,
+       calls a new `UserRepository.findActivatedByAuthority(
+"ROLE_ADMIN")`, returns `Optional<String>`. Missing-admin
+       case logs + skips (no exception). Operators repair via the
+       log message.
+    4. **Stubs cashed.** Six `// TODO: Implement email notification`
+       in `BillingLifecycleService` (lines 381/386/391/396/401/406)
+       all wired to `BillingMailService.send*` calls via the
+       resolver. `TenantEventListener.sendWelcomeEmail` /
+       `sendPaymentReceipt` ditto. **New
+       `handlePaymentFailed(PaymentFailedEvent)`** listener — first
+       downstream consumer of the P4.2 event; fires
+       `sendPaymentFailed(...)` so a declined card produces a
+       user-facing fix-payment email.
+  - **Renewal path dispatches TWO emails by design.** Invoice-issued
+    (payment-ready details + link to pay) AND subscription-renewed
+    (renewal confirmation) — different copy, different decisions.
+  - **Deliberate deviations from spec wording.**
+    _(1)_ No `InvoiceIssuedEvent` added. The brief mentions one,
+    but `MailService.sendEmail` is already `@Async`; an extra
+    event publish is duplicate indirection without an actual
+    async-gating need. Direct injection of `BillingMailService`
+    into `BillingLifecycleService` keeps the path concrete.
+    _(2)_ No Spring Retry. Brief mentions retry 3× with exponential
+    backoff but the acceptance doesn't require it.
+    `MailService.sendEmail` already catches and warns on
+    `MailException + MessagingException`. Drop-in
+    `@Retryable(maxAttempts=3, backoff=@Backoff(delay=1000,
+multiplier=2))` on a wrapper method when needed; future
+    hardening.
+  - **i18n keys.** Added to `messages.properties` (default —
+    Spring's ResourceBundle fallback covers `messages_en.properties`
+    without duplication). Seven `email.billing.<flow>.title` subject
+    keys + ~30 body labels.
+  - **Acceptance.** "Full onboarding flow generates a welcome email;
+    invoice issuance generates an invoice email; payment generates
+    a receipt." All three paths exercised structurally:
+    - Welcome: `TenantOnboardedEvent` listener →
+      `billingMailService.sendWelcome(...)` → `MailService.sendEmail`
+      (async).
+    - Invoice: `BillingLifecycleService.processRenewal` →
+      `sendInvoiceIssuedNotification(invoice)` → render + queue.
+    - Receipt: `PaymentCompletedEvent` listener →
+      `billingMailService.sendPaymentReceipt(...)` (resolves billing
+      email via `TenantAdminEmailResolver`).
+      Live end-to-end with real SMTP + seeded tenant + seeded admin
+      deferred (same pattern as P3.x / P4.1 / P4.2).
+  - **Verification.** `./mvnw -DskipTests compile` green at **597
+    source files** (+3 new: `BillingMailService`,
+    `TenantAdminEmailResolver`, no new event types — uses the P4.2
+    `PaymentFailedEvent`). `./mvnw test` → **36/36 green** — Part 4
+    invariant honoured. Boot's structural guarantee unchanged (no
+    new DB column or changeset; only new failure mode would be a
+    missing Thymeleaf template, which the build log confirms is
+    bundled via `Copying 28 resources from src/main/resources to
+target/classes`).
 
 - [ ] **P4.4 — Dunning state machine**
 
@@ -2458,24 +2673,21 @@ ${STRIPE_WEBHOOK_SECRET:}`. Empty defaults keep dev boot working;
 
 - [x] **P5.3 — `DeadlineMonitorService` actually fires escalations**
 
-  - **Done.** Three pieces:
-    1. **`EscalationTriggeredEvent`** — new record under `com.humano.events`
-       carrying `deadlineId / workflowId / escalationLevel / assigneeId /
+  - **Done.** Three pieces: 1. **`EscalationTriggeredEvent`** — new record under `com.humano.events`
+    carrying `deadlineId / workflowId / escalationLevel / assigneeId /
 escalatedAt`. Same record-style pattern as `TenantStatusChangedEvent`.
-       Listeners side-effect asynchronously (invariant I5).
-    2. **Escalation cap.** New configurable knob
-       `humano.workflow.max-escalation-level` (default `3`) bound via
-       `@Value` in the `DeadlineMonitorService` constructor. Both
-       escalation paths — the public manual `escalate(deadlineId)` and the
-       hourly-scheduled `checkAndEscalate(deadline)` — verify the cap
-       before mutating state. `checkAndEscalate` also clamps the computed
-       `expectedEscalationLevel` to the cap so the once-per-24h tick rule
-       can't overshoot.
-    3. **Single chokepoint `applyEscalation(deadline)`** that bumps the
-       level via `deadline.escalate()`, persists, sends the existing
-       manager notification, and publishes the new event. Both escalation
-       entry points funnel through it so the event firing and the cap
-       enforcement can't diverge.
+    Listeners side-effect asynchronously (invariant I5). 2. **Escalation cap.** New configurable knob
+    `humano.workflow.max-escalation-level` (default `3`) bound via
+    `@Value` in the `DeadlineMonitorService` constructor. Both
+    escalation paths — the public manual `escalate(deadlineId)` and the
+    hourly-scheduled `checkAndEscalate(deadline)` — verify the cap
+    before mutating state. `checkAndEscalate` also clamps the computed
+    `expectedEscalationLevel` to the cap so the once-per-24h tick rule
+    can't overshoot. 3. **Single chokepoint `applyEscalation(deadline)`** that bumps the
+    level via `deadline.escalate()`, persists, sends the existing
+    manager notification, and publishes the new event. Both escalation
+    entry points funnel through it so the event firing and the cap
+    enforcement can't diverge.
   - **Scheduling.** `@Scheduled(fixedRate = 3600000)` on `checkOverdueItems`
     - `checkApproachingDeadlines` already wired (P1.8). With tenants now
       actually being provisioned (P1.10, P2.6), the tick has real

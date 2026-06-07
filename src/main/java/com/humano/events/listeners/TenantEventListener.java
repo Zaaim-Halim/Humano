@@ -1,9 +1,13 @@
 package com.humano.events.listeners;
 
 import com.humano.events.PaymentCompletedEvent;
+import com.humano.events.PaymentFailedEvent;
 import com.humano.events.TenantOnboardedEvent;
 import com.humano.events.TenantStatusChangedEvent;
+import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.MailService;
+import com.humano.service.billing.BillingMailService;
+import com.humano.service.billing.TenantAdminEmailResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -20,9 +24,20 @@ public class TenantEventListener {
     private static final Logger log = LoggerFactory.getLogger(TenantEventListener.class);
 
     private final MailService mailService;
+    private final BillingMailService billingMailService;
+    private final TenantAdminEmailResolver adminEmailResolver;
+    private final TenantRepository tenantRepository;
 
-    public TenantEventListener(MailService mailService) {
+    public TenantEventListener(
+        MailService mailService,
+        BillingMailService billingMailService,
+        TenantAdminEmailResolver adminEmailResolver,
+        TenantRepository tenantRepository
+    ) {
         this.mailService = mailService;
+        this.billingMailService = billingMailService;
+        this.adminEmailResolver = adminEmailResolver;
+        this.tenantRepository = tenantRepository;
     }
 
     /**
@@ -92,11 +107,23 @@ public class TenantEventListener {
 
     private void sendWelcomeEmail(TenantOnboardedEvent event) {
         log.debug("Sending welcome email to: {}", event.adminEmail());
+        billingMailService.sendWelcome(
+            event.adminEmail(),
+            event.tenantName(),
+            event.subdomain(),
+            extractFirstName(event.adminEmail()),
+            event.isTrial()
+        );
+    }
 
-        // TODO: Use MailService to send templated welcome email
-        // mailService.sendWelcomeEmail(event.adminEmail(), event.tenantName(), event.subdomain());
-
-        log.info("Welcome email would be sent to {}", event.adminEmail());
+    /** Best-effort first-name lift from an email login when we don't have a User row to read. */
+    private static String extractFirstName(String email) {
+        if (email == null || email.isBlank()) return "there";
+        int at = email.indexOf('@');
+        String local = at > 0 ? email.substring(0, at) : email;
+        String token = local.split("[._-]")[0];
+        if (token.isEmpty()) return "there";
+        return Character.toUpperCase(token.charAt(0)) + token.substring(1);
     }
 
     private void provisionTenantDefaults(TenantOnboardedEvent event) {
@@ -159,10 +186,40 @@ public class TenantEventListener {
 
     private void sendPaymentReceipt(PaymentCompletedEvent event) {
         log.debug("Sending payment receipt for invoice: {}", event.invoiceNumber());
+        resolveBillingEmail(event.tenantId()).ifPresent(email ->
+            billingMailService.sendPaymentReceipt(
+                email,
+                event.tenantName(),
+                event.invoiceNumber(),
+                event.amount(),
+                event.currency(),
+                event.externalPaymentId()
+            )
+        );
+    }
 
-        // TODO: Generate PDF receipt and send via email
-        // mailService.sendPaymentReceipt(...)
+    /** P4.3 — Payment failed: dunning starts here (P4.4) and the tenant gets a fix-payment email. */
+    @EventListener
+    @Async
+    public void handlePaymentFailed(PaymentFailedEvent event) {
+        log.info("Handling payment failed event for invoice: {} (tenant: {})", event.invoiceNumber(), event.tenantName());
+        try {
+            resolveBillingEmail(event.tenantId()).ifPresent(email ->
+                billingMailService.sendPaymentFailed(
+                    email,
+                    event.tenantName(),
+                    event.invoiceNumber(),
+                    event.amount(),
+                    event.currency(),
+                    event.failureReason()
+                )
+            );
+        } catch (Exception e) {
+            log.error("Error sending payment-failed email for invoice {}", event.invoiceId(), e);
+        }
+    }
 
-        log.info("Payment receipt would be sent for invoice: {} to tenant: {}", event.invoiceNumber(), event.tenantName());
+    private java.util.Optional<String> resolveBillingEmail(java.util.UUID tenantId) {
+        return tenantRepository.findById(tenantId).flatMap(tenant -> adminEmailResolver.resolveBillingContact(tenant.getSubdomain()));
     }
 }

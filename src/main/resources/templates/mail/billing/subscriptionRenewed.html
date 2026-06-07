@@ -1,0 +1,26 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}" lang="en">
+  <head>
+    <title th:text="#{email.billing.subscription-renewed.title}">Subscription renewed</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  </head>
+  <body>
+    <p th:text="#{email.billing.subscription-renewed.greeting(${tenantName})}">Hi,</p>
+    <p th:text="#{email.billing.subscription-renewed.body(${planName})}">Your subscription has been renewed.</p>
+    <ul>
+      <li>
+        <strong th:text="#{email.billing.subscription-renewed.next}">Next renewal:</strong>
+        <span th:text="${nextRenewalAt}">2026-07-07</span>
+      </li>
+      <li>
+        <strong th:text="#{email.billing.subscription-renewed.amount}">Amount:</strong>
+        <span th:text="${amount} + ' ' + ${currency}">100.00 EUR</span>
+      </li>
+    </ul>
+    <p>
+      <span th:text="#{email.billing.text2}">Regards,</span>
+      <br />
+      <em th:text="#{email.signature}">Humano Team.</em>
+    </p>
+  </body>
+</html>
