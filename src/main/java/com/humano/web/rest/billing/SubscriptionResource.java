@@ -4,7 +4,7 @@ import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.dto.billing.requests.CreateSubscriptionRequest;
 import com.humano.dto.billing.requests.UpdateSubscriptionRequest;
 import com.humano.dto.billing.responses.SubscriptionResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireAdmin;
 import com.humano.service.billing.SubscriptionService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -12,7 +12,6 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -23,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/billing/subscriptions")
-@PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+@RequireAdmin
 public class SubscriptionResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(SubscriptionResource.class);

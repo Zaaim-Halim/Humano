@@ -4,7 +4,9 @@ import com.humano.dto.hr.requests.CreateExpenseClaimRequest;
 import com.humano.dto.hr.requests.ExpenseClaimSearchRequest;
 import com.humano.dto.hr.requests.ProcessExpenseClaimRequest;
 import com.humano.dto.hr.responses.ExpenseClaimResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.service.hr.ExpenseClaimService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -17,7 +19,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -50,17 +51,7 @@ public class ExpenseClaimResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<ExpenseClaimResponse> createExpenseClaim(@Valid @RequestBody CreateExpenseClaimRequest request)
         throws URISyntaxException {
         LOG.debug("REST request to create ExpenseClaim: {}", request);
@@ -80,15 +71,7 @@ public class ExpenseClaimResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated expense claim
      */
     @PutMapping("/{id}/process")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<ExpenseClaimResponse> processExpenseClaim(
         @PathVariable UUID id,
         @Valid @RequestBody ProcessExpenseClaimRequest request
@@ -109,15 +92,7 @@ public class ExpenseClaimResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of expense claims in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<ExpenseClaimResponse>> getAllExpenseClaims(Pageable pageable) {
         LOG.debug("REST request to get all ExpenseClaims");
 
@@ -134,17 +109,7 @@ public class ExpenseClaimResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the expense claim
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<ExpenseClaimResponse> getExpenseClaim(@PathVariable UUID id) {
         LOG.debug("REST request to get ExpenseClaim: {}", id);
 
@@ -161,15 +126,7 @@ public class ExpenseClaimResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of expense claims in body
      */
     @GetMapping("/search")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<ExpenseClaimResponse>> searchExpenseClaims(ExpenseClaimSearchRequest searchRequest, Pageable pageable) {
         LOG.debug("REST request to search ExpenseClaims with criteria: {}", searchRequest);
 
@@ -188,17 +145,7 @@ public class ExpenseClaimResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of expense claims in body
      */
     @GetMapping("/employee/{employeeId}/search")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<Page<ExpenseClaimResponse>> searchExpenseClaimsByEmployee(
         @PathVariable UUID employeeId,
         ExpenseClaimSearchRequest searchRequest,
@@ -219,7 +166,7 @@ public class ExpenseClaimResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deleteExpenseClaim(@PathVariable UUID id) {
         LOG.debug("REST request to delete ExpenseClaim: {}", id);
 

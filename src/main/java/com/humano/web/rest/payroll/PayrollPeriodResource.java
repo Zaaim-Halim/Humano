@@ -2,7 +2,7 @@ package com.humano.web.rest.payroll;
 
 import com.humano.dto.payroll.request.GeneratePayrollPeriodsRequest;
 import com.humano.dto.payroll.response.PayrollPeriodResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequirePayrollAdmin;
 import com.humano.service.payroll.PayrollCalendarService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -14,7 +14,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
@@ -25,7 +24,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/periods")
-@PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.PAYROLL_ADMIN + "')")
+@RequirePayrollAdmin
 public class PayrollPeriodResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(PayrollPeriodResource.class);

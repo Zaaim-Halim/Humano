@@ -3,7 +3,8 @@ package com.humano.web.rest.hr;
 import com.humano.dto.hr.requests.CreateTrainingRequest;
 import com.humano.dto.hr.requests.UpdateTrainingRequest;
 import com.humano.dto.hr.responses.TrainingResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.service.hr.TrainingService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -16,7 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -49,7 +49,7 @@ public class TrainingResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<TrainingResponse> createTraining(@Valid @RequestBody CreateTrainingRequest request) throws URISyntaxException {
         LOG.debug("REST request to create Training: {}", request);
 
@@ -68,7 +68,7 @@ public class TrainingResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated training
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<TrainingResponse> updateTraining(@PathVariable UUID id, @Valid @RequestBody UpdateTrainingRequest request) {
         LOG.debug("REST request to update Training: {}", id);
 
@@ -86,17 +86,7 @@ public class TrainingResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of trainings in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<Page<TrainingResponse>> getAllTrainings(Pageable pageable) {
         LOG.debug("REST request to get all Trainings");
 
@@ -113,17 +103,7 @@ public class TrainingResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the training
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<TrainingResponse> getTraining(@PathVariable UUID id) {
         LOG.debug("REST request to get Training: {}", id);
 
@@ -139,7 +119,7 @@ public class TrainingResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deleteTraining(@PathVariable UUID id) {
         LOG.debug("REST request to delete Training: {}", id);
 

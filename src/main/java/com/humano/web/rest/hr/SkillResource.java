@@ -3,7 +3,8 @@ package com.humano.web.rest.hr;
 import com.humano.dto.hr.requests.CreateSkillRequest;
 import com.humano.dto.hr.requests.UpdateSkillRequest;
 import com.humano.dto.hr.responses.SkillResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.service.hr.SkillService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -16,7 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -49,7 +49,7 @@ public class SkillResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<SkillResponse> createSkill(@Valid @RequestBody CreateSkillRequest request) throws URISyntaxException {
         LOG.debug("REST request to create Skill: {}", request);
 
@@ -68,7 +68,7 @@ public class SkillResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated skill
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<SkillResponse> updateSkill(@PathVariable UUID id, @Valid @RequestBody UpdateSkillRequest request) {
         LOG.debug("REST request to update Skill: {}", id);
 
@@ -86,17 +86,7 @@ public class SkillResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of skills in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<Page<SkillResponse>> getAllSkills(Pageable pageable) {
         LOG.debug("REST request to get all Skills");
 
@@ -113,17 +103,7 @@ public class SkillResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the skill
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<SkillResponse> getSkill(@PathVariable UUID id) {
         LOG.debug("REST request to get Skill: {}", id);
 
@@ -140,17 +120,7 @@ public class SkillResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of skills in body
      */
     @GetMapping("/category/{category}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<Page<SkillResponse>> getSkillsByCategory(@PathVariable String category, Pageable pageable) {
         LOG.debug("REST request to get Skills by category: {}", category);
 
@@ -167,7 +137,7 @@ public class SkillResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deleteSkill(@PathVariable UUID id) {
         LOG.debug("REST request to delete Skill: {}", id);
 

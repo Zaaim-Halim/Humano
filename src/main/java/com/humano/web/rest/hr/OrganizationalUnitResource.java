@@ -3,7 +3,8 @@ package com.humano.web.rest.hr;
 import com.humano.dto.hr.requests.CreateOrganizationalUnitRequest;
 import com.humano.dto.hr.requests.UpdateOrganizationalUnitRequest;
 import com.humano.dto.hr.responses.OrganizationalUnitResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaff;
 import com.humano.service.hr.OrganizationalUnitService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -16,7 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -49,7 +49,7 @@ public class OrganizationalUnitResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<OrganizationalUnitResponse> createOrganizationalUnit(@Valid @RequestBody CreateOrganizationalUnitRequest request)
         throws URISyntaxException {
         LOG.debug("REST request to create OrganizationalUnit: {}", request);
@@ -69,7 +69,7 @@ public class OrganizationalUnitResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated organizational unit
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<OrganizationalUnitResponse> updateOrganizationalUnit(
         @PathVariable UUID id,
         @Valid @RequestBody UpdateOrganizationalUnitRequest request
@@ -90,15 +90,7 @@ public class OrganizationalUnitResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of organizational units in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<OrganizationalUnitResponse>> getAllOrganizationalUnits(Pageable pageable) {
         LOG.debug("REST request to get all OrganizationalUnits");
 
@@ -115,15 +107,7 @@ public class OrganizationalUnitResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the organizational unit
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<OrganizationalUnitResponse> getOrganizationalUnit(@PathVariable UUID id) {
         LOG.debug("REST request to get OrganizationalUnit: {}", id);
 
@@ -139,15 +123,7 @@ public class OrganizationalUnitResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of root organizational units in body
      */
     @GetMapping("/roots")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<OrganizationalUnitResponse>> getRootOrganizationalUnits(Pageable pageable) {
         LOG.debug("REST request to get root OrganizationalUnits");
 
@@ -165,15 +141,7 @@ public class OrganizationalUnitResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of sub-units in body
      */
     @GetMapping("/{parentId}/sub-units")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<OrganizationalUnitResponse>> getSubUnits(@PathVariable UUID parentId, Pageable pageable) {
         LOG.debug("REST request to get sub-units of OrganizationalUnit: {}", parentId);
 
@@ -190,7 +158,7 @@ public class OrganizationalUnitResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deleteOrganizationalUnit(@PathVariable UUID id) {
         LOG.debug("REST request to delete OrganizationalUnit: {}", id);
 

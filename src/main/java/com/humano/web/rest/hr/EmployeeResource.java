@@ -6,7 +6,8 @@ import com.humano.dto.hr.requests.EmployeeSearchRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeProfileRequest;
 import com.humano.dto.hr.responses.EmployeeProfileResponse;
 import com.humano.dto.hr.responses.SimpleEmployeeProfileResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaff;
 import com.humano.service.hr.EmployeeProfileService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -19,7 +20,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -74,7 +74,7 @@ public class EmployeeResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping("/{userId}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<EmployeeProfileResponse> createEmployeeProfile(
         @PathVariable UUID userId,
         @Valid @RequestBody CreateEmployeeProfileRequest request
@@ -96,15 +96,7 @@ public class EmployeeResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated employee
      */
     @PutMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<EmployeeProfileResponse> updateEmployeeProfile(
         @PathVariable UUID id,
         @Valid @RequestBody UpdateEmployeeProfileRequest request
@@ -125,15 +117,7 @@ public class EmployeeResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of employees in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<SimpleEmployeeProfileResponse>> getAllEmployees(Pageable pageable) {
         LOG.debug("REST request to get all Employees");
 
@@ -150,15 +134,7 @@ public class EmployeeResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the employee
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<EmployeeProfileResponse> getEmployee(@PathVariable UUID id) {
         LOG.debug("REST request to get Employee: {}", id);
 
@@ -175,15 +151,7 @@ public class EmployeeResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of employees in body
      */
     @PostMapping("/search")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<SimpleEmployeeProfileResponse>> searchEmployees(
         @RequestBody EmployeeSearchRequest searchRequest,
         Pageable pageable
@@ -203,7 +171,7 @@ public class EmployeeResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deleteEmployee(@PathVariable UUID id) {
         LOG.debug("REST request to delete Employee: {}", id);
 

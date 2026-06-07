@@ -3,7 +3,7 @@ package com.humano.web.rest.billing;
 import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.dto.billing.requests.CreateInvoiceRequest;
 import com.humano.dto.billing.responses.InvoiceResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireAdmin;
 import com.humano.service.billing.InvoiceService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -22,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/billing/invoices")
-@PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+@RequireAdmin
 public class InvoiceResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(InvoiceResource.class);

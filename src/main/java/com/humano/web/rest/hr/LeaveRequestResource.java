@@ -4,7 +4,9 @@ import com.humano.dto.hr.requests.CreateLeaveRequest;
 import com.humano.dto.hr.requests.LeaveRequestSearchRequest;
 import com.humano.dto.hr.requests.ProcessLeaveRequest;
 import com.humano.dto.hr.responses.LeaveRequestResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.service.hr.LeaveRequestService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -17,7 +19,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -50,17 +51,7 @@ public class LeaveRequestResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<LeaveRequestResponse> createLeaveRequest(@Valid @RequestBody CreateLeaveRequest request)
         throws URISyntaxException {
         LOG.debug("REST request to create LeaveRequest: {}", request);
@@ -80,15 +71,7 @@ public class LeaveRequestResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated leave request
      */
     @PutMapping("/{id}/process")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<LeaveRequestResponse> processLeaveRequest(
         @PathVariable UUID id,
         @Valid @RequestBody ProcessLeaveRequest request
@@ -109,15 +92,7 @@ public class LeaveRequestResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of leave requests in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<LeaveRequestResponse>> getAllLeaveRequests(Pageable pageable) {
         LOG.debug("REST request to get all LeaveRequests");
 
@@ -134,17 +109,7 @@ public class LeaveRequestResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the leave request
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<LeaveRequestResponse> getLeaveRequest(@PathVariable UUID id) {
         LOG.debug("REST request to get LeaveRequest: {}", id);
 
@@ -161,15 +126,7 @@ public class LeaveRequestResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of leave requests in body
      */
     @GetMapping("/search")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<LeaveRequestResponse>> searchLeaveRequests(LeaveRequestSearchRequest searchRequest, Pageable pageable) {
         LOG.debug("REST request to search LeaveRequests with criteria: {}", searchRequest);
 
@@ -188,17 +145,7 @@ public class LeaveRequestResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of leave requests in body
      */
     @GetMapping("/employee/{employeeId}/search")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<Page<LeaveRequestResponse>> searchLeaveRequestsByEmployee(
         @PathVariable UUID employeeId,
         LeaveRequestSearchRequest searchRequest,
@@ -219,7 +166,7 @@ public class LeaveRequestResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deleteLeaveRequest(@PathVariable UUID id) {
         LOG.debug("REST request to delete LeaveRequest: {}", id);
 

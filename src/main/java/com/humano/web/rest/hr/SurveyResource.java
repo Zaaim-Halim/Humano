@@ -5,7 +5,9 @@ import com.humano.dto.hr.requests.SubmitSurveyResponseRequest;
 import com.humano.dto.hr.requests.UpdateSurveyRequest;
 import com.humano.dto.hr.responses.SurveyResponse;
 import com.humano.dto.hr.responses.SurveyResponseResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.service.hr.SurveyService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -18,7 +20,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -51,7 +52,7 @@ public class SurveyResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<SurveyResponse> createSurvey(@Valid @RequestBody CreateSurveyRequest request) throws URISyntaxException {
         LOG.debug("REST request to create Survey: {}", request);
 
@@ -70,7 +71,7 @@ public class SurveyResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated survey
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<SurveyResponse> updateSurvey(@PathVariable UUID id, @Valid @RequestBody UpdateSurveyRequest request) {
         LOG.debug("REST request to update Survey: {}", id);
 
@@ -88,15 +89,7 @@ public class SurveyResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of surveys in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<SurveyResponse>> getAllSurveys(Pageable pageable) {
         LOG.debug("REST request to get all Surveys");
 
@@ -113,17 +106,7 @@ public class SurveyResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the survey
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<SurveyResponse> getSurvey(@PathVariable UUID id) {
         LOG.debug("REST request to get Survey: {}", id);
 
@@ -139,17 +122,7 @@ public class SurveyResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of active surveys in body
      */
     @GetMapping("/active")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<Page<SurveyResponse>> getActiveSurveys(Pageable pageable) {
         LOG.debug("REST request to get active Surveys");
 
@@ -166,7 +139,7 @@ public class SurveyResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deleteSurvey(@PathVariable UUID id) {
         LOG.debug("REST request to delete Survey: {}", id);
 
@@ -188,17 +161,7 @@ public class SurveyResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping("/{surveyId}/responses")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<SurveyResponseResponse> submitSurveyResponse(
         @PathVariable UUID surveyId,
         @Valid @RequestBody SubmitSurveyResponseRequest request
@@ -220,15 +183,7 @@ public class SurveyResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of survey responses in body
      */
     @GetMapping("/{surveyId}/responses")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<SurveyResponseResponse>> getSurveyResponses(@PathVariable UUID surveyId, Pageable pageable) {
         LOG.debug("REST request to get Survey Responses for survey: {}", surveyId);
 
@@ -245,7 +200,7 @@ public class SurveyResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/responses/{responseId}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deleteSurveyResponse(@PathVariable UUID responseId) {
         LOG.debug("REST request to delete Survey Response: {}", responseId);
 

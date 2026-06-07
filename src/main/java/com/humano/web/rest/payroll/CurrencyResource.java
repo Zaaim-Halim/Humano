@@ -2,12 +2,11 @@ package com.humano.web.rest.payroll;
 
 import com.humano.domain.payroll.Currency;
 import com.humano.repository.payroll.CurrencyRepository;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.service.errors.EntityNotFoundException;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -16,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/payroll/currencies")
-@PreAuthorize("isAuthenticated()")
+@RequireAuthenticated
 public class CurrencyResource {
 
     private final CurrencyRepository currencyRepository;

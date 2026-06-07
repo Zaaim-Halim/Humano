@@ -5,7 +5,7 @@ import com.humano.dto.payroll.request.BonusSearchRequest;
 import com.humano.dto.payroll.request.BulkBonusRequest;
 import com.humano.dto.payroll.response.BonusResponse;
 import com.humano.dto.payroll.response.BonusSummaryResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequirePayrollOrHrManager;
 import com.humano.service.payroll.BonusService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -17,7 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
@@ -27,15 +26,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/bonuses")
-@PreAuthorize(
-    "hasAnyAuthority('" +
-    AuthoritiesConstants.ADMIN +
-    "', '" +
-    AuthoritiesConstants.PAYROLL_ADMIN +
-    "', '" +
-    AuthoritiesConstants.HR_MANAGER +
-    "')"
-)
+@RequirePayrollOrHrManager
 public class BonusResource {
 
     private final BonusService bonusService;

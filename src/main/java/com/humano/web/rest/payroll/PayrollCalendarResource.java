@@ -3,7 +3,7 @@ package com.humano.web.rest.payroll;
 import com.humano.dto.payroll.request.CreatePayrollCalendarRequest;
 import com.humano.dto.payroll.response.PayrollCalendarResponse;
 import com.humano.dto.payroll.response.PayrollPeriodResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequirePayrollAdmin;
 import com.humano.service.payroll.PayrollCalendarService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -13,7 +13,6 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -21,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/payroll/calendars")
-@PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.PAYROLL_ADMIN + "')")
+@RequirePayrollAdmin
 public class PayrollCalendarResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(PayrollCalendarResource.class);

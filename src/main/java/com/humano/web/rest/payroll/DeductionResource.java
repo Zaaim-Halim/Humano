@@ -4,7 +4,7 @@ import com.humano.domain.enumeration.payroll.DeductionType;
 import com.humano.dto.payroll.request.CreateDeductionRequest;
 import com.humano.dto.payroll.request.DeductionSearchRequest;
 import com.humano.dto.payroll.response.DeductionResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequirePayrollAdmin;
 import com.humano.service.payroll.DeductionService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -17,7 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
@@ -27,7 +26,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/deductions")
-@PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.PAYROLL_ADMIN + "')")
+@RequirePayrollAdmin
 public class DeductionResource {
 
     private final DeductionService deductionService;

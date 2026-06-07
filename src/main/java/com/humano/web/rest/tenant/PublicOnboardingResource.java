@@ -2,6 +2,7 @@ package com.humano.web.rest.tenant;
 
 import com.humano.dto.tenant.requests.TenantOnboardingRequest;
 import com.humano.dto.tenant.responses.TenantOnboardingResponse;
+import com.humano.security.annotation.PublicEndpoint;
 import com.humano.service.tenant.TenantOnboardingService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -39,6 +40,7 @@ public class PublicOnboardingResource {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PublicEndpoint
     public TenantOnboardingResponse onboard(@Valid @RequestBody TenantOnboardingRequest request) {
         LOG.info("Public onboarding request received for company '{}'", request.companyName());
         return onboardingService.onboardTenant(request);

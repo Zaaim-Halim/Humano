@@ -4,7 +4,8 @@ import com.humano.dto.hr.requests.CreatePerformanceReviewRequest;
 import com.humano.dto.hr.requests.PerformanceReviewSearchRequest;
 import com.humano.dto.hr.requests.UpdatePerformanceReviewRequest;
 import com.humano.dto.hr.responses.PerformanceReviewResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaff;
 import com.humano.service.hr.PerformanceReviewService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -17,7 +18,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -50,15 +50,7 @@ public class PerformanceReviewResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<PerformanceReviewResponse> createPerformanceReview(@Valid @RequestBody CreatePerformanceReviewRequest request)
         throws URISyntaxException {
         LOG.debug("REST request to create PerformanceReview: {}", request);
@@ -78,15 +70,7 @@ public class PerformanceReviewResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated performance review
      */
     @PutMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<PerformanceReviewResponse> updatePerformanceReview(
         @PathVariable UUID id,
         @Valid @RequestBody UpdatePerformanceReviewRequest request
@@ -107,15 +91,7 @@ public class PerformanceReviewResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of performance reviews in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<PerformanceReviewResponse>> getAllPerformanceReviews(Pageable pageable) {
         LOG.debug("REST request to get all PerformanceReviews");
 
@@ -132,15 +108,7 @@ public class PerformanceReviewResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the performance review
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<PerformanceReviewResponse> getPerformanceReview(@PathVariable UUID id) {
         LOG.debug("REST request to get PerformanceReview: {}", id);
 
@@ -157,15 +125,7 @@ public class PerformanceReviewResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of performance reviews in body
      */
     @GetMapping("/search")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<PerformanceReviewResponse>> searchPerformanceReviews(
         PerformanceReviewSearchRequest searchRequest,
         Pageable pageable
@@ -185,7 +145,7 @@ public class PerformanceReviewResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deletePerformanceReview(@PathVariable UUID id) {
         LOG.debug("REST request to delete PerformanceReview: {}", id);
 

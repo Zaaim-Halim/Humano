@@ -1,5 +1,6 @@
 package com.humano.web.rest.billing;
 
+import com.humano.security.annotation.PublicEndpoint;
 import com.humano.service.billing.PaymentService;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Charge;
@@ -61,6 +62,7 @@ public class StripeWebhookResource {
     }
 
     @PostMapping(value = "/stripe", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PublicEndpoint
     public ResponseEntity<String> handle(
         @RequestHeader(value = "Stripe-Signature", required = false) String signature,
         @RequestBody String payload

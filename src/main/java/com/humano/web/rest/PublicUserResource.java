@@ -1,7 +1,11 @@
 package com.humano.web.rest;
 
-import com.humano.service.UserService;
 import com.humano.dto.UserDTO;
+import com.humano.security.annotation.RequireAuthenticated;
+import com.humano.service.UserService;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -15,10 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -43,6 +43,7 @@ public class PublicUserResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body all users.
      */
     @GetMapping("/users")
+    @RequireAuthenticated
     public ResponseEntity<List<UserDTO>> getAllPublicUsers(@org.springdoc.core.annotations.ParameterObject Pageable pageable) {
         LOG.debug("REST request to get all public User names");
         if (!onlyContainsAllowedProperties(pageable)) {

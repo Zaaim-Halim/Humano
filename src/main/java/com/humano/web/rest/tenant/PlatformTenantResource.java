@@ -7,7 +7,7 @@ import com.humano.domain.tenant.Tenant;
 import com.humano.dto.tenant.TenantRegistrationDTO;
 import com.humano.dto.tenant.responses.TenantResponse;
 import com.humano.repository.tenant.TenantRepository;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireAdmin;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.multitenancy.TenantProvisioningService;
 import com.humano.service.tenant.TenantService;
@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/platform/tenants")
-@PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+@RequireAdmin
 public class PlatformTenantResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(PlatformTenantResource.class);

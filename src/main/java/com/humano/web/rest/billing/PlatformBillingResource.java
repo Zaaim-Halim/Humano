@@ -3,7 +3,7 @@ package com.humano.web.rest.billing;
 import com.humano.dto.billing.responses.InvoiceResponse;
 import com.humano.dto.billing.responses.PaymentResponse;
 import com.humano.dto.billing.responses.SubscriptionResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireAdmin;
 import com.humano.service.billing.InvoiceService;
 import com.humano.service.billing.PaymentService;
 import com.humano.service.billing.SubscriptionService;
@@ -12,7 +12,6 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -22,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/platform/billing")
-@PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+@RequireAdmin
 public class PlatformBillingResource {
 
     private final SubscriptionService subscriptionService;

@@ -4,7 +4,8 @@ import com.humano.domain.enumeration.billing.SubscriptionType;
 import com.humano.dto.billing.requests.CreateSubscriptionPlanRequest;
 import com.humano.dto.billing.requests.UpdateSubscriptionPlanRequest;
 import com.humano.dto.billing.responses.SubscriptionPlanResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireAdmin;
+import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.service.billing.SubscriptionPlanService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -15,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/billing/plans")
-@PreAuthorize("isAuthenticated()")
+@RequireAuthenticated
 public class SubscriptionPlanResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(SubscriptionPlanResource.class);
@@ -57,7 +57,7 @@ public class SubscriptionPlanResource {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     public ResponseEntity<SubscriptionPlanResponse> create(@Valid @RequestBody CreateSubscriptionPlanRequest request) {
         LOG.debug("REST request to create SubscriptionPlan: {}", request);
         SubscriptionPlanResponse created = planService.createSubscriptionPlan(request);
@@ -65,7 +65,7 @@ public class SubscriptionPlanResource {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     public ResponseEntity<SubscriptionPlanResponse> update(
         @PathVariable UUID id,
         @Valid @RequestBody UpdateSubscriptionPlanRequest request
@@ -74,19 +74,19 @@ public class SubscriptionPlanResource {
     }
 
     @PostMapping("/{id}/activate")
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     public ResponseEntity<SubscriptionPlanResponse> activate(@PathVariable UUID id) {
         return ResponseEntity.ok(planService.activateSubscriptionPlan(id));
     }
 
     @PostMapping("/{id}/deactivate")
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     public ResponseEntity<SubscriptionPlanResponse> deactivate(@PathVariable UUID id) {
         return ResponseEntity.ok(planService.deactivateSubscriptionPlan(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         planService.deleteSubscriptionPlan(id);
         return ResponseEntity.noContent().build();

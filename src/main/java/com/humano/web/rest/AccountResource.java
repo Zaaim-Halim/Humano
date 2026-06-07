@@ -7,6 +7,8 @@ import com.humano.dto.PasswordChangeDTO;
 import com.humano.repository.shared.PersistentTokenRepository;
 import com.humano.repository.shared.UserRepository;
 import com.humano.security.SecurityUtils;
+import com.humano.security.annotation.PublicEndpoint;
+import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.service.MailService;
 import com.humano.service.UserService;
 import com.humano.web.rest.errors.EmailAlreadyUsedException;
@@ -70,6 +72,7 @@ public class AccountResource {
      */
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
+    @PublicEndpoint
     public void registerAccount(@Valid @RequestBody ManagedUserVM managedUserVM) {
         if (isPasswordLengthInvalid(managedUserVM.getPassword())) {
             throw new InvalidPasswordException();
@@ -85,6 +88,7 @@ public class AccountResource {
      * @throws RuntimeException {@code 500 (Internal Server Error)} if the user couldn't be activated.
      */
     @GetMapping("/activate")
+    @PublicEndpoint
     public void activateAccount(@RequestParam(value = "key") String key) {
         Optional<User> user = userService.activateRegistration(key);
         if (!user.isPresent()) {
@@ -99,6 +103,7 @@ public class AccountResource {
      * or with status {@code 401 (Unauthorized)} if not authenticated.
      */
     @GetMapping("/authenticate")
+    @PublicEndpoint
     public ResponseEntity<Void> isAuthenticated(Principal principal) {
         LOG.debug("REST request to check if the current user is authenticated");
         return ResponseEntity.status(principal == null ? HttpStatus.UNAUTHORIZED : HttpStatus.NO_CONTENT).build();
@@ -111,6 +116,7 @@ public class AccountResource {
      * @throws RuntimeException {@code 500 (Internal Server Error)} if the user couldn't be returned.
      */
     @GetMapping("/account")
+    @RequireAuthenticated
     public AdminUserDTO getAccount() {
         return userService
             .getUserWithAuthorities()
@@ -126,6 +132,7 @@ public class AccountResource {
      * @throws RuntimeException          {@code 500 (Internal Server Error)} if the user login wasn't found.
      */
     @PostMapping("/account")
+    @RequireAuthenticated
     public void saveAccount(@Valid @RequestBody AdminUserDTO userDTO) {
         String userLogin = SecurityUtils.getCurrentUserLogin()
             .orElseThrow(() -> new AccountResourceException("Current user login not found"));
@@ -153,6 +160,7 @@ public class AccountResource {
      * @throws InvalidPasswordException {@code 400 (Bad Request)} if the new password is incorrect.
      */
     @PostMapping(path = "/account/change-password")
+    @RequireAuthenticated
     public void changePassword(@RequestBody PasswordChangeDTO passwordChangeDto) {
         if (isPasswordLengthInvalid(passwordChangeDto.getNewPassword())) {
             throw new InvalidPasswordException();
@@ -167,6 +175,7 @@ public class AccountResource {
      * @throws RuntimeException {@code 500 (Internal Server Error)} if the current open sessions couldn't be retrieved.
      */
     @GetMapping("/account/sessions")
+    @RequireAuthenticated
     public List<PersistentToken> getCurrentSessions() {
         return persistentTokenRepository.findByUser(
             userRepository
@@ -194,6 +203,7 @@ public class AccountResource {
      * @throws IllegalArgumentException if the series couldn't be URL decoded.
      */
     @DeleteMapping("/account/sessions/{series}")
+    @RequireAuthenticated
     public void invalidateSession(@PathVariable("series") String series) {
         String decodedSeries = URLDecoder.decode(series, StandardCharsets.UTF_8);
         SecurityUtils.getCurrentUserLogin()
@@ -214,6 +224,7 @@ public class AccountResource {
      * @param mail the mail of the user.
      */
     @PostMapping(path = "/account/reset-password/init")
+    @PublicEndpoint
     public void requestPasswordReset(@RequestBody String mail) {
         Optional<User> user = userService.requestPasswordReset(mail);
         if (user.isPresent()) {
@@ -233,6 +244,7 @@ public class AccountResource {
      * @throws RuntimeException         {@code 500 (Internal Server Error)} if the password could not be reset.
      */
     @PostMapping(path = "/account/reset-password/finish")
+    @PublicEndpoint
     public void finishPasswordReset(@RequestBody KeyAndPasswordVM keyAndPassword) {
         if (isPasswordLengthInvalid(keyAndPassword.getNewPassword())) {
             throw new InvalidPasswordException();

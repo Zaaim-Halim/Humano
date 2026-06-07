@@ -7,7 +7,7 @@ import com.humano.dto.payroll.response.PayrollResultResponse;
 import com.humano.dto.payroll.response.PayrollRunResponse;
 import com.humano.dto.payroll.response.PayrollRunSummaryResponse;
 import com.humano.dto.payroll.response.PayslipResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequirePayrollAdmin;
 import com.humano.service.payroll.PayrollProcessingService;
 import com.humano.service.payroll.PayslipService;
 import jakarta.validation.Valid;
@@ -21,7 +21,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -43,7 +42,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/payroll/runs")
-@PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.PAYROLL_ADMIN + "')")
+@RequirePayrollAdmin
 public class PayrollRunResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(PayrollRunResource.class);

@@ -3,7 +3,7 @@ package com.humano.web.rest.payroll;
 import com.humano.domain.enumeration.payroll.TaxType;
 import com.humano.dto.payroll.request.CreateTaxWithholdingRequest;
 import com.humano.dto.payroll.response.TaxWithholdingResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequirePayrollAdmin;
 import com.humano.service.payroll.TaxWithholdingService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -16,7 +16,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
@@ -26,7 +25,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/tax-withholdings")
-@PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.PAYROLL_ADMIN + "')")
+@RequirePayrollAdmin
 public class TaxWithholdingResource {
 
     private final TaxWithholdingService withholdingService;

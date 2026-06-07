@@ -3,7 +3,9 @@ package com.humano.web.rest.hr;
 import com.humano.dto.hr.requests.CreateEmployeeDocumentRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeDocumentRequest;
 import com.humano.dto.hr.responses.EmployeeDocumentResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.service.hr.EmployeeDocumentService;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -22,7 +24,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -59,15 +60,7 @@ public class EmployeeDocumentResource {
      * @throws IOException if file upload fails
      */
     @PostMapping("/employee/{employeeId}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<EmployeeDocumentResponse> uploadDocument(
         @PathVariable UUID employeeId,
         @Valid @RequestPart("metadata") CreateEmployeeDocumentRequest request,
@@ -90,15 +83,7 @@ public class EmployeeDocumentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated document
      */
     @PutMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<EmployeeDocumentResponse> updateDocument(
         @PathVariable UUID id,
         @Valid @RequestBody UpdateEmployeeDocumentRequest request
@@ -121,15 +106,7 @@ public class EmployeeDocumentResource {
      * @throws IOException if file upload fails
      */
     @PutMapping("/{id}/file")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<EmployeeDocumentResponse> replaceDocumentFile(@PathVariable UUID id, @RequestPart("file") MultipartFile file)
         throws IOException {
         LOG.debug("REST request to replace file for Document: {}", id);
@@ -148,15 +125,7 @@ public class EmployeeDocumentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of documents in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<EmployeeDocumentResponse>> getAllDocuments(Pageable pageable) {
         LOG.debug("REST request to get all Documents");
 
@@ -173,17 +142,7 @@ public class EmployeeDocumentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the document
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<EmployeeDocumentResponse> getDocument(@PathVariable UUID id) {
         LOG.debug("REST request to get Document: {}", id);
 
@@ -200,17 +159,7 @@ public class EmployeeDocumentResource {
      * @throws IOException if file download fails
      */
     @GetMapping("/{id}/download")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<Resource> downloadDocument(@PathVariable UUID id) throws IOException {
         LOG.debug("REST request to download Document: {}", id);
 
@@ -233,17 +182,7 @@ public class EmployeeDocumentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of documents in body
      */
     @GetMapping("/employee/{employeeId}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<List<EmployeeDocumentResponse>> getDocumentsByEmployee(@PathVariable UUID employeeId) {
         LOG.debug("REST request to get Documents by employee: {}", employeeId);
 
@@ -259,7 +198,7 @@ public class EmployeeDocumentResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deleteDocument(@PathVariable UUID id) {
         LOG.debug("REST request to delete Document: {}", id);
 

@@ -2,7 +2,8 @@ package com.humano.web.rest.billing;
 
 import com.humano.dto.billing.requests.CreateCouponRequest;
 import com.humano.dto.billing.responses.CouponResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireAdmin;
+import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.service.billing.CouponService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -12,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/billing/coupons")
-@PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+@RequireAdmin
 public class CouponResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(CouponResource.class);
@@ -53,7 +53,7 @@ public class CouponResource {
     }
 
     @PostMapping("/redeem/{code}")
-    @PreAuthorize("isAuthenticated()")
+    @RequireAuthenticated
     public ResponseEntity<CouponResponse> redeem(@PathVariable String code) {
         return ResponseEntity.ok(couponService.redeemCoupon(code));
     }

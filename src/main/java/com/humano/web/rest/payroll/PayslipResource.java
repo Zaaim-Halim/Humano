@@ -2,7 +2,7 @@ package com.humano.web.rest.payroll;
 
 import com.humano.dto.payroll.request.PayslipSearchRequest;
 import com.humano.dto.payroll.response.PayslipResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequirePayrollOrHrManager;
 import com.humano.service.payroll.PayslipService;
 import jakarta.validation.Valid;
 import java.util.Map;
@@ -13,7 +13,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
@@ -33,15 +32,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/payslips")
-@PreAuthorize(
-    "hasAnyAuthority('" +
-    AuthoritiesConstants.ADMIN +
-    "', '" +
-    AuthoritiesConstants.PAYROLL_ADMIN +
-    "', '" +
-    AuthoritiesConstants.HR_MANAGER +
-    "')"
-)
+@RequirePayrollOrHrManager
 public class PayslipResource {
 
     private final PayslipService payslipService;

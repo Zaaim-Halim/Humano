@@ -3,7 +3,8 @@ package com.humano.web.rest.hr;
 import com.humano.dto.hr.requests.CreateDepartmentRequest;
 import com.humano.dto.hr.requests.UpdateDepartmentRequest;
 import com.humano.dto.hr.responses.DepartmentResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaff;
 import com.humano.service.hr.DepartmentService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -16,7 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -49,7 +49,7 @@ public class DepartmentResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<DepartmentResponse> createDepartment(@Valid @RequestBody CreateDepartmentRequest request)
         throws URISyntaxException {
         LOG.debug("REST request to create Department: {}", request);
@@ -69,7 +69,7 @@ public class DepartmentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated department
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<DepartmentResponse> updateDepartment(@PathVariable UUID id, @Valid @RequestBody UpdateDepartmentRequest request) {
         LOG.debug("REST request to update Department: {}", id);
 
@@ -87,15 +87,7 @@ public class DepartmentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of departments in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<DepartmentResponse>> getAllDepartments(Pageable pageable) {
         LOG.debug("REST request to get all Departments");
 
@@ -112,15 +104,7 @@ public class DepartmentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the department
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<DepartmentResponse> getDepartment(@PathVariable UUID id) {
         LOG.debug("REST request to get Department: {}", id);
 
@@ -136,7 +120,7 @@ public class DepartmentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and boolean result
      */
     @GetMapping("/exists")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Boolean> existsByName(@RequestParam String name) {
         LOG.debug("REST request to check if Department exists by name: {}", name);
 
@@ -152,7 +136,7 @@ public class DepartmentResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deleteDepartment(@PathVariable UUID id) {
         LOG.debug("REST request to delete Department: {}", id);
 
@@ -171,7 +155,7 @@ public class DepartmentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated department
      */
     @PutMapping("/{id}/head/{headId}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<DepartmentResponse> assignHead(@PathVariable UUID id, @PathVariable UUID headId) {
         LOG.debug("REST request to assign head {} to Department: {}", headId, id);
 
@@ -189,7 +173,7 @@ public class DepartmentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated department
      */
     @DeleteMapping("/{id}/head")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<DepartmentResponse> removeHead(@PathVariable UUID id) {
         LOG.debug("REST request to remove head from Department: {}", id);
 

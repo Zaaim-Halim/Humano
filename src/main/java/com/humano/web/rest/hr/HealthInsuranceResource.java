@@ -4,7 +4,9 @@ import com.humano.domain.enumeration.hr.HealthInsuranceStatus;
 import com.humano.dto.hr.requests.CreateHealthInsuranceRequest;
 import com.humano.dto.hr.requests.UpdateHealthInsuranceRequest;
 import com.humano.dto.hr.responses.HealthInsuranceResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.service.hr.HealthInsuranceService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -17,7 +19,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -50,15 +51,7 @@ public class HealthInsuranceResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<HealthInsuranceResponse> createHealthInsurance(@Valid @RequestBody CreateHealthInsuranceRequest request)
         throws URISyntaxException {
         LOG.debug("REST request to create HealthInsurance: {}", request);
@@ -78,15 +71,7 @@ public class HealthInsuranceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated health insurance
      */
     @PutMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<HealthInsuranceResponse> updateHealthInsurance(
         @PathVariable UUID id,
         @Valid @RequestBody UpdateHealthInsuranceRequest request
@@ -107,15 +92,7 @@ public class HealthInsuranceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of health insurance records in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<HealthInsuranceResponse>> getAllHealthInsurance(Pageable pageable) {
         LOG.debug("REST request to get all HealthInsurance records");
 
@@ -132,17 +109,7 @@ public class HealthInsuranceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the health insurance
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<HealthInsuranceResponse> getHealthInsurance(@PathVariable UUID id) {
         LOG.debug("REST request to get HealthInsurance: {}", id);
 
@@ -159,17 +126,7 @@ public class HealthInsuranceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of health insurance records in body
      */
     @GetMapping("/employee/{employeeId}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<Page<HealthInsuranceResponse>> getHealthInsuranceByEmployee(@PathVariable UUID employeeId, Pageable pageable) {
         LOG.debug("REST request to get HealthInsurance by employee: {}", employeeId);
 
@@ -187,15 +144,7 @@ public class HealthInsuranceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of health insurance records in body
      */
     @GetMapping("/status/{status}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<HealthInsuranceResponse>> getHealthInsuranceByStatus(
         @PathVariable HealthInsuranceStatus status,
         Pageable pageable
@@ -215,15 +164,7 @@ public class HealthInsuranceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of active health insurance records in body
      */
     @GetMapping("/active")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<HealthInsuranceResponse>> getActiveHealthInsurance(Pageable pageable) {
         LOG.debug("REST request to get active HealthInsurance records");
 
@@ -240,7 +181,7 @@ public class HealthInsuranceResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deleteHealthInsurance(@PathVariable UUID id) {
         LOG.debug("REST request to delete HealthInsurance: {}", id);
 

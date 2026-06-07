@@ -9,7 +9,8 @@ import com.humano.dto.tenant.requests.UpdateTenantRequest;
 import com.humano.dto.tenant.responses.OrganizationResponse;
 import com.humano.dto.tenant.responses.TenantResponse;
 import com.humano.dto.tenant.responses.TenantStorageConfigResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireAdmin;
+import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.service.tenant.OrganizationService;
 import com.humano.service.tenant.TenantService;
 import com.humano.service.tenant.TenantStorageConfigService;
@@ -20,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/tenant")
-@PreAuthorize("isAuthenticated()")
+@RequireAuthenticated
 public class TenantResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantResource.class);
@@ -72,7 +72,7 @@ public class TenantResource {
     }
 
     @PutMapping("/me")
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     public TenantResponse updateCurrent(@Valid @RequestBody UpdateTenantRequest request) {
         LOG.info("Tenant '{}' self-update", TenantContext.getCurrentTenant());
         return tenantService.updateTenant(currentTenantId(), request);
@@ -86,7 +86,7 @@ public class TenantResource {
     }
 
     @PostMapping("/organizations")
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     @ResponseStatus(HttpStatus.CREATED)
     public OrganizationResponse createOrganization(@Valid @RequestBody CreateOrganizationRequest request) {
         // Ignore any caller-supplied tenantId — always create under the current tenant.
@@ -95,13 +95,13 @@ public class TenantResource {
     }
 
     @PutMapping("/organizations/{id}")
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     public OrganizationResponse updateOrganization(@PathVariable("id") UUID id, @Valid @RequestBody UpdateOrganizationRequest request) {
         return organizationService.updateOrganization(id, request);
     }
 
     @DeleteMapping("/organizations/{id}")
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     public ResponseEntity<Void> deleteOrganization(@PathVariable("id") UUID id) {
         organizationService.deleteOrganization(id);
         return ResponseEntity.noContent().build();
@@ -115,7 +115,7 @@ public class TenantResource {
     }
 
     @PostMapping("/storage-configs")
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     @ResponseStatus(HttpStatus.CREATED)
     public TenantStorageConfigResponse createStorageConfig(@Valid @RequestBody CreateTenantStorageConfigRequest request) {
         // Scope to the current tenant regardless of payload.
@@ -137,19 +137,19 @@ public class TenantResource {
     }
 
     @PostMapping("/storage-configs/{id}/activate")
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     public TenantStorageConfigResponse activateStorageConfig(@PathVariable("id") UUID id) {
         return storageConfigService.activateStorageConfig(id);
     }
 
     @PostMapping("/storage-configs/{id}/deactivate")
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     public TenantStorageConfigResponse deactivateStorageConfig(@PathVariable("id") UUID id) {
         return storageConfigService.deactivateStorageConfig(id);
     }
 
     @DeleteMapping("/storage-configs/{id}")
-    @PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+    @RequireAdmin
     public ResponseEntity<Void> deleteStorageConfig(@PathVariable("id") UUID id) {
         storageConfigService.deleteStorageConfig(id);
         return ResponseEntity.noContent().build();

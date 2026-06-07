@@ -4,7 +4,9 @@ import com.humano.dto.hr.requests.CreateOvertimeRecordRequest;
 import com.humano.dto.hr.requests.OvertimeRecordSearchRequest;
 import com.humano.dto.hr.requests.ProcessOvertimeRecordRequest;
 import com.humano.dto.hr.responses.OvertimeRecordResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.service.hr.OvertimeRecordService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -17,7 +19,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -50,17 +51,7 @@ public class OvertimeRecordResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<OvertimeRecordResponse> createOvertimeRecord(@Valid @RequestBody CreateOvertimeRecordRequest request)
         throws URISyntaxException {
         LOG.debug("REST request to create OvertimeRecord: {}", request);
@@ -80,15 +71,7 @@ public class OvertimeRecordResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated overtime record
      */
     @PutMapping("/{id}/process")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<OvertimeRecordResponse> processOvertimeRecord(
         @PathVariable UUID id,
         @Valid @RequestBody ProcessOvertimeRecordRequest request
@@ -109,15 +92,7 @@ public class OvertimeRecordResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of overtime records in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<OvertimeRecordResponse>> getAllOvertimeRecords(Pageable pageable) {
         LOG.debug("REST request to get all OvertimeRecords");
 
@@ -134,17 +109,7 @@ public class OvertimeRecordResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the overtime record
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<OvertimeRecordResponse> getOvertimeRecord(@PathVariable UUID id) {
         LOG.debug("REST request to get OvertimeRecord: {}", id);
 
@@ -161,15 +126,7 @@ public class OvertimeRecordResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of overtime records in body
      */
     @GetMapping("/search")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<OvertimeRecordResponse>> searchOvertimeRecords(
         OvertimeRecordSearchRequest searchRequest,
         Pageable pageable
@@ -191,17 +148,7 @@ public class OvertimeRecordResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of overtime records in body
      */
     @GetMapping("/employee/{employeeId}/search")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<Page<OvertimeRecordResponse>> searchOvertimeRecordsByEmployee(
         @PathVariable UUID employeeId,
         OvertimeRecordSearchRequest searchRequest,
@@ -222,7 +169,7 @@ public class OvertimeRecordResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deleteOvertimeRecord(@PathVariable UUID id) {
         LOG.debug("REST request to delete OvertimeRecord: {}", id);
 

@@ -2,14 +2,13 @@ package com.humano.web.rest.payroll;
 
 import com.humano.dto.payroll.request.CreatePayRuleRequest;
 import com.humano.dto.payroll.response.PayComponentResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequirePayrollAdmin;
 import com.humano.service.payroll.PayComponentService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -18,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/payroll/pay-rules")
-@PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.PAYROLL_ADMIN + "')")
+@RequirePayrollAdmin
 public class PayRuleResource {
 
     private final PayComponentService payComponentService;

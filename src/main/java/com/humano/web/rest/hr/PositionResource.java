@@ -3,7 +3,8 @@ package com.humano.web.rest.hr;
 import com.humano.dto.hr.requests.CreatePositionRequest;
 import com.humano.dto.hr.requests.UpdatePositionRequest;
 import com.humano.dto.hr.responses.PositionResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaff;
 import com.humano.service.hr.PositionService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -16,7 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -49,7 +49,7 @@ public class PositionResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<PositionResponse> createPosition(@Valid @RequestBody CreatePositionRequest request) throws URISyntaxException {
         LOG.debug("REST request to create Position: {}", request);
 
@@ -68,7 +68,7 @@ public class PositionResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated position
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<PositionResponse> updatePosition(@PathVariable UUID id, @Valid @RequestBody UpdatePositionRequest request) {
         LOG.debug("REST request to update Position: {}", id);
 
@@ -86,15 +86,7 @@ public class PositionResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of positions in body
      */
     @GetMapping
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<PositionResponse>> getAllPositions(Pageable pageable) {
         LOG.debug("REST request to get all Positions");
 
@@ -111,15 +103,7 @@ public class PositionResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the position
      */
     @GetMapping("/{id}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<PositionResponse> getPosition(@PathVariable UUID id) {
         LOG.debug("REST request to get Position: {}", id);
 
@@ -136,15 +120,7 @@ public class PositionResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of positions in body
      */
     @GetMapping("/unit/{unitId}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "')"
-    )
+    @RequireHrStaff
     public ResponseEntity<Page<PositionResponse>> getPositionsByUnit(@PathVariable UUID unitId, Pageable pageable) {
         LOG.debug("REST request to get Positions by Unit: {}", unitId);
 
@@ -161,7 +137,7 @@ public class PositionResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> deletePosition(@PathVariable UUID id) {
         LOG.debug("REST request to delete Position: {}", id);
 

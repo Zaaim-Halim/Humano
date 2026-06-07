@@ -5,7 +5,7 @@ import com.humano.dto.payroll.request.CreateCompensationRequest;
 import com.humano.dto.payroll.request.SalaryAdjustmentRequest;
 import com.humano.dto.payroll.response.CompensationResponse;
 import com.humano.dto.payroll.response.SalaryHistoryResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequirePayrollOrHrManager;
 import com.humano.service.payroll.CompensationService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -17,7 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
@@ -27,15 +26,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/compensations")
-@PreAuthorize(
-    "hasAnyAuthority('" +
-    AuthoritiesConstants.ADMIN +
-    "', '" +
-    AuthoritiesConstants.PAYROLL_ADMIN +
-    "', '" +
-    AuthoritiesConstants.HR_MANAGER +
-    "')"
-)
+@RequirePayrollOrHrManager
 public class CompensationResource {
 
     private final CompensationService compensationService;

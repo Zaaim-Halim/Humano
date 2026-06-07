@@ -2,9 +2,9 @@ package com.humano.web.rest.billing;
 
 import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.dto.billing.responses.SubscriptionResponse;
+import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.service.billing.SubscriptionService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/billing/me")
-@PreAuthorize("isAuthenticated()")
+@RequireAuthenticated
 public class MeBillingResource {
 
     private final SubscriptionService subscriptionService;

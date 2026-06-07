@@ -5,6 +5,8 @@ import com.humano.dto.hr.workflow.requests.ApprovalDecisionRequest;
 import com.humano.dto.hr.workflow.requests.InitiateTransferRequest;
 import com.humano.dto.hr.workflow.responses.TransferWorkflowResponse;
 import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.service.hr.workflow.TransferWorkflowService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -38,7 +40,7 @@ public class TransferWorkflowResource {
      * {@code POST  /} : Initiate a transfer request.
      */
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<TransferWorkflowResponse> initiateTransfer(@Valid @RequestBody InitiateTransferRequest request) {
         LOG.debug("REST request to initiate transfer for employee: {}", request.employeeId());
         TransferWorkflowResponse result = transferService.initiateTransfer(request);
@@ -49,17 +51,7 @@ public class TransferWorkflowResource {
      * {@code GET  /:workflowId} : Get transfer workflow status.
      */
     @GetMapping("/{workflowId}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<TransferWorkflowResponse> getTransferStatus(@PathVariable UUID workflowId) {
         LOG.debug("REST request to get transfer status: {}", workflowId);
         TransferWorkflowResponse result = transferService.getTransferStatus(workflowId);
@@ -116,7 +108,7 @@ public class TransferWorkflowResource {
      * {@code POST  /:workflowId/approve/hr} : Process HR approval.
      */
     @PostMapping("/{workflowId}/approve/hr")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<TransferWorkflowResponse> processHRApproval(
         @PathVariable UUID workflowId,
         @Valid @RequestBody ApprovalDecisionRequest decision
@@ -132,7 +124,7 @@ public class TransferWorkflowResource {
      * {@code POST  /:workflowId/execute} : Execute an approved transfer.
      */
     @PostMapping("/{workflowId}/execute")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<TransferWorkflowResponse> executeTransfer(@PathVariable UUID workflowId) {
         LOG.debug("REST request to execute transfer: {}", workflowId);
         TransferWorkflowResponse result = transferService.executeTransfer(workflowId);
@@ -143,7 +135,7 @@ public class TransferWorkflowResource {
      * {@code POST  /:workflowId/cancel} : Cancel a transfer request.
      */
     @PostMapping("/{workflowId}/cancel")
-    @PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.HR_MANAGER + "')")
+    @RequireHrManager
     public ResponseEntity<Void> cancelTransfer(@PathVariable UUID workflowId, @RequestParam String reason) {
         LOG.debug("REST request to cancel transfer: {}", workflowId);
         transferService.cancelTransfer(workflowId, reason);
@@ -156,17 +148,7 @@ public class TransferWorkflowResource {
      * {@code GET  /history/:employeeId} : Get employee's position history.
      */
     @GetMapping("/history/{employeeId}")
-    @PreAuthorize(
-        "hasAnyAuthority('" +
-        AuthoritiesConstants.ADMIN +
-        "', '" +
-        AuthoritiesConstants.HR_MANAGER +
-        "', '" +
-        AuthoritiesConstants.HR_SPECIALIST +
-        "', '" +
-        AuthoritiesConstants.EMPLOYEE +
-        "')"
-    )
+    @RequireHrStaffOrEmployee
     public ResponseEntity<Page<EmployeePositionHistory>> getEmployeePositionHistory(@PathVariable UUID employeeId, Pageable pageable) {
         LOG.debug("REST request to get position history for employee: {}", employeeId);
         Page<EmployeePositionHistory> page = transferService.getEmployeePositionHistory(employeeId, pageable);

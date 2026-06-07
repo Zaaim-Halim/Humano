@@ -3,7 +3,7 @@ package com.humano.web.rest.payroll;
 import com.humano.dto.payroll.request.BulkPayrollInputRequest;
 import com.humano.dto.payroll.request.CreatePayrollInputRequest;
 import com.humano.dto.payroll.response.PayrollInputResponse;
-import com.humano.security.AuthoritiesConstants;
+import com.humano.security.annotation.RequirePayrollAdmin;
 import com.humano.service.payroll.PayrollInputService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -15,7 +15,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.PaginationUtil;
@@ -25,7 +24,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/inputs")
-@PreAuthorize("hasAnyAuthority('" + AuthoritiesConstants.ADMIN + "', '" + AuthoritiesConstants.PAYROLL_ADMIN + "')")
+@RequirePayrollAdmin
 public class PayrollInputResource {
 
     private final PayrollInputService inputService;
