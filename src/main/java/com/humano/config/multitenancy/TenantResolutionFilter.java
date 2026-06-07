@@ -118,6 +118,10 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             path.startsWith("/management/") ||
             path.startsWith("/api/tenant-registration") ||
             path.startsWith("/api/public/") ||
+            // P4.2 — Stripe webhooks carry no tenant header; the resource resolves the
+            // target tenant transitively through Payment → Invoice → Tenant after
+            // verifying the Stripe-Signature.
+            path.startsWith("/api/billing/webhooks/") ||
             path.startsWith("/swagger-ui") ||
             path.startsWith("/v3/api-docs") ||
             path.startsWith("/content/") ||

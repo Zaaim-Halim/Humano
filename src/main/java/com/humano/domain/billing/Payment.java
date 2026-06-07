@@ -9,9 +9,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Payment entity represents a financial transaction for an invoice.
@@ -164,6 +168,18 @@ public class Payment extends AbstractAuditingEntity<UUID> {
     @JoinColumn(name = "currency_id", nullable = false)
     @NotNull(message = "Currency is required")
     private BillingCurrency currency;
+
+    /**
+     * Raw provider response stored as JSON.
+     * <p>
+     * Captures the structured rest of a Stripe (or future provider) response that
+     * doesn't fit a typed column — PaymentIntent status, last_payment_error,
+     * charge object, balance transaction id, dispute info, etc. Lets ops diff what
+     * we recorded against the provider dashboard when a payment is challenged.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "provider_metadata", columnDefinition = "json")
+    private Map<String, Object> providerMetadata = new HashMap<>();
 
     /**
      * Optimistic locking version for concurrent modifications.
@@ -356,6 +372,14 @@ public class Payment extends AbstractAuditingEntity<UUID> {
 
     public Long getVersion() {
         return version;
+    }
+
+    public Map<String, Object> getProviderMetadata() {
+        return providerMetadata;
+    }
+
+    public void setProviderMetadata(Map<String, Object> providerMetadata) {
+        this.providerMetadata = providerMetadata != null ? providerMetadata : new HashMap<>();
     }
 
     @Override

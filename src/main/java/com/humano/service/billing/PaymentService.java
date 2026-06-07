@@ -12,18 +12,24 @@ import com.humano.domain.tenant.Tenant;
 import com.humano.dto.billing.requests.CreatePaymentRequest;
 import com.humano.dto.billing.responses.PaymentResponse;
 import com.humano.events.PaymentCompletedEvent;
+import com.humano.events.PaymentFailedEvent;
 import com.humano.repository.billing.BillingCurrencyRepository;
 import com.humano.repository.billing.InvoiceRepository;
 import com.humano.repository.billing.PaymentRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
+import com.humano.service.billing.payment.PaymentProvider;
+import com.humano.service.billing.payment.PaymentProviderException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -45,6 +51,14 @@ public class PaymentService {
     private final SubscriptionRepository subscriptionRepository;
     private final TenantRepository tenantRepository;
     private final ApplicationEventPublisher eventPublisher;
+    /**
+     * P4.2 — Optional. Resolved on demand via {@link ObjectProvider#getIfAvailable()};
+     * absent in dev when {@code humano.billing.stripe.secret-key} is empty. When
+     * absent, {@link #refundPayment} and {@link #retryPayment} keep the simulate-
+     * success path so the app boots and the REST surface stays usable without
+     * Stripe credentials. In prod the bean is always present.
+     */
+    private final ObjectProvider<PaymentProvider> paymentProvider;
 
     public PaymentService(
         PaymentRepository paymentRepository,
@@ -52,7 +66,8 @@ public class PaymentService {
         BillingCurrencyRepository currencyRepository,
         SubscriptionRepository subscriptionRepository,
         TenantRepository tenantRepository,
-        ApplicationEventPublisher eventPublisher
+        ApplicationEventPublisher eventPublisher,
+        ObjectProvider<PaymentProvider> paymentProvider
     ) {
         this.paymentRepository = paymentRepository;
         this.invoiceRepository = invoiceRepository;
@@ -60,6 +75,7 @@ public class PaymentService {
         this.subscriptionRepository = subscriptionRepository;
         this.tenantRepository = tenantRepository;
         this.eventPublisher = eventPublisher;
+        this.paymentProvider = paymentProvider;
     }
 
     /**
@@ -218,12 +234,41 @@ public class PaymentService {
                     payment.setStatus(PaymentStatus.REFUNDED);
                 }
 
-                // TODO: Integrate with payment provider to process actual refund
+                // P4.2 — call the provider if both wired (provider bean) and applicable
+                // (externalPaymentId carries a Stripe charge id, not the sim "retry_..." marker).
+                PaymentProvider provider = paymentProvider.getIfAvailable();
+                if (provider != null && payment.getExternalPaymentId() != null && payment.getExternalPaymentId().startsWith("pi_")) {
+                    try {
+                        PaymentProvider.RefundResult result = provider.refund(payment.getExternalPaymentId(), actualRefundAmount);
+                        mergeMetadata(payment, "refund", result.providerMetadata());
+                        log.info("Stripe refund {} succeeded for payment: {}", result.refundId(), id);
+                    } catch (PaymentProviderException e) {
+                        log.warn("Stripe refund failed for payment {} ({}): {}", id, e.getKind(), e.getMessage());
+                        throw new IllegalStateException("Provider refund failed: " + e.getMessage(), e);
+                    }
+                }
 
                 log.info("Processed refund of {} for payment: {}", actualRefundAmount, id);
                 return mapToResponse(paymentRepository.save(payment));
             })
             .orElseThrow(() -> EntityNotFoundException.create("Payment", id));
+    }
+
+    /**
+     * Merge a provider response snapshot into the payment's accumulating metadata,
+     * keyed by operation ("charge", "refund", "retry", "webhook"). Each operation
+     * overwrites its prior snapshot — we don't keep a per-attempt history here
+     * (the audit event log P6.2 covers that level of detail).
+     */
+    private void mergeMetadata(Payment payment, String operation, java.util.Map<String, Object> snapshot) {
+        java.util.Map<String, Object> existing = payment.getProviderMetadata();
+        if (existing == null) {
+            existing = new HashMap<>();
+        }
+        existing.put(operation, snapshot);
+        existing.put("lastOperation", operation);
+        existing.put("lastOperationAt", Instant.now().toString());
+        payment.setProviderMetadata(existing);
     }
 
     /**
@@ -248,12 +293,46 @@ public class PaymentService {
                 int retryCount = payment.getRetryCount() != null ? payment.getRetryCount() : 0;
                 payment.setRetryCount(retryCount + 1);
 
-                // TODO: Integrate with payment provider to process payment with new token
-                // For now, simulate success
-                payment.setStatus(PaymentStatus.COMPLETED);
-                payment.setPaymentDate(Instant.now());
-                payment.setExternalPaymentId("retry_" + UUID.randomUUID().toString().substring(0, 8));
-                payment.setFailureReason(null);
+                // P4.2 — provider call if wired. Idempotency key includes the retry count
+                // so each attempt is distinct (otherwise Stripe replays the failed result).
+                PaymentProvider provider = paymentProvider.getIfAvailable();
+                if (provider != null) {
+                    String idempotencyKey = "payment-" + id + "-retry-" + payment.getRetryCount();
+                    String currencyCode = payment.getCurrency() != null ? payment.getCurrency().getCode().name() : "USD";
+                    try {
+                        PaymentProvider.ChargeResult result = provider.charge(
+                            payment.getAmount(),
+                            currencyCode,
+                            newPaymentToken,
+                            idempotencyKey
+                        );
+                        payment.setExternalPaymentId(result.transactionId());
+                        mergeMetadata(payment, "retry", result.providerMetadata());
+                        if (isProviderSuccessStatus(result.status())) {
+                            payment.setStatus(PaymentStatus.COMPLETED);
+                            payment.setPaymentDate(Instant.now());
+                            payment.setFailureReason(null);
+                        } else {
+                            // Provider accepted but requires next action (3DS, etc.) — leave PENDING.
+                            payment.setStatus(PaymentStatus.PENDING);
+                            payment.setFailureReason("Provider status: " + result.status());
+                            return mapToResponse(paymentRepository.save(payment));
+                        }
+                    } catch (PaymentProviderException e) {
+                        payment.setStatus(PaymentStatus.FAILED);
+                        payment.setFailureReason(e.getMessage());
+                        Payment saved = paymentRepository.save(payment);
+                        publishPaymentFailedEvent(saved, payment.getInvoice(), e.getProviderCode());
+                        log.warn("Stripe retry failed for payment {} ({}): {}", id, e.getKind(), e.getMessage());
+                        return mapToResponse(saved);
+                    }
+                } else {
+                    // Dev / no-provider path — simulate success (legacy behaviour).
+                    payment.setStatus(PaymentStatus.COMPLETED);
+                    payment.setPaymentDate(Instant.now());
+                    payment.setExternalPaymentId("retry_" + UUID.randomUUID().toString().substring(0, 8));
+                    payment.setFailureReason(null);
+                }
 
                 Payment savedPayment = paymentRepository.save(payment);
 
@@ -355,6 +434,127 @@ public class PaymentService {
         }
         paymentRepository.deleteById(id);
         log.info("Deleted payment with ID: {}", id);
+    }
+
+    private static boolean isProviderSuccessStatus(String status) {
+        return "succeeded".equalsIgnoreCase(status) || "captured".equalsIgnoreCase(status);
+    }
+
+    /**
+     * P4.2 — Webhook entry point. Stripe's {@code payment_intent.succeeded} fires
+     * asynchronously after a charge clears (3DS challenge, off-session debit, etc.).
+     * The webhook resource resolves the {@code PaymentIntent.id} back to our
+     * {@link Payment} via {@link PaymentRepository#findByExternalPaymentId} and
+     * calls this method. Idempotent: a duplicate webhook on an already-COMPLETED
+     * payment is a no-op.
+     */
+    @Transactional
+    public Optional<PaymentResponse> completeByExternalId(String externalPaymentId, java.util.Map<String, Object> webhookSnapshot) {
+        log.info("Webhook completePaymentByExternalId: {}", externalPaymentId);
+        return paymentRepository
+            .findByExternalPaymentId(externalPaymentId)
+            .map(payment -> {
+                if (payment.getStatus() == PaymentStatus.COMPLETED) {
+                    log.debug("Payment {} already COMPLETED — webhook is replay; no-op", payment.getId());
+                    return mapToResponse(payment);
+                }
+                payment.setStatus(PaymentStatus.COMPLETED);
+                payment.setPaymentDate(Instant.now());
+                payment.setFailureReason(null);
+                mergeMetadata(payment, "webhook", webhookSnapshot);
+
+                Invoice invoice = payment.getInvoice();
+                BigDecimal totalPaid = invoice
+                    .getPayments()
+                    .stream()
+                    .filter(p -> p.getStatus() == PaymentStatus.COMPLETED)
+                    .map(Payment::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .add(payment.getAmount());
+
+                if (totalPaid.compareTo(invoice.getTotalAmount()) >= 0) {
+                    invoice.setStatus(InvoiceStatus.PAID);
+                    invoice.setPaidDate(Instant.now());
+                    invoiceRepository.save(invoice);
+                    activateTenantIfNeeded(invoice);
+                }
+
+                Payment saved = paymentRepository.save(payment);
+                publishPaymentCompletedEvent(saved, invoice);
+                return mapToResponse(saved);
+            });
+    }
+
+    /**
+     * P4.2 — Webhook entry point. Stripe's {@code payment_intent.payment_failed}
+     * marks the corresponding payment FAILED and publishes
+     * {@link PaymentFailedEvent} for dunning + email listeners. Idempotent.
+     */
+    @Transactional
+    public Optional<PaymentResponse> failByExternalId(
+        String externalPaymentId,
+        String failureReason,
+        String providerCode,
+        java.util.Map<String, Object> webhookSnapshot
+    ) {
+        log.info("Webhook failPaymentByExternalId: {} ({})", externalPaymentId, failureReason);
+        return paymentRepository
+            .findByExternalPaymentId(externalPaymentId)
+            .map(payment -> {
+                if (payment.getStatus() == PaymentStatus.FAILED) {
+                    log.debug("Payment {} already FAILED — webhook is replay; no-op", payment.getId());
+                    return mapToResponse(payment);
+                }
+                payment.setStatus(PaymentStatus.FAILED);
+                payment.setFailureReason(failureReason);
+                mergeMetadata(payment, "webhook", webhookSnapshot);
+                Payment saved = paymentRepository.save(payment);
+                publishPaymentFailedEvent(saved, payment.getInvoice(), providerCode);
+                return mapToResponse(saved);
+            });
+    }
+
+    /**
+     * P4.2 — Webhook entry point for {@code charge.refunded}. Pushes the refunded
+     * amount onto the payment row and re-evaluates terminal status. Idempotent on
+     * the {@code refundedAmount} field — Stripe sends the cumulative amount, not
+     * the delta, so we overwrite rather than add.
+     */
+    @Transactional
+    public Optional<PaymentResponse> recordRefundByExternalId(
+        String externalPaymentId,
+        BigDecimal refundedAmountTotal,
+        java.util.Map<String, Object> webhookSnapshot
+    ) {
+        log.info("Webhook recordRefundByExternalId: {} amount={}", externalPaymentId, refundedAmountTotal);
+        return paymentRepository
+            .findByExternalPaymentId(externalPaymentId)
+            .map(payment -> {
+                payment.setRefundedAmount(refundedAmountTotal);
+                if (refundedAmountTotal.compareTo(payment.getAmount()) >= 0) {
+                    payment.setStatus(PaymentStatus.REFUNDED);
+                }
+                mergeMetadata(payment, "webhook", webhookSnapshot);
+                return mapToResponse(paymentRepository.save(payment));
+            });
+    }
+
+    private void publishPaymentFailedEvent(Payment payment, Invoice invoice, String providerCode) {
+        Tenant tenant = invoice.getTenant();
+        PaymentFailedEvent event = PaymentFailedEvent.of(
+            payment.getId(),
+            invoice.getId(),
+            invoice.getInvoiceNumber(),
+            tenant.getId(),
+            tenant.getName(),
+            payment.getAmount(),
+            payment.getCurrency() != null ? payment.getCurrency().getCode().name() : "USD",
+            payment.getExternalPaymentId(),
+            payment.getFailureReason(),
+            providerCode
+        );
+        eventPublisher.publishEvent(event);
+        log.debug("Published payment failed event for payment: {}", payment.getId());
     }
 
     private PaymentResponse mapToResponse(Payment payment) {

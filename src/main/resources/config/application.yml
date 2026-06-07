@@ -250,3 +250,13 @@ humano:
   # PayrollValidationError instead of silently using a stale rate.
   payroll:
     max-exchange-rate-staleness-days: 7
+  # P4.2 — Stripe payment provider. Both secrets are sourced from env vars and have
+  # no committed value. When secret-key is empty the StripePaymentProvider bean is
+  # NOT registered and PaymentService falls back to its existing simulate-success
+  # path — keeps dev boot working without Stripe credentials. In prod set both
+  # STRIPE_SECRET_KEY (sk_live_... or sk_test_...) and STRIPE_WEBHOOK_SECRET
+  # (whsec_...) — the webhook endpoint refuses requests when the latter is empty.
+  billing:
+    stripe:
+      secret-key: ${STRIPE_SECRET_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}

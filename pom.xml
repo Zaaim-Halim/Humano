@@ -113,6 +113,14 @@
             <artifactId>openhtmltopdf-slf4j</artifactId>
             <version>1.0.10</version>
         </dependency>
+        <!-- P4.2: Stripe SDK for charge / refund / SetupIntent + webhook signature verification.
+             Pinned to a recent stable; the SDK is API-versioned server-side, so version bumps
+             here don't change behaviour without an explicit Stripe-Version header. -->
+        <dependency>
+            <groupId>com.stripe</groupId>
+            <artifactId>stripe-java</artifactId>
+            <version>28.4.0</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>

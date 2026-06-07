@@ -87,6 +87,8 @@ public class SecurityConfiguration {
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
                     // Public tenant signup is hit by non-SPA clients that don't carry a CSRF cookie.
                     .ignoringRequestMatchers(antMatcher("/api/tenant-registration"))
+                    // P4.2 — Stripe POSTs webhook events with its own signed envelope; no CSRF cookie.
+                    .ignoringRequestMatchers(antMatcher("/api/billing/webhooks/**"))
             )
             // Tenant resolution MUST run before any authentication step so the user lookup
             // hits the correct tenant DB.
@@ -116,6 +118,7 @@ public class SecurityConfiguration {
                     .requestMatchers(mvc.pattern("/api/register")).permitAll()
                     .requestMatchers(mvc.pattern("/api/activate")).permitAll()
                     .requestMatchers(mvc.pattern("/api/tenant-registration")).permitAll()
+                    .requestMatchers(mvc.pattern("/api/billing/webhooks/**")).permitAll()
                     .requestMatchers(mvc.pattern("/api/account/reset-password/init")).permitAll()
                     .requestMatchers(mvc.pattern("/api/account/reset-password/finish")).permitAll()
                     .requestMatchers(mvc.pattern("/api/admin/**")).hasAuthority(AuthoritiesConstants.ADMIN)
