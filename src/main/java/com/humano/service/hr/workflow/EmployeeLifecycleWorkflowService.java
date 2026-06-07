@@ -29,8 +29,63 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Orchestrator service for managing employee lifecycle workflows.
- * Handles complete onboarding and offboarding processes.
+ * Orchestrator service for managing employee lifecycle workflows
+ * (onboarding + offboarding).
+ *
+ * <h2>P5.1 — Actual state machine (audited 2026-06-07)</h2>
+ *
+ * <p>Two parallel flows. Each writes to BOTH a {@code WorkflowInstance}
+ * (string {@code currentState}, tracked by {@code WorkflowStateManager}) AND
+ * an {@code EmployeeProcess} (typed {@code EmployeeProcessStatus}). The two
+ * state spaces are independent — the workflow state is granular but mostly
+ * static; the process status is the load-bearing one.
+ *
+ * <h3>Onboarding</h3>
+ * <pre>
+ *  EmployeeProcessStatus:  NEW → IN_PROGRESS → COMPLETED
+ *                                 ↘ CANCELLED (via cancelOnboarding)
+ *
+ *  WorkflowInstance.currentState:
+ *      (created) → IN_PROGRESS → PROFILE_SETUP → (no further transitions) → COMPLETED
+ * </pre>
+ *
+ * Entry: {@link #initiateOnboarding} creates both rows; the workflow is
+ * transitioned to {@link #STATE_PROFILE_SETUP} once. {@link
+ * #completeOnboardingTask} marks individual tasks done and the helper
+ * {@code updateProcessProgress} flips the process to {@code COMPLETED} when
+ * every task is done. {@link #cancelOnboarding} hard-cancels.
+ *
+ * <h3>Offboarding</h3>
+ * <pre>
+ *  EmployeeProcessStatus:  NEW → IN_PROGRESS → COMPLETED
+ *
+ *  WorkflowInstance.currentState:
+ *      (created) → IN_PROGRESS → PENDING_REQUESTS_PROCESSING → (no further transitions) → COMPLETED
+ * </pre>
+ *
+ * Entry: {@link #initiateOffboarding} creates both rows + cancels pending
+ * leave requests for the employee + transitions the workflow to {@link
+ * #STATE_PENDING_REQUESTS_PROCESSING}. {@link #completeOffboardingTask} drives
+ * the task list; same all-tasks-done → {@code COMPLETED} fan-in.
+ *
+ * <h3>Dead state constants (audit finding)</h3>
+ *
+ * The class declares eleven phase strings (
+ * {@link #STATE_DEPARTMENT_ASSIGNMENT}, {@link #STATE_BENEFITS_SETUP},
+ * {@link #STATE_TRAINING_ASSIGNMENT}, {@link #STATE_TASKS_IN_PROGRESS},
+ * {@link #STATE_SETTLEMENT_CALCULATION}, {@link #STATE_BENEFITS_TERMINATION},
+ * {@link #STATE_EXIT_TASKS}, {@link #STATE_EXIT_INTERVIEW},
+ * {@link #STATE_FINAL_PROCESSING}, and a partially-used pair) but only TWO
+ * are ever passed to {@code workflowStateManager.transitionState}:
+ * {@link #STATE_PROFILE_SETUP} on onboarding entry and {@link
+ * #STATE_PENDING_REQUESTS_PROCESSING} on offboarding entry. The remaining
+ * constants exist as documentation but contribute nothing observable to the
+ * state machine — process progression is tracked via task-list completion
+ * percentage, not via workflow state. <b>Closing the gap</b> would mean
+ * either: (a) emit a {@code transitionState} per phase as tasks of that
+ * category complete (richer state surface, more notifications); or (b) drop
+ * the unused constants (lighter API). Tracked as a P5.x follow-up — not
+ * required for the P5.1 audit which only documents the actual state machine.
  */
 @Service
 @Transactional

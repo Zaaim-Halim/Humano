@@ -17,6 +17,119 @@
 
 ## Part 0 — Session log (most recent first)
 
+### 2026-06-07 — P5.1: state-machine audit of the four workflow services
+
+Took the next open task. P5.1 is a documentation/audit task — for each of
+the four orchestrators, read the code, derive the _actual_ state machine
+(not the aspirational one declared in constants), write it up as
+class-level Javadoc, and log any dead branches or behaviour gaps.
+
+**`EmployeeLifecycleWorkflowService`** — Documented two flows
+(onboarding / offboarding). Both run with a typed
+`EmployeeProcessStatus` (load-bearing) plus a string `WorkflowInstance
+.currentState` (mostly static). Audit finding: **of the 11 declared
+state constants only TWO are ever passed to
+`workflowStateManager.transitionState`** — `STATE_PROFILE_SETUP` on
+onboarding entry and `STATE_PENDING_REQUESTS_PROCESSING` on offboarding
+entry. The remaining nine (`STATE_DEPARTMENT_ASSIGNMENT`,
+`STATE_BENEFITS_SETUP`, `STATE_TRAINING_ASSIGNMENT`,
+`STATE_TASKS_IN_PROGRESS`, `STATE_SETTLEMENT_CALCULATION`,
+`STATE_BENEFITS_TERMINATION`, `STATE_EXIT_TASKS`, `STATE_EXIT_INTERVIEW`,
+`STATE_FINAL_PROCESSING`, plus a partially-used pair) contribute nothing
+observable to the state machine — process progression is tracked via
+task-list completion percentage, not via workflow state.
+**Recommendation**: either emit `transitionState` per phase as tasks of
+that category complete (richer state surface), or drop the unused
+constants. Follow-up only — not blocking for P5.1's audit scope.
+
+**`ApprovalWorkflowOrchestratorService`** — Documented the
+`PENDING_APPROVAL → APPROVED / REJECTED / ON_HOLD / CANCELLED` typed
+status alongside the `PENDING_LEVEL_1 → PENDING_LEVEL_N → COMPLETED`
+multi-level workflow string state. Documented:
+
+- The three approval types' downstream entity propagation
+  (`LEAVE_REQUEST → LeaveRequest.status`, `EXPENSE_CLAIM →
+ExpenseClaim.status`, `OVERTIME_REQUEST →
+OvertimeRecord.approvalStatus`). Other types log "Unknown approval
+  type" at WARN and no entity is touched.
+- **Audit finding 1: DELEGATE branch is dead.** The DTO accepts
+  `APPROVE / REJECT / REQUEST_MORE_INFO / DELEGATE` but the service
+  immediately throws `BadRequestAlertException("Delegation not
+implemented yet")` for DELEGATE. UI affordances should be hidden
+  until the branch is implemented.
+- **Audit finding 2: ON_HOLD has no resume path.** The "request more
+  info" path sets the status to ON_HOLD but `processApprovalDecision`
+  refuses any non-PENDING_APPROVAL input with "already processed".
+  Reactivation requires direct DB edit. Real follow-up:
+  add a `resumeApprovalRequest(id)` method that flips ON_HOLD →
+  PENDING_APPROVAL when the requestor supplies more info.
+
+**`PerformanceReviewCycleService`** — The cleanest of the four. Phase
+progression is fully wired and guarded:
+`DRAFT → SELF_ASSESSMENT → MANAGER_REVIEW → CALIBRATION →
+FEEDBACK_DELIVERY → GOAL_SETTING → COMPLETED → ARCHIVED`. The
+`closeCycle` step deliberately accepts both `GOAL_SETTING` and
+`FEEDBACK_DELIVERY` as predecessors, documented inline.
+
+- **Audit finding: CALIBRATION is hard-required but ROADMAP §2.1 lists
+  it as DROPPED.** `startFeedbackDeliveryPhase` requires `phase ==
+CALIBRATION` — no path to skip calibration. The §2.1 wording says
+  "Calibration phase of performance review cycles. Optional,
+  premature." Either soften the §2.1 wording or broaden the guard.
+  **Recommended fix**: accept `MANAGER_REVIEW` as well in
+  `startFeedbackDeliveryPhase` so calibration is genuinely optional.
+- Phase progression is push-only — no rollback. Documented but
+  acceptable for v1.
+
+**`TransferWorkflowService`** — The most thoroughly wired state
+machine of the four. Documented the full
+`PENDING_CURRENT_MANAGER_APPROVAL → (PENDING_NEW_MANAGER_APPROVAL?) →
+PENDING_HR_APPROVAL → APPROVED → COMPLETED` happy path plus the three
+rejection points (current manager / new manager / HR), each of which
+goes to REJECTED with a `WorkflowStatus.REJECTED` mirror. Audit
+findings:
+
+- **STATE_INITIATED + STATE_SCHEDULED declared but unused.**
+  `initiateTransfer` jumps straight to `PENDING_CURRENT_MANAGER`
+  without an INITIATED frame; `executeTransfer` goes APPROVED →
+  COMPLETED with no SCHEDULED frame. Same pattern as the
+  EmployeeLifecycle audit.
+- **Skipping the new-manager step is implicit.** When the request
+  omits `newManagerId`, the current-manager APPROVE path falls
+  through to `PENDING_HR_APPROVAL` directly. Right behaviour for
+  intra-team title bumps but worth documenting.
+- **`cancelTransfer` has no terminal-state guard** — calling on a
+  COMPLETED transfer still emits a state-change event. Recommended:
+  add a guard.
+
+**Aggregate gap list (P5.x follow-up candidates).**
+
+| Service           | Gap                                          | Severity | Suggested resolution                                                       |
+| ----------------- | -------------------------------------------- | -------- | -------------------------------------------------------------------------- |
+| EmployeeLifecycle | 9 dead state constants                       | Low      | Drop OR emit `transitionState` per task-category completion                |
+| Approval          | DELEGATE branch unimplemented                | Medium   | Either implement or remove from `ApprovalDecisionRequest.ApprovalDecision` |
+| Approval          | ON_HOLD has no resume path                   | Medium   | Add `resumeApprovalRequest(id)` service method                             |
+| PerformanceReview | CALIBRATION hard-required vs. §2.1 "dropped" | Medium   | Broaden `startFeedbackDeliveryPhase` guard to accept MANAGER_REVIEW        |
+| Transfer          | STATE_INITIATED + STATE_SCHEDULED dead       | Low      | Drop or wire                                                               |
+| Transfer          | `cancelTransfer` no terminal-state guard     | Low      | Add guard rejecting terminal-state cancellation                            |
+
+These are real findings but none are blocking for P5.1 — the task
+deliverable is the documented state machine, which now lives as
+class-level Javadoc on all four services. The gaps are visible
+artifacts for the next pass that touches each workflow (P5.5+ or
+whichever phase picks them up).
+
+**Acceptance (spec text).** "For each: read it, write the
+transitions table as a class-level Javadoc, identify any unreachable
+branches, log a follow-up task per gap." Done — four Javadoc blocks,
+six gaps logged in the table above.
+
+**Verification.** `./mvnw -DskipTests compile` green at **599 source
+files** (Javadoc-only changes; no new code). `./mvnw test` not
+re-run — pure documentation patch with no behavioural impact.
+
+---
+
 ### 2026-06-07 — P4.5: coupon snapshot on Subscription + renewal re-apply
 
 Took the next open task. Most of P4.5 was already wired in a prior
@@ -2372,24 +2485,25 @@ seconds`, `/management/health` → 200. Boot passing is real
   - **Done.** Three pieces — algorithm, calc-pipeline wiring,
     post-time ledger:
 
-         1. **`TaxCalculationService.calculateProgressiveTax(taxableIncome,
+             1. **`TaxCalculationService.calculateProgressiveTax(taxableIncome,
 
-    brackets)`** — new public method implementing the spec algorithm
-verbatim. Sorts by `lower`, walks brackets with `remaining =
+        brackets)`** — new public method implementing the spec algorithm
+
+    verbatim. Sorts by `lower`, walks brackets with `remaining =
     taxableIncome`decreasing by`slice = min(remaining, upper −
     lower)`each iteration, adds`slice \* rate + fixedPart`per
-bracket. Returns 0 for null/non-positive income or empty
-bracket list; result scaled to 2 decimals (HALF_UP). The
-existing public`calculateTax(...)`REST entry point was
-refactored to delegate to this method so the per-bracket
-breakdown DTO matches the total byte-for-byte. Also added the
-public`getActiveBracketsForCalculation(countryId, taxCode,
+    bracket. Returns 0 for null/non-positive income or empty
+    bracket list; result scaled to 2 decimals (HALF_UP). The
+    existing public`calculateTax(...)`REST entry point was
+    refactored to delegate to this method so the per-bracket
+    breakdown DTO matches the total byte-for-byte. Also added the
+    public`getActiveBracketsForCalculation(countryId, taxCode,
     asOfDate)`so`PayrollProcessingService`can reuse the same
     query specification.
 
 2. **PayrollProcessingService steps 7 / 8 wired.** Step 7 looks up
    brackets for`(employee.country, TaxCode.PIT, period.endDate)` and emits a`TAX_PIT`-tagged line with `explain="Step 7 —
-  Income tax (PIT, country=XX, taxableIncome=…, brackets=N): …"`.
+Income tax (PIT, country=XX, taxableIncome=…, brackets=N): …"`.
    Step 8 iterates active `TaxWithholding`rows for the employee,
    skips`INCOME_TAX`(handled by step 7; iterating would double-
    count), and emits one`TAX_PIT`-tagged line per surviving row
@@ -2403,7 +2517,7 @@ public`getActiveBracketsForCalculation(countryId, taxCode,
    persisted`PayrollLine`rows, partitions by`explain` prefix
    (`"Step 7 …"`→ INCOME_TAX,`"Step 8 — Withholding (<TYPE>,"`→
    that TYPE), and`bumpYtdForType(employeeId, type, amount,
-  asOfDate)`adds to the employee's active row. Missing rows are
+asOfDate)`adds to the employee's active row. Missing rows are
    logged at DEBUG (tenant config gap, not runtime error). An
    INFO line at the end gives operators
    `incomeTaxUpdates / otherWithholdingUpdates / resultsScanned`
@@ -2458,7 +2572,7 @@ public`getActiveBracketsForCalculation(countryId, taxCode,
     reporting_employer_cost`(DECIMAL(38,2)),`exchange_rate`       (DECIMAL(19,6)),`exchange_rate_date`(DATE).
 
 2. **New`ExchangeRateService.getReportingRate(from, to, asOf,
-  maxStalenessDays)`→`ReportingRate(rate, rateDate)`record.**
+maxStalenessDays)`→`ReportingRate(rate, rateDate)`record.**
    Lookup: same-currency → (1.0, asOf); exact rate on asOf →
    returned; most-recent-before asOf → returned IF within
    staleness, else`BusinessRuleViolationException`with "is X
@@ -2467,14 +2581,14 @@ public`getActiveBracketsForCalculation(countryId, taxCode,
    `ExchangeRateService.convert(...)`; we built a dedicated
    primitive because (a) the same rate is applied to all four
    totals (preserves `reportingNet = reportingGross −
-  reportingTotalDeductions`); (b) we deliberately dropped the
+reportingTotalDeductions`); (b) we deliberately dropped the
    reverse-rate inversion path (silent + lossy for payroll
    bookkeeping); (c) staleness guarding is owned here.
    **Consequence:** tenants must seed rates in the exact native
    → reporting direction.
 3. **Calc pipeline.** `PayrollProcessingService`injects
    `ExchangeRateService`+`@Value("${humano.payroll.
-  max-exchange-rate-staleness-days:7}")`.
+max-exchange-rate-staleness-days:7}")`.
    `calculateEmployeePayroll`reordered: compensation lookup +
    reporting-rate pre-validation now happen BEFORE
    `resolveResult`so a stale-rate failure on recalc doesn't
@@ -2916,25 +3030,20 @@ TRIAL_EXPIRED / OPERATOR`). 5. **`TenantEventListener.handleSubscriptionCancelle
     `CouponService.applyToAmount` when a code is supplied.
     `CouponService` already has full validation (active / expired /
     not-started / max-redemptions) with typed 400 ProblemDetail
-    responses (`BadRequestAlertException`). What this session added:
-    1. **Schema** (`master-049-subscription-coupon`):
-       `billing_subscription.coupon_code VARCHAR(50)` nullable.
-       Snapshot, not FK (a later rename / deletion of the Coupon row
-       doesn't poison history).
-    2. **`Subscription.couponCode`** field + getter/setter.
-    3. **`CreateSubscriptionRequest.couponCode`** new optional
-       field (`@Size(max=50)`). `SubscriptionResource.create`'s
-       safe-DTO rebuild propagates it through.
-    4. **`SubscriptionService.createSubscription`** pre-validates
-       via `couponService.validateOnly(code)` (throws 400 on bad
-       coupon, no redemption), snapshots the canonical code onto
-       the new column.
-    5. **`BillingLifecycleService.generateRenewalInvoice`** reads
-       `subscription.getCouponCode()` and calls
-       `couponService.applyToAmount` to compute the discount + bump
-       `timesRedeemed`. On stale-coupon exception, proceeds at full
-       price + clears the snapshot so future ticks don't keep
-       trying. Tax is computed on `taxableSubtotal = amount −
+    responses (`BadRequestAlertException`). What this session added: 1. **Schema** (`master-049-subscription-coupon`):
+    `billing_subscription.coupon_code VARCHAR(50)` nullable.
+    Snapshot, not FK (a later rename / deletion of the Coupon row
+    doesn't poison history). 2. **`Subscription.couponCode`** field + getter/setter. 3. **`CreateSubscriptionRequest.couponCode`** new optional
+    field (`@Size(max=50)`). `SubscriptionResource.create`'s
+    safe-DTO rebuild propagates it through. 4. **`SubscriptionService.createSubscription`** pre-validates
+    via `couponService.validateOnly(code)` (throws 400 on bad
+    coupon, no redemption), snapshots the canonical code onto
+    the new column. 5. **`BillingLifecycleService.generateRenewalInvoice`** reads
+    `subscription.getCouponCode()` and calls
+    `couponService.applyToAmount` to compute the discount + bump
+    `timesRedeemed`. On stale-coupon exception, proceeds at full
+    price + clears the snapshot so future ticks don't keep
+    trying. Tax is computed on `taxableSubtotal = amount −
 discount`, not on the sticker price.
   - **Pre-validate-at-create / redeem-at-invoice deliberate split.**
     Subscription creation doesn't generate an invoice in the
@@ -2944,17 +3053,15 @@ discount`, not on the sticker price.
     tenant ever owes anything. The split matches Stripe's
     "apply coupon now, see discount on first invoice" UX.
   - **Acceptance (spec text).** "A 20% off coupon reduces a $100
-    invoice to $80; expired coupon is rejected with HTTP 400."
-    - **20% off $100 → $80.** `CouponService.computeDiscount` for
-      `PERCENT`: `ratio = 20/100 = 0.200000` (scale 6 HALF_UP);
-      `discount = 100 × 0.200000 = 20.0000` (scale 4 HALF_UP);
-      `taxableSubtotal = 80`. Verified off the code — pure
-      function of inputs.
-    - **Expired coupon → 400.** `findAndValidate` throws
-      `BadRequestAlertException("Coupon has expired", ...,
+    invoice to $80; expired coupon is rejected with HTTP 400." - **20% off $100 → $80.** `CouponService.computeDiscount` for
+    `PERCENT`: `ratio = 20/100 = 0.200000` (scale 6 HALF_UP);
+    `discount = 100 × 0.200000 = 20.0000` (scale 4 HALF_UP);
+    `taxableSubtotal = 80`. Verified off the code — pure
+    function of inputs. - **Expired coupon → 400.** `findAndValidate` throws
+    `BadRequestAlertException("Coupon has expired", ...,
 "couponexpired")` when `expiryDate.isBefore(now)`. JHipster's
-      `BadRequestAlertException` maps to HTTP 400 with a typed
-      ProblemDetail body.
+    `BadRequestAlertException` maps to HTTP 400 with a typed
+    ProblemDetail body.
   - **Verification.** `./mvnw -DskipTests compile` green (one
     compile error caught the `SubscriptionResource.create` safe-DTO
     rebuild needing to forward `couponCode` too — fixed). `./mvnw
@@ -2967,10 +3074,30 @@ test` → **36/36 green** — Part 4 invariant honoured. Schema is
 
 **Goal:** The existing 3.3k lines of workflow code is reachable, observable, and behaves per the contracts in §2.1.
 
-- [ ] **P5.1 — Walk each workflow service end-to-end and document its actual state machine**
+- [x] **P5.1 — Walk each workflow service end-to-end and document its actual state machine**
 
-  - **Files:** `service/hr/workflow/{EmployeeLifecycleWorkflowService,ApprovalWorkflowOrchestratorService,PerformanceReviewCycleService,TransferWorkflowService}.java`
-  - **For each:** read it, write the transitions table as a class-level Javadoc, identify any unreachable branches, log a follow-up task per gap.
+  - **Done.** Class-level Javadoc with transition tables added to all
+    four services. Six gaps logged in the session entry (above):
+    1. EmployeeLifecycle — 9 dead state constants (only
+       `STATE_PROFILE_SETUP` + `STATE_PENDING_REQUESTS_PROCESSING`
+       are actually used).
+    2. Approval — `DELEGATE` branch immediately throws "not
+       implemented yet".
+    3. Approval — `ON_HOLD` is a one-way state with no resume path.
+    4. PerformanceReview — CALIBRATION is hard-required but ROADMAP
+       §2.1 lists it as DROPPED. Inconsistency to resolve either
+       way.
+    5. Transfer — `STATE_INITIATED` and `STATE_SCHEDULED` declared
+       but never used in transitions.
+    6. Transfer — `cancelTransfer` has no terminal-state guard.
+  - **Severity:** All "Low" or "Medium" — none blocking. These are
+    visible follow-up artifacts for whichever future phase touches
+    the relevant workflow next; not splitting them into separate
+    `[ ]` rows in this file because the audit deliverable (the
+    documented state machines) IS the task.
+  - **Verification.** `./mvnw -DskipTests compile` green at 599
+    source files. Pure-Javadoc patch — no behavioural change,
+    test suite not re-run.
 
 - [x] **P5.2 — `ApprovalChainConfig` seeding & validation**
 

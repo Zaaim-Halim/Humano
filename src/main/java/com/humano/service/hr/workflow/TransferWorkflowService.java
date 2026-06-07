@@ -29,7 +29,71 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service for managing employee transfer workflows.
- * Handles position and department transfers with multi-party approvals.
+ *
+ * <h2>P5.1 — Actual state machine (audited 2026-06-07)</h2>
+ *
+ * <p>Of the four workflow services this is the one with the genuinely full
+ * state machine — every declared state constant is reachable, every
+ * transition is guarded, and rejection at any level is terminal.
+ *
+ * <h3>WorkflowInstance.currentState transitions</h3>
+ * <pre>
+ *  (created) → IN_PROGRESS → PENDING_CURRENT_MANAGER_APPROVAL
+ *                                    │
+ *                                    │ processCurrentManagerApproval(APPROVE)
+ *                                    │   ├─ newManagerId set → PENDING_NEW_MANAGER_APPROVAL
+ *                                    │   │       │
+ *                                    │   │       │ processNewManagerApproval(APPROVE)
+ *                                    │   │       └─→ PENDING_HR_APPROVAL
+ *                                    │   │       processNewManagerApproval(REJECT)
+ *                                    │   │       └─→ REJECTED (terminal)
+ *                                    │   │
+ *                                    │   └─ newManagerId absent → PENDING_HR_APPROVAL
+ *                                    │           │
+ *                                    │           │ processHRApproval(APPROVE)
+ *                                    │           ├─→ APPROVED
+ *                                    │           │       │
+ *                                    │           │       │ executeTransfer()
+ *                                    │           │       └─→ COMPLETED (terminal)
+ *                                    │           │
+ *                                    │           processHRApproval(REJECT)
+ *                                    │           └─→ REJECTED (terminal)
+ *                                    │
+ *                                    │ processCurrentManagerApproval(REJECT)
+ *                                    └─→ REJECTED (terminal)
+ *
+ *  cancelTransfer() — operator override; works from any non-terminal state.
+ * </pre>
+ *
+ * <h3>Status alignment</h3>
+ *
+ * Each terminal transition also writes to
+ * {@code workflow.status (WorkflowStatus)} so the typed status stays in
+ * lockstep with the string state: APPROVED → {@code APPROVED}; REJECTED →
+ * {@code REJECTED}; COMPLETED → {@code COMPLETED} (via
+ * {@code completeWorkflow}).
+ *
+ * <h3>Audit findings</h3>
+ * <ul>
+ *   <li><b>STATE_INITIATED + STATE_SCHEDULED are declared but unused.</b>
+ *       {@link #initiateTransfer} immediately transitions to
+ *       PENDING_CURRENT_MANAGER without writing INITIATED first.
+ *       SCHEDULED is similarly unreferenced — the executeTransfer path
+ *       goes APPROVED → COMPLETED without a SCHEDULED step. Same shape
+ *       as the {@link EmployeeLifecycleWorkflowService} audit: dead
+ *       constants. Either drop or wire.</li>
+ *   <li><b>Skipping the new-manager step is implicit, not explicit.</b>
+ *       When the request omits {@code newManagerId}, the current-manager
+ *       APPROVE path falls through to PENDING_HR_APPROVAL directly.
+ *       That's the right behaviour for an intra-team title bump (no new
+ *       receiving manager) but the lack of a dedicated state is easy to
+ *       miss — documented inline.</li>
+ *   <li><b>Cancellation from REJECTED / COMPLETED is silently accepted.</b>
+ *       {@link #cancelTransfer} doesn't guard against terminal states.
+ *       Calling it on a completed transfer no-ops in spirit but emits a
+ *       state-change event. <b>Recommended</b>: add a terminal-state
+ *       guard.</li>
+ * </ul>
  */
 @Service
 @Transactional

@@ -31,8 +31,77 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Orchestrator service for managing approval workflows.
- * Handles leave requests, expense claims, overtime requests, and other approval-based workflows.
+ * Orchestrator service for approval workflows
+ * (leave / expense / overtime requests; salary / timesheet adjustments).
+ *
+ * <h2>P5.1 — Actual state machine (audited 2026-06-07)</h2>
+ *
+ * <p>Each approval request writes BOTH a typed status on
+ * {@code ApprovalRequest.status} (a {@code WorkflowStatus}) AND a string
+ * {@code currentState} on the underlying {@code WorkflowInstance}. The two
+ * stay aligned by construction — every {@code transitionState} happens
+ * alongside the corresponding {@code setStatus}.
+ *
+ * <h3>ApprovalRequest status transitions</h3>
+ * <pre>
+ *  (created) → PENDING_APPROVAL ─┬─ APPROVED   (handleApproval, final level reached)
+ *                                ├─ REJECTED   (handleRejection)
+ *                                ├─ ON_HOLD    (handleMoreInfoRequest)
+ *                                └─ CANCELLED  (withdrawApprovalRequest)
+ *
+ *  ON_HOLD → PENDING_APPROVAL    (when requestor supplies more info — TBD; today
+ *                                 ON_HOLD is a one-way state with no resume path
+ *                                 wired in the service)
+ * </pre>
+ *
+ * <h3>WorkflowInstance.currentState transitions</h3>
+ * <pre>
+ *  (created) → IN_PROGRESS → PENDING_LEVEL_1 → PENDING_LEVEL_2 → ... → PENDING_LEVEL_N
+ *                                                                         ↓
+ *                                                              COMPLETED (final approval)
+ *                                                                or
+ *                                                              COMPLETED (rejection — same
+ *                                                                terminal status; the
+ *                                                                outcome is on the
+ *                                                                ApprovalRequest row)
+ * </pre>
+ *
+ * Multi-level chains advance on each APPROVE decision; the next-level
+ * approver is resolved via {@code determineApprover(approvalChain[level],
+ * requestor)}.
+ *
+ * <h3>Entity propagation</h3>
+ *
+ * Final APPROVE / REJECT updates the underlying business entity:
+ * <ul>
+ *   <li>{@code LEAVE_REQUEST} → {@code LeaveRequest.status} = APPROVED / REJECTED.</li>
+ *   <li>{@code EXPENSE_CLAIM} → {@code ExpenseClaim.status} = APPROVED / REJECTED.</li>
+ *   <li>{@code OVERTIME_REQUEST} → {@code OvertimeRecord.approvalStatus} = APPROVED / REJECTED.</li>
+ *   <li>Other {@code ApprovalType} values log "Unknown approval type" at WARN — no entity is touched.</li>
+ * </ul>
+ *
+ * <h3>Audit findings</h3>
+ * <ul>
+ *   <li><b>DELEGATE branch is dead.</b> {@link
+ *       #processApprovalDecision} accepts {@code APPROVE / REJECT /
+ *       REQUEST_MORE_INFO / DELEGATE}; the DELEGATE case throws
+ *       {@code BadRequestAlertException("Delegation not implemented yet")}
+ *       immediately. The DTO surface exposes a decision type that the
+ *       service refuses — UI affordances for delegation should be hidden
+ *       until the branch is implemented.</li>
+ *   <li><b>{@code ON_HOLD} has no resume path.</b>
+ *       {@link #processApprovalDecision} rejects any non-{@code
+ *       PENDING_APPROVAL} input with "already processed". Once the
+ *       requestor responds to a more-info request, the only way back to
+ *       {@code PENDING_APPROVAL} is direct DB edit — not a user-facing
+ *       flow.</li>
+ *   <li><b>Default chain fallback.</b> When no
+ *       {@code ApprovalChainConfig} rows are seeded for the type, the
+ *       service builds a single-step "direct manager" chain at runtime
+ *       (see {@code createDefaultApprovalChain}). P5.2's seeding makes
+ *       this fallback unreachable for the three core types; non-seeded
+ *       types (SALARY_ADJUSTMENT, TRAINING_REQUEST, ...) still hit it.</li>
+ * </ul>
  */
 @Service
 @Transactional

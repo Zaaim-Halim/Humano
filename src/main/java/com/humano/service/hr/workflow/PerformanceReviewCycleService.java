@@ -35,7 +35,55 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service for managing performance review cycle workflows.
- * Handles the complete lifecycle of review cycles including phases and tracking.
+ *
+ * <h2>P5.1 — Actual state machine (audited 2026-06-07)</h2>
+ *
+ * <p>Two state spaces in lockstep: the typed {@code ReviewCyclePhase} on
+ * {@code ReviewCycle.phase} (load-bearing — every method's guard reads it)
+ * AND the string {@code currentState} on the cycle's {@code WorkflowInstance}
+ * (mirrors the phase one-for-one). Each {@code start*Phase} method validates
+ * a single predecessor phase, advances both, and registers a typed deadline.
+ *
+ * <h3>Phase transitions</h3>
+ * <pre>
+ *  DRAFT
+ *    └─ startSelfAssessmentPhase     → SELF_ASSESSMENT
+ *         └─ startManagerReviewPhase → MANAGER_REVIEW
+ *              └─ startCalibrationPhase → CALIBRATION
+ *                   └─ startFeedbackDeliveryPhase → FEEDBACK_DELIVERY
+ *                        └─ startGoalSettingPhase → GOAL_SETTING
+ *                             └─ closeCycle          → COMPLETED
+ *                                  └─ archiveCycle  → ARCHIVED
+ *
+ *  closeCycle ALSO accepts FEEDBACK_DELIVERY as a predecessor (operators
+ *  can skip the GOAL_SETTING phase by closing directly from FEEDBACK_DELIVERY).
+ * </pre>
+ *
+ * <h3>Self-assessment / manager-review submissions</h3>
+ *
+ * {@link #submitSelfAssessment} and {@link #submitManagerReview} write to
+ * the individual {@code PerformanceReview} rows; they don't transition the
+ * cycle phase. Phase progression is a separate operator-driven action.
+ *
+ * <h3>Audit findings</h3>
+ * <ul>
+ *   <li><b>CALIBRATION is hard-required but ROADMAP §2.1 lists it as
+ *       dropped.</b> {@link #startFeedbackDeliveryPhase} requires
+ *       {@code phase == CALIBRATION} — there's no path to skip calibration
+ *       and go straight from MANAGER_REVIEW to FEEDBACK_DELIVERY.
+ *       Either the spec's "dropped" wording needs to soften, or this
+ *       guard needs to also accept {@code MANAGER_REVIEW} so the
+ *       calibration phase is genuinely optional. <b>Recommended fix</b>:
+ *       broaden the guard to accept either predecessor.</li>
+ *   <li><b>Phase progression is push-only, no rollback.</b> No method
+ *       moves a cycle backwards (e.g. SELF_ASSESSMENT → DRAFT to fix a
+ *       misconfigured deadline). Operators have to wait for completion
+ *       and re-create. Acceptable for v1 — listed for completeness.</li>
+ *   <li><b>{@link #closeCycle} accepts two predecessors</b>
+ *       (GOAL_SETTING or FEEDBACK_DELIVERY) — documented inline; means
+ *       cycles can complete with or without an explicit goal-setting
+ *       step.</li>
+ * </ul>
  */
 @Service
 @Transactional
