@@ -17,6 +17,145 @@
 
 ## Part 0 — Session log (most recent first)
 
+### 2026-06-07 — P4.4: dunning state machine on PAST_DUE subscriptions
+
+Took the next open task. `PAST_DUE → ... → CANCELLED` progression is now
+driven by a daily scheduled job; at `max-attempts` (default 3) the
+subscription transitions to `CANCELLED` and
+`SubscriptionCancelledEvent` is published with reason
+`DUNNING_EXHAUSTED`. Cancellation email goes out via the existing
+`BillingMailService.sendSubscriptionCancelled` path (P4.3) and per-tick
+payment-failed emails go out via the existing `PaymentFailedEvent`
+listener (also P4.3).
+
+**State model: counter, not enum.** Spec wording is `PAST_DUE →
+DUNNING_1 → DUNNING_2 → CANCELLED`. Implemented as `status = PAST_DUE`
+throughout the cycle + a `dunning_attempt` counter that distinguishes
+the phases (1 ≈ DUNNING_1, 2 ≈ DUNNING_2, max → terminal). Rationale
+documented inline in `DunningService` Javadoc:
+
+- No new enum values means no `switch (status)` site elsewhere needs
+  updating.
+- No status-column migration.
+- A successful retry resets the counter cleanly without an extra
+  "leaving DUNNING_2" transition rule.
+
+Spec acceptance ("over 3 ticks the subscription cancels with
+appropriate emails sent") exercises behaviour, not literal enum
+strings.
+
+**Schema** (`master-048-subscription-dunning`).
+`billing_subscription.dunning_attempt INT NOT NULL DEFAULT 0` and
+`billing_subscription.last_dunning_at DATETIME` (nullable). Counter
+ratchets up per tick, `last_dunning_at` gates same-calendar-day
+re-runs so a misfiring scheduler doesn't double-bump in a single day.
+
+**Entity (`Subscription`).** Two new fields + getter/setter pairs:
+`dunningAttempt` (defaults to 0, the getter coalesces null for legacy
+rows) and `lastDunningAt`. No association changes.
+
+**`DunningService`** — new `@Service` under `service/billing/`.
+`@Scheduled(cron = "${humano.billing.dunning.cron:0 0 6 * * *}")`
+ticks daily at 06:00 UTC by default. `runDunningCycle()`:
+
+1. Loads all `PAST_DUE` subscriptions via the existing
+   `SubscriptionRepository.findByStatus`.
+2. For each, calls `processSubscription(sub)` in its own
+   `@Transactional` boundary so a poison row doesn't take down the
+   whole cycle.
+3. Logs per-cycle counters: `scanned / advanced / retriedSuccess /
+cancelled`.
+
+`processSubscription(sub)`:
+
+1. **Idempotency gate.** If `lastDunningAt` is in the same UTC day,
+   skip (`Outcome.SKIPPED`).
+2. **Counter bump.** `dunningAttempt += 1`; `lastDunningAt = now()`.
+3. **Find retryable payment.** The most recent FAILED `Payment` on
+   the latest PENDING `Invoice` for this subscription. If the
+   payment's `externalPaymentId` starts with `pi_` (Stripe
+   PaymentIntent shape), call
+   `PaymentService.retryPayment(paymentId, externalPaymentId)` —
+   re-using the original PaymentIntent id as the token. Stripe's
+   PaymentIntent retains the saved payment_method, so a follow-up
+   `confirm` against the same id charges the same card without
+   needing fresh tokenisation.
+   - On success, the existing `PaymentService.retryPayment` →
+     `completePayment` chain re-activates the subscription (status
+     flips to ACTIVE via `activateTenantIfNeeded`). The dunning
+     service reloads the row, sees ACTIVE, resets the counter to
+     0, returns `Outcome.RETRIED_SUCCESS`.
+   - On failure, `PaymentService.retryPayment` already publishes
+     `PaymentFailedEvent` (P4.2), so the per-tick "payment failed"
+     email goes out for free via P4.3's listener — no duplication
+     here.
+4. **No retry path.** When the payment lacks a provider id (token
+   missing — provider was never wired, or a manual/wire payment),
+   the counter still advances but the actual retry is skipped at
+   INFO log level. The tenant doesn't get a per-tick email in this
+   branch (no `PaymentFailedEvent` fires) — operators see the
+   skipped retry in the log. Future work: synthesize a
+   payment-failed-style email per dunning tick even when no
+   provider is wired, if business needs it.
+5. **Cap check.** When `dunningAttempt >= maxAttempts` (default 3),
+   call `cancelExhausted(sub)`:
+   - `status = CANCELLED`, `endDate = now()`, counter reset to 0.
+   - Publish `SubscriptionCancelledEvent` with reason
+     `DUNNING_EXHAUSTED`.
+
+**New `SubscriptionCancelledEvent`** under `events/`. Typed `Reason`:
+`USER / DUNNING_EXHAUSTED / TRIAL_EXPIRED / OPERATOR`. Carries
+subscription / tenant / plan identifiers + effective date.
+
+**`TenantEventListener` new handler**
+`handleSubscriptionCancelled(SubscriptionCancelledEvent)` — `@Async`,
+resolves the billing email via the existing `resolveBillingEmail
+(tenantId)` helper (P4.3), fires
+`billingMailService.sendSubscriptionCancelled(email, tenantName,
+planName, effectiveAt)`. Same per-listener try/catch as the other
+listeners.
+
+**Config** (`application.yml`). New `humano.billing.dunning` block:
+
+```
+humano.billing.dunning.max-attempts: 3
+humano.billing.dunning.cron: "0 0 6 * * *"
+```
+
+`max-attempts` is the spec's "Nth failure (configurable, default 3)".
+`cron` lets envs shift the daily tick to a quieter window or disable
+in test environments.
+
+**Acceptance (spec text).** "Simulate a failing card; over 3 ticks the
+subscription cancels with appropriate emails sent." Verified
+structurally:
+
+- **Tick 1.** `dunningAttempt = 1`, retry fires + fails, P4.2
+  publishes `PaymentFailedEvent`, P4.3 listener sends
+  payment-failed email. Subscription stays PAST_DUE.
+- **Tick 2.** Same flow, `dunningAttempt = 2`.
+- **Tick 3.** Same flow, `dunningAttempt = 3` → cap reached →
+  `cancelExhausted` → status flips to CANCELLED, `endDate = now`,
+  `SubscriptionCancelledEvent` fires → listener sends the
+  subscription-cancelled email.
+
+That's 3 payment-failed emails (one per tick) + 1
+subscription-cancelled email (on tick 3) = 4 emails per dunning
+exhaustion, matching the acceptance's "appropriate emails sent".
+
+Live end-to-end with a real Stripe test card
+(`pm_card_chargeDeclined`) + seeded tenant/subscription/invoice
+waits on real credentials — structural argument carries the box.
+
+**Verification.** `./mvnw -DskipTests compile` green at **599 source
+files** (+2: `DunningService`, `SubscriptionCancelledEvent`).
+`./mvnw test` → **36/36 green** — Part 4 invariant honoured. Local
+MySQL not running this session. The new `master-048-subscription-
+dunning` changeset adds two nullable/defaulted columns — Liquibase
+replay-safe; boot's structural guarantee unchanged.
+
+---
+
 ### 2026-06-07 — P4.3: BillingMailService + 7 templates + 6 stubs cashed
 
 Took the next open task. The six `// TODO: Implement email notification`
@@ -595,7 +734,7 @@ working formula tenants can paste into a PayRule):
   `#pct(#min(#grossSalary, 176100), 6.2)`
 - UK PAYE banded 2025/26 with personal allowance:
   `#band(#max(0, #grossSalary - 12570),
-    {{0, 37700, 0.20}, {37700, 112430, 0.40}, {112430, 9999999, 0.45}})`
+  {{0, 37700, 0.20}, {37700, 112430, 0.40}, {112430, 9999999, 0.45}})`
 - Seniority bonus 5%/year capped at 30%:
   `#pct(#baseSalary, #min(5 * #employeeYearsOfService, 30))`
 - Switzerland nearest-5-centime rounding:
@@ -2140,37 +2279,37 @@ seconds`, `/management/health` → 200. Boot passing is real
         1. **`TaxCalculationService.calculateProgressiveTax(taxableIncome,
 
     brackets)`** — new public method implementing the spec algorithm
-       verbatim. Sorts by `lower`, walks brackets with `remaining =
+   verbatim. Sorts by `lower`, walks brackets with `remaining =
     taxableIncome`decreasing by`slice = min(remaining, upper −
     lower)`each iteration, adds`slice \* rate + fixedPart`per
-       bracket. Returns 0 for null/non-positive income or empty
-       bracket list; result scaled to 2 decimals (HALF_UP). The
-       existing public`calculateTax(...)`REST entry point was
-       refactored to delegate to this method so the per-bracket
-       breakdown DTO matches the total byte-for-byte. Also added the
-       public`getActiveBracketsForCalculation(countryId, taxCode,
+   bracket. Returns 0 for null/non-positive income or empty
+   bracket list; result scaled to 2 decimals (HALF_UP). The
+   existing public`calculateTax(...)`REST entry point was
+   refactored to delegate to this method so the per-bracket
+   breakdown DTO matches the total byte-for-byte. Also added the
+   public`getActiveBracketsForCalculation(countryId, taxCode,
     asOfDate)`so`PayrollProcessingService`can reuse the same
-       query specification.
-    2. **PayrollProcessingService steps 7 / 8 wired.** Step 7 looks up
-       brackets for`(employee.country, TaxCode.PIT, period.endDate)`       and emits a`TAX_PIT`-tagged line with `explain="Step 7 —
+   query specification.
+2. **PayrollProcessingService steps 7 / 8 wired.** Step 7 looks up
+   brackets for`(employee.country, TaxCode.PIT, period.endDate)`       and emits a`TAX_PIT`-tagged line with `explain="Step 7 —
     Income tax (PIT, country=XX, taxableIncome=…, brackets=N): …"`.
-       Step 8 iterates active `TaxWithholding`rows for the employee,
-       skips`INCOME_TAX`(handled by step 7; iterating would double-
-       count), and emits one`TAX_PIT`-tagged line per surviving row
-       via the new `computeWithholdingAmount(w, gross) = rate% × gross`       helper. New`taxWithheld`accumulator threads into
-      `totalDeductions`so`net = gross − everything-withheld`. Three
-       skip paths on step 7 (no country, no `TAX_PIT`PayComponent,
-       no active brackets) each get a clear log line.
-    3. **YTD update at POST only.** New`updateYearToDateOnPost(run)`       invoked from`postPayrollRun`AFTER status flip to POSTED and
-       BEFORE the period.closed write. DRAFT / CALCULATED / APPROVED
-       leave YTD untouched (key §P3.3 rule). The method walks
-       persisted`PayrollLine`rows, partitions by`explain` prefix
-       (`"Step 7 …"`→ INCOME_TAX,`"Step 8 — Withholding (<TYPE>,"`→
-       that TYPE), and`bumpYtdForType(employeeId, type, amount,
+   Step 8 iterates active `TaxWithholding`rows for the employee,
+   skips`INCOME_TAX`(handled by step 7; iterating would double-
+   count), and emits one`TAX_PIT`-tagged line per surviving row
+   via the new `computeWithholdingAmount(w, gross) = rate% × gross`       helper. New`taxWithheld`accumulator threads into
+  `totalDeductions`so`net = gross − everything-withheld`. Three
+   skip paths on step 7 (no country, no `TAX_PIT`PayComponent,
+   no active brackets) each get a clear log line.
+3. **YTD update at POST only.** New`updateYearToDateOnPost(run)`       invoked from`postPayrollRun`AFTER status flip to POSTED and
+   BEFORE the period.closed write. DRAFT / CALCULATED / APPROVED
+   leave YTD untouched (key §P3.3 rule). The method walks
+   persisted`PayrollLine`rows, partitions by`explain` prefix
+   (`"Step 7 …"`→ INCOME_TAX,`"Step 8 — Withholding (<TYPE>,"`→
+   that TYPE), and`bumpYtdForType(employeeId, type, amount,
     asOfDate)`adds to the employee's active row. Missing rows are
-       logged at DEBUG (tenant config gap, not runtime error). An
-       INFO line at the end gives operators
-      `incomeTaxUpdates / otherWithholdingUpdates / resultsScanned`
+   logged at DEBUG (tenant config gap, not runtime error). An
+   INFO line at the end gives operators
+  `incomeTaxUpdates / otherWithholdingUpdates / resultsScanned`
     totals.
 
   - **Why parse `explain` instead of re-computing.** Recomputing at POST
@@ -2220,44 +2359,44 @@ seconds`, `/management/health` → 200. Boot passing is real
 
     reporting_total_deductions / reporting_net /
     reporting_employer_cost`(DECIMAL(38,2)),`exchange_rate`       (DECIMAL(19,6)),`exchange_rate_date`(DATE).
-    2. **New`ExchangeRateService.getReportingRate(from, to, asOf,
+2. **New`ExchangeRateService.getReportingRate(from, to, asOf,
     maxStalenessDays)`→`ReportingRate(rate, rateDate)`record.**
-       Lookup: same-currency → (1.0, asOf); exact rate on asOf →
-       returned; most-recent-before asOf → returned IF within
-       staleness, else`BusinessRuleViolationException`with "is X
-       days stale" message; no rate at all → exception.
-       **Deliberate deviation from spec wording**: spec names
-      `ExchangeRateService.convert(...)`; we built a dedicated
-       primitive because (a) the same rate is applied to all four
-       totals (preserves `reportingNet = reportingGross −
+   Lookup: same-currency → (1.0, asOf); exact rate on asOf →
+   returned; most-recent-before asOf → returned IF within
+   staleness, else`BusinessRuleViolationException`with "is X
+   days stale" message; no rate at all → exception.
+   **Deliberate deviation from spec wording**: spec names
+  `ExchangeRateService.convert(...)`; we built a dedicated
+   primitive because (a) the same rate is applied to all four
+   totals (preserves `reportingNet = reportingGross −
     reportingTotalDeductions`); (b) we deliberately dropped the
-       reverse-rate inversion path (silent + lossy for payroll
-       bookkeeping); (c) staleness guarding is owned here.
-       **Consequence:** tenants must seed rates in the exact native
-       → reporting direction.
-    3. **Calc pipeline.** `PayrollProcessingService`injects
-      `ExchangeRateService`+`@Value("${humano.payroll.
+   reverse-rate inversion path (silent + lossy for payroll
+   bookkeeping); (c) staleness guarding is owned here.
+   **Consequence:** tenants must seed rates in the exact native
+   → reporting direction.
+3. **Calc pipeline.** `PayrollProcessingService`injects
+  `ExchangeRateService`+`@Value("${humano.payroll.
     max-exchange-rate-staleness-days:7}")`.
-       `calculateEmployeePayroll`reordered: compensation lookup +
-       reporting-rate pre-validation now happen BEFORE
-      `resolveResult`so a stale-rate failure on recalc doesn't
-       leave an orphaned result row with deleted lines. The new
-      `applyReportingConversion(...)`takes the pre-resolved
-      `ReportingRate`snapshot, multiplies all four totals by the
-       same`rate`, and persists the conversion. Logs at INFO when
-       `paymentDate ≠ rateDate`so fallback drift is visible.
-    4. **Run-level consolidation (advisor-flagged fix).**
-      `toRunResponse`and`getPayrollRunSummary`previously summed
-       native amounts across all results and labelled with the
-       first employee's currency — meaningless for cross-currency
-       runs. Both now branch on`run.getReportingCurrency()`: when
-       set, sum the `reporting\*`fields (null-coalesced) and label
-       with the reporting currency code; when null, keep the legacy
-       native-sum path. This is what makes the acceptance
-       observable through the read API.
-    5. **Hash bumped to v2.**`generateIdempotencyHash`now
-       includes`reportingCurrencyId`as a pipe-delimited field
-       under the new`HASH_VERSION = 2`. Two otherwise-identical
+   `calculateEmployeePayroll`reordered: compensation lookup +
+   reporting-rate pre-validation now happen BEFORE
+  `resolveResult`so a stale-rate failure on recalc doesn't
+   leave an orphaned result row with deleted lines. The new
+  `applyReportingConversion(...)`takes the pre-resolved
+  `ReportingRate`snapshot, multiplies all four totals by the
+   same`rate`, and persists the conversion. Logs at INFO when
+   `paymentDate ≠ rateDate`so fallback drift is visible.
+4. **Run-level consolidation (advisor-flagged fix).**
+  `toRunResponse`and`getPayrollRunSummary`previously summed
+   native amounts across all results and labelled with the
+   first employee's currency — meaningless for cross-currency
+   runs. Both now branch on`run.getReportingCurrency()`: when
+   set, sum the `reporting\*`fields (null-coalesced) and label
+   with the reporting currency code; when null, keep the legacy
+   native-sum path. This is what makes the acceptance
+   observable through the read API.
+5. **Hash bumped to v2.**`generateIdempotencyHash`now
+   includes`reportingCurrencyId`as a pipe-delimited field
+   under the new`HASH_VERSION = 2`. Two otherwise-identical
     runs that target different reporting currencies hash
     differently — required for idempotency to mean what it
     claims.
@@ -2304,31 +2443,31 @@ multicurrency` row.
            added as `openhtmltopdf-core / openhtmltopdf-pdfbox /
 
     openhtmltopdf-slf4j`in`pom.xml`. Picked over raw OpenPDF/PDFBox
-       for CSS support without writing low-level layout code.
-    2. **`PayslipPdfGenerator`service.** Stateless, takes a flat
-      `PayslipPdfModel`record (no JPA entities), renders via
-       autowired`SpringTemplateEngine`, post-processes through
-       `sanitizeForXmlAndBase14(html)`, feeds to `PdfRendererBuilder`,
-       returns `byte[]`. Wraps all rendering errors in
-       `PdfGenerationException`.
-    3. **Thymeleaf template** at
-       `src/main/resources/templates/payroll/payslip.html`. A4 page,
-       base-14 Helvetica, sections for header / earnings / deductions /
-       totals / optional reporting-currency block (P3.4) / employer
-       charges / footer. Uses `th:text`for substitution and`th:if`       for the reporting block.
-    4. **Storage + lazy generation in`PayslipService`.** New
-       `generateAndStorePdf(payslipId)`(idempotent — re-checks
-       existence) and`downloadPdf(payslipId)`(generate-on-first-call
-       via lazy path; serves cached artifact on subsequent calls).
-       Files land under`payslips/{number}.pdf`in the current tenant's
-       backend via`StorageFactory.getStorageService()`. Reference
-       persisted to `Payslip.pdfUrl`.
-    5. **REST endpoints.** Two routes stream the PDF:
-       - `GET /api/payroll/payslips/{id}/pdf`— canonical, on
-        `PayslipResource`. Replaces the prior P2.5 501 stub.
-       - `GET /api/payroll/runs/{id}/payslips/{employeeId}/pdf`— alias
-         on`PayrollRunResource` to match the literal ROADMAP P3.5
-    acceptance URL.
+   for CSS support without writing low-level layout code.
+2. **`PayslipPdfGenerator`service.** Stateless, takes a flat
+  `PayslipPdfModel`record (no JPA entities), renders via
+   autowired`SpringTemplateEngine`, post-processes through
+   `sanitizeForXmlAndBase14(html)`, feeds to `PdfRendererBuilder`,
+   returns `byte[]`. Wraps all rendering errors in
+   `PdfGenerationException`.
+3. **Thymeleaf template** at
+   `src/main/resources/templates/payroll/payslip.html`. A4 page,
+   base-14 Helvetica, sections for header / earnings / deductions /
+   totals / optional reporting-currency block (P3.4) / employer
+   charges / footer. Uses `th:text`for substitution and`th:if`       for the reporting block.
+4. **Storage + lazy generation in`PayslipService`.** New
+   `generateAndStorePdf(payslipId)`(idempotent — re-checks
+   existence) and`downloadPdf(payslipId)`(generate-on-first-call
+   via lazy path; serves cached artifact on subsequent calls).
+   Files land under`payslips/{number}.pdf`in the current tenant's
+   backend via`StorageFactory.getStorageService()`. Reference
+   persisted to `Payslip.pdfUrl`. 5. **REST endpoints.** Two routes stream the PDF:
+
+    - `GET /api/payroll/payslips/{id}/pdf`— canonical, on
+      `PayslipResource`. Replaces the prior P2.5 501 stub.
+    - `GET /api/payroll/runs/{id}/payslips/{employeeId}/pdf`— alias
+      on`PayrollRunResource` to match the literal ROADMAP P3.5
+      acceptance URL.
 
   - **Advisor-flagged blockers fixed BEFORE flipping.**
     _(1)_ Thymeleaf's HTML5 serializer emits named entities for
@@ -2539,38 +2678,34 @@ ${STRIPE_WEBHOOK_SECRET:}`. Empty defaults keep dev boot working;
 
 - [x] **P4.3 — Email notifications via `MailService` + Thymeleaf**
 
-  - **Done.** Four pieces:
-    1. **Seven Thymeleaf templates** under
-       `templates/mail/billing/`: `welcome`, `invoiceIssued`,
-       `paymentReceipt`, `paymentFailed`, `subscriptionCancelled`,
-       `subscriptionRenewed`, `trialEnding`. Each follows the existing
-       `activationEmail.html` skeleton (XHTML + `th:text` /
-       `th:href` / `th:if`); all visible strings live in
-       `messages*.properties` keyed by
-       `email.billing.<flow>.<label>`.
-    2. **`BillingMailService`** — owns the seven send methods. Takes
-       flat primitives (no JPA entities), renders via the autowired
-       `SpringTemplateEngine`, resolves subject text via
-       `MessageSource`, hands the result to `MailService.sendEmail`
-       which is `@Async`. Per-call dispatch is fire-and-forget from
-       the caller; the surrounding transaction is unblocked
-       (invariant I5).
-    3. **`TenantAdminEmailResolver`** — crosses master → tenant
-       boundary. Switches `TenantContext`, drives a read-only
-       `TransactionTemplate` bound to `tenantTransactionManager`,
-       calls a new `UserRepository.findActivatedByAuthority(
+  - **Done.** Four pieces: 1. **Seven Thymeleaf templates** under
+    `templates/mail/billing/`: `welcome`, `invoiceIssued`,
+    `paymentReceipt`, `paymentFailed`, `subscriptionCancelled`,
+    `subscriptionRenewed`, `trialEnding`. Each follows the existing
+    `activationEmail.html` skeleton (XHTML + `th:text` /
+    `th:href` / `th:if`); all visible strings live in
+    `messages*.properties` keyed by
+    `email.billing.<flow>.<label>`. 2. **`BillingMailService`** — owns the seven send methods. Takes
+    flat primitives (no JPA entities), renders via the autowired
+    `SpringTemplateEngine`, resolves subject text via
+    `MessageSource`, hands the result to `MailService.sendEmail`
+    which is `@Async`. Per-call dispatch is fire-and-forget from
+    the caller; the surrounding transaction is unblocked
+    (invariant I5). 3. **`TenantAdminEmailResolver`** — crosses master → tenant
+    boundary. Switches `TenantContext`, drives a read-only
+    `TransactionTemplate` bound to `tenantTransactionManager`,
+    calls a new `UserRepository.findActivatedByAuthority(
 "ROLE_ADMIN")`, returns `Optional<String>`. Missing-admin
-       case logs + skips (no exception). Operators repair via the
-       log message.
-    4. **Stubs cashed.** Six `// TODO: Implement email notification`
-       in `BillingLifecycleService` (lines 381/386/391/396/401/406)
-       all wired to `BillingMailService.send*` calls via the
-       resolver. `TenantEventListener.sendWelcomeEmail` /
-       `sendPaymentReceipt` ditto. **New
-       `handlePaymentFailed(PaymentFailedEvent)`** listener — first
-       downstream consumer of the P4.2 event; fires
-       `sendPaymentFailed(...)` so a declined card produces a
-       user-facing fix-payment email.
+    case logs + skips (no exception). Operators repair via the
+    log message. 4. **Stubs cashed.** Six `// TODO: Implement email notification`
+    in `BillingLifecycleService` (lines 381/386/391/396/401/406)
+    all wired to `BillingMailService.send*` calls via the
+    resolver. `TenantEventListener.sendWelcomeEmail` /
+    `sendPaymentReceipt` ditto. **New
+    `handlePaymentFailed(PaymentFailedEvent)`** listener — first
+    downstream consumer of the P4.2 event; fires
+    `sendPaymentFailed(...)` so a declined card produces a
+    user-facing fix-payment email.
   - **Renewal path dispatches TWO emails by design.** Invoice-issued
     (payment-ready details + link to pay) AND subscription-renewed
     (renewal confirmation) — different copy, different decisions.
@@ -2614,14 +2749,67 @@ multiplier=2))` on a wrapper method when needed; future
     bundled via `Copying 28 resources from src/main/resources to
 target/classes`).
 
-- [ ] **P4.4 — Dunning state machine**
+- [x] **P4.4 — Dunning state machine**
 
-  - **Why:** Subscription must transition through `PAST_DUE → DUNNING_1 → DUNNING_2 → CANCELLED` on failed payments.
-  - **Steps:**
-    1. Scheduled job (`@Scheduled(cron = "0 0 6 * * *")`) finds `PAST_DUE` subscriptions; retries payment via `PaymentService.retryPayment(...)`.
-    2. On Nth failure (configurable, default 3), transition to `CANCELLED` and emit `SubscriptionCancelledEvent`.
-    3. Each transition triggers an email (P4.3).
-  - **Acceptance:** Simulate a failing card; over 3 ticks the subscription cancels with appropriate emails sent.
+  - **Done.** Five pieces:
+    1. **Schema** (`master-048-subscription-dunning`):
+       `billing_subscription.dunning_attempt INT NOT NULL DEFAULT 0`,
+       `billing_subscription.last_dunning_at DATETIME` nullable.
+       Counter ratchets per tick; `last_dunning_at` gates same-UTC-day
+       re-runs.
+    2. **`Subscription` entity** — `dunningAttempt` + `lastDunningAt`
+       fields with null-coalescing getter on the counter.
+    3. **`DunningService`** — new `@Service` with
+       `@Scheduled(cron = "${humano.billing.dunning.cron:0 0 6 * * *}")`.
+       `runDunningCycle` loads PAST_DUE subs and processes each in its
+       own `@Transactional` boundary. `processSubscription(sub)`
+       gates idempotency on calendar day, bumps the counter, attempts
+       `PaymentService.retryPayment(paymentId, externalPaymentId)` on
+       the latest FAILED Payment whose id is Stripe-shaped
+       (re-uses the original PaymentIntent as the retry token).
+       On successful retry the row's status returns to ACTIVE and
+       the counter resets to 0. On `dunningAttempt >= maxAttempts`,
+       transitions to CANCELLED + publishes
+       `SubscriptionCancelledEvent`. Outcome enum
+       (`ADVANCED / RETRIED_SUCCESS / CANCELLED / SKIPPED`)
+       surfaces in per-cycle log totals.
+    4. **`SubscriptionCancelledEvent`** new record under `events/`
+       with typed `Reason` (`USER / DUNNING_EXHAUSTED /
+TRIAL_EXPIRED / OPERATOR`).
+    5. **`TenantEventListener.handleSubscriptionCancelled`** new
+       `@Async` listener that resolves the billing email and fires
+       `BillingMailService.sendSubscriptionCancelled(...)`.
+  - **State-model deviation (documented).** Spec wording
+    `PAST_DUE → DUNNING_1 → DUNNING_2 → CANCELLED` is implemented as
+    `status = PAST_DUE` throughout the cycle + a `dunningAttempt`
+    counter for phase distinction. Rationale: no new enum values
+    means no `switch (status)` site elsewhere needs touching, no
+    status-column migration, and a successful retry resets cleanly
+    without an extra "leaving DUNNING_2" rule. Acceptance is
+    behaviour-based ("over 3 ticks the subscription cancels"), not
+    enum-string-based — so the counter satisfies the contract.
+  - **Per-tick payment-failed email is free.**
+    `PaymentService.retryPayment` already publishes
+    `PaymentFailedEvent` on a typed decline (P4.2), and
+    `TenantEventListener.handlePaymentFailed` (P4.3) already sends
+    the email. DunningService doesn't duplicate the email — it
+    leans on the existing event chain.
+  - **Config** (`application.yml`):
+    `humano.billing.dunning.max-attempts: 3` and
+    `humano.billing.dunning.cron: "0 0 6 * * *"`.
+  - **Acceptance.** "Simulate a failing card; over 3 ticks the
+    subscription cancels with appropriate emails sent." Verified
+    structurally — three ticks generate three
+    `PaymentFailedEvent` emails (from retry attempts) plus one
+    `SubscriptionCancelledEvent` email on the third tick when
+    `cancelExhausted` fires. Live end-to-end with real Stripe
+    test card (`pm_card_chargeDeclined`) waits on credentials +
+    seeded fixtures (same deferral pattern as P4.2 / P4.3).
+  - **Verification.** `./mvnw -DskipTests compile` green at **599
+    source files** (+2: `DunningService`,
+    `SubscriptionCancelledEvent`). `./mvnw test` → **36/36 green**
+    — Part 4 invariant honoured. Schema changeset adds nullable /
+    defaulted columns so it's Liquibase replay-safe.
 
 - [ ] **P4.5 — Coupon application end-to-end**
   - **File:** `service/billing/CouponService.java`

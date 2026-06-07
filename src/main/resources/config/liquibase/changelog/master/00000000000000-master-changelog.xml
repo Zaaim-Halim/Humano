@@ -573,4 +573,19 @@
         </addColumn>
     </changeSet>
 
+    <!-- P4.4: dunning counters on Subscription. PAST_DUE subscriptions advance
+         through retry attempts on a daily cron; at max-attempts the subscription
+         transitions to CANCELLED. dunning_attempt is the count of retry ticks
+         seen since the subscription entered PAST_DUE; reset to 0 on the
+         status leaving PAST_DUE. last_dunning_at gates idempotency so a misfiring
+         cron doesn't double-bump the counter within the same calendar day. -->
+    <changeSet id="master-048-subscription-dunning" author="halimzaaim">
+        <addColumn tableName="billing_subscription">
+            <column name="dunning_attempt" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_dunning_at" type="DATETIME"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>

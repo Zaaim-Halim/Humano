@@ -2,6 +2,7 @@ package com.humano.events.listeners;
 
 import com.humano.events.PaymentCompletedEvent;
 import com.humano.events.PaymentFailedEvent;
+import com.humano.events.SubscriptionCancelledEvent;
 import com.humano.events.TenantOnboardedEvent;
 import com.humano.events.TenantStatusChangedEvent;
 import com.humano.repository.tenant.TenantRepository;
@@ -219,7 +220,22 @@ public class TenantEventListener {
         }
     }
 
+    /** P4.4 — Subscription cancelled (any reason): send the cancellation email. */
+    @EventListener
+    @Async
+    public void handleSubscriptionCancelled(SubscriptionCancelledEvent event) {
+        log.info("Handling subscription cancelled event for tenant: {} (reason={})", event.tenantName(), event.reason());
+        try {
+            resolveBillingEmail(event.tenantId()).ifPresent(email ->
+                billingMailService.sendSubscriptionCancelled(email, event.tenantName(), event.planName(), event.effectiveAt())
+            );
+        } catch (Exception e) {
+            log.error("Error sending subscription-cancelled email for subscription {}", event.subscriptionId(), e);
+        }
+    }
+
     private java.util.Optional<String> resolveBillingEmail(java.util.UUID tenantId) {
+        if (tenantId == null) return java.util.Optional.empty();
         return tenantRepository.findById(tenantId).flatMap(tenant -> adminEmailResolver.resolveBillingContact(tenant.getSubdomain()));
     }
 }

@@ -260,3 +260,10 @@ humano:
     stripe:
       secret-key: ${STRIPE_SECRET_KEY:}
       webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+    # P4.4 — Dunning state machine. The daily tick walks PAST_DUE subscriptions,
+    # retries the most recent failed payment, and after `max-attempts` consecutive
+    # failures cancels the subscription. Override `cron` to shift the daily tick
+    # to a quieter hour or to `-` (disable) in test environments.
+    dunning:
+      max-attempts: 3
+      cron: '0 0 6 * * *'

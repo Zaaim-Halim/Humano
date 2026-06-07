@@ -137,6 +137,23 @@ public class Subscription extends AbstractAuditingEntity<UUID> {
     private Instant trialEnd;
 
     /**
+     * P4.4 — Number of dunning retry attempts since the subscription entered
+     * PAST_DUE. Bumped by the daily DunningService tick. Reset to 0 when the
+     * subscription leaves PAST_DUE (back to ACTIVE on successful retry; or
+     * once on transition to CANCELLED).
+     */
+    @Column(name = "dunning_attempt", nullable = false)
+    private Integer dunningAttempt = 0;
+
+    /**
+     * P4.4 — Timestamp of the most recent DunningService tick that processed
+     * this row. Guards against duplicate same-day bumps if the scheduler
+     * misfires.
+     */
+    @Column(name = "last_dunning_at")
+    private Instant lastDunningAt;
+
+    /**
      * The subscription plan associated with this subscription.
      * <p>
      * Defines the feature set and base pricing for this subscription.
@@ -293,6 +310,22 @@ public class Subscription extends AbstractAuditingEntity<UUID> {
 
     public void setTrialEnd(Instant trialEnd) {
         this.trialEnd = trialEnd;
+    }
+
+    public Integer getDunningAttempt() {
+        return dunningAttempt != null ? dunningAttempt : 0;
+    }
+
+    public void setDunningAttempt(Integer dunningAttempt) {
+        this.dunningAttempt = dunningAttempt != null ? dunningAttempt : 0;
+    }
+
+    public Instant getLastDunningAt() {
+        return lastDunningAt;
+    }
+
+    public void setLastDunningAt(Instant lastDunningAt) {
+        this.lastDunningAt = lastDunningAt;
     }
 
     public SubscriptionPlan getSubscriptionPlan() {
