@@ -1,0 +1,171 @@
+{
+  "title": "Humano — Per-tenant overview (P7.1)",
+  "uid": "humano-tenants",
+  "schemaVersion": 39,
+  "tags": ["humano", "multi-tenant", "p7.1"],
+  "timezone": "",
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0
+      },
+      {
+        "name": "tenant",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "label_values(humano_tenant_requests_total, tenant)",
+        "multi": true,
+        "includeAll": true,
+        "refresh": 1,
+        "sort": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Request rate by tenant",
+      "description": "humano.tenant.requests counter — per-second rate, summed across endpoint and status. One series per tenant matching $tenant.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (tenant) (rate(humano_tenant_requests_total{tenant=~\"$tenant\"}[1m]))",
+          "legendFormat": "{{tenant}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Error rate (HTTP ≥500) by tenant",
+      "description": "Per-tenant rate of 5xx responses on /api/**.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (tenant) (rate(humano_tenant_requests_total{tenant=~\"$tenant\", status=~\"5..\"}[1m]))",
+          "legendFormat": "{{tenant}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Active DB connections per tenant",
+      "description": "humano.tenant.db.pool.usage{state=\"active\"} — currently checked-out connections from each tenant's Hikari pool.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "humano_tenant_db_pool_usage{tenant=~\"$tenant\", state=\"active\"}",
+          "legendFormat": "{{tenant}} active"
+        },
+        {
+          "refId": "B",
+          "expr": "humano_tenant_db_pool_usage{tenant=~\"$tenant\", state=\"awaiting\"}",
+          "legendFormat": "{{tenant}} awaiting"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "DB pool saturation (active / total) per tenant",
+      "description": "Current utilization ratio. Sustained values near 1.0 mean the per-tenant pool is undersized.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "humano_tenant_db_pool_usage{tenant=~\"$tenant\", state=\"active\"} / clamp_min(humano_tenant_db_pool_usage{tenant=~\"$tenant\", state=\"total\"}, 1)",
+          "legendFormat": "{{tenant}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "red", "value": 0.9 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Payroll-post duration (p95) by tenant",
+      "description": "humano.tenant.payroll.run.duration — 95th percentile wall-clock time of PayrollProcessingService.postPayrollRun.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "humano_tenant_payroll_run_duration_seconds{tenant=~\"$tenant\", quantile=\"0.95\"}",
+          "legendFormat": "{{tenant}} p95"
+        },
+        {
+          "refId": "B",
+          "expr": "humano_tenant_payroll_run_duration_seconds{tenant=~\"$tenant\", quantile=\"0.99\"}",
+          "legendFormat": "{{tenant}} p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Invoice amount distribution (p95) by tenant",
+      "description": "humano.tenant.billing.invoice.amount — 95th-percentile sticker price (pre-tax) per issued invoice, per tenant.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "humano_tenant_billing_invoice_amount{tenant=~\"$tenant\", quantile=\"0.95\"}",
+          "legendFormat": "{{tenant}} p95"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(humano_tenant_billing_invoice_amount_sum{tenant=~\"$tenant\"}[5m]) / clamp_min(rate(humano_tenant_billing_invoice_amount_count{tenant=~\"$tenant\"}[5m]), 1)",
+          "legendFormat": "{{tenant}} avg (5m)"
+        }
+      ]
+    }
+  ]
+}

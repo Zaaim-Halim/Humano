@@ -267,3 +267,9 @@ humano:
     dunning:
       max-attempts: 3
       cron: '0 0 6 * * *'
+  # P7.1 — per-tenant metrics. The DB-pool multi-gauge is refreshed on this
+  # cadence from TenantDataSourceProvider.getPoolStats(). Lower the value to
+  # surface short-lived pool spikes; raise it if the gauge cost shows up on
+  # the scheduler thread under high tenant counts.
+  metrics:
+    pool-refresh-ms: 30000

@@ -1,5 +1,6 @@
 package com.humano.service.billing;
 
+import com.humano.config.metrics.TenantMetrics;
 import com.humano.domain.billing.Invoice;
 import com.humano.domain.billing.Subscription;
 import com.humano.domain.enumeration.billing.InvoiceStatus;
@@ -35,19 +36,22 @@ public class InvoiceService {
     private final SubscriptionRepository subscriptionRepository;
     private final BillingTaxResolver taxResolver;
     private final CouponService couponService;
+    private final TenantMetrics tenantMetrics;
 
     public InvoiceService(
         InvoiceRepository invoiceRepository,
         TenantRepository tenantRepository,
         SubscriptionRepository subscriptionRepository,
         BillingTaxResolver taxResolver,
-        CouponService couponService
+        CouponService couponService,
+        TenantMetrics tenantMetrics
     ) {
         this.invoiceRepository = invoiceRepository;
         this.tenantRepository = tenantRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.taxResolver = taxResolver;
         this.couponService = couponService;
+        this.tenantMetrics = tenantMetrics;
     }
 
     /**
@@ -119,6 +123,15 @@ public class InvoiceService {
 
         Invoice savedInvoice = invoiceRepository.save(invoice);
         log.info("Created invoice with ID: {}", savedInvoice.getId());
+
+        // P7.1 — tenant passed explicitly: invoice issuance runs in master-DB context
+        // so TenantContext is null/master here. Sticker price (pre-tax) recorded; tax
+        // and discount derivations live alongside as separate Invoice columns. The
+        // record is in-memory and NOT transactional — a subsequent commit failure
+        // will leave the meter over-counted by one. Acceptable for a v1 volume
+        // metric; wrap in TransactionSynchronization.afterCommit if exactness is
+        // ever required.
+        tenantMetrics.recordInvoiceAmount(tenant.getSubdomain(), savedInvoice.getAmount());
 
         return mapToResponse(savedInvoice);
     }

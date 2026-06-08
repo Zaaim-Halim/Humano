@@ -1,6 +1,7 @@
 package com.humano.service.payroll;
 
 import com.humano.aop.audit.Auditable;
+import com.humano.config.metrics.TenantMetrics;
 import com.humano.domain.enumeration.hr.LeaveStatus;
 import com.humano.domain.enumeration.hr.LeaveType;
 import com.humano.domain.enumeration.payroll.*;
@@ -19,6 +20,7 @@ import com.humano.repository.payroll.CurrencyRepository;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
+import io.micrometer.core.instrument.Timer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -140,6 +142,7 @@ public class PayrollProcessingService {
     private final BonusService bonusService;
     private final TaxCalculationService taxCalculationService;
     private final ExchangeRateService exchangeRateService;
+    private final TenantMetrics tenantMetrics;
 
     /** P3.4: maximum days a fallback rate may lag the payment date before the per-employee
      *  calculation fails with a {@code BusinessRuleViolationException}. */
@@ -168,7 +171,8 @@ public class PayrollProcessingService {
         DeductionService deductionService,
         BonusService bonusService,
         TaxCalculationService taxCalculationService,
-        ExchangeRateService exchangeRateService
+        ExchangeRateService exchangeRateService,
+        TenantMetrics tenantMetrics
     ) {
         this.payrollRunRepository = payrollRunRepository;
         this.payrollPeriodRepository = payrollPeriodRepository;
@@ -192,6 +196,7 @@ public class PayrollProcessingService {
         this.bonusService = bonusService;
         this.taxCalculationService = taxCalculationService;
         this.exchangeRateService = exchangeRateService;
+        this.tenantMetrics = tenantMetrics;
     }
 
     /**
@@ -860,29 +865,36 @@ public class PayrollProcessingService {
     @Auditable(action = "PAYROLL_POSTED", targetType = "PayrollRun", targetIdExpression = "#runId")
     public PayrollRunResponse postPayrollRun(UUID runId) {
         log.info("Posting payroll run: {}", runId);
+        // P7.1 — record wall-clock duration. Started inside the method (not via
+        // AOP) so it covers only the POSTED transition + YTD-ledger walk + period
+        // close — the bit that's actually expensive enough to track over time.
+        Timer.Sample sample = tenantMetrics.startPayrollTimer();
+        try {
+            PayrollRun run = payrollRunRepository.findById(runId).orElseThrow(() -> new EntityNotFoundException("PayrollRun", runId));
 
-        PayrollRun run = payrollRunRepository.findById(runId).orElseThrow(() -> new EntityNotFoundException("PayrollRun", runId));
+            if (run.getStatus() != RunStatus.APPROVED) {
+                throw new BusinessRuleViolationException("Can only post APPROVED payroll runs. Current status: " + run.getStatus());
+            }
 
-        if (run.getStatus() != RunStatus.APPROVED) {
-            throw new BusinessRuleViolationException("Can only post APPROVED payroll runs. Current status: " + run.getStatus());
+            run.setStatus(RunStatus.POSTED);
+            run = payrollRunRepository.save(run);
+
+            // §P3.3: YTD update happens before the period closes, but after the run is
+            // marked POSTED so a partial failure leaves the run state coherent with the
+            // ledger write attempts.
+            updateYearToDateOnPost(run);
+
+            // Close the period
+            PayrollPeriod period = run.getPeriod();
+            period.setClosed(true);
+            payrollPeriodRepository.save(period);
+
+            log.info("Payroll run {} posted and period {} closed", run.getId(), period.getId());
+
+            return toRunResponse(run, Collections.emptyList());
+        } finally {
+            tenantMetrics.stopPayrollTimer(sample);
         }
-
-        run.setStatus(RunStatus.POSTED);
-        run = payrollRunRepository.save(run);
-
-        // §P3.3: YTD update happens before the period closes, but after the run is
-        // marked POSTED so a partial failure leaves the run state coherent with the
-        // ledger write attempts.
-        updateYearToDateOnPost(run);
-
-        // Close the period
-        PayrollPeriod period = run.getPeriod();
-        period.setClosed(true);
-        payrollPeriodRepository.save(period);
-
-        log.info("Payroll run {} posted and period {} closed", run.getId(), period.getId());
-
-        return toRunResponse(run, Collections.emptyList());
     }
 
     /**
