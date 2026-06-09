@@ -8,6 +8,7 @@ import com.humano.dto.hr.responses.OrganizationalUnitResponse;
 import com.humano.repository.hr.OrganizationalUnitRepository;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
+import com.humano.web.rest.errors.BadRequestAlertException;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +65,8 @@ public class OrganizationalUnitService {
         return organizationalUnitRepository
             .findById(id)
             .map(unit -> {
+                String oldPath = unit.getPath();
+
                 if (request.name() != null) {
                     unit.setName(request.name());
                 }
@@ -74,6 +77,7 @@ public class OrganizationalUnitService {
                     OrganizationalUnit parentUnit = organizationalUnitRepository
                         .findById(request.parentUnitId())
                         .orElseThrow(() -> EntityNotFoundException.create("OrganizationalUnit", request.parentUnitId()));
+                    rejectIfWouldCreateCycle(unit, parentUnit);
                     unit.setParentUnit(parentUnit);
                 }
                 if (request.managerId() != null) {
@@ -82,9 +86,36 @@ public class OrganizationalUnitService {
                         .orElseThrow(() -> EntityNotFoundException.create("Employee", request.managerId()));
                     unit.setManager(manager);
                 }
-                return mapToResponse(organizationalUnitRepository.save(unit));
+
+                // Flush so the recomputed path is in the DB before bulk-rewriting descendants.
+                OrganizationalUnit saved = organizationalUnitRepository.saveAndFlush(unit);
+                String newPath = saved.getPath();
+                if (oldPath != null && !oldPath.equals(newPath)) {
+                    int rewritten = organizationalUnitRepository.rewriteDescendantPaths(oldPath, newPath);
+                    log.info("Rewrote {} descendant path(s) after reparenting/renaming org unit {}", rewritten, id);
+                }
+                return mapToResponse(saved);
             })
             .orElseThrow(() -> EntityNotFoundException.create("OrganizationalUnit", id));
+    }
+
+    /**
+     * Reject moving a unit under one of its own descendants — that would create a
+     * cycle and silently corrupt the materialized path on every node below.
+     */
+    private void rejectIfWouldCreateCycle(OrganizationalUnit unit, OrganizationalUnit proposedParent) {
+        String unitPath = unit.getPath();
+        String parentPath = proposedParent.getPath();
+        if (unitPath == null || parentPath == null) {
+            return;
+        }
+        if (parentPath.equals(unitPath) || parentPath.startsWith(unitPath + "/")) {
+            throw new BadRequestAlertException(
+                "Parent unit cannot be the unit itself or one of its sub-units",
+                "organizationalUnit",
+                "cyclicHierarchy"
+            );
+        }
     }
 
     @Transactional(readOnly = true)

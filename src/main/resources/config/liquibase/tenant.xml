@@ -59,6 +59,9 @@
     <!-- P6.2 — Append-only audit_event log for sensitive HR/payroll actions -->
     <include file="config/liquibase/changelog/tenant/20260607-audit-event-changelog.xml" relativeToChangelogFile="false"/>
 
+    <!-- Indexes backing the materialized-path hierarchy reads (employee + org unit subtrees) -->
+    <include file="config/liquibase/changelog/tenant/20260609-hierarchy-indexes-changelog.xml" relativeToChangelogFile="false"/>
+
     <!--  will add tenant liquibase changelogs here -->
 
 </databaseChangeLog>

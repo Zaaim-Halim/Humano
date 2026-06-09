@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!--
+        Indexes that back the materialized-path hierarchy reads.
+        - *_path: prefix-LIKE 'root/%' subtree fetches go through these as range scans
+                  instead of full table scans.
+        - employee_unit_id: fused employees-in-unit-subtree query joins through this FK.
+        - organizational_unit_parent_unit_id: direct sub-units lookup and validation.
+    -->
+
+    <changeSet id="tenant-hierarchy-001-employee-path-idx" author="halimzaaim">
+        <createIndex tableName="employee" indexName="idx_employee_path">
+            <column name="path"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="tenant-hierarchy-002-employee-unit-idx" author="halimzaaim">
+        <createIndex tableName="employee" indexName="idx_employee_unit_id">
+            <column name="unit_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="tenant-hierarchy-003-org-unit-path-idx" author="halimzaaim">
+        <createIndex tableName="organizational_unit" indexName="idx_organizational_unit_path">
+            <column name="path"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="tenant-hierarchy-004-org-unit-parent-idx" author="halimzaaim">
+        <createIndex tableName="organizational_unit" indexName="idx_organizational_unit_parent_unit_id">
+            <column name="parent_unit_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

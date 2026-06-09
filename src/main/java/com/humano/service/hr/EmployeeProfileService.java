@@ -123,14 +123,22 @@ public class EmployeeProfileService {
         return employeeRepository
             .findById(id)
             .map(existingEmployee -> {
-                // Update employee properties
-                updateEmployeeFromRequest(existingEmployee, request);
+                String oldPath = existingEmployee.getPath();
 
-                // Update relationships if provided in request
+                updateEmployeeFromRequest(existingEmployee, request);
                 updateEmployeeRelationships(existingEmployee, request);
 
-                // Save updated employee
-                return mapToEmployeeProfileResponse(employeeRepository.save(existingEmployee));
+                // saveAndFlush so the cursor row's recomputed path is in the DB before we
+                // bulk-rewrite the descendants. The @PreUpdate hook on Employee recomputes
+                // path from the (possibly new) manager.
+                Employee saved = employeeRepository.saveAndFlush(existingEmployee);
+                String newPath = saved.getPath();
+                if (oldPath != null && !oldPath.equals(newPath)) {
+                    int rewritten = employeeRepository.rewriteDescendantPaths(oldPath, newPath);
+                    log.info("Rewrote {} descendant path(s) after reparenting employee {}", rewritten, id);
+                }
+
+                return mapToEmployeeProfileResponse(saved);
             })
             .orElseThrow(() -> new EntityNotFoundException("Employee not found with ID: " + id));
     }
@@ -408,8 +416,30 @@ public class EmployeeProfileService {
                 Employee manager = employeeRepository
                     .findById(request.managerId())
                     .orElseThrow(() -> new EntityNotFoundException("Manager not found with ID: " + request.managerId()));
+                rejectIfWouldCreateCycle(employee, manager);
                 employee.setManager(manager);
             }
+        }
+    }
+
+    /**
+     * Re-parenting an employee under one of their own subordinates would create a
+     * cycle and silently corrupt the materialized path. A subordinate's path always
+     * begins with the manager's path followed by a slash, so that prefix check
+     * detects every cyclic case in one comparison.
+     */
+    private void rejectIfWouldCreateCycle(Employee employee, Employee proposedManager) {
+        String employeePath = employee.getPath();
+        String managerPath = proposedManager.getPath();
+        if (employeePath == null || managerPath == null) {
+            return;
+        }
+        if (managerPath.equals(employeePath) || managerPath.startsWith(employeePath + "/")) {
+            throw new BadRequestAlertException(
+                "New manager cannot be the employee themselves or one of their subordinates",
+                ENTITY_NAME,
+                "cyclicHierarchy"
+            );
         }
     }
 
