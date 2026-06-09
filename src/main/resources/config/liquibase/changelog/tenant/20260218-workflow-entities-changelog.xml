@@ -129,7 +129,7 @@
             <column name="current_state" type="VARCHAR(50)"/>
             <column name="current_assignee_id" type="${uuidType}"/>
             <column name="initiator_id" type="${uuidType}"/>
-            <column name="context" type="TEXT"/>
+            <column name="context" type="${jsonType}"/>
             <column name="started_at" type="DATETIME"/>
             <column name="completed_at" type="DATETIME"/>
             <column name="created_by" type="VARCHAR(50)">

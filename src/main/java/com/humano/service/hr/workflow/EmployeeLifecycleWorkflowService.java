@@ -32,60 +32,32 @@ import org.springframework.transaction.annotation.Transactional;
  * Orchestrator service for managing employee lifecycle workflows
  * (onboarding + offboarding).
  *
- * <h2>P5.1 — Actual state machine (audited 2026-06-07)</h2>
- *
- * <p>Two parallel flows. Each writes to BOTH a {@code WorkflowInstance}
+ * <p>Each flow writes to BOTH a {@code WorkflowInstance}
  * (string {@code currentState}, tracked by {@code WorkflowStateManager}) AND
- * an {@code EmployeeProcess} (typed {@code EmployeeProcessStatus}). The two
- * state spaces are independent — the workflow state is granular but mostly
- * static; the process status is the load-bearing one.
+ * an {@code EmployeeProcess} (typed {@code EmployeeProcessStatus}). The
+ * process status is the load-bearing one; the workflow state is granular
+ * but mostly static.
  *
  * <h3>Onboarding</h3>
  * <pre>
- *  EmployeeProcessStatus:  NEW → IN_PROGRESS → COMPLETED
+ *  EmployeeProcessStatus:  PLANNED → IN_PROGRESS → COMPLETED
  *                                 ↘ CANCELLED (via cancelOnboarding)
  *
  *  WorkflowInstance.currentState:
- *      (created) → IN_PROGRESS → PROFILE_SETUP → (no further transitions) → COMPLETED
+ *      (created) → IN_PROGRESS → PROFILE_SETUP → COMPLETED
  * </pre>
- *
- * Entry: {@link #initiateOnboarding} creates both rows; the workflow is
- * transitioned to {@link #STATE_PROFILE_SETUP} once. {@link
- * #completeOnboardingTask} marks individual tasks done and the helper
- * {@code updateProcessProgress} flips the process to {@code COMPLETED} when
- * every task is done. {@link #cancelOnboarding} hard-cancels.
  *
  * <h3>Offboarding</h3>
  * <pre>
- *  EmployeeProcessStatus:  NEW → IN_PROGRESS → COMPLETED
+ *  EmployeeProcessStatus:  PLANNED → IN_PROGRESS → COMPLETED
  *
  *  WorkflowInstance.currentState:
- *      (created) → IN_PROGRESS → PENDING_REQUESTS_PROCESSING → (no further transitions) → COMPLETED
+ *      (created) → IN_PROGRESS → PENDING_REQUESTS_PROCESSING → COMPLETED
  * </pre>
  *
- * Entry: {@link #initiateOffboarding} creates both rows + cancels pending
- * leave requests for the employee + transitions the workflow to {@link
- * #STATE_PENDING_REQUESTS_PROCESSING}. {@link #completeOffboardingTask} drives
- * the task list; same all-tasks-done → {@code COMPLETED} fan-in.
- *
- * <h3>Dead state constants (audit finding)</h3>
- *
- * The class declares eleven phase strings (
- * {@link #STATE_DEPARTMENT_ASSIGNMENT}, {@link #STATE_BENEFITS_SETUP},
- * {@link #STATE_TRAINING_ASSIGNMENT}, {@link #STATE_TASKS_IN_PROGRESS},
- * {@link #STATE_SETTLEMENT_CALCULATION}, {@link #STATE_BENEFITS_TERMINATION},
- * {@link #STATE_EXIT_TASKS}, {@link #STATE_EXIT_INTERVIEW},
- * {@link #STATE_FINAL_PROCESSING}, and a partially-used pair) but only TWO
- * are ever passed to {@code workflowStateManager.transitionState}:
- * {@link #STATE_PROFILE_SETUP} on onboarding entry and {@link
- * #STATE_PENDING_REQUESTS_PROCESSING} on offboarding entry. The remaining
- * constants exist as documentation but contribute nothing observable to the
- * state machine — process progression is tracked via task-list completion
- * percentage, not via workflow state. <b>Closing the gap</b> would mean
- * either: (a) emit a {@code transitionState} per phase as tasks of that
- * category complete (richer state surface, more notifications); or (b) drop
- * the unused constants (lighter API). Tracked as a P5.x follow-up — not
- * required for the P5.1 audit which only documents the actual state machine.
+ * Each {@code initiate} call is idempotent on (employeeId, processType):
+ * an active process for the same employee will reject the call. Completing
+ * an already-completed task is a no-op.
  */
 @Service
 @Transactional
@@ -94,22 +66,19 @@ public class EmployeeLifecycleWorkflowService {
     private static final Logger log = LoggerFactory.getLogger(EmployeeLifecycleWorkflowService.class);
 
     // Onboarding states
-    public static final String STATE_INITIATED = "INITIATED";
     public static final String STATE_PROFILE_SETUP = "PROFILE_SETUP";
-    public static final String STATE_DEPARTMENT_ASSIGNMENT = "DEPARTMENT_ASSIGNMENT";
-    public static final String STATE_BENEFITS_SETUP = "BENEFITS_SETUP";
-    public static final String STATE_TRAINING_ASSIGNMENT = "TRAINING_ASSIGNMENT";
     public static final String STATE_TASKS_IN_PROGRESS = "TASKS_IN_PROGRESS";
-    public static final String STATE_COMPLETED = "COMPLETED";
 
     // Offboarding states
-    public static final String STATE_OFFBOARDING_INITIATED = "OFFBOARDING_INITIATED";
     public static final String STATE_PENDING_REQUESTS_PROCESSING = "PENDING_REQUESTS_PROCESSING";
-    public static final String STATE_SETTLEMENT_CALCULATION = "SETTLEMENT_CALCULATION";
-    public static final String STATE_BENEFITS_TERMINATION = "BENEFITS_TERMINATION";
     public static final String STATE_EXIT_TASKS = "EXIT_TASKS";
-    public static final String STATE_EXIT_INTERVIEW = "EXIT_INTERVIEW";
-    public static final String STATE_FINAL_PROCESSING = "FINAL_PROCESSING";
+
+    // Statuses that indicate an in-flight process (used for idempotency checks).
+    private static final List<EmployeeProcessStatus> ACTIVE_PROCESS_STATUSES = List.of(
+        EmployeeProcessStatus.PLANNED,
+        EmployeeProcessStatus.IN_PROGRESS,
+        EmployeeProcessStatus.DELAYED
+    );
 
     private final WorkflowStateManager workflowStateManager;
     private final NotificationOrchestrationService notificationService;
@@ -117,12 +86,7 @@ public class EmployeeLifecycleWorkflowService {
     private final EmployeeRepository employeeRepository;
     private final EmployeeProcessRepository processRepository;
     private final EmployeeProcessTaskRepository taskRepository;
-    private final DepartmentRepository departmentRepository;
-    private final PositionRepository positionRepository;
-    private final BenefitRepository benefitRepository;
-    private final HealthInsuranceRepository healthInsuranceRepository;
     private final EmployeeTrainingRepository employeeTrainingRepository;
-    private final TrainingRepository trainingRepository;
     private final LeaveRequestRepository leaveRequestRepository;
     private final ExpenseClaimRepository expenseClaimRepository;
     private final OvertimeRecordRepository overtimeRecordRepository;
@@ -134,12 +98,7 @@ public class EmployeeLifecycleWorkflowService {
         EmployeeRepository employeeRepository,
         EmployeeProcessRepository processRepository,
         EmployeeProcessTaskRepository taskRepository,
-        DepartmentRepository departmentRepository,
-        PositionRepository positionRepository,
-        BenefitRepository benefitRepository,
-        HealthInsuranceRepository healthInsuranceRepository,
         EmployeeTrainingRepository employeeTrainingRepository,
-        TrainingRepository trainingRepository,
         LeaveRequestRepository leaveRequestRepository,
         ExpenseClaimRepository expenseClaimRepository,
         OvertimeRecordRepository overtimeRecordRepository
@@ -150,12 +109,7 @@ public class EmployeeLifecycleWorkflowService {
         this.employeeRepository = employeeRepository;
         this.processRepository = processRepository;
         this.taskRepository = taskRepository;
-        this.departmentRepository = departmentRepository;
-        this.positionRepository = positionRepository;
-        this.benefitRepository = benefitRepository;
-        this.healthInsuranceRepository = healthInsuranceRepository;
         this.employeeTrainingRepository = employeeTrainingRepository;
-        this.trainingRepository = trainingRepository;
         this.leaveRequestRepository = leaveRequestRepository;
         this.expenseClaimRepository = expenseClaimRepository;
         this.overtimeRecordRepository = overtimeRecordRepository;
@@ -174,14 +128,22 @@ public class EmployeeLifecycleWorkflowService {
             .findById(request.employeeId())
             .orElseThrow(() -> EntityNotFoundException.create("Employee", request.employeeId()));
 
-        // Create workflow instance
+        // Reject if an active onboarding already exists for this employee
+        processRepository
+            .findByEmployeeIdAndProcessTypeAndStatusIn(request.employeeId(), EmployeeProcessType.ONBOARDING, ACTIVE_PROCESS_STATUSES)
+            .ifPresent(existing -> {
+                throw new BadRequestAlertException("Active onboarding process already exists for employee", "process", "duplicate");
+            });
+
+        // Create workflow instance — caller-supplied context is overlaid first
+        // so trusted keys (employeeId, dates, ids) cannot be overridden.
         Map<String, Object> context = new HashMap<>();
+        if (request.additionalContext() != null) context.putAll(request.additionalContext());
         context.put("employeeId", request.employeeId().toString());
         context.put("startDate", request.startDate() != null ? request.startDate().toString() : LocalDate.now().toString());
         if (request.departmentId() != null) context.put("departmentId", request.departmentId().toString());
         if (request.positionId() != null) context.put("positionId", request.positionId().toString());
         if (request.managerId() != null) context.put("managerId", request.managerId().toString());
-        if (request.additionalContext() != null) context.putAll(request.additionalContext());
 
         WorkflowInstance workflow = workflowStateManager.createWorkflow(
             WorkflowType.ONBOARDING,
@@ -265,12 +227,21 @@ public class EmployeeLifecycleWorkflowService {
             .findById(processId)
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeProcess", processId));
 
+        if (process.getProcessType() != EmployeeProcessType.ONBOARDING) {
+            throw new BadRequestAlertException("Process is not an onboarding process", "process", "invalidtype");
+        }
+
         EmployeeProcessTask task = taskRepository
             .findById(request.taskId())
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeProcessTask", request.taskId()));
 
         if (!task.getProcess().getId().equals(processId)) {
             throw new BadRequestAlertException("Task does not belong to this process", "task", "invalidtask");
+        }
+
+        if (Boolean.TRUE.equals(task.getCompleted())) {
+            log.debug("Onboarding task {} already completed; skipping", request.taskId());
+            return getOnboardingStatus(processId);
         }
 
         // Complete the task
@@ -310,6 +281,15 @@ public class EmployeeLifecycleWorkflowService {
             .findById(processId)
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeProcess", processId));
 
+        if (process.getProcessType() != EmployeeProcessType.ONBOARDING) {
+            throw new BadRequestAlertException("Process is not an onboarding process", "process", "invalidtype");
+        }
+
+        EmployeeProcessStatus status = process.getStatus();
+        if (status == EmployeeProcessStatus.COMPLETED || status == EmployeeProcessStatus.CANCELLED) {
+            throw new BadRequestAlertException("Cannot cancel a process that is already " + status, "process", "invalidstatus");
+        }
+
         process.setStatus(EmployeeProcessStatus.CANCELLED);
         process.setNotes(reason);
         processRepository.save(process);
@@ -346,14 +326,21 @@ public class EmployeeLifecycleWorkflowService {
             .findById(request.employeeId())
             .orElseThrow(() -> EntityNotFoundException.create("Employee", request.employeeId()));
 
-        // Create workflow context
+        processRepository
+            .findByEmployeeIdAndProcessTypeAndStatusIn(request.employeeId(), EmployeeProcessType.OFFBOARDING, ACTIVE_PROCESS_STATUSES)
+            .ifPresent(existing -> {
+                throw new BadRequestAlertException("Active offboarding process already exists for employee", "process", "duplicate");
+            });
+
+        // Create workflow context — caller-supplied context is overlaid first
+        // so trusted keys cannot be overridden.
         Map<String, Object> context = new HashMap<>();
+        if (request.additionalContext() != null) context.putAll(request.additionalContext());
         context.put("employeeId", request.employeeId().toString());
         context.put("lastWorkingDate", request.lastWorkingDate().toString());
         context.put("reason", request.reason());
         context.put("offboardingType", request.offboardingType());
         context.put("conductExitInterview", request.conductExitInterview());
-        if (request.additionalContext() != null) context.putAll(request.additionalContext());
 
         WorkflowInstance workflow = workflowStateManager.createWorkflow(
             WorkflowType.OFFBOARDING,
@@ -441,12 +428,21 @@ public class EmployeeLifecycleWorkflowService {
             .findById(processId)
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeProcess", processId));
 
+        if (process.getProcessType() != EmployeeProcessType.OFFBOARDING) {
+            throw new BadRequestAlertException("Process is not an offboarding process", "process", "invalidtype");
+        }
+
         EmployeeProcessTask task = taskRepository
             .findById(request.taskId())
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeProcessTask", request.taskId()));
 
         if (!task.getProcess().getId().equals(processId)) {
             throw new BadRequestAlertException("Task does not belong to this process", "task", "invalidtask");
+        }
+
+        if (Boolean.TRUE.equals(task.getCompleted())) {
+            log.debug("Offboarding task {} already completed; skipping", request.taskId());
+            return getOffboardingStatus(processId);
         }
 
         task.complete(request.completionNotes());
@@ -734,31 +730,32 @@ public class EmployeeLifecycleWorkflowService {
         long completedCount = tasks.stream().filter(EmployeeProcessTask::getCompleted).count();
 
         int completionPercentage = tasks.isEmpty() ? 0 : (int) ((completedCount * 100) / tasks.size());
+        boolean allDone = !tasks.isEmpty() && completedCount == tasks.size();
 
-        // Update workflow state based on progress
+        // Process completion is independent of whether an active workflow still exists.
+        if (allDone && process.getStatus() != EmployeeProcessStatus.COMPLETED) {
+            process.setStatus(EmployeeProcessStatus.COMPLETED);
+            process.setCompletionDate(LocalDate.now());
+            processRepository.save(process);
+
+            notificationService.notifyWorkflowCompleted(
+                process.getEmployee().getId(),
+                process.getProcessType() == EmployeeProcessType.ONBOARDING ? "Onboarding Complete" : "Offboarding Complete",
+                "Your " + process.getProcessType().name().toLowerCase() + " process has been completed.",
+                process.getId(),
+                process.getProcessType().name()
+            );
+        }
+
+        WorkflowType matchingType = process.getProcessType() == EmployeeProcessType.ONBOARDING
+            ? WorkflowType.ONBOARDING
+            : WorkflowType.OFFBOARDING;
         List<WorkflowInstance> workflows = workflowStateManager.findActiveWorkflowsByEntityId(process.getEmployee().getId());
         for (WorkflowInstance workflow : workflows) {
-            if (
-                (workflow.getWorkflowType() == WorkflowType.ONBOARDING && process.getProcessType() == EmployeeProcessType.ONBOARDING) ||
-                (workflow.getWorkflowType() == WorkflowType.OFFBOARDING && process.getProcessType() == EmployeeProcessType.OFFBOARDING)
-            ) {
+            if (workflow.getWorkflowType() == matchingType) {
                 workflowStateManager.updateContext(workflow.getId(), "completionPercentage", completionPercentage);
-
-                // Complete workflow if all tasks are done
-                if (completedCount == tasks.size()) {
-                    process.setStatus(EmployeeProcessStatus.COMPLETED);
-                    process.setCompletionDate(LocalDate.now());
-                    processRepository.save(process);
-
+                if (allDone) {
                     workflowStateManager.completeWorkflow(workflow.getId(), "All tasks completed");
-
-                    notificationService.notifyWorkflowCompleted(
-                        process.getEmployee().getId(),
-                        process.getProcessType() == EmployeeProcessType.ONBOARDING ? "Onboarding Complete" : "Offboarding Complete",
-                        "Your " + process.getProcessType().name().toLowerCase() + " process has been completed.",
-                        process.getId(),
-                        process.getProcessType().name()
-                    );
                 }
             }
         }

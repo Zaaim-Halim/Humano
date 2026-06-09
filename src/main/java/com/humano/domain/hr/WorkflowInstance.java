@@ -83,10 +83,15 @@ public class WorkflowInstance extends AbstractAuditingEntity<UUID> {
     private Employee initiator;
 
     /**
-     * Context data stored as JSON for workflow-specific information.
+     * Workflow-specific context data. Stored as native JSON per dialect via the
+     * Liquibase {@code ${jsonType}} property — {@code jsonb} on PostgreSQL,
+     * {@code json} on MySQL/MariaDB/H2, {@code nvarchar(max)} on SQL Server,
+     * {@code clob} on Oracle. Hibernate binds it via {@link JdbcTypeCode}
+     * {@code (SqlTypes.JSON)}; no {@code columnDefinition} override is needed
+     * because Liquibase owns DDL.
      */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "context", columnDefinition = "jsonb")
+    @Column(name = "context")
     private Map<String, Object> context = new HashMap<>();
 
     /**
