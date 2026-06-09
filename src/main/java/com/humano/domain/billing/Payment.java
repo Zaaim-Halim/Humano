@@ -178,7 +178,7 @@ public class Payment extends AbstractAuditingEntity<UUID> {
      * we recorded against the provider dashboard when a payment is challenged.
      */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "provider_metadata", columnDefinition = "json")
+    @Column(name = "provider_metadata")
     private Map<String, Object> providerMetadata = new HashMap<>();
 
     /**

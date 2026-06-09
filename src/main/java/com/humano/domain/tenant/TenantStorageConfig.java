@@ -53,7 +53,7 @@ public class TenantStorageConfig extends AbstractAuditingEntity<UUID> {
     @NotNull
     @JsonIgnore
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "config", nullable = false, columnDefinition = "json")
+    @Column(name = "config", nullable = false)
     private StorageConfigDetails config;
 
     @NotNull

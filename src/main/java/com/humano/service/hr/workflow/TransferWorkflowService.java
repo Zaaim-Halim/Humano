@@ -1,5 +1,7 @@
 package com.humano.service.hr.workflow;
 
+import com.humano.domain.enumeration.hr.PositionChangeStatus;
+import com.humano.domain.enumeration.hr.PositionChangeType;
 import com.humano.domain.enumeration.hr.WorkflowStatus;
 import com.humano.domain.enumeration.hr.WorkflowType;
 import com.humano.domain.hr.*;
@@ -7,6 +9,7 @@ import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.workflow.requests.ApprovalDecisionRequest;
 import com.humano.dto.hr.workflow.requests.InitiateTransferRequest;
 import com.humano.dto.hr.workflow.responses.TransferWorkflowResponse;
+import com.humano.events.TransferExecutedEvent;
 import com.humano.repository.hr.*;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
@@ -22,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -29,12 +33,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service for managing employee transfer workflows.
- *
- * <h2>P5.1 — Actual state machine (audited 2026-06-07)</h2>
- *
- * <p>Of the four workflow services this is the one with the genuinely full
- * state machine — every declared state constant is reachable, every
- * transition is guarded, and rejection at any level is terminal.
  *
  * <h3>WorkflowInstance.currentState transitions</h3>
  * <pre>
@@ -62,7 +60,8 @@ import org.springframework.transaction.annotation.Transactional;
  *                                    │ processCurrentManagerApproval(REJECT)
  *                                    └─→ REJECTED (terminal)
  *
- *  cancelTransfer() — operator override; works from any non-terminal state.
+ *  cancelTransfer() — operator override; rejected from any terminal status
+ *  ({@code COMPLETED}, {@code CANCELLED}, {@code REJECTED}, {@code FAILED}).
  * </pre>
  *
  * <h3>Status alignment</h3>
@@ -73,27 +72,12 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code REJECTED}; COMPLETED → {@code COMPLETED} (via
  * {@code completeWorkflow}).
  *
- * <h3>Audit findings</h3>
- * <ul>
- *   <li><b>STATE_INITIATED + STATE_SCHEDULED are declared but unused.</b>
- *       {@link #initiateTransfer} immediately transitions to
- *       PENDING_CURRENT_MANAGER without writing INITIATED first.
- *       SCHEDULED is similarly unreferenced — the executeTransfer path
- *       goes APPROVED → COMPLETED without a SCHEDULED step. Same shape
- *       as the {@link EmployeeLifecycleWorkflowService} audit: dead
- *       constants. Either drop or wire.</li>
- *   <li><b>Skipping the new-manager step is implicit, not explicit.</b>
- *       When the request omits {@code newManagerId}, the current-manager
- *       APPROVE path falls through to PENDING_HR_APPROVAL directly.
- *       That's the right behaviour for an intra-team title bump (no new
- *       receiving manager) but the lack of a dedicated state is easy to
- *       miss — documented inline.</li>
- *   <li><b>Cancellation from REJECTED / COMPLETED is silently accepted.</b>
- *       {@link #cancelTransfer} doesn't guard against terminal states.
- *       Calling it on a completed transfer no-ops in spirit but emits a
- *       state-change event. <b>Recommended</b>: add a terminal-state
- *       guard.</li>
- * </ul>
+ * <p>{@link #initiateTransfer} is idempotent on employee: a second call
+ * while an active TRANSFER workflow exists for the same employee is
+ * rejected. Skipping the new-manager step is implicit — when the request
+ * omits {@code newManagerId}, the current-manager APPROVE path falls
+ * through to PENDING_HR_APPROVAL directly (correct for intra-team title
+ * bumps with no receiving manager).
  */
 @Service
 @Transactional
@@ -102,12 +86,10 @@ public class TransferWorkflowService {
     private static final Logger log = LoggerFactory.getLogger(TransferWorkflowService.class);
 
     // Transfer states
-    public static final String STATE_INITIATED = "INITIATED";
     public static final String STATE_PENDING_CURRENT_MANAGER = "PENDING_CURRENT_MANAGER_APPROVAL";
     public static final String STATE_PENDING_NEW_MANAGER = "PENDING_NEW_MANAGER_APPROVAL";
     public static final String STATE_PENDING_HR = "PENDING_HR_APPROVAL";
     public static final String STATE_APPROVED = "APPROVED";
-    public static final String STATE_SCHEDULED = "SCHEDULED";
     public static final String STATE_COMPLETED = "COMPLETED";
     public static final String STATE_REJECTED = "REJECTED";
 
@@ -119,6 +101,7 @@ public class TransferWorkflowService {
     private final PositionRepository positionRepository;
     private final OrganizationalUnitRepository organizationalUnitRepository;
     private final EmployeePositionHistoryRepository positionHistoryRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public TransferWorkflowService(
         WorkflowStateManager workflowStateManager,
@@ -128,7 +111,8 @@ public class TransferWorkflowService {
         DepartmentRepository departmentRepository,
         PositionRepository positionRepository,
         OrganizationalUnitRepository organizationalUnitRepository,
-        EmployeePositionHistoryRepository positionHistoryRepository
+        EmployeePositionHistoryRepository positionHistoryRepository,
+        ApplicationEventPublisher eventPublisher
     ) {
         this.workflowStateManager = workflowStateManager;
         this.notificationService = notificationService;
@@ -138,6 +122,7 @@ public class TransferWorkflowService {
         this.positionRepository = positionRepository;
         this.organizationalUnitRepository = organizationalUnitRepository;
         this.positionHistoryRepository = positionHistoryRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -158,6 +143,15 @@ public class TransferWorkflowService {
             request.newOrganizationalUnitId() == null
         ) {
             throw new BadRequestAlertException("At least one transfer change must be specified", "transfer", "nochange");
+        }
+
+        // Reject if an active transfer workflow already exists for this employee
+        boolean activeTransferExists = workflowStateManager
+            .findActiveWorkflowsByEntityId(request.employeeId())
+            .stream()
+            .anyMatch(w -> w.getWorkflowType() == WorkflowType.TRANSFER);
+        if (activeTransferExists) {
+            throw new BadRequestAlertException("Active transfer workflow already exists for employee", "transfer", "duplicate");
         }
 
         // Create workflow context
@@ -359,6 +353,8 @@ public class TransferWorkflowService {
 
         Map<String, Object> context = workflow.getContext();
 
+        workflowStateManager.updateContext(workflowId, "newManagerDecisionAt", Instant.now().toString());
+
         if (decision.decision() == ApprovalDecisionRequest.ApprovalDecision.APPROVE) {
             workflowStateManager.updateContext(workflowId, "newManagerApproved", true);
             workflowStateManager.updateContext(workflowId, "newManagerComments", decision.comments());
@@ -400,6 +396,8 @@ public class TransferWorkflowService {
         }
 
         Map<String, Object> context = workflow.getContext();
+
+        workflowStateManager.updateContext(workflowId, "hrDecisionAt", Instant.now().toString());
 
         if (decision.decision() == ApprovalDecisionRequest.ApprovalDecision.APPROVE) {
             workflowStateManager.updateContext(workflowId, "hrApproved", true);
@@ -450,7 +448,7 @@ public class TransferWorkflowService {
 
         WorkflowInstance workflow = workflowStateManager.getWorkflow(workflowId);
 
-        if (!STATE_APPROVED.equals(workflow.getCurrentState()) && !STATE_SCHEDULED.equals(workflow.getCurrentState())) {
+        if (!STATE_APPROVED.equals(workflow.getCurrentState())) {
             throw new BadRequestAlertException("Transfer must be approved before execution", "transfer", "notapproved");
         }
 
@@ -461,42 +459,27 @@ public class TransferWorkflowService {
             .findById(employeeId)
             .orElseThrow(() -> EntityNotFoundException.create("Employee", employeeId));
 
-        // Record position history before making changes
-        recordPositionHistory(employee, context);
+        // Resolve targets up-front so the history row can capture both the
+        // before-state (read off the employee) and the after-state in one shot.
+        Department newDept = resolveOptional(context, "newDepartmentId", id ->
+            departmentRepository.findById(id).orElseThrow(() -> EntityNotFoundException.create("Department", id))
+        );
+        Position newPos = resolveOptional(context, "newPositionId", id ->
+            positionRepository.findById(id).orElseThrow(() -> EntityNotFoundException.create("Position", id))
+        );
+        Employee newManager = resolveOptional(context, "newManagerId", id ->
+            employeeRepository.findById(id).orElseThrow(() -> EntityNotFoundException.create("Employee", id))
+        );
+        OrganizationalUnit newUnit = resolveOptional(context, "newOrganizationalUnitId", id ->
+            organizationalUnitRepository.findById(id).orElseThrow(() -> EntityNotFoundException.create("OrganizationalUnit", id))
+        );
 
-        // Apply the transfer changes
-        if (context.containsKey("newDepartmentId")) {
-            UUID newDeptId = UUID.fromString((String) context.get("newDepartmentId"));
-            Department newDept = departmentRepository
-                .findById(newDeptId)
-                .orElseThrow(() -> EntityNotFoundException.create("Department", newDeptId));
-            employee.setDepartment(newDept);
-        }
+        recordPositionHistory(employee, context, newPos, newManager, newUnit);
 
-        if (context.containsKey("newPositionId")) {
-            UUID newPosId = UUID.fromString((String) context.get("newPositionId"));
-            Position newPos = positionRepository.findById(newPosId).orElseThrow(() -> EntityNotFoundException.create("Position", newPosId));
-            employee.setPosition(newPos);
-        }
-
-        if (context.containsKey("newManagerId")) {
-            UUID newMgrId = UUID.fromString((String) context.get("newManagerId"));
-            Employee newManager = employeeRepository
-                .findById(newMgrId)
-                .orElseThrow(() -> EntityNotFoundException.create("Employee", newMgrId));
-            employee.setManager(newManager);
-        }
-
-        if (context.containsKey("newOrganizationalUnitId")) {
-            UUID newUnitId = UUID.fromString((String) context.get("newOrganizationalUnitId"));
-            OrganizationalUnit newUnit = organizationalUnitRepository
-                .findById(newUnitId)
-                .orElseThrow(() -> EntityNotFoundException.create("OrganizationalUnit", newUnitId));
-            employee.setUnit(newUnit);
-        }
-
-        // Note: OrganizationalUnit changes are tracked in history but not directly set on Employee
-        // as the Employee entity may not support this field directly
+        if (newDept != null) employee.setDepartment(newDept);
+        if (newPos != null) employee.setPosition(newPos);
+        if (newManager != null) employee.setManager(newManager);
+        if (newUnit != null) employee.setUnit(newUnit);
 
         employeeRepository.save(employee);
 
@@ -526,8 +509,18 @@ public class TransferWorkflowService {
 
         WorkflowInstance workflow = workflowStateManager.getWorkflow(workflowId);
 
-        if (STATE_COMPLETED.equals(workflow.getCurrentState())) {
-            throw new BadRequestAlertException("Cannot cancel a completed transfer", "transfer", "alreadycompleted");
+        if (workflow.getWorkflowType() != WorkflowType.TRANSFER) {
+            throw new BadRequestAlertException("Workflow is not a transfer workflow", "workflow", "invalidtype");
+        }
+
+        WorkflowStatus status = workflow.getStatus();
+        if (
+            status == WorkflowStatus.COMPLETED ||
+            status == WorkflowStatus.CANCELLED ||
+            status == WorkflowStatus.REJECTED ||
+            status == WorkflowStatus.FAILED
+        ) {
+            throw new BadRequestAlertException("Cannot cancel a transfer that is already " + status, "transfer", "terminal");
         }
 
         workflowStateManager.cancelWorkflow(workflowId, reason);
@@ -556,15 +549,33 @@ public class TransferWorkflowService {
 
     // ==================== PRIVATE HELPER METHODS ====================
 
-    private void recordPositionHistory(Employee employee, Map<String, Object> context) {
+    private void recordPositionHistory(
+        Employee employee,
+        Map<String, Object> context,
+        Position newPosition,
+        Employee newManager,
+        OrganizationalUnit newUnit
+    ) {
         EmployeePositionHistory history = new EmployeePositionHistory();
         history.setEmployee(employee);
         history.setOldPosition(employee.getPosition());
+        history.setNewPosition(newPosition);
         history.setOldManager(employee.getManager());
-        history.setEffectiveDate(LocalDate.now());
+        history.setNewManager(newManager);
+        history.setOldUnit(employee.getUnit());
+        history.setNewUnit(newUnit);
+        history.setEffectiveDate(LocalDate.parse((String) context.get("effectiveDate")));
         history.setReason((String) context.get("reason"));
+        history.setChangeType(PositionChangeType.TRANSFER);
+        history.setStatus(PositionChangeStatus.APPLIED);
 
         positionHistoryRepository.save(history);
+    }
+
+    private <T> T resolveOptional(Map<String, Object> context, String key, java.util.function.Function<UUID, T> loader) {
+        Object raw = context.get(key);
+        if (raw == null) return null;
+        return loader.apply(UUID.fromString((String) raw));
     }
 
     private TransferWorkflowResponse mapToTransferResponse(WorkflowInstance workflow) {

@@ -82,7 +82,7 @@ public class AuditEvent {
      * decision context. Stored as native JSON.
      */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "payload_json", columnDefinition = "json")
+    @Column(name = "payload_json")
     private Map<String, Object> payloadJson = new HashMap<>();
 
     @Column(name = "occurred_at", nullable = false, updatable = false)

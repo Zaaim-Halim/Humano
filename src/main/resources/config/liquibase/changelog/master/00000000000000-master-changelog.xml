@@ -562,14 +562,14 @@
     </changeSet>
 
     <!-- P4.2: raw provider response captured on every Payment mutation that hits
-         Stripe (charge / refund / retry / webhook reconciliation). Stored as JSON
-         text so an operator can diff what we recorded against the Stripe dashboard
-         when a payment dispute lands. externalPaymentId already stores the Stripe
-         PaymentIntent id; this column carries the structured rest. Nullable —
+         Stripe (charge / refund / retry / webhook reconciliation). Stored as native
+         JSON per dialect so an operator can diff what we recorded against the Stripe
+         dashboard when a payment dispute lands. externalPaymentId already stores the
+         Stripe PaymentIntent id; this column carries the structured rest. Nullable —
          absent on payments that never reached the provider. -->
     <changeSet id="master-047-payment-provider-metadata" author="halimzaaim">
         <addColumn tableName="billing_payment">
-            <column name="provider_metadata" type="TEXT"/>
+            <column name="provider_metadata" type="${jsonType}"/>
         </addColumn>
     </changeSet>
 
