@@ -1,6 +1,7 @@
 package com.humano.service.hr.workflow.infrastructure;
 
 import com.humano.config.multitenancy.TenantContext;
+import com.humano.config.multitenancy.TenantIteration;
 import com.humano.domain.hr.WorkflowDeadline;
 import com.humano.domain.hr.WorkflowInstance;
 import com.humano.domain.shared.Employee;
@@ -9,6 +10,8 @@ import com.humano.repository.hr.workflow.WorkflowDeadlineRepository;
 import com.humano.repository.hr.workflow.WorkflowInstanceRepository;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -19,6 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -36,6 +40,8 @@ public class DeadlineMonitorService {
     private final EmployeeRepository employeeRepository;
     private final NotificationOrchestrationService notificationService;
     private final ApplicationEventPublisher eventPublisher;
+    private final TenantIteration tenantIteration;
+    private final MeterRegistry meterRegistry;
 
     /**
      * Hard ceiling on auto-escalations per deadline. Prevents the hourly scheduler
@@ -50,6 +56,8 @@ public class DeadlineMonitorService {
         EmployeeRepository employeeRepository,
         NotificationOrchestrationService notificationService,
         ApplicationEventPublisher eventPublisher,
+        TenantIteration tenantIteration,
+        MeterRegistry meterRegistry,
         @Value("${humano.workflow.max-escalation-level:3}") int maxEscalationLevel
     ) {
         this.deadlineRepository = deadlineRepository;
@@ -57,6 +65,8 @@ public class DeadlineMonitorService {
         this.employeeRepository = employeeRepository;
         this.notificationService = notificationService;
         this.eventPublisher = eventPublisher;
+        this.tenantIteration = tenantIteration;
+        this.meterRegistry = meterRegistry;
         this.maxEscalationLevel = maxEscalationLevel;
     }
 
@@ -168,10 +178,22 @@ public class DeadlineMonitorService {
 
     /**
      * Scheduled task to check for approaching deadlines (runs every hour).
+     * Fans out across every ACTIVE tenant; each tenant runs in its own
+     * transaction via {@link TenantIteration}.
      */
     @Scheduled(fixedRate = 3600000) // Every hour
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void checkApproachingDeadlines() {
-        log.debug("Checking for approaching deadlines");
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            tenantIteration.forEachActiveTenant(subdomain -> processApproachingDeadlinesForCurrentTenant());
+        } finally {
+            sample.stop(meterRegistry.timer("scheduled.tick", "name", "checkApproachingDeadlines"));
+        }
+    }
+
+    private void processApproachingDeadlinesForCurrentTenant() {
+        log.debug("Checking for approaching deadlines (tenant={})", TenantContext.getCurrentTenant());
 
         Instant now = Instant.now();
         List<WorkflowDeadline> deadlinesNeedingWarning = deadlineRepository.findDeadlinesNeedingWarning(now);
@@ -186,15 +208,31 @@ public class DeadlineMonitorService {
             }
         }
 
-        log.info("Processed {} approaching deadline warnings", deadlinesNeedingWarning.size());
+        log.info(
+            "Processed {} approaching deadline warnings (tenant={})",
+            deadlinesNeedingWarning.size(),
+            TenantContext.getCurrentTenant()
+        );
     }
 
     /**
      * Scheduled task to check for overdue items (runs every hour).
+     * Fans out across every ACTIVE tenant; each tenant runs in its own
+     * transaction via {@link TenantIteration}.
      */
     @Scheduled(fixedRate = 3600000) // Every hour
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void checkOverdueItems() {
-        log.debug("Checking for overdue items");
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            tenantIteration.forEachActiveTenant(subdomain -> processOverdueItemsForCurrentTenant());
+        } finally {
+            sample.stop(meterRegistry.timer("scheduled.tick", "name", "checkOverdueItems"));
+        }
+    }
+
+    private void processOverdueItemsForCurrentTenant() {
+        log.debug("Checking for overdue items (tenant={})", TenantContext.getCurrentTenant());
 
         Instant now = Instant.now();
         List<WorkflowDeadline> overdueDeadlines = deadlineRepository.findOverdueDeadlines(now);

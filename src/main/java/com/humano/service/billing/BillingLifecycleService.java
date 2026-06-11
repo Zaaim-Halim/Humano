@@ -9,6 +9,8 @@ import com.humano.domain.tenant.Tenant;
 import com.humano.repository.billing.InvoiceRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -48,6 +50,7 @@ public class BillingLifecycleService {
     private final BillingMailService billingMailService;
     private final TenantAdminEmailResolver adminEmailResolver;
     private final CouponService couponService;
+    private final MeterRegistry meterRegistry;
 
     public BillingLifecycleService(
         SubscriptionRepository subscriptionRepository,
@@ -56,7 +59,8 @@ public class BillingLifecycleService {
         BillingTaxResolver taxResolver,
         BillingMailService billingMailService,
         TenantAdminEmailResolver adminEmailResolver,
-        CouponService couponService
+        CouponService couponService,
+        MeterRegistry meterRegistry
     ) {
         this.subscriptionRepository = subscriptionRepository;
         this.invoiceRepository = invoiceRepository;
@@ -65,6 +69,16 @@ public class BillingLifecycleService {
         this.billingMailService = billingMailService;
         this.adminEmailResolver = adminEmailResolver;
         this.couponService = couponService;
+        this.meterRegistry = meterRegistry;
+    }
+
+    private void timeTick(String name, Runnable body) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            body.run();
+        } finally {
+            sample.stop(meterRegistry.timer("scheduled.tick", "name", name));
+        }
     }
 
     // ========== SCHEDULED TASKS ==========
@@ -76,6 +90,10 @@ public class BillingLifecycleService {
     @Scheduled(cron = "0 0 2 * * *") // Run at 2 AM daily
     @Transactional
     public void processSubscriptionRenewals() {
+        timeTick("processSubscriptionRenewals", this::processSubscriptionRenewalsBody);
+    }
+
+    private void processSubscriptionRenewalsBody() {
         log.info("Starting subscription renewal processing");
 
         Instant renewalThreshold = Instant.now().plus(RENEWAL_DAYS_BEFORE, ChronoUnit.DAYS);
@@ -107,6 +125,10 @@ public class BillingLifecycleService {
     @Scheduled(cron = "0 0 3 * * *") // Run at 3 AM daily
     @Transactional
     public void processTrialExpirations() {
+        timeTick("processTrialExpirations", this::processTrialExpirationsBody);
+    }
+
+    private void processTrialExpirationsBody() {
         log.info("Starting trial expiration processing");
 
         Instant now = Instant.now();
@@ -140,6 +162,10 @@ public class BillingLifecycleService {
     @Scheduled(cron = "0 0 4 * * *") // Run at 4 AM daily
     @Transactional
     public void processOverdueInvoices() {
+        timeTick("processOverdueInvoices", this::processOverdueInvoicesBody);
+    }
+
+    private void processOverdueInvoicesBody() {
         log.info("Starting overdue invoice processing");
 
         Instant now = Instant.now();
@@ -181,6 +207,10 @@ public class BillingLifecycleService {
     @Scheduled(cron = "0 0 5 * * *") // Run at 5 AM daily
     @Transactional
     public void processPendingCancellations() {
+        timeTick("processPendingCancellations", this::processPendingCancellationsBody);
+    }
+
+    private void processPendingCancellationsBody() {
         log.info("Starting pending cancellation processing");
 
         Instant now = Instant.now();

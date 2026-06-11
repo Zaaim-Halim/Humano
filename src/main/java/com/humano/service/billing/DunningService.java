@@ -9,6 +9,8 @@ import com.humano.domain.enumeration.billing.SubscriptionStatus;
 import com.humano.events.SubscriptionCancelledEvent;
 import com.humano.repository.billing.InvoiceRepository;
 import com.humano.repository.billing.SubscriptionRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
@@ -75,6 +77,7 @@ public class DunningService {
     private final BillingMailService billingMailService;
     private final TenantAdminEmailResolver adminEmailResolver;
     private final ApplicationEventPublisher eventPublisher;
+    private final MeterRegistry meterRegistry;
     private final int maxAttempts;
 
     public DunningService(
@@ -84,6 +87,7 @@ public class DunningService {
         BillingMailService billingMailService,
         TenantAdminEmailResolver adminEmailResolver,
         ApplicationEventPublisher eventPublisher,
+        MeterRegistry meterRegistry,
         @Value("${humano.billing.dunning.max-attempts:3}") int maxAttempts
     ) {
         this.subscriptionRepository = subscriptionRepository;
@@ -92,6 +96,7 @@ public class DunningService {
         this.billingMailService = billingMailService;
         this.adminEmailResolver = adminEmailResolver;
         this.eventPublisher = eventPublisher;
+        this.meterRegistry = meterRegistry;
         this.maxAttempts = maxAttempts;
     }
 
@@ -101,6 +106,15 @@ public class DunningService {
      */
     @Scheduled(cron = "${humano.billing.dunning.cron:0 0 6 * * *}")
     public void runDunningCycle() {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            runDunningCycleBody();
+        } finally {
+            sample.stop(meterRegistry.timer("scheduled.tick", "name", "runDunningCycle"));
+        }
+    }
+
+    private void runDunningCycleBody() {
         log.info("Dunning cycle starting (maxAttempts={})", maxAttempts);
         List<Subscription> past = subscriptionRepository.findByStatus(SubscriptionStatus.PAST_DUE);
         int advanced = 0, retried = 0, cancelled = 0;

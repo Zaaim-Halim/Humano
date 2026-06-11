@@ -5,6 +5,8 @@ import com.humano.domain.tenant.TenantDatabaseConfig;
 import com.humano.repository.tenant.TenantRepository;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.sql.DataSource;
@@ -30,15 +32,18 @@ public class TenantDataSourceProvider {
     private final TenantRepository tenantRepository;
     private final MultiTenantProperties properties;
     private final TenantPasswordCipher passwordCipher;
+    private final MeterRegistry meterRegistry;
 
     public TenantDataSourceProvider(
         TenantRepository tenantRepository,
         MultiTenantProperties properties,
-        TenantPasswordCipher passwordCipher
+        TenantPasswordCipher passwordCipher,
+        MeterRegistry meterRegistry
     ) {
         this.tenantRepository = tenantRepository;
         this.properties = properties;
         this.passwordCipher = passwordCipher;
+        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -137,16 +142,21 @@ public class TenantDataSourceProvider {
      */
     @Scheduled(fixedRate = 300000) // Every 5 minutes
     public void healthCheck() {
-        tenantDataSources.forEach((tenantId, dataSource) -> {
-            try {
-                if (!dataSource.isRunning()) {
-                    LOG.warn("DataSource for tenant {} is not running, evicting", tenantId);
-                    evictDataSource(tenantId);
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            tenantDataSources.forEach((tenantId, dataSource) -> {
+                try {
+                    if (!dataSource.isRunning()) {
+                        LOG.warn("DataSource for tenant {} is not running, evicting", tenantId);
+                        evictDataSource(tenantId);
+                    }
+                } catch (Exception e) {
+                    LOG.error("Health check failed for tenant {}: {}", tenantId, e.getMessage());
                 }
-            } catch (Exception e) {
-                LOG.error("Health check failed for tenant {}: {}", tenantId, e.getMessage());
-            }
-        });
+            });
+        } finally {
+            sample.stop(meterRegistry.timer("scheduled.tick", "name", "tenantDataSourceHealthCheck"));
+        }
     }
 
     /**

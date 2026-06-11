@@ -10,10 +10,12 @@ import org.springframework.boot.autoconfigure.task.TaskExecutionProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import tech.jhipster.async.ExceptionHandlingAsyncTaskExecutor;
 
 @Configuration
@@ -43,6 +45,26 @@ public class AsyncConfiguration implements AsyncConfigurer {
         // repositories keep routing correctly off the request thread.
         executor.setTaskDecorator(new TenantAwareTaskDecorator());
         return new ExceptionHandlingAsyncTaskExecutor(executor);
+    }
+
+    /**
+     * Dedicated scheduler for {@code @Scheduled} ticks. Without an explicit bean
+     * Spring falls back to a default single-thread {@code ScheduledExecutorService}
+     * that has no {@link TenantAwareTaskDecorator}, so any tenant repo call from
+     * a tick would route to master/null. The decorator here covers child tasks
+     * the tick spawns (e.g. via {@code TenantIteration}); the tick body itself
+     * must still set the tenant explicitly since the scheduler has no submitter
+     * context to inherit.
+     */
+    @Bean(name = "taskScheduler")
+    public TaskScheduler taskScheduler() {
+        LOG.debug("Creating tenant-aware Task Scheduler");
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(4);
+        scheduler.setThreadNamePrefix("humano-sched-");
+        scheduler.setRemoveOnCancelPolicy(true);
+        scheduler.setTaskDecorator(new TenantAwareTaskDecorator());
+        return scheduler;
     }
 
     @Override

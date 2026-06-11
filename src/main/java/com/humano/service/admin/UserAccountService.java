@@ -2,6 +2,8 @@ package com.humano.service.admin;
 
 import com.humano.aop.audit.Auditable;
 import com.humano.config.Constants;
+import com.humano.config.multitenancy.TenantContext;
+import com.humano.config.multitenancy.TenantIteration;
 import com.humano.domain.shared.Authority;
 import com.humano.domain.shared.User;
 import com.humano.dto.admin.requests.CreateUserRequest;
@@ -9,6 +11,8 @@ import com.humano.dto.admin.requests.UpdateUserRequest;
 import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.PersistentTokenRepository;
 import com.humano.repository.shared.UserRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -23,6 +27,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tech.jhipster.security.RandomUtil;
 
@@ -47,17 +52,23 @@ public class UserAccountService {
     private final AuthorityRepository authorityRepository;
     private final PersistentTokenRepository persistentTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TenantIteration tenantIteration;
+    private final MeterRegistry meterRegistry;
 
     public UserAccountService(
         UserRepository userRepository,
         AuthorityRepository authorityRepository,
         PersistentTokenRepository persistentTokenRepository,
-        PasswordEncoder passwordEncoder
+        PasswordEncoder passwordEncoder,
+        TenantIteration tenantIteration,
+        MeterRegistry meterRegistry
     ) {
         this.userRepository = userRepository;
         this.authorityRepository = authorityRepository;
         this.persistentTokenRepository = persistentTokenRepository;
         this.passwordEncoder = passwordEncoder;
+        this.tenantIteration = tenantIteration;
+        this.meterRegistry = meterRegistry;
     }
 
     /**
@@ -165,12 +176,22 @@ public class UserAccountService {
      * the table grows unbounded.
      */
     @Scheduled(cron = "0 0 0 * * ?")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void removeOldPersistentTokens() {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            tenantIteration.forEachActiveTenant(subdomain -> removeOldPersistentTokensForCurrentTenant());
+        } finally {
+            sample.stop(meterRegistry.timer("scheduled.tick", "name", "removeOldPersistentTokens"));
+        }
+    }
+
+    private void removeOldPersistentTokensForCurrentTenant() {
         LocalDate now = LocalDate.now();
         persistentTokenRepository
             .findByTokenDateBefore(now.minusMonths(1))
             .forEach(token -> {
-                LOG.debug("Deleting persistent token {}", token.getSeries());
+                LOG.debug("Deleting persistent token {} (tenant={})", token.getSeries(), TenantContext.getCurrentTenant());
                 User user = token.getUser();
                 user.getPersistentTokens().remove(token);
                 persistentTokenRepository.delete(token);
@@ -182,11 +203,21 @@ public class UserAccountService {
      * three days. Keeps the user table free of half-abandoned signups.
      */
     @Scheduled(cron = "0 0 1 * * ?")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void removeNotActivatedUsers() {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            tenantIteration.forEachActiveTenant(subdomain -> removeNotActivatedUsersForCurrentTenant());
+        } finally {
+            sample.stop(meterRegistry.timer("scheduled.tick", "name", "removeNotActivatedUsers"));
+        }
+    }
+
+    private void removeNotActivatedUsersForCurrentTenant() {
         userRepository
             .findAllByActivatedIsFalseAndActivationKeyIsNotNullAndCreatedDateBefore(Instant.now().minus(3, ChronoUnit.DAYS))
             .forEach(user -> {
-                LOG.debug("Deleting never-activated user {}", user.getLogin());
+                LOG.debug("Deleting never-activated user {} (tenant={})", user.getLogin(), TenantContext.getCurrentTenant());
                 userRepository.delete(user);
             });
     }
