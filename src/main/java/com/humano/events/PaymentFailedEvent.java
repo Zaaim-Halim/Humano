@@ -10,6 +10,9 @@ import java.util.UUID;
  * Stripe webhook ({@code payment_intent.payment_failed}). Async listeners can
  * react by triggering dunning state advancement (P4.4) or a "payment failed"
  * customer email (P4.3).
+ *
+ * <p>Implements {@link TenantScopedEvent}: dunning runs against tenant-scoped
+ * subscription state, so the listener must route via {@code tenantSubdomain()}.
  */
 public record PaymentFailedEvent(
     UUID paymentId,
@@ -17,19 +20,22 @@ public record PaymentFailedEvent(
     String invoiceNumber,
     UUID tenantId,
     String tenantName,
+    String tenantSubdomain,
     BigDecimal amount,
     String currency,
     String externalPaymentId,
     String failureReason,
     String providerCode,
     Instant failedAt
-) {
+)
+    implements TenantScopedEvent {
     public static PaymentFailedEvent of(
         UUID paymentId,
         UUID invoiceId,
         String invoiceNumber,
         UUID tenantId,
         String tenantName,
+        String tenantSubdomain,
         BigDecimal amount,
         String currency,
         String externalPaymentId,
@@ -42,6 +48,7 @@ public record PaymentFailedEvent(
             invoiceNumber,
             tenantId,
             tenantName,
+            tenantSubdomain,
             amount,
             currency,
             externalPaymentId,

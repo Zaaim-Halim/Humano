@@ -1,5 +1,6 @@
 package com.humano.service.hr.workflow;
 
+import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.enumeration.hr.PositionChangeStatus;
 import com.humano.domain.enumeration.hr.PositionChangeType;
 import com.humano.domain.enumeration.hr.WorkflowStatus;
@@ -474,7 +475,14 @@ public class TransferWorkflowService {
             organizationalUnitRepository.findById(id).orElseThrow(() -> EntityNotFoundException.create("OrganizationalUnit", id))
         );
 
-        recordPositionHistory(employee, context, newPos, newManager, newUnit);
+        // Snapshot before-state for the event (after history but before mutation).
+        UUID oldPositionId = employee.getPosition() != null ? employee.getPosition().getId() : null;
+        UUID oldDepartmentId = employee.getDepartment() != null ? employee.getDepartment().getId() : null;
+        UUID oldManagerId = employee.getManager() != null ? employee.getManager().getId() : null;
+        UUID oldUnitId = employee.getUnit() != null ? employee.getUnit().getId() : null;
+        LocalDate effectiveDate = LocalDate.parse((String) context.get("effectiveDate"));
+
+        recordPositionHistory(employee, effectiveDate, context, newPos, newManager, newUnit);
 
         if (newDept != null) employee.setDepartment(newDept);
         if (newPos != null) employee.setPosition(newPos);
@@ -482,6 +490,26 @@ public class TransferWorkflowService {
         if (newUnit != null) employee.setUnit(newUnit);
 
         employeeRepository.save(employee);
+
+        // Stamp the tenant at publish time so the listener (which may run on a
+        // different thread under @Async / a fresh AFTER_COMMIT phase) can restore
+        // TenantContext deterministically rather than inheriting the publisher's.
+        eventPublisher.publishEvent(
+            TransferExecutedEvent.of(
+                workflowId,
+                TenantContext.getCurrentTenant(),
+                employeeId,
+                effectiveDate,
+                oldPositionId,
+                newPos != null ? newPos.getId() : null,
+                oldDepartmentId,
+                newDept != null ? newDept.getId() : null,
+                oldManagerId,
+                newManager != null ? newManager.getId() : null,
+                oldUnitId,
+                newUnit != null ? newUnit.getId() : null
+            )
+        );
 
         // Complete workflow
         workflowStateManager.transitionState(workflowId, STATE_COMPLETED, "Transfer executed successfully");
@@ -551,6 +579,7 @@ public class TransferWorkflowService {
 
     private void recordPositionHistory(
         Employee employee,
+        LocalDate effectiveDate,
         Map<String, Object> context,
         Position newPosition,
         Employee newManager,
@@ -564,7 +593,7 @@ public class TransferWorkflowService {
         history.setNewManager(newManager);
         history.setOldUnit(employee.getUnit());
         history.setNewUnit(newUnit);
-        history.setEffectiveDate(LocalDate.parse((String) context.get("effectiveDate")));
+        history.setEffectiveDate(effectiveDate);
         history.setReason((String) context.get("reason"));
         history.setChangeType(PositionChangeType.TRANSFER);
         history.setStatus(PositionChangeStatus.APPLIED);

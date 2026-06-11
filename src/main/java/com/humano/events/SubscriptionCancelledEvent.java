@@ -15,16 +15,22 @@ import java.util.UUID;
  * </ul>
  * Listeners side-effect asynchronously (email via {@code TenantEventListener},
  * future analytics, downstream provisioning teardown).
+ *
+ * <p>Implements {@link TenantScopedEvent}: provisioning-teardown listeners must
+ * route to the tenant DB via {@code tenantSubdomain()} to drop tenant-scoped
+ * state.
  */
 public record SubscriptionCancelledEvent(
     UUID subscriptionId,
     UUID tenantId,
     String tenantName,
+    String tenantSubdomain,
     String planName,
     Reason reason,
     Instant effectiveAt,
     Instant cancelledAt
-) {
+)
+    implements TenantScopedEvent {
     public enum Reason {
         USER,
         DUNNING_EXHAUSTED,
@@ -36,10 +42,20 @@ public record SubscriptionCancelledEvent(
         UUID subscriptionId,
         UUID tenantId,
         String tenantName,
+        String tenantSubdomain,
         String planName,
         Reason reason,
         Instant effectiveAt
     ) {
-        return new SubscriptionCancelledEvent(subscriptionId, tenantId, tenantName, planName, reason, effectiveAt, Instant.now());
+        return new SubscriptionCancelledEvent(
+            subscriptionId,
+            tenantId,
+            tenantName,
+            tenantSubdomain,
+            planName,
+            reason,
+            effectiveAt,
+            Instant.now()
+        );
     }
 }

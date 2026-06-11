@@ -111,7 +111,7 @@ public class TenantEventListener {
         billingMailService.sendWelcome(
             event.adminEmail(),
             event.tenantName(),
-            event.subdomain(),
+            event.tenantSubdomain(),
             extractFirstName(event.adminEmail()),
             event.isTrial()
         );
@@ -149,7 +149,7 @@ public class TenantEventListener {
         String message = String.format(
             "New tenant signed up: %s (%s) - Plan: %s - Trial: %s",
             event.tenantName(),
-            event.subdomain(),
+            event.tenantSubdomain(),
             event.subscriptionPlanName(),
             event.isTrial()
         );

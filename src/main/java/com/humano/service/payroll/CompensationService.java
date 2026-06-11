@@ -242,6 +242,48 @@ public class CompensationService {
     }
 
     /**
+     * Re-points the employee's active compensation at a new position effective
+     * {@code effectiveDate}, preserving amount/basis/currency. Closes the
+     * current row at {@code effectiveDate.minusDays(1)} and opens a new one.
+     *
+     * <p>No-op if no active compensation exists (just-hired, pre-payroll
+     * employee) or if the active row already points at {@code newPositionId}.
+     *
+     * @return the newly-opened compensation row, or {@code Optional.empty()}
+     *         when there was nothing to sync.
+     */
+    public Optional<Compensation> applyPositionChange(UUID employeeId, UUID newPositionId, LocalDate effectiveDate) {
+        Optional<Compensation> currentOpt = findActiveCompensation(employeeId, effectiveDate);
+        if (currentOpt.isEmpty()) {
+            log.info("No active compensation for employee {} on {}; skipping position sync", employeeId, effectiveDate);
+            return Optional.empty();
+        }
+        Compensation current = currentOpt.get();
+        if (current.getPosition() != null && current.getPosition().getId().equals(newPositionId)) {
+            return Optional.of(current);
+        }
+
+        Position newPosition = positionRepository
+            .findById(newPositionId)
+            .orElseThrow(() -> new EntityNotFoundException("Position", newPositionId));
+
+        current.setEffectiveTo(effectiveDate.minusDays(1));
+        compensationRepository.save(current);
+
+        Compensation next = new Compensation();
+        next.setEmployee(current.getEmployee());
+        next.setPosition(newPosition);
+        next.setBaseAmount(current.getBaseAmount());
+        next.setBasis(current.getBasis());
+        next.setCurrency(current.getCurrency());
+        next.setEffectiveFrom(effectiveDate);
+        next = compensationRepository.save(next);
+
+        log.info("Synced compensation for employee {} to position {} effective {}", employeeId, newPositionId, effectiveDate);
+        return Optional.of(next);
+    }
+
+    /**
      * Finds the active compensation for an employee on a specific date.
      */
     @Transactional(readOnly = true)

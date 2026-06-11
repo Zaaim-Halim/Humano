@@ -10,21 +10,26 @@ import java.util.UUID;
  * - Setting up default data
  * - Provisioning tenant-specific resources
  * - Notifying administrators
+ *
+ * <p>Implements {@link TenantScopedEvent}: even though the publisher operates on
+ * the master DB, listeners may need to seed tenant-scoped defaults — they read
+ * {@code tenantSubdomain()} and switch {@code TenantContext} accordingly.
  */
 public record TenantOnboardedEvent(
     UUID tenantId,
     String tenantName,
-    String subdomain,
+    String tenantSubdomain,
     String adminEmail,
     UUID subscriptionId,
     String subscriptionPlanName,
     boolean isTrial,
     Instant onboardedAt
-) {
+)
+    implements TenantScopedEvent {
     public static TenantOnboardedEvent of(
         UUID tenantId,
         String tenantName,
-        String subdomain,
+        String tenantSubdomain,
         String adminEmail,
         UUID subscriptionId,
         String subscriptionPlanName,
@@ -33,7 +38,7 @@ public record TenantOnboardedEvent(
         return new TenantOnboardedEvent(
             tenantId,
             tenantName,
-            subdomain,
+            tenantSubdomain,
             adminEmail,
             subscriptionId,
             subscriptionPlanName,

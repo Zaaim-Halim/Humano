@@ -1,5 +1,6 @@
 package com.humano.service.hr.workflow.infrastructure;
 
+import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.hr.WorkflowDeadline;
 import com.humano.domain.hr.WorkflowInstance;
 import com.humano.domain.shared.Employee;
@@ -274,7 +275,9 @@ public class DeadlineMonitorService {
         sendEscalationNotification(saved);
         UUID assigneeId = saved.getAssignee() != null ? saved.getAssignee().getId() : null;
         UUID workflowId = saved.getWorkflowInstance() != null ? saved.getWorkflowInstance().getId() : null;
-        eventPublisher.publishEvent(EscalationTriggeredEvent.of(saved.getId(), workflowId, saved.getEscalationLevel(), assigneeId));
+        eventPublisher.publishEvent(
+            EscalationTriggeredEvent.of(saved.getId(), TenantContext.getCurrentTenant(), workflowId, saved.getEscalationLevel(), assigneeId)
+        );
         log.info("Escalated deadline {} to level {} (cap={})", saved.getId(), saved.getEscalationLevel(), maxEscalationLevel);
     }
 

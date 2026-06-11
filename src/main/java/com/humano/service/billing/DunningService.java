@@ -199,6 +199,7 @@ public class DunningService {
             sub.getId(),
             tenant != null ? tenant.getId() : null,
             tenant != null ? tenant.getName() : "—",
+            tenant != null ? tenant.getSubdomain() : null,
             planName,
             SubscriptionCancelledEvent.Reason.DUNNING_EXHAUSTED,
             Instant.now()
