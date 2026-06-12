@@ -16,7 +16,9 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -472,7 +474,10 @@ public class ExchangeRateService {
                         cb.equal(root.get("fromCcy").get("id"), fromCurrencyId),
                         cb.equal(root.get("toCcy").get("id"), toCurrencyId),
                         cb.equal(root.get("date"), date)
-                    )
+                    ),
+                // M3: a currency pair should have one rate per date, but pin a deterministic
+                // pick + LIMIT 1 so a stray duplicate can't make the result arbitrary.
+                PageRequest.of(0, 1, Sort.by(Sort.Order.asc("id")))
             )
             .stream()
             .findFirst();
@@ -481,16 +486,16 @@ public class ExchangeRateService {
     private Optional<ExchangeRate> findMostRecentRate(UUID fromCurrencyId, UUID toCurrencyId, LocalDate beforeDate) {
         return exchangeRateRepository
             .findAll(
-                (Specification<ExchangeRate>) (root, query, cb) -> {
-                    if (query != null) {
-                        query.orderBy(cb.desc(root.get("date")));
-                    }
-                    return cb.and(
+                (Specification<ExchangeRate>) (root, query, cb) ->
+                    cb.and(
                         cb.equal(root.get("fromCcy").get("id"), fromCurrencyId),
                         cb.equal(root.get("toCcy").get("id"), toCurrencyId),
                         cb.lessThanOrEqualTo(root.get("date"), beforeDate)
-                    );
-                }
+                    ),
+                // M3: most-recent rate on/before the date with LIMIT 1 pushed into SQL (was
+                // loading every prior row). The id tiebreak makes the pick deterministic when
+                // two rows share the latest date.
+                PageRequest.of(0, 1, Sort.by(Sort.Order.desc("date"), Sort.Order.desc("id")))
             )
             .stream()
             .findFirst();

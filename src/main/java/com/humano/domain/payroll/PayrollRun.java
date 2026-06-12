@@ -105,6 +105,18 @@ public class PayrollRun extends AbstractAuditingEntity<UUID> {
     @JoinColumn(name = "reporting_currency_id")
     private Currency reportingCurrency;
 
+    /**
+     * Optimistic-lock guard for the run lifecycle (DRAFT&rarr;CALCULATED&rarr;APPROVED&rarr;POSTED).
+     * <p>
+     * The status transitions are check-then-act (read current status, validate, write the
+     * next status). Without this version, two concurrent {@code postPayrollRun} calls on the
+     * same APPROVED run can both pass the guard and both run the year-to-date ledger update,
+     * double-counting tax. With {@code @Version}, the second commit fails with an optimistic
+     * lock exception and its whole transaction (including the YTD writes) rolls back.
+     */
+    @Version
+    private Long version;
+
     @Override
     public UUID getId() {
         return id;
@@ -198,6 +210,14 @@ public class PayrollRun extends AbstractAuditingEntity<UUID> {
 
     public void setReportingCurrency(Currency reportingCurrency) {
         this.reportingCurrency = reportingCurrency;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     @Override

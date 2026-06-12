@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!--
+        Optimistic-lock guards on the two payroll entities whose updates are
+        check-then-act / read-modify-write under concurrency.
+
+        - payroll_run.version: guards the run lifecycle transition so two concurrent
+          posts on the same APPROVED run cannot both run the year-to-date update
+          (which would double-count tax). The losing transaction fails its commit and
+          rolls back its YTD writes.
+        - tax_withholding.version: guards the year_to_date_amount accumulation so two
+          runs posting concurrently against the same employee's withholding row cannot
+          lose one of the increments.
+
+        defaultValueNumeric=0 backfills existing rows; NOT NULL because Hibernate's
+        @Version (Long) manages the column from 0 upward and never writes NULL.
+    -->
+
+    <changeSet id="tenant-076-payroll-run-version" author="halimzaaim">
+        <addColumn tableName="payroll_run">
+            <column name="version" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="tenant-077-tax-withholding-version" author="halimzaaim">
+        <addColumn tableName="tax_withholding">
+            <column name="version" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!--
+        Typed classification columns on payroll_line. These replace the parsing of the
+        human-readable `explain` text that the post-time year-to-date tax reader previously
+        relied on:
+          - line_category: structured kind of the line (INCOME_TAX / WITHHOLDING / EARNING / ...).
+          - tax_type: originating tax type for tax lines; NULL otherwise.
+        Both nullable — historical lines predate the columns and posted runs already updated
+        their YTD ledger, so a NULL category on an old line is simply ignored by the reader.
+    -->
+    <changeSet id="tenant-078-payroll-line-category" author="halimzaaim">
+        <addColumn tableName="payroll_line">
+            <column name="line_category" type="VARCHAR(30)"/>
+            <column name="tax_type" type="VARCHAR(30)"/>
+        </addColumn>
+    </changeSet>
+
+    <!--
+        M1: one PayrollResult per (run, employee). resolveResult() does an unlocked
+        find-or-create, which the previous single-transaction-per-run model implicitly
+        serialized. Now that each employee commits in its own transaction, two concurrent
+        calculations of the same run could double-insert; this unique constraint is the
+        durable guard — the losing insert fails and that employee is recorded as a
+        calculation error instead of producing a duplicate result row.
+    -->
+    <changeSet id="tenant-079-payroll-result-unique" author="halimzaaim">
+        <addUniqueConstraint tableName="payroll_result"
+                             columnNames="run_id, employee_id"
+                             constraintName="uc_payroll_result_run_employee"/>
+    </changeSet>
+
+</databaseChangeLog>

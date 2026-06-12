@@ -17,6 +17,8 @@ import com.humano.repository.hr.LeaveRequestRepository;
 import com.humano.repository.payroll.*;
 import com.humano.repository.payroll.CurrencyRepository;
 import com.humano.repository.shared.EmployeeRepository;
+import com.humano.security.AuthorityPermissionService;
+import com.humano.security.PermissionsConstants;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
@@ -28,7 +30,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -140,6 +145,10 @@ public class PayrollProcessingService {
     private final BonusService bonusService;
     private final TaxCalculationService taxCalculationService;
     private final ExchangeRateService exchangeRateService;
+    private final AuthorityPermissionService authorityPermissionService;
+
+    /** M1: runs each employee's calculation in its own tenant {@code REQUIRES_NEW} transaction. */
+    private final PayrollEmployeeTransactionExecutor employeeTransactionExecutor;
 
     /** P3.4: maximum days a fallback rate may lag the payment date before the per-employee
      *  calculation fails with a {@code BusinessRuleViolationException}. */
@@ -168,7 +177,9 @@ public class PayrollProcessingService {
         DeductionService deductionService,
         BonusService bonusService,
         TaxCalculationService taxCalculationService,
-        ExchangeRateService exchangeRateService
+        ExchangeRateService exchangeRateService,
+        AuthorityPermissionService authorityPermissionService,
+        PayrollEmployeeTransactionExecutor employeeTransactionExecutor
     ) {
         this.payrollRunRepository = payrollRunRepository;
         this.payrollPeriodRepository = payrollPeriodRepository;
@@ -192,6 +203,8 @@ public class PayrollProcessingService {
         this.bonusService = bonusService;
         this.taxCalculationService = taxCalculationService;
         this.exchangeRateService = exchangeRateService;
+        this.authorityPermissionService = authorityPermissionService;
+        this.employeeTransactionExecutor = employeeTransactionExecutor;
     }
 
     /**
@@ -310,7 +323,32 @@ public class PayrollProcessingService {
 
     /**
      * Calculates payroll for all employees in a run.
+     *
+     * <h3>Transaction model (M1)</h3>
+     * The orchestration here runs in one tenant transaction, but each employee is calculated
+     * in its <em>own</em> {@code REQUIRES_NEW} transaction via
+     * {@link PayrollEmployeeTransactionExecutor#calculateInNewTransaction}. That buys:
+     * <ul>
+     *   <li><strong>Genuine per-employee isolation.</strong> Previously a caught per-employee
+     *       failure was <em>not</em> truly isolated: rows already saved by the failing employee
+     *       (e.g. the {@link PayrollResult} persisted just before its lines threw) sat in the
+     *       shared persistence context and flushed at the final commit alongside everyone else
+     *       — a half-written result could be persisted. Now each employee fully commits or
+     *       fully rolls back, and a failure is recorded as a
+     *       {@link PayrollRunResponse.PayrollValidationError} without touching anyone else.</li>
+     *   <li><strong>Bounded memory.</strong> Each employee's heavy entity graph lives in its
+     *       own transaction-scoped persistence context (closed at that employee's commit), so
+     *       it never accumulates across thousands of employees in one giant context.</li>
+     * </ul>
+     *
+     * <p><strong>Concurrency caveat.</strong> Per-employee commits remove the implicit
+     * whole-run serialization. {@link #resolveResult} does an unlocked find-or-create on
+     * {@code (run, employee)}; the durable guard against a concurrent double-calculate is the
+     * unique constraint {@code uc_payroll_result_run_employee} on
+     * {@code payroll_result(run_id, employee_id)} — a racing insert fails and surfaces as a
+     * per-employee error instead of a duplicate row.
      */
+    @Transactional(transactionManager = "tenantTransactionManager")
     public PayrollRunResponse calculatePayroll(UUID runId) {
         log.info("Calculating payroll for run: {}", runId);
 
@@ -320,21 +358,38 @@ public class PayrollProcessingService {
             throw new BusinessRuleViolationException("Can only calculate payroll for DRAFT or CALCULATED runs");
         }
 
-        PayrollPeriod period = run.getPeriod();
-        List<Employee> employees = getEmployeesForScope(run.getScope(), period);
+        List<Employee> employees = getEmployeesForScope(run.getScope(), run.getPeriod());
+
+        // M2: pay components are tenant-global config — load the lookup map ONCE for the whole
+        // run instead of re-querying pay_component for every employee. The components are only
+        // read and used as non-cascading FK targets on emitted lines, so passing them into each
+        // per-employee transaction (where they are technically detached) is safe.
+        Map<PayComponentCode, PayComponent> componentsByCode = loadComponentsByCode();
 
         List<PayrollRunResponse.PayrollValidationError> errors = new ArrayList<>();
         int processedCount = 0;
-
         for (Employee employee : employees) {
+            UUID employeeId = employee.getId();
             try {
-                calculateEmployeePayroll(run, period, employee);
+                // REQUIRES_NEW: the executor suspends this orchestration transaction and runs
+                // the work in its own, so a failure rolls back only that employee. Run + employee
+                // are re-loaded inside that transaction (the instances above are managed by the
+                // orchestration context, hence detached for the new one).
+                employeeTransactionExecutor.runInNewTransaction(() -> {
+                    PayrollRun freshRun = payrollRunRepository
+                        .findById(runId)
+                        .orElseThrow(() -> new EntityNotFoundException("PayrollRun", runId));
+                    Employee freshEmployee = employeeRepository
+                        .findById(employeeId)
+                        .orElseThrow(() -> new EntityNotFoundException("Employee", employeeId));
+                    calculateEmployeePayroll(freshRun, freshRun.getPeriod(), freshEmployee, componentsByCode);
+                });
                 processedCount++;
             } catch (Exception e) {
-                log.error("Error calculating payroll for employee {}: {}", employee.getId(), e.getMessage());
+                log.error("Error calculating payroll for employee {}: {}", employeeId, e.getMessage());
                 errors.add(
                     new PayrollRunResponse.PayrollValidationError(
-                        employee.getId(),
+                        employeeId,
                         employee.getFirstName() + " " + employee.getLastName(),
                         "CALCULATION_ERROR",
                         e.getMessage(),
@@ -356,7 +411,12 @@ public class PayrollProcessingService {
      * Calculates payroll for a single employee following the canonical §2.2 pipeline .
      * See the class-level sequence diagram for the contract.
      */
-    private PayrollResult calculateEmployeePayroll(PayrollRun run, PayrollPeriod period, Employee employee) {
+    private PayrollResult calculateEmployeePayroll(
+        PayrollRun run,
+        PayrollPeriod period,
+        Employee employee,
+        Map<PayComponentCode, PayComponent> componentsByCode
+    ) {
         log.debug("Calculating payroll for employee: {}", employee.getId());
 
         // ---- Resolve compensation (required) ----
@@ -402,15 +462,8 @@ public class PayrollProcessingService {
         BigDecimal employerCharges = BigDecimal.ZERO;
         BigDecimal benefitEmployerCost = BigDecimal.ZERO;
 
-        // Cache the component map once; every step looks up by code for deterministic component
-        // selection. PayComponent.code is unique-constrained at the entity level
-        // (PayComponent.java:49 `@Column(name="code", unique=true)`), so the merge function
-        // never actually fires — kept only to satisfy Collectors.toMap's signature.
-        Map<PayComponentCode, PayComponent> componentsByCode = payComponentRepository
-            .findAll()
-            .stream()
-            .filter(c -> c.getCode() != null)
-            .collect(Collectors.toMap(PayComponent::getCode, c -> c, (a, b) -> a));
+        // componentsByCode is the tenant-global pay-component lookup, loaded once per run (M2)
+        // and passed in. Used here read-only plus as non-cascading FK targets on emitted lines.
         Set<UUID> handledComponentIds = new HashSet<>();
 
         // ============================================================
@@ -425,7 +478,9 @@ public class PayrollProcessingService {
                 fmt(compensation.getBaseAmount()) +
                 ") → period amount " +
                 fmt(baseSalary);
-            lines.add(emitLine(result, basicComponent, null, null, baseSalary, seq.next(), explain));
+            lines.add(
+                emitLine(result, basicComponent, null, null, baseSalary, seq.next(), explain).lineCategory(PayrollLineCategory.BASE_SALARY)
+            );
             handledComponentIds.add(basicComponent.getId());
             if (!Boolean.TRUE.equals(basicComponent.getTaxable())) {
                 nonTaxableEarnings = nonTaxableEarnings.add(baseSalary);
@@ -450,7 +505,11 @@ public class PayrollProcessingService {
                 continue;
             }
             String explain = explainInput(input, amt, "Step 2a");
-            lines.add(emitLine(result, input.getComponent(), input.getQuantity(), input.getRate(), amt, seq.next(), explain));
+            lines.add(
+                emitLine(result, input.getComponent(), input.getQuantity(), input.getRate(), amt, seq.next(), explain).lineCategory(
+                    PayrollLineCategory.EARNING
+                )
+            );
             gross = gross.add(amt);
             if (!Boolean.TRUE.equals(input.getComponent().getTaxable())) {
                 nonTaxableEarnings = nonTaxableEarnings.add(amt);
@@ -482,7 +541,7 @@ public class PayrollProcessingService {
                 BigDecimal amt = bonus.getAmount() == null ? BigDecimal.ZERO : bonus.getAmount().setScale(MONEY_SCALE, MONEY_ROUNDING);
                 if (amt.signum() == 0) continue;
                 String explain = "Step 2b — Bonus (" + bonus.getType() + ", awarded " + bonus.getAwardDate() + "): " + fmt(amt);
-                lines.add(emitLine(result, bonusComponent, null, null, amt, seq.next(), explain));
+                lines.add(emitLine(result, bonusComponent, null, null, amt, seq.next(), explain).lineCategory(PayrollLineCategory.EARNING));
                 gross = gross.add(amt);
                 if (!Boolean.TRUE.equals(bonusComponent.getTaxable())) {
                     nonTaxableEarnings = nonTaxableEarnings.add(amt);
@@ -498,7 +557,7 @@ public class PayrollProcessingService {
             if (amt == null || amt.signum() == 0) continue;
             amt = amt.setScale(MONEY_SCALE, MONEY_ROUNDING);
             String explain = "Step 2c — Earning '" + component.getCode() + "' via PayRule formula: " + fmt(amt);
-            lines.add(emitLine(result, component, null, null, amt, seq.next(), explain));
+            lines.add(emitLine(result, component, null, null, amt, seq.next(), explain).lineCategory(PayrollLineCategory.EARNING));
             gross = gross.add(amt);
             if (!Boolean.TRUE.equals(component.getTaxable())) {
                 nonTaxableEarnings = nonTaxableEarnings.add(amt);
@@ -532,7 +591,9 @@ public class PayrollProcessingService {
                             cb.and(
                                 cb.equal(root.get("country").get("id"), employee.getCountry().getId()),
                                 cb.equal(root.get("leaveType"), lt)
-                            )
+                            ),
+                        // M3: deterministic single-row pick (LIMIT 1, id tiebreak) pushed into SQL.
+                        PageRequest.of(0, 1, Sort.by(Sort.Order.asc("id")))
                     )
                     .stream()
                     .findFirst();
@@ -565,7 +626,17 @@ public class PayrollProcessingService {
                     "% = " +
                     fmt(deduction) +
                     (affectsTaxable ? " [pre-tax]" : " [post-tax]");
-                lines.add(emitLine(result, leaveDeductionComponent, BigDecimal.valueOf(days), dailyRate, deduction, seq.next(), explain));
+                lines.add(
+                    emitLine(
+                        result,
+                        leaveDeductionComponent,
+                        BigDecimal.valueOf(days),
+                        dailyRate,
+                        deduction,
+                        seq.next(),
+                        explain
+                    ).lineCategory(PayrollLineCategory.LEAVE_DEDUCTION)
+                );
                 if (affectsTaxable) {
                     preTaxDeductions = preTaxDeductions.add(deduction);
                 } else {
@@ -594,7 +665,11 @@ public class PayrollProcessingService {
                 continue;
             }
             String explain = explainDeduction(d, amt, grossPay, "Step 5", true);
-            lines.add(emitLine(result, generalDeductionComponent, null, null, amt, seq.next(), explain));
+            lines.add(
+                emitLine(result, generalDeductionComponent, null, null, amt, seq.next(), explain).lineCategory(
+                    PayrollLineCategory.PRE_TAX_DEDUCTION
+                )
+            );
             preTaxDeductions = preTaxDeductions.add(amt);
         }
 
@@ -611,7 +686,7 @@ public class PayrollProcessingService {
         // Step 7 — Income tax (progressive, country-aware)
         //   Looks up the active TaxBracket rows for (employee.country, PIT, period.endDate)
         //   and applies the spec'd progressive algorithm. The emitted line is tagged with
-        //   PayComponentCode.TAX_PIT; the explain prefix "Step 7 — Income tax" is the
+        //   lineCategory=INCOME_TAX and taxType=INCOME_TAX; those typed fields are the
         //   contract the post-time YTD reader (updateYearToDateOnPost) keys off.
         // ============================================================
         PayComponent taxPitComponent = componentsByCode.get(PayComponentCode.TAX_PIT);
@@ -644,7 +719,11 @@ public class PayrollProcessingService {
                         brackets.size() +
                         "): " +
                         fmt(incomeTax);
-                    lines.add(emitLine(result, taxPitComponent, null, null, incomeTax, seq.next(), explain));
+                    lines.add(
+                        emitLine(result, taxPitComponent, null, null, incomeTax, seq.next(), explain)
+                            .lineCategory(PayrollLineCategory.INCOME_TAX)
+                            .taxType(TaxType.INCOME_TAX)
+                    );
                     taxWithheld = taxWithheld.add(incomeTax);
                     // Once we've emitted a bracket-driven tax line, exclude TAX_PIT from the
                     // step 10 formula loop so a tenant that ALSO seeded a TAX_PIT PayRule
@@ -658,9 +737,9 @@ public class PayrollProcessingService {
         // ============================================================
         // Step 8 — Other withholdings (TaxWithholding rows; non-INCOME_TAX)
         //   INCOME_TAX is handled by step 7's bracket calc; iterating it here would
-        //   double-count. Each surviving row contributes a line via rate% × gross.
-        //   Explain prefix "Step 8 — Withholding (<TYPE>" is the contract for the
-        //   post-time YTD reader.
+        //   double-count. Each surviving row contributes a line via rate% × gross,
+        //   tagged lineCategory=WITHHOLDING and taxType=<the row's type> — the typed
+        //   contract the post-time YTD reader keys off.
         // ============================================================
         List<TaxWithholding> activeWithholdings = activeWithholdingsForPeriod(employee, period.getEndDate());
         for (TaxWithholding w : activeWithholdings) {
@@ -686,7 +765,11 @@ public class PayrollProcessingService {
                 ", authority=" +
                 w.getTaxAuthority() +
                 ")";
-            lines.add(emitLine(result, taxPitComponent, null, w.getRate(), amt, seq.next(), explain));
+            lines.add(
+                emitLine(result, taxPitComponent, null, w.getRate(), amt, seq.next(), explain)
+                    .lineCategory(PayrollLineCategory.WITHHOLDING)
+                    .taxType(w.getType())
+            );
             taxWithheld = taxWithheld.add(amt);
         }
 
@@ -703,14 +786,22 @@ public class PayrollProcessingService {
                     log.warn("Step 9 — benefit {} employeeCost {} skipped: no DEDUCTION PayComponent seeded", b.getId(), fmt(employeeCost));
                 } else {
                     String explain = "Step 9 — Benefit (" + b.getType() + ") employee cost: " + fmt(employeeCost);
-                    lines.add(emitLine(result, generalDeductionComponent, null, null, employeeCost, seq.next(), explain));
+                    lines.add(
+                        emitLine(result, generalDeductionComponent, null, null, employeeCost, seq.next(), explain).lineCategory(
+                            PayrollLineCategory.BENEFIT_DEDUCTION
+                        )
+                    );
                     postTaxDeductions = postTaxDeductions.add(employeeCost);
                 }
             }
             if (employerCost.signum() != 0) {
                 if (employerChargeComponent != null) {
                     String explain = "Step 9 — Benefit (" + b.getType() + ") employer cost: " + fmt(employerCost);
-                    lines.add(emitLine(result, employerChargeComponent, null, null, employerCost, seq.next(), explain));
+                    lines.add(
+                        emitLine(result, employerChargeComponent, null, null, employerCost, seq.next(), explain).lineCategory(
+                            PayrollLineCategory.EMPLOYER_CHARGE
+                        )
+                    );
                 }
                 benefitEmployerCost = benefitEmployerCost.add(employerCost);
             }
@@ -727,7 +818,11 @@ public class PayrollProcessingService {
                 continue;
             }
             String explain = explainDeduction(d, amt, grossPay, "Step 10", false);
-            lines.add(emitLine(result, generalDeductionComponent, null, null, amt, seq.next(), explain));
+            lines.add(
+                emitLine(result, generalDeductionComponent, null, null, amt, seq.next(), explain).lineCategory(
+                    PayrollLineCategory.POST_TAX_DEDUCTION
+                )
+            );
             postTaxDeductions = postTaxDeductions.add(amt);
         }
         // Formula-driven DEDUCTION PayComponents in deterministic order
@@ -736,7 +831,9 @@ public class PayrollProcessingService {
             if (amt == null || amt.signum() == 0) continue;
             amt = amt.setScale(MONEY_SCALE, MONEY_ROUNDING).abs();
             String explain = "Step 10 — Deduction component '" + component.getCode() + "' via PayRule formula: " + fmt(amt);
-            lines.add(emitLine(result, component, null, null, amt, seq.next(), explain));
+            lines.add(
+                emitLine(result, component, null, null, amt, seq.next(), explain).lineCategory(PayrollLineCategory.POST_TAX_DEDUCTION)
+            );
             postTaxDeductions = postTaxDeductions.add(amt);
             context.put(component.getCode().name(), amt);
         }
@@ -757,7 +854,7 @@ public class PayrollProcessingService {
             if (amt == null || amt.signum() == 0) continue;
             amt = amt.setScale(MONEY_SCALE, MONEY_ROUNDING);
             String explain = "Step 12 — Employer charge '" + component.getCode() + "' via PayRule formula: " + fmt(amt);
-            lines.add(emitLine(result, component, null, null, amt, seq.next(), explain));
+            lines.add(emitLine(result, component, null, null, amt, seq.next(), explain).lineCategory(PayrollLineCategory.EMPLOYER_CHARGE));
             employerCharges = employerCharges.add(amt);
             context.put(component.getCode().name(), amt);
         }
@@ -789,6 +886,20 @@ public class PayrollProcessingService {
             lines.size()
         );
         return result;
+    }
+
+    /**
+     * Loads the tenant-global pay-component lookup keyed by {@link PayComponentCode}. Called
+     * once per run (M2) rather than once per employee. {@code PayComponent.code} is
+     * unique-constrained at the entity level, so the merge function never actually fires — it
+     * is only there to satisfy {@link Collectors#toMap}'s signature.
+     */
+    private Map<PayComponentCode, PayComponent> loadComponentsByCode() {
+        return payComponentRepository
+            .findAll()
+            .stream()
+            .filter(c -> c.getCode() != null)
+            .collect(Collectors.toMap(PayComponent::getCode, c -> c, (a, b) -> a));
     }
 
     /**
@@ -838,13 +949,26 @@ public class PayrollProcessingService {
             .orElseThrow(() -> new EntityNotFoundException("Employee (approver)", request.approverId()));
 
         // Validate approver has authority
-        validateApprovalAuthority(approver, run);
+        validateApprovalAuthority(approver, run, request.forceApproval());
 
         run.setStatus(RunStatus.APPROVED);
         run.setApprovedAt(OffsetDateTime.now());
         run.setApprovedBy(approver);
 
-        run = payrollRunRepository.save(run);
+        // Flush inside the transaction so a concurrent approve/recalculate that already
+        // advanced this run's version surfaces as a clean business error rather than a
+        // commit-time 500 (and never lets two approvals race past the CALCULATED guard).
+        try {
+            run = payrollRunRepository.save(run);
+            payrollRunRepository.flush();
+        } catch (ObjectOptimisticLockingFailureException e) {
+            log.warn("Concurrent modification while approving run {}: {}", request.payrollRunId(), e.getMessage());
+            throw new BusinessRuleViolationException(
+                "Payroll run " +
+                request.payrollRunId() +
+                " was modified concurrently (already approved or under recalculation). Reload and retry."
+            );
+        }
         log.info("Payroll run {} approved by {}", run.getId(), approver.getId());
 
         return toRunResponse(run, Collections.emptyList());
@@ -868,17 +992,32 @@ public class PayrollProcessingService {
         }
 
         run.setStatus(RunStatus.POSTED);
-        run = payrollRunRepository.save(run);
 
-        // §P3.3: YTD update happens before the period closes, but after the run is
-        // marked POSTED so a partial failure leaves the run state coherent with the
-        // ledger write attempts.
-        updateYearToDateOnPost(run);
-
-        // Close the period
+        // §P3.3: YTD update happens before the period closes. All three writes (run status,
+        // YTD ledger, period close) commit together — post is all-or-nothing.
+        //
+        // The explicit flush() converts the commit-time optimistic-lock check into a
+        // catchable failure HERE, inside the transaction. Two concurrent posts on the same
+        // APPROVED run both pass the status guard above; the loser's flush bumps payroll_run
+        // (or a tax_withholding YTD row) against a version the winner already advanced,
+        // throws, and its whole transaction — including the YTD increments — rolls back.
+        // Without this, the loser would silently double-count the tax ledger.
         PayrollPeriod period = run.getPeriod();
         period.setClosed(true);
-        payrollPeriodRepository.save(period);
+        try {
+            run = payrollRunRepository.save(run);
+            updateYearToDateOnPost(run);
+            payrollPeriodRepository.save(period);
+            payrollRunRepository.flush();
+        } catch (ObjectOptimisticLockingFailureException e) {
+            log.warn("Concurrent modification while posting run {}: {}", runId, e.getMessage());
+            throw new BusinessRuleViolationException(
+                "Payroll run " +
+                runId +
+                " (or one of its tax-withholding rows) was modified concurrently while posting. " +
+                "It may already be posted or under recalculation — reload and retry."
+            );
+        }
 
         log.info("Payroll run {} posted and period {} closed", run.getId(), period.getId());
 
@@ -887,22 +1026,23 @@ public class PayrollProcessingService {
 
     /**
      * Walks the persisted lines of every {@link PayrollResult} in this run, isolates the
-     * step-7 income tax line and step-8 withholding lines (both tagged
-     * {@link PayComponentCode#TAX_PIT}; differentiated by {@code explain} prefix), and
-     * adds the amounts to the matching {@link TaxWithholding#yearToDateAmount}.
+     * income-tax and withholding lines via their typed {@link PayrollLine#getLineCategory()}
+     * / {@link PayrollLine#getTaxType()} fields, and adds the amounts to the matching
+     * {@link TaxWithholding#yearToDateAmount}.
      *
-     * <p>The {@code explain}-prefix protocol is the load-bearing contract between step 7/8
-     * line emission (in {@link #calculateEmployeePayroll}) and this reader. Don't change
-     * one without the other.
+     * <p>The classification is structured data set at line emission (in
+     * {@link #calculateEmployeePayroll}), not parsed from the human-readable {@code explain}
+     * text. This is the typed replacement for the former explain-prefix protocol, so editing
+     * a log/explain string can no longer silently break the tax ledger.
      *
      * <p>Per-line resolution semantics:
      * <ul>
-     *   <li><b>Step 7 line</b> ({@code explain} starts with {@code "Step 7"}) → looks up
-     *       the employee's active {@link TaxType#INCOME_TAX} row at {@code period.endDate}
-     *       and adds {@code line.amount} to its YTD.</li>
-     *   <li><b>Step 8 lines</b> ({@code explain} starts with {@code "Step 8 — Withholding ("})
-     *       → parses the {@link TaxType} out of the parenthetical, looks up that type's
-     *       active row, and adds {@code line.amount} to its YTD.</li>
+     *   <li><b>{@link PayrollLineCategory#INCOME_TAX}</b> → looks up the employee's active
+     *       {@link TaxType#INCOME_TAX} row at {@code period.endDate} and adds {@code line.amount}
+     *       to its YTD.</li>
+     *   <li><b>{@link PayrollLineCategory#WITHHOLDING}</b> → routes by the line's
+     *       {@link PayrollLine#getTaxType()} to that type's active row and adds {@code line.amount}
+     *       to its YTD.</li>
      * </ul>
      *
      * <p>If no active row is configured for a tax type that produced a line, the amount is
@@ -916,33 +1056,26 @@ public class PayrollProcessingService {
         List<PayrollResult> results = payrollResultRepository.findAll(
             (Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), runId)
         );
+        // M2: fetch every line for the run in ONE query and group by result, instead of a
+        // per-result query inside the loop (which was O(employees) round-trips).
+        Map<UUID, List<PayrollLine>> linesByResult = payrollLineRepository
+            .findAll((Specification<PayrollLine>) (root, query, cb) -> cb.equal(root.get("result").get("run").get("id"), runId))
+            .stream()
+            .collect(Collectors.groupingBy(line -> line.getResult().getId()));
         int incomeTaxUpdates = 0;
         int otherWithholdingUpdates = 0;
         for (PayrollResult result : results) {
             Employee employee = result.getEmployee();
-            final UUID resultId = result.getId();
-            List<PayrollLine> lines = payrollLineRepository.findAll(
-                (Specification<PayrollLine>) (root, query, cb) -> cb.equal(root.get("result").get("id"), resultId)
-            );
+            List<PayrollLine> lines = linesByResult.getOrDefault(result.getId(), List.of());
             BigDecimal incomeTaxAmount = BigDecimal.ZERO;
             Map<TaxType, BigDecimal> withholdingByType = new EnumMap<>(TaxType.class);
             for (PayrollLine line : lines) {
-                if (line.getComponent() == null || line.getComponent().getCode() != PayComponentCode.TAX_PIT) continue;
-                String explain = line.getExplain() == null ? "" : line.getExplain();
                 BigDecimal amt = nz(line.getAmount());
-                if (explain.startsWith("Step 7")) {
+                PayrollLineCategory category = line.getLineCategory();
+                if (category == PayrollLineCategory.INCOME_TAX) {
                     incomeTaxAmount = incomeTaxAmount.add(amt);
-                } else if (explain.startsWith("Step 8 — Withholding (")) {
-                    int start = "Step 8 — Withholding (".length();
-                    int end = explain.indexOf(",", start);
-                    if (end > start) {
-                        try {
-                            TaxType type = TaxType.valueOf(explain.substring(start, end).trim());
-                            withholdingByType.merge(type, amt, BigDecimal::add);
-                        } catch (IllegalArgumentException ex) {
-                            log.warn("Unparseable TaxType in line {} explain '{}'", line.getId(), explain);
-                        }
-                    }
+                } else if (category == PayrollLineCategory.WITHHOLDING && line.getTaxType() != null) {
+                    withholdingByType.merge(line.getTaxType(), amt, BigDecimal::add);
                 }
             }
             if (incomeTaxAmount.signum() > 0 && bumpYtdForType(employee.getId(), TaxType.INCOME_TAX, incomeTaxAmount, asOfDate)) {
@@ -978,7 +1111,10 @@ public class PayrollProcessingService {
                         cb.equal(root.get("type"), type),
                         cb.lessThanOrEqualTo(root.get("effectiveFrom"), asOfDate),
                         cb.or(cb.isNull(root.get("effectiveTo")), cb.greaterThanOrEqualTo(root.get("effectiveTo"), asOfDate))
-                    )
+                    ),
+                // M3: deterministically pick which active row receives the YTD bump when more
+                // than one matches — latest-starting wins, id tiebreak — instead of arbitrary.
+                PageRequest.of(0, 1, Sort.by(Sort.Order.desc("effectiveFrom"), Sort.Order.asc("id")))
             )
             .stream()
             .findFirst();
@@ -1032,22 +1168,20 @@ public class PayrollProcessingService {
             );
         }
 
-        // Get breakdown by component
+        // Get breakdown by component. M2: one query for every line in the run, instead of a
+        // per-result query inside the loop.
         Map<String, BigDecimal> earningsByComponent = new HashMap<>();
         Map<String, BigDecimal> deductionsByComponent = new HashMap<>();
 
-        for (PayrollResult result : results) {
-            List<PayrollLine> lines = payrollLineRepository.findAll(
-                (Specification<PayrollLine>) (root, query, cb) -> cb.equal(root.get("result").get("id"), result.getId())
-            );
-
-            for (PayrollLine line : lines) {
-                String componentName = line.getComponent().getName();
-                if (line.getComponent().getKind() == Kind.EARNING) {
-                    earningsByComponent.merge(componentName, line.getAmount(), BigDecimal::add);
-                } else if (line.getComponent().getKind() == Kind.DEDUCTION) {
-                    deductionsByComponent.merge(componentName, line.getAmount().abs(), BigDecimal::add);
-                }
+        List<PayrollLine> allLines = payrollLineRepository.findAll(
+            (Specification<PayrollLine>) (root, query, cb) -> cb.equal(root.get("result").get("run").get("id"), runId)
+        );
+        for (PayrollLine line : allLines) {
+            String componentName = line.getComponent().getName();
+            if (line.getComponent().getKind() == Kind.EARNING) {
+                earningsByComponent.merge(componentName, line.getAmount(), BigDecimal::add);
+            } else if (line.getComponent().getKind() == Kind.DEDUCTION) {
+                deductionsByComponent.merge(componentName, line.getAmount().abs(), BigDecimal::add);
             }
         }
 
@@ -1124,7 +1258,11 @@ public class PayrollProcessingService {
                         cb.equal(root.get("employee").get("id"), employeeId),
                         cb.lessThanOrEqualTo(root.get("effectiveFrom"), asOfDate),
                         cb.or(cb.isNull(root.get("effectiveTo")), cb.greaterThanOrEqualTo(root.get("effectiveTo"), asOfDate))
-                    )
+                    ),
+                // M3: push ORDER BY + LIMIT 1 into SQL instead of loading every active row and
+                // taking an arbitrary first. When overlapping compensations are active, the
+                // latest-starting one wins, with id as a stable tiebreaker — deterministic.
+                PageRequest.of(0, 1, Sort.by(Sort.Order.desc("effectiveFrom"), Sort.Order.asc("id")))
             )
             .stream()
             .findFirst()
@@ -1238,10 +1376,54 @@ public class PayrollProcessingService {
         return (int) ((days * 5) / 7); // Approximate work days
     }
 
-    private void validateApprovalAuthority(Employee approver, PayrollRun run) {
-        // Implement approval authority validation based on business rules
-        // For now, just log
-        log.debug("Validating approval authority for {} on run {}", approver.getId(), run.getId());
+    /**
+     * Enforces who may approve a payroll run. Two controls, applied in order:
+     *
+     * <ol>
+     *   <li><strong>Permission (hard, never bypassable).</strong> The named approver must hold
+     *       at least one authority that grants {@link PermissionsConstants#APPROVE_PAYROLL}.
+     *       The class-level {@code @RequirePayrollAdmin} on the REST resource only checks the
+     *       <em>caller</em>; this checks the <em>approver of record</em>, so a privileged caller
+     *       cannot record an approval against someone who lacks the authority. Fails closed.</li>
+     *   <li><strong>Segregation of duties (self-approval).</strong> The approver may not be the
+     *       same person who created the run (compared by audit login). This is overridable with
+     *       {@code forceApproval=true} — e.g. a single-operator tenant — but the override is
+     *       logged at WARN so it leaves a trail. The permission control above is <em>not</em>
+     *       overridable.</li>
+     * </ol>
+     *
+     * @throws BusinessRuleViolationException when the approver lacks the approval permission,
+     *         or self-approves without {@code forceApproval}.
+     */
+    private void validateApprovalAuthority(Employee approver, PayrollRun run, boolean forceApproval) {
+        boolean hasApprovalPermission = approver
+            .getAuthorities()
+            .stream()
+            .anyMatch(authority -> authorityPermissionService.hasPermission(authority.getName(), PermissionsConstants.APPROVE_PAYROLL));
+        if (!hasApprovalPermission) {
+            throw new BusinessRuleViolationException(
+                "Employee " + approver.getId() + " is not authorized to approve payroll runs (missing APPROVE_PAYROLL permission)."
+            );
+        }
+
+        String creator = run.getCreatedBy();
+        String approverLogin = approver.getLogin();
+        boolean selfApproval = creator != null && approverLogin != null && creator.equalsIgnoreCase(approverLogin);
+        if (selfApproval) {
+            if (!forceApproval) {
+                throw new BusinessRuleViolationException(
+                    "Approver may not approve a payroll run they created (segregation of duties). " +
+                    "Set forceApproval to override on single-operator tenants."
+                );
+            }
+            log.warn(
+                "Self-approval override on run {}: approver {} created the run; proceeding because forceApproval=true",
+                run.getId(),
+                approver.getId()
+            );
+        }
+
+        log.debug("Approval authority validated for {} on run {}", approver.getId(), run.getId());
     }
 
     /** Bumped whenever the hash *format* changes so old runs don't collide with new ones.

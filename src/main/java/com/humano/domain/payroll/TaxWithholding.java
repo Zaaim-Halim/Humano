@@ -120,6 +120,17 @@ public class TaxWithholding extends AbstractAuditingEntity<UUID> {
     @DecimalMin(value = "0.0", inclusive = true, message = "Year-to-date amount cannot be negative")
     private BigDecimal yearToDateAmount = BigDecimal.ZERO;
 
+    /**
+     * Optimistic-lock guard for the {@link #yearToDateAmount} accumulation.
+     * <p>
+     * The post step reads the current YTD, adds the period's withheld amount, and saves it
+     * back (read-modify-write). Two payroll runs posting concurrently and touching the same
+     * employee's YTD row would otherwise lose one of the increments. {@code @Version} turns
+     * the losing write into an optimistic lock failure so the amount is never silently lost.
+     */
+    @Version
+    private Long version;
+
     @Override
     public UUID getId() {
         return id;
@@ -231,6 +242,14 @@ public class TaxWithholding extends AbstractAuditingEntity<UUID> {
 
     public void setYearToDateAmount(BigDecimal yearToDateAmount) {
         this.yearToDateAmount = yearToDateAmount;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     @Override

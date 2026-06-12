@@ -1,5 +1,7 @@
 package com.humano.domain.payroll;
 
+import com.humano.domain.enumeration.payroll.PayrollLineCategory;
+import com.humano.domain.enumeration.payroll.TaxType;
 import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -80,6 +82,26 @@ public class PayrollLine extends AbstractAuditingEntity<UUID> {
      */
     @Column(name = "explain", columnDefinition = "TEXT")
     private String explain;
+
+    /**
+     * Structured classification of this line, set by the calculation pipeline.
+     * <p>
+     * Machine-readable counterpart to {@link #explain}. Downstream consumers (notably the
+     * post-time year-to-date tax reader) key off this instead of parsing the explain text,
+     * so the tax ledger no longer depends on prose remaining byte-stable.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "line_category")
+    private PayrollLineCategory lineCategory;
+
+    /**
+     * For tax lines ({@link PayrollLineCategory#INCOME_TAX} / {@link PayrollLineCategory#WITHHOLDING}),
+     * the originating tax type; null for all other lines. Lets the YTD reader route each tax
+     * line to the correct {@code TaxWithholding} row without string parsing.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tax_type")
+    private TaxType taxType;
 
     /**
      * The PayrollResult (payslip) this line is part of.
@@ -173,6 +195,32 @@ public class PayrollLine extends AbstractAuditingEntity<UUID> {
 
     public void setExplain(String explain) {
         this.explain = explain;
+    }
+
+    public PayrollLineCategory getLineCategory() {
+        return lineCategory;
+    }
+
+    public PayrollLine lineCategory(PayrollLineCategory lineCategory) {
+        this.lineCategory = lineCategory;
+        return this;
+    }
+
+    public void setLineCategory(PayrollLineCategory lineCategory) {
+        this.lineCategory = lineCategory;
+    }
+
+    public TaxType getTaxType() {
+        return taxType;
+    }
+
+    public PayrollLine taxType(TaxType taxType) {
+        this.taxType = taxType;
+        return this;
+    }
+
+    public void setTaxType(TaxType taxType) {
+        this.taxType = taxType;
     }
 
     public PayrollResult getResult() {
