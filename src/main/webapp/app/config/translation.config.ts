@@ -1,6 +1,6 @@
 import { MissingTranslationHandler, MissingTranslationHandlerParams, TranslateLoader } from '@ngx-translate/core';
-import { HttpClient } from '@angular/common/http';
-import { TranslateHttpLoader } from '@ngx-translate/http-loader';
+import { loadLocale } from 'i18n';
+import { Observable, from } from 'rxjs';
 
 export const translationNotFoundMessage = 'translation-not-found';
 
@@ -11,8 +11,12 @@ export class MissingTranslationHandlerImpl implements MissingTranslationHandler 
   }
 }
 
-export function translatePartialLoader(http: HttpClient): TranslateLoader {
-  return new TranslateHttpLoader(http, 'i18n/', `.json?_=${I18N_HASH}`);
+export function translatePartialLoader(): TranslateLoader {
+  return {
+    getTranslation(lang: string): Observable<any> {
+      return from(loadLocale(lang as any));
+    },
+  };
 }
 
 export function missingTranslationHandler(): MissingTranslationHandler {

@@ -1,0 +1,402 @@
+/* ============================================================
+   Humano Design System — runtime design tokens (_tokens.scss)
+   AUTO-DERIVED from the canonical token/component CSS in this
+   repo. Regenerate rather than hand-editing so Angular stays in
+   sync with the React/HTML source of truth.
+   ============================================================ */
+
+// These emit the CSS custom properties the component skins consume.
+// Import once at the app root, before humano.scss.
+
+/* ============================================================
+   Humano — Color tokens
+   Base ramps (primitive) + semantic aliases (use these in UI).
+   Light is the default; [data-theme="dark"] overrides aliases.
+   Platform/Superadmin chrome is scoped under [data-chrome="platform"].
+   ============================================================ */
+
+:root {
+  /* --- Brand: deep indigo ------------------------------------ */
+  --indigo-50: #eef2ff;
+  --indigo-100: #e0e7ff;
+  --indigo-200: #c7d2fe;
+  --indigo-300: #a5b4fc;
+  --indigo-400: #818cf8;
+  --indigo-500: #6366f1;
+  --indigo-600: #4f46e5;
+  --indigo-700: #4338ca; /* primary */
+  --indigo-800: #3730a3;
+  --indigo-900: #312e81;
+  --indigo-950: #1e1b4b;
+
+  /* --- Neutral: slate --------------------------------------- */
+  --slate-0: #ffffff;
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+  --slate-950: #020617;
+
+  /* --- Semantic scales -------------------------------------- */
+  /* success — paid / approved (emerald) */
+  --success-50: #ecfdf5;
+  --success-100: #d1fae5;
+  --success-200: #a7f3d0;
+  --success-500: #10b981;
+  --success-600: #059669;
+  --success-700: #047857;
+
+  /* warning — pending / due (amber) */
+  --warning-50: #fffbeb;
+  --warning-100: #fef3c7;
+  --warning-200: #fde68a;
+  --warning-500: #f59e0b;
+  --warning-600: #d97706;
+  --warning-700: #b45309;
+
+  /* danger — rejected / overdue (red) */
+  --danger-50: #fef2f2;
+  --danger-100: #fee2e2;
+  --danger-200: #fecaca;
+  --danger-500: #ef4444;
+  --danger-600: #dc2626;
+  --danger-700: #b91c1c;
+
+  /* info — neutral informational (blue) */
+  --info-50: #eff6ff;
+  --info-100: #dbeafe;
+  --info-200: #bfdbfe;
+  --info-500: #3b82f6;
+  --info-600: #2563eb;
+  --info-700: #1d4ed8;
+
+  /* platform / superadmin accent (violet) */
+  --violet-50: #f5f3ff;
+  --violet-100: #ede9fe;
+  --violet-300: #c4b5fd;
+  --violet-400: #a78bfa;
+  --violet-500: #8b5cf6;
+  --violet-600: #7c3aed;
+  --violet-700: #6d28d9;
+
+  /* ==========================================================
+     SEMANTIC ALIASES — light theme (default)
+     Reach for these in components, never the raw ramps.
+     ========================================================== */
+
+  /* surfaces */
+  --bg-app: var(--slate-50); /* page background */
+  --bg-surface: var(--slate-0); /* cards, panels, sheets */
+  --bg-subtle: var(--slate-50); /* zebra rows, wells */
+  --bg-muted: var(--slate-100); /* hover fills, chips */
+  --bg-emphasis: var(--slate-900); /* tooltips, inverted */
+  --bg-overlay: rgba(15, 23, 42, 0.45); /* modal scrim */
+
+  /* borders */
+  --border-subtle: var(--slate-200);
+  --border-default: var(--slate-300);
+  --border-strong: var(--slate-400);
+
+  /* text */
+  --text-strong: var(--slate-900);
+  --text-default: var(--slate-700);
+  --text-muted: var(--slate-500);
+  --text-subtle: var(--slate-400);
+  --text-inverse: var(--slate-0);
+  --text-link: var(--indigo-700);
+
+  /* brand */
+  --brand: var(--indigo-700);
+  --brand-hover: var(--indigo-800);
+  --brand-active: var(--indigo-900);
+  --brand-fg: var(--slate-0);
+  --brand-subtle: var(--indigo-50);
+  --brand-muted: var(--indigo-100);
+  --brand-text: var(--indigo-700);
+  --brand-border: var(--indigo-200);
+
+  /* focus */
+  --focus-ring: var(--indigo-500);
+  --focus-ring-offset: var(--slate-0);
+
+  /* semantic foregrounds/backgrounds for status surfaces */
+  --success-bg: var(--success-50);
+  --success-fg: var(--success-700);
+  --success-solid: var(--success-600);
+  --warning-bg: var(--warning-50);
+  --warning-fg: var(--warning-700);
+  --warning-solid: var(--warning-600);
+  --danger-bg: var(--danger-50);
+  --danger-fg: var(--danger-700);
+  --danger-solid: var(--danger-600);
+  --info-bg: var(--info-50);
+  --info-fg: var(--info-700);
+  --info-solid: var(--info-600);
+  --neutral-bg: var(--slate-100);
+  --neutral-fg: var(--slate-600);
+  --neutral-solid: var(--slate-500);
+
+  /* accounting / money */
+  --money-positive: var(--success-700);
+  --money-negative: var(--danger-600);
+}
+
+/* ============================================================
+   DARK THEME — override aliases only
+   ============================================================ */
+[data-theme='dark'] {
+  --bg-app: var(--slate-950);
+  --bg-surface: var(--slate-900);
+  --bg-subtle: #0b1424; /* between 900 and 950 */
+  --bg-muted: var(--slate-800);
+  --bg-emphasis: var(--slate-0);
+  --bg-overlay: rgba(2, 6, 23, 0.65);
+
+  --border-subtle: #1c2840;
+  --border-default: var(--slate-800);
+  --border-strong: var(--slate-700);
+
+  --text-strong: var(--slate-50);
+  --text-default: var(--slate-300);
+  --text-muted: var(--slate-400);
+  --text-subtle: var(--slate-500);
+  --text-inverse: var(--slate-900);
+  --text-link: var(--indigo-300);
+
+  --brand: var(--indigo-500);
+  --brand-hover: var(--indigo-400);
+  --brand-active: var(--indigo-300);
+  --brand-fg: var(--slate-950);
+  --brand-subtle: rgba(99, 102, 241, 0.12);
+  --brand-muted: rgba(99, 102, 241, 0.2);
+  --brand-text: var(--indigo-300);
+  --brand-border: rgba(99, 102, 241, 0.35);
+
+  --focus-ring: var(--indigo-400);
+  --focus-ring-offset: var(--slate-900);
+
+  --success-bg: rgba(16, 185, 129, 0.14);
+  --success-fg: #6ee7b7;
+  --success-solid: var(--success-500);
+  --warning-bg: rgba(245, 158, 11, 0.14);
+  --warning-fg: #fcd34d;
+  --warning-solid: var(--warning-500);
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --danger-fg: #fca5a5;
+  --danger-solid: var(--danger-500);
+  --info-bg: rgba(59, 130, 246, 0.15);
+  --info-fg: #93c5fd;
+  --info-solid: var(--info-500);
+  --neutral-bg: var(--slate-800);
+  --neutral-fg: var(--slate-300);
+  --neutral-solid: var(--slate-500);
+
+  --money-positive: #6ee7b7;
+  --money-negative: #fca5a5;
+}
+
+/* ============================================================
+   PLATFORM / SUPERADMIN CHROME
+   Distinct dark chrome + violet accent so it is never mistaken
+   for a tenant's own admin. Apply data-chrome="platform" on the
+   shell root (works in both light and dark app themes).
+   ========================================================== */
+[data-chrome='platform'] {
+  --chrome-bg: var(--slate-950);
+  --chrome-surface: #0c1322;
+  --chrome-border: #1c2840;
+  --chrome-text: var(--slate-200);
+  --chrome-muted: var(--slate-400);
+  --chrome-accent: var(--violet-500);
+  --chrome-accent-fg: var(--slate-0);
+  --chrome-accent-subtle: rgba(139, 92, 246, 0.16);
+}
+
+/* ============================================================
+   Humano — Typography tokens
+   UI: Geist (variable sans). Numerals/IDs/code: Geist Mono.
+   Money, hours, %, and table figures use tabular numerals.
+   ============================================================ */
+
+:root {
+  /* families */
+  --font-sans: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* type scale (px) — 12/13/14/16/20/24/30 + display */
+  --text-xs: 0.75rem; /* 12 — meta, captions, table micro */
+  --text-sm: 0.8125rem; /* 13 — secondary, dense tables */
+  --text-base: 0.875rem; /* 14 — default body / UI */
+  --text-md: 1rem; /* 16 — comfortable body, inputs */
+  --text-lg: 1.25rem; /* 20 — card titles, section heads */
+  --text-xl: 1.5rem; /* 24 — page titles */
+  --text-2xl: 1.875rem; /* 30 — KPI figures, hero numbers */
+  --text-3xl: 2.25rem; /* 36 — display */
+  --text-4xl: 3rem; /* 48 — marketing display */
+
+  /* weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* line-heights */
+  --leading-none: 1;
+  --leading-tight: 1.25; /* tables, headings */
+  --leading-snug: 1.4;
+  --leading-normal: 1.5; /* body */
+  --leading-relaxed: 1.65; /* prose */
+
+  /* letter-spacing */
+  --tracking-tight: -0.02em; /* large headings */
+  --tracking-snug: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em; /* eyebrows, all-caps labels */
+
+  /* semantic roles */
+  --font-display: var(--font-sans);
+  --font-body: var(--font-sans);
+  --font-numeric: var(--font-mono);
+
+  /* font-feature for tabular figures */
+  --feat-tabular: 'tnum' 1, 'lnum' 1;
+}
+
+/* Utility: apply tabular, lining numerals to any figure */
+.tabular-nums,
+[data-numeric] {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: var(--feat-tabular);
+}
+
+/* ============================================================
+   Humano — Spacing, radii, sizing tokens
+   4px base grid. Soft (not bubbly) radii: 6–10px core.
+   ============================================================ */
+
+:root {
+  /* spacing scale (4px grid) */
+  --space-0: 0;
+  --space-px: 1px;
+  --space-0_5: 0.125rem; /* 2 */
+  --space-1: 0.25rem; /* 4 */
+  --space-1_5: 0.375rem; /* 6 */
+  --space-2: 0.5rem; /* 8 */
+  --space-2_5: 0.625rem; /* 10 */
+  --space-3: 0.75rem; /* 12 */
+  --space-3_5: 0.875rem; /* 14 */
+  --space-4: 1rem; /* 16 */
+  --space-5: 1.25rem; /* 20 */
+  --space-6: 1.5rem; /* 24 */
+  --space-7: 1.75rem; /* 28 */
+  --space-8: 2rem; /* 32 */
+  --space-10: 2.5rem; /* 40 */
+  --space-12: 3rem; /* 48 */
+  --space-16: 4rem; /* 64 */
+  --space-20: 5rem; /* 80 */
+
+  /* radii */
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 8px; /* default control / card */
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* control heights (density: comfortable) */
+  --control-sm: 1.75rem; /* 28 */
+  --control-md: 2.25rem; /* 36 — default */
+  --control-lg: 2.75rem; /* 44 — touch target floor */
+
+  /* layout */
+  --sidebar-w: 16rem; /* 256 */
+  --sidebar-w-collapsed: 3.5rem; /* 56 */
+  --topbar-h: 3.5rem; /* 56 */
+  --container-max: 80rem; /* 1280 */
+  --drawer-w: 28rem; /* 448 */
+
+  /* hairline */
+  --hairline: 1px;
+}
+
+/* Compact density — opt in on a shell/table root with data-density="compact" */
+[data-density='compact'] {
+  --control-sm: 1.5rem; /* 24 */
+  --control-md: 1.875rem; /* 30 */
+  --control-lg: 2.25rem; /* 36 */
+}
+
+/* ============================================================
+   Humano — Elevation tokens
+   Prefer subtle 1px borders for structure. Use shadow ONLY for
+   things that float above the page: menus, popovers, modals,
+   drawers, toasts. Dark theme leans on borders + faint glow.
+   ============================================================ */
+
+:root {
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 2px 4px -1px rgba(15, 23, 42, 0.06), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 8px 16px -4px rgba(15, 23, 42, 0.1), 0 4px 6px -2px rgba(15, 23, 42, 0.05);
+  --shadow-xl: 0 20px 28px -8px rgba(15, 23, 42, 0.18), 0 8px 12px -6px rgba(15, 23, 42, 0.1);
+
+  /* focus ring (use with --focus-ring color) */
+  --ring-width: 2px;
+  --ring-offset: 2px;
+
+  /* inner hairline used on inputs/cards in dark to define edges */
+  --inset-hairline: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+[data-theme='dark'] {
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.45), 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 6px -1px rgba(0, 0, 0, 0.5), 0 6px 16px -2px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 10px 22px -6px rgba(0, 0, 0, 0.55), 0 4px 8px -2px rgba(0, 0, 0, 0.45);
+  --shadow-xl: 0 24px 40px -10px rgba(0, 0, 0, 0.65), 0 10px 16px -8px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================
+   Humano — Motion tokens
+   Fast, functional, ease-out. Animate state changes, not décor.
+   120–200ms range. Honor prefers-reduced-motion everywhere.
+   ============================================================ */
+
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --dur-fast: 120ms;
+  --dur-base: 160ms;
+  --dur-slow: 200ms;
+  --dur-slower: 280ms;
+
+  --transition-colors:
+    color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+    --dur-slower: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

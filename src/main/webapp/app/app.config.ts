@@ -4,7 +4,10 @@ import { RouterFeatures, TitleStrategy, provideRouter, withComponentInputBinding
 import { ServiceWorkerModule } from '@angular/service-worker';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 
+import { LucideAngularModule } from 'lucide-angular';
+
 import './config/dayjs';
+import { lucideIcons } from './config/lucide-icons';
 import { TranslationModule } from 'app/shared/language/translation.module';
 import { environment } from 'environments/environment';
 import { httpInterceptorProviders } from './core/interceptor';
@@ -24,6 +27,7 @@ export const appConfig: ApplicationConfig = {
     // Set this to true to enable service worker (PWA)
     importProvidersFrom(ServiceWorkerModule.register('ngsw-worker.js', { enabled: false })),
     importProvidersFrom(TranslationModule),
+    importProvidersFrom(LucideAngularModule.pick(lucideIcons)),
     provideHttpClient(withInterceptorsFromDi()),
     Title,
     { provide: LOCALE_ID, useValue: 'en' },

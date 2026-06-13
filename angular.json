@@ -18,24 +18,44 @@
       "prefix": "hum",
       "architect": {
         "build": {
-          "builder": "@angular-builders/custom-webpack:browser",
+          "builder": "@angular-builders/custom-esbuild:application",
           "options": {
-            "customWebpackConfig": {
-              "path": "./webpack/webpack.custom.js"
+            "plugins": ["build-plugins/i18n-esbuild.ts", "build-plugins/define-esbuild.ts"],
+            "outputPath": {
+              "base": "target/classes/static",
+              "browser": ""
             },
-            "outputPath": "target/classes/static/",
             "index": "src/main/webapp/index.html",
-            "main": "src/main/webapp/main.ts",
+            "browser": "src/main/webapp/main.ts",
             "polyfills": [],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "define": {
+              "SERVER_API_URL": "''"
+            },
             "assets": [
               "src/main/webapp/content",
               "src/main/webapp/favicon.ico",
               "src/main/webapp/manifest.webapp",
-              "src/main/webapp/robots.txt"
+              "src/main/webapp/robots.txt",
+              {
+                "glob": "**/*.{js,css,html,png}",
+                "input": "node_modules/swagger-ui-dist",
+                "output": "swagger-ui",
+                "ignore": ["index.html"]
+              },
+              {
+                "glob": "axios.min.js",
+                "input": "node_modules/axios/dist",
+                "output": "swagger-ui"
+              },
+              {
+                "glob": "**/*",
+                "input": "src/main/webapp/swagger-ui",
+                "output": "swagger-ui"
+              }
             ],
-            "styles": ["src/main/webapp/content/scss/vendor.scss", "src/main/webapp/content/scss/global.scss"],
+            "styles": ["src/main/webapp/content/scss/global.scss"],
             "scripts": []
           },
           "configurations": {
@@ -43,12 +63,8 @@
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,
-              "namedChunks": false,
               "extractLicenses": true,
-              "vendorChunk": false,
-              "buildOptimizer": true,
-              "serviceWorker": true,
-              "ngswConfigPath": "ngsw-config.json",
+              "serviceWorker": "ngsw-config.json",
               "budgets": [
                 {
                   "type": "initial",
@@ -63,12 +79,9 @@
               ]
             },
             "development": {
-              "buildOptimizer": false,
               "optimization": false,
-              "vendorChunk": true,
               "extractLicenses": false,
               "sourceMap": true,
-              "namedChunks": true,
               "fileReplacements": [
                 {
                   "replace": "src/main/webapp/environments/environment.ts",
@@ -80,10 +93,11 @@
           "defaultConfiguration": "production"
         },
         "serve": {
-          "builder": "@angular-builders/custom-webpack:dev-server",
+          "builder": "@angular-builders/custom-esbuild:dev-server",
           "options": {
             "buildTarget": "humano:build:development",
-            "port": 4200
+            "port": 4200,
+            "proxyConfig": "proxy.config.mjs"
           },
           "configurations": {
             "production": {
