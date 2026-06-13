@@ -7,10 +7,10 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,10 +42,12 @@ import org.springframework.stereotype.Service;
  * four layers, each useful on its own:
  *
  * <ol>
- *   <li><strong>Token-level rejection BEFORE parsing.</strong> Formulas containing
- *       {@code T(} (type reference) or {@code @} (bean reference) are rejected with
- *       a {@link SecurityException} at the engine entry. SpEL's parser would happily
- *       accept these; we never let them reach it.</li>
+ *   <li><strong>Length + token rejection BEFORE parsing.</strong> Formulas longer than
+ *       {@link #MAX_FORMULA_LENGTH} are rejected (an over-long expression is the cheapest
+ *       way to abuse a parser/evaluator with no time budget), as are formulas containing
+ *       {@code T(} (type reference) or {@code @} (bean reference) — rejected with a
+ *       {@link SecurityException} at the engine entry. SpEL's parser would happily accept
+ *       the latter; we never let them reach it.</li>
  *   <li><strong>{@link SimpleEvaluationContext} (read-only data binding).</strong>
  *       Used instead of {@code StandardEvaluationContext}. Disables type references,
  *       bean references, constructor calls, property writes, and reflective method
@@ -57,8 +59,8 @@ import org.springframework.stereotype.Service;
  *       reflection, no DB.</li>
  *   <li><strong>Parsed-{@link Expression} cache.</strong> SpEL parsing isn't free; the
  *       same formula string fires once per employee × payroll run. We cache by formula
- *       text, capped at {@link #CACHE_MAX_SIZE} entries with a naive clear-on-overflow
- *       policy (sufficient for v1; tenants don't author thousands of distinct formulas).</li>
+ *       text in a bounded LRU capped at {@link #CACHE_MAX_SIZE} entries — the least-recently-used
+ *       entry is evicted on overflow, so a burst of one-off formulas can't drop the hot set.</li>
  * </ol>
  *
  * <h2>What a formula can reach</h2>
@@ -198,11 +200,21 @@ public class PayrollFormulaEngine {
     private static final Pattern FORBIDDEN_TOKENS = Pattern.compile("T\\s*\\(|@");
 
     /**
-     * Soft cap on the parsed-expression cache. Reached only on tenants with thousands
-     * of distinct formula strings (PayRule formulas are reused per employee, so the
-     * cardinality is per-tenant pay-rule-count, not per-employee-run).
+     * Hard cap on the parsed-expression cache. The cache is a bounded LRU (see
+     * {@link #expressionCache}); reaching this size evicts the least-recently-used entry
+     * rather than clearing the whole cache. Reached only on tenants with thousands of distinct
+     * formula strings (formulas are reused per employee, so the cardinality is per-tenant
+     * pay-rule-count, not per-employee-run).
      */
     private static final int CACHE_MAX_SIZE = 1000;
+
+    /**
+     * Maximum accepted formula length. Tenant formulas are untrusted input; an absurdly long
+     * expression is the cheapest DoS vector against the SpEL parser/evaluator (which has no
+     * built-in time budget). Real country rules are well under this; reject the rest before
+     * parsing. Generous on purpose so legitimate banded formulas still fit.
+     */
+    private static final int MAX_FORMULA_LENGTH = 2000;
 
     /**
      * Numeric constants exposed as SpEL variables. These let formulas reference common
@@ -224,7 +236,22 @@ public class PayrollFormulaEngine {
     );
 
     private final ExpressionParser parser = new SpelExpressionParser();
-    private final Map<String, Expression> expressionCache = new ConcurrentHashMap<>();
+
+    /**
+     * Parsed-expression cache as a bounded LRU. Replaces a clear-the-whole-thing-on-overflow
+     * policy (which could drop every hot entry at once and cause a re-parse stampede).
+     * Access-ordered {@link LinkedHashMap} wrapped for thread-safety; the eldest
+     * (least-recently-used) entry is evicted once the size would exceed {@link #CACHE_MAX_SIZE}.
+     */
+    private final Map<String, Expression> expressionCache = Collections.synchronizedMap(
+        new LinkedHashMap<>(16, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, Expression> eldest) {
+                return size() > CACHE_MAX_SIZE;
+            }
+        }
+    );
+
     private final Map<String, Method> functionRegistry;
 
     public PayrollFormulaEngine() {
@@ -238,7 +265,8 @@ public class PayrollFormulaEngine {
      * registered so the formula can call {@code #min(...)} / {@code #band(...)} /
      * {@code #pct(...)} / etc. and reference {@code #WORKDAYS_IN_MONTH} etc.
      *
-     * @throws IllegalArgumentException when {@code formula} is null/blank.
+     * @throws IllegalArgumentException when {@code formula} is null/blank or exceeds
+     *         {@link #MAX_FORMULA_LENGTH} characters.
      * @throws SecurityException when {@code formula} contains forbidden tokens
      *         ({@code T(...)} or {@code @bean}).
      * @throws org.springframework.expression.spel.SpelEvaluationException on runtime
@@ -249,11 +277,17 @@ public class PayrollFormulaEngine {
         if (formula == null || formula.isBlank()) {
             throw new IllegalArgumentException("Formula must not be blank");
         }
+        // Length guard before parsing — checked explicitly here so the caller gets an accurate
+        // message rather than the generic forbidden-tokens one from isFormulaSafe.
+        if (formula.length() > MAX_FORMULA_LENGTH) {
+            log.warn("Rejected formula of length {} (max {})", formula.length(), MAX_FORMULA_LENGTH);
+            throw new IllegalArgumentException("Formula exceeds maximum length of " + MAX_FORMULA_LENGTH + " characters");
+        }
         if (!isFormulaSafe(formula)) {
             log.warn("Rejected formula containing forbidden tokens (T(...) or @bean): {}", formula);
             throw new SecurityException("Formula contains forbidden tokens (T(...) or @bean references)");
         }
-        Expression expression = expressionCache.computeIfAbsent(formula, this::parseAndCacheGuarded);
+        Expression expression = expressionCache.computeIfAbsent(formula, parser::parseExpression);
         SimpleEvaluationContext context = SimpleEvaluationContext.forReadOnlyDataBinding().build();
         functionRegistry.forEach(context::setVariable);
         CONSTANTS.forEach(context::setVariable);
@@ -267,7 +301,7 @@ public class PayrollFormulaEngine {
      * gets immediate feedback instead of discovering the rejection at calc time.
      */
     public boolean isFormulaSafe(String formula) {
-        if (formula == null || formula.isBlank()) return false;
+        if (formula == null || formula.isBlank() || formula.length() > MAX_FORMULA_LENGTH) return false;
         return !FORBIDDEN_TOKENS.matcher(formula).find();
     }
 
@@ -279,20 +313,6 @@ public class PayrollFormulaEngine {
     /** Returns the set of variable names the engine will accept (whitelist + dynamic-pattern hint). */
     public Set<String> allowedVariableNames() {
         return ALLOWED_VARIABLE_NAMES;
-    }
-
-    /**
-     * Cache-loader. Honours the soft cap by clearing the whole cache when it would
-     * grow past {@link #CACHE_MAX_SIZE} — simpler than tracking per-entry access
-     * times and bounded by the same property the cap targets (re-parse cost is
-     * negligible compared to formula evaluation).
-     */
-    private Expression parseAndCacheGuarded(String formula) {
-        if (expressionCache.size() >= CACHE_MAX_SIZE) {
-            log.info("PayrollFormulaEngine cache reached {} entries; clearing", CACHE_MAX_SIZE);
-            expressionCache.clear();
-        }
-        return parser.parseExpression(formula);
     }
 
     /**

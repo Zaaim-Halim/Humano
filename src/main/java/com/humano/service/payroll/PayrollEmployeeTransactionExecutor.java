@@ -5,7 +5,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Provides a per-employee transaction boundary for {@link PayrollProcessingService} (M1).
+ * Provides a per-employee transaction boundary for {@link PayrollProcessingService}.
  *
  * <p>Spring's {@code @Transactional} is proxy-based, so a {@code REQUIRES_NEW} method invoked
  * from <em>within</em> the same bean would be a plain self-call and never start a new

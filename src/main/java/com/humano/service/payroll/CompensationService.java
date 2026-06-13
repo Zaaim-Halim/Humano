@@ -25,7 +25,9 @@ import java.util.LinkedHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -295,7 +297,11 @@ public class CompensationService {
                         cb.equal(root.get("employee").get("id"), employeeId),
                         cb.lessThanOrEqualTo(root.get("effectiveFrom"), asOfDate),
                         cb.or(cb.isNull(root.get("effectiveTo")), cb.greaterThanOrEqualTo(root.get("effectiveTo"), asOfDate))
-                    )
+                    ),
+                // Deterministic pick + LIMIT 1, consistent with the calc-path findActiveCompensation.
+                // Compensation has no uniqueness on the active window, so overlapping rows would
+                // otherwise make this arbitrary; latest-starting wins.
+                PageRequest.of(0, 1, Sort.by(Sort.Order.desc("effectiveFrom"), Sort.Order.asc("id")))
             )
             .stream()
             .findFirst();

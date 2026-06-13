@@ -30,6 +30,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -147,7 +148,7 @@ public class PayrollProcessingService {
     private final ExchangeRateService exchangeRateService;
     private final AuthorityPermissionService authorityPermissionService;
 
-    /** M1: runs each employee's calculation in its own tenant {@code REQUIRES_NEW} transaction. */
+    /** Runs each employee's calculation in its own tenant {@code REQUIRES_NEW} transaction. */
     private final PayrollEmployeeTransactionExecutor employeeTransactionExecutor;
 
     /** P3.4: maximum days a fallback rate may lag the payment date before the per-employee
@@ -310,7 +311,21 @@ public class PayrollProcessingService {
             run.setReportingCurrency(reporting);
         }
 
-        run = payrollRunRepository.save(run);
+        // saveAndFlush so a unique-hash violation surfaces here (synchronously) rather than
+        // at commit. The hash short-circuit above is a check-then-act with a TOCTOU window: a
+        // concurrent initiate with identical inputs can insert the same hash between our check
+        // and this insert. The unique constraint on payroll_run.hash blocks the duplicate;
+        // translate the raw violation into a clear, retryable business error instead of a 500.
+        // (A full insert-or-return would re-resolve to the winning run, but that needs a fresh
+        // transaction since the failed flush marks this one rollback-only — deferred.)
+        try {
+            run = payrollRunRepository.saveAndFlush(run);
+        } catch (DataIntegrityViolationException e) {
+            log.info("Idempotency race on hash {} while creating run for period {}", hash, request.periodId());
+            throw new BusinessRuleViolationException(
+                "A payroll run for these exact inputs was just created concurrently. Retry the request to retrieve it."
+            );
+        }
         log.info(
             "Created payroll run {} with status DRAFT, hash={}, reportingCurrency={}",
             run.getId(),
@@ -324,7 +339,7 @@ public class PayrollProcessingService {
     /**
      * Calculates payroll for all employees in a run.
      *
-     * <h3>Transaction model (M1)</h3>
+     * <h3>Transaction model</h3>
      * The orchestration here runs in one tenant transaction, but each employee is calculated
      * in its <em>own</em> {@code REQUIRES_NEW} transaction via
      * {@link PayrollEmployeeTransactionExecutor#calculateInNewTransaction}. That buys:
@@ -360,7 +375,7 @@ public class PayrollProcessingService {
 
         List<Employee> employees = getEmployeesForScope(run.getScope(), run.getPeriod());
 
-        // M2: pay components are tenant-global config — load the lookup map ONCE for the whole
+        // Pay components are tenant-global config — load the lookup map ONCE for the whole
         // run instead of re-querying pay_component for every employee. The components are only
         // read and used as non-cascading FK targets on emitted lines, so passing them into each
         // per-employee transaction (where they are technically detached) is safe.
@@ -386,13 +401,18 @@ public class PayrollProcessingService {
                 });
                 processedCount++;
             } catch (Exception e) {
-                log.error("Error calculating payroll for employee {}: {}", employeeId, e.getMessage());
+                // Log the full throwable (stack trace), not just getMessage(), so a
+                // production calc failure is actually diagnosable. The catch stays broad on
+                // purpose — per-employee isolation means one employee's failure must not abort
+                // the run — but the diagnostics are no longer discarded.
+                log.error("Error calculating payroll for employee {}", employeeId, e);
+                String message = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                 errors.add(
                     new PayrollRunResponse.PayrollValidationError(
                         employeeId,
                         employee.getFirstName() + " " + employee.getLastName(),
                         "CALCULATION_ERROR",
-                        e.getMessage(),
+                        message,
                         "ERROR"
                     )
                 );
@@ -462,7 +482,7 @@ public class PayrollProcessingService {
         BigDecimal employerCharges = BigDecimal.ZERO;
         BigDecimal benefitEmployerCost = BigDecimal.ZERO;
 
-        // componentsByCode is the tenant-global pay-component lookup, loaded once per run (M2)
+        // componentsByCode is the tenant-global pay-component lookup, loaded once per run
         // and passed in. Used here read-only plus as non-cascading FK targets on emitted lines.
         Set<UUID> handledComponentIds = new HashSet<>();
 
@@ -592,7 +612,7 @@ public class PayrollProcessingService {
                                 cb.equal(root.get("country").get("id"), employee.getCountry().getId()),
                                 cb.equal(root.get("leaveType"), lt)
                             ),
-                        // M3: deterministic single-row pick (LIMIT 1, id tiebreak) pushed into SQL.
+                        // Deterministic single-row pick (LIMIT 1, id tiebreak) pushed into SQL.
                         PageRequest.of(0, 1, Sort.by(Sort.Order.asc("id")))
                     )
                     .stream()
@@ -890,7 +910,7 @@ public class PayrollProcessingService {
 
     /**
      * Loads the tenant-global pay-component lookup keyed by {@link PayComponentCode}. Called
-     * once per run (M2) rather than once per employee. {@code PayComponent.code} is
+     * once per run rather than once per employee. {@code PayComponent.code} is
      * unique-constrained at the entity level, so the merge function never actually fires — it
      * is only there to satisfy {@link Collectors#toMap}'s signature.
      */
@@ -1056,7 +1076,7 @@ public class PayrollProcessingService {
         List<PayrollResult> results = payrollResultRepository.findAll(
             (Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), runId)
         );
-        // M2: fetch every line for the run in ONE query and group by result, instead of a
+        // Fetch every line for the run in ONE query and group by result, instead of a
         // per-result query inside the loop (which was O(employees) round-trips).
         Map<UUID, List<PayrollLine>> linesByResult = payrollLineRepository
             .findAll((Specification<PayrollLine>) (root, query, cb) -> cb.equal(root.get("result").get("run").get("id"), runId))
@@ -1112,7 +1132,7 @@ public class PayrollProcessingService {
                         cb.lessThanOrEqualTo(root.get("effectiveFrom"), asOfDate),
                         cb.or(cb.isNull(root.get("effectiveTo")), cb.greaterThanOrEqualTo(root.get("effectiveTo"), asOfDate))
                     ),
-                // M3: deterministically pick which active row receives the YTD bump when more
+                // Deterministically pick which active row receives the YTD bump when more
                 // than one matches — latest-starting wins, id tiebreak — instead of arbitrary.
                 PageRequest.of(0, 1, Sort.by(Sort.Order.desc("effectiveFrom"), Sort.Order.asc("id")))
             )
@@ -1168,7 +1188,7 @@ public class PayrollProcessingService {
             );
         }
 
-        // Get breakdown by component. M2: one query for every line in the run, instead of a
+        // Get breakdown by component. One query for every line in the run, instead of a
         // per-result query inside the loop.
         Map<String, BigDecimal> earningsByComponent = new HashMap<>();
         Map<String, BigDecimal> deductionsByComponent = new HashMap<>();
@@ -1259,7 +1279,7 @@ public class PayrollProcessingService {
                         cb.lessThanOrEqualTo(root.get("effectiveFrom"), asOfDate),
                         cb.or(cb.isNull(root.get("effectiveTo")), cb.greaterThanOrEqualTo(root.get("effectiveTo"), asOfDate))
                     ),
-                // M3: push ORDER BY + LIMIT 1 into SQL instead of loading every active row and
+                // Push ORDER BY + LIMIT 1 into SQL instead of loading every active row and
                 // taking an arbitrary first. When overlapping compensations are active, the
                 // latest-starting one wins, with id as a stable tiebreaker — deterministic.
                 PageRequest.of(0, 1, Sort.by(Sort.Order.desc("effectiveFrom"), Sort.Order.asc("id")))

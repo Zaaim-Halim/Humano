@@ -55,7 +55,7 @@
     </changeSet>
 
     <!--
-        M1: one PayrollResult per (run, employee). resolveResult() does an unlocked
+        One PayrollResult per (run, employee). resolveResult() does an unlocked
         find-or-create, which the previous single-transaction-per-run model implicitly
         serialized. Now that each employee commits in its own transaction, two concurrent
         calculations of the same run could double-insert; this unique constraint is the

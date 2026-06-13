@@ -14,6 +14,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -237,15 +239,11 @@ public class TotalCompensationService {
 
         Optional<Compensation> compensation = compensationRepository
             .findAll(
-                (Specification<Compensation>) (root, query, cb) -> {
-                    if (query != null) {
-                        query.orderBy(cb.desc(root.get("effectiveFrom")));
-                    }
-                    return cb.and(
-                        cb.equal(root.get("employee").get("id"), employeeId),
-                        cb.lessThanOrEqualTo(root.get("effectiveFrom"), yearEnd)
-                    );
-                }
+                (Specification<Compensation>) (root, query, cb) ->
+                    cb.and(cb.equal(root.get("employee").get("id"), employeeId), cb.lessThanOrEqualTo(root.get("effectiveFrom"), yearEnd)),
+                // Ordering moved into the Pageable with an id tiebreak + LIMIT 1, so the pick is
+                // deterministic on same-effectiveFrom ties and the full set isn't materialized.
+                PageRequest.of(0, 1, Sort.by(Sort.Order.desc("effectiveFrom"), Sort.Order.desc("id")))
             )
             .stream()
             .findFirst();
@@ -396,12 +394,10 @@ public class TotalCompensationService {
     private String getCurrencyCode(UUID employeeId) {
         return compensationRepository
             .findAll(
-                (Specification<Compensation>) (root, query, cb) -> {
-                    if (query != null) {
-                        query.orderBy(cb.desc(root.get("effectiveFrom")));
-                    }
-                    return cb.equal(root.get("employee").get("id"), employeeId);
-                }
+                (Specification<Compensation>) (root, query, cb) -> cb.equal(root.get("employee").get("id"), employeeId),
+                // Deterministic latest-compensation pick (effectiveFrom DESC, id DESC) + LIMIT 1,
+                // instead of an arbitrary row off the full materialized list.
+                PageRequest.of(0, 1, Sort.by(Sort.Order.desc("effectiveFrom"), Sort.Order.desc("id")))
             )
             .stream()
             .findFirst()

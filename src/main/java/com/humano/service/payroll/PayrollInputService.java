@@ -20,7 +20,9 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -395,7 +397,11 @@ public class PayrollInputService {
                         cb.equal(root.get("employee").get("id"), employeeId),
                         cb.equal(root.get("period").get("id"), periodId),
                         cb.equal(root.get("component").get("id"), componentId)
-                    )
+                    ),
+                // (employee, period, component) is not unique-constrained, so duplicates are
+                // possible; pick deterministically (id ASC) + LIMIT 1 instead of an arbitrary row
+                // and loading the whole match set, so the existing-input target is stable.
+                PageRequest.of(0, 1, Sort.by(Sort.Order.asc("id")))
             )
             .stream()
             .findFirst();

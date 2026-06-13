@@ -475,7 +475,7 @@ public class ExchangeRateService {
                         cb.equal(root.get("toCcy").get("id"), toCurrencyId),
                         cb.equal(root.get("date"), date)
                     ),
-                // M3: a currency pair should have one rate per date, but pin a deterministic
+                // A currency pair should have one rate per date, but pin a deterministic
                 // pick + LIMIT 1 so a stray duplicate can't make the result arbitrary.
                 PageRequest.of(0, 1, Sort.by(Sort.Order.asc("id")))
             )
@@ -492,7 +492,7 @@ public class ExchangeRateService {
                         cb.equal(root.get("toCcy").get("id"), toCurrencyId),
                         cb.lessThanOrEqualTo(root.get("date"), beforeDate)
                     ),
-                // M3: most-recent rate on/before the date with LIMIT 1 pushed into SQL (was
+                // Most-recent rate on/before the date with LIMIT 1 pushed into SQL (was
                 // loading every prior row). The id tiebreak makes the pick deterministic when
                 // two rows share the latest date.
                 PageRequest.of(0, 1, Sort.by(Sort.Order.desc("date"), Sort.Order.desc("id")))
