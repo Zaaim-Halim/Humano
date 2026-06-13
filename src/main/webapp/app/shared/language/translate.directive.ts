@@ -9,10 +9,10 @@ import { translationNotFoundMessage } from 'app/config/translation.config';
  * A wrapper directive on top of the translation pipe as the inbuilt translation directive from ngx-translate is too verbose and buggy
  */
 @Directive({
-  selector: '[jhiTranslate]',
+  selector: '[humTranslate]',
 })
 export default class TranslateDirective implements OnChanges, OnInit, OnDestroy {
-  readonly jhiTranslate = input.required<string>();
+  readonly humTranslate = input.required<string>();
   readonly translateValues = input<Record<string, unknown>>();
 
   private readonly directiveDestroyed = new Subject();
@@ -40,13 +40,13 @@ export default class TranslateDirective implements OnChanges, OnInit, OnDestroy 
 
   private getTranslation(): void {
     this.translateService
-      .get(this.jhiTranslate(), this.translateValues())
+      .get(this.humTranslate(), this.translateValues())
       .pipe(takeUntil(this.directiveDestroyed))
       .subscribe({
         next: value => {
           this.el.nativeElement.innerHTML = value;
         },
-        error: () => `${translationNotFoundMessage}[${this.jhiTranslate()}]`,
+        error: () => `${translationNotFoundMessage}[${this.humTranslate()}]`,
       });
   }
 }

@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 @Injectable({ providedIn: 'root' })
 export class StateStorageService {
   private readonly previousUrlKey = 'previousUrl';
-  private readonly authenticationKey = 'jhi-authenticationToken';
+  private readonly authenticationKey = 'authenticationToken';
   private readonly localeKey = 'locale';
 
   storeUrl(url: string): void {

@@ -6,7 +6,7 @@ import TranslateDirective from './translate.directive';
 
 @Component({
   imports: [TranslateDirective],
-  template: ` <div jhiTranslate="test"></div> `,
+  template: ` <div humTranslate="test"></div> `,
 })
 class TestTranslateDirectiveComponent {}
 

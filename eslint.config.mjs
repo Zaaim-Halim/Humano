@@ -42,7 +42,7 @@ export default tseslint.config(
         'error',
         {
           type: 'element',
-          prefix: 'jhi',
+          prefix: 'hum',
           style: 'kebab-case',
         },
       ],
@@ -50,7 +50,7 @@ export default tseslint.config(
         'error',
         {
           type: 'attribute',
-          prefix: 'jhi',
+          prefix: 'hum',
           style: 'camelCase',
         },
       ],

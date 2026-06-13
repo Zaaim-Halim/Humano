@@ -42,7 +42,7 @@ describe('Alert service test', () => {
           timeout: 3000,
           toast: true,
           position: 'top left',
-        } as Alert),
+        }),
       );
 
       expect(service.get().length).toBe(1);
@@ -54,7 +54,7 @@ describe('Alert service test', () => {
           timeout: 3000,
           toast: true,
           position: 'top left',
-        } as Alert),
+        }),
       );
     }));
 
@@ -80,7 +80,7 @@ describe('Alert service test', () => {
             timeout: 3000,
             toast: true,
             position: 'top left',
-          } as Alert),
+          }),
         );
 
         expect(extAlerts.length).toBe(1);
@@ -92,7 +92,7 @@ describe('Alert service test', () => {
             timeout: 3000,
             toast: true,
             position: 'top left',
-          } as Alert),
+          }),
         );
       },
     ));
@@ -104,7 +104,7 @@ describe('Alert service test', () => {
           type: 'success',
           message: 'Hello JHipster success',
           id: 1,
-        } as Alert),
+        }),
       );
 
       expect(service.get().length).toBe(2);
@@ -113,7 +113,7 @@ describe('Alert service test', () => {
           type: 'success',
           message: 'Hello JHipster success',
           id: 1,
-        } as Alert),
+        }),
       );
     }));
 
@@ -126,7 +126,7 @@ describe('Alert service test', () => {
           type: 'success',
           message: 'Hello JHipster success',
           id: 2,
-        } as Alert),
+        }),
       );
 
       expect(service.get().length).toBe(3);
@@ -137,7 +137,7 @@ describe('Alert service test', () => {
           type: 'info',
           message: 'Hello Jhipster info 2',
           id: 1,
-        } as Alert),
+        }),
       );
       alert2.close?.(service.get());
       expect(service.get().length).toBe(1);
@@ -146,7 +146,7 @@ describe('Alert service test', () => {
           type: 'success',
           message: 'Hello JHipster success',
           id: 2,
-        } as Alert),
+        }),
       );
       alert0.close?.(service.get());
       expect(service.get().length).toBe(0);
@@ -191,7 +191,7 @@ describe('Alert service test', () => {
           timeout: 3000,
           toast: true,
           position: 'top left',
-        } as Alert),
+        }),
       );
 
       expect(service.get().length).toBe(0);
