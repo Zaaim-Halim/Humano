@@ -45,3 +45,10 @@ export type { MenuItem } from './navigation/menu.component';
 export { StepperComponent } from './data/stepper.component';
 export { DataTableComponent } from './data/data-table.component';
 export type { Column, Row } from './data/data-table.component';
+
+// Shell
+export { AppShellComponent } from './shell/app-shell.component';
+export type { ShellChrome, NavItem, NavGroup, ShellUser, ShellTenant } from './shell/app-shell.component';
+export { PageHeaderComponent } from './shell/page-header.component';
+export { CommandPaletteComponent } from './shell/command-palette.component';
+export type { Command } from './shell/command-palette.component';

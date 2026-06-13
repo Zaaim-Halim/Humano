@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 
 import { ThemeService } from 'app/core/theme/theme.service';
-import { ButtonComponent, IconButtonComponent } from 'app/shared/ui';
+import { ButtonComponent, Command, CommandPaletteComponent, IconButtonComponent } from 'app/shared/ui';
 
 /**
  * `/dev/ui` — living gallery of the Humano primitives. Acts as the visual
@@ -13,7 +13,7 @@ import { ButtonComponent, IconButtonComponent } from 'app/shared/ui';
 @Component({
   selector: 'hum-ui-gallery',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, ButtonComponent, IconButtonComponent],
+  imports: [NgTemplateOutlet, ButtonComponent, IconButtonComponent, CommandPaletteComponent],
   template: `
     <div class="ui-gallery">
       <header class="ui-gallery__bar">
@@ -21,10 +21,15 @@ import { ButtonComponent, IconButtonComponent } from 'app/shared/ui';
           <h1 class="text-strong" style="font-size:1.25rem;font-weight:650">Humano · UI gallery</h1>
           <p class="text-soft" style="font-size:.8125rem">Every primitive, light + dark. Verification harness for the design system.</p>
         </div>
-        <hum-button variant="secondary" size="sm" [icon]="theme.theme() === 'dark' ? 'sun' : 'moon'" (click)="theme.toggleTheme()">
-          {{ theme.theme() === 'dark' ? 'Light' : 'Dark' }}
-        </hum-button>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <hum-button variant="outline" size="sm" icon="search" (click)="palette.openPalette()">Command palette (⌘K)</hum-button>
+          <hum-button variant="secondary" size="sm" [icon]="theme.theme() === 'dark' ? 'sun' : 'moon'" (click)="theme.toggleTheme()">
+            {{ theme.theme() === 'dark' ? 'Light' : 'Dark' }}
+          </hum-button>
+        </div>
       </header>
+
+      <hum-command-palette #palette placeholder="Search commands, pages, people…" [commands]="commands" (run)="lastCommand.set($event)" />
 
       <div class="ui-gallery__panes">
         <section class="ui-pane">
@@ -154,4 +159,15 @@ import { ButtonComponent, IconButtonComponent } from 'app/shared/ui';
 })
 export default class UiGalleryComponent {
   protected readonly theme = inject(ThemeService);
+  protected readonly lastCommand = signal<string | null>(null);
+
+  protected readonly commands: Command[] = [
+    { id: 'dashboard', label: 'Go to Dashboard', icon: 'layout-grid', group: 'Navigate', keywords: 'home overview' },
+    { id: 'employees', label: 'Employees', icon: 'users', group: 'Navigate', keywords: 'people directory' },
+    { id: 'runs', label: 'Pay runs', icon: 'wallet', group: 'Navigate', keywords: 'payroll' },
+    { id: 'approvals', label: 'Approvals', icon: 'check-check', group: 'Navigate', hint: '17' },
+    { id: 'new-employee', label: 'Add employee', icon: 'user-plus', group: 'Actions', keywords: 'create hire' },
+    { id: 'run-payroll', label: 'Run payroll', icon: 'play', group: 'Actions' },
+    { id: 'toggle-theme', label: 'Toggle theme', icon: 'moon', group: 'Actions', hint: '⌘⇧L' },
+  ];
 }

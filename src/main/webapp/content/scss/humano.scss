@@ -1128,6 +1128,56 @@
   padding: 2px 5px;
 }
 
+/* command palette (⌘K) — composes .hum-overlay backdrop + .hum-menu rows */
+.hum-overlay--top {
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+.hum-cmdk {
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+  animation: hum-pop var(--dur-base) var(--ease-out);
+}
+.hum-cmdk__search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2_5);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.hum-cmdk__search-icon {
+  flex: none;
+  color: var(--text-muted);
+}
+.hum-cmdk__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  outline: none;
+  font: var(--text-base) var(--font-sans);
+  color: var(--text-strong);
+}
+.hum-cmdk__input::placeholder {
+  color: var(--text-subtle);
+}
+.hum-cmdk__list {
+  max-height: 360px;
+  overflow-y: auto;
+  padding: var(--space-1);
+}
+.hum-cmdk__empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  font-size: var(--text-base);
+  color: var(--text-muted);
+}
+
 /* ---------- App shell -------------------------------------- */
 .hum-shell {
   display: grid;
