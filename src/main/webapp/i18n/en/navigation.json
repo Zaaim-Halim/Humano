@@ -1,0 +1,46 @@
+{
+  "humano": {
+    "nav": {
+      "groups": {
+        "overview": "Overview",
+        "people": "People",
+        "timeLeave": "Time & Leave",
+        "payroll": "Payroll",
+        "settings": "Settings"
+      },
+      "dashboard": "Dashboard",
+      "employees": "Employees",
+      "org": "Org units",
+      "positions": "Positions",
+      "leave": "Leave requests",
+      "timesheets": "Timesheets",
+      "runs": "Pay runs",
+      "payslips": "Payslips",
+      "approvals": "Approvals",
+      "settings": "Workspace"
+    },
+    "shell": {
+      "search": "Search…  ⌘K",
+      "searchCommands": "Search pages and actions…",
+      "help": "Help & support",
+      "notifications": "Notifications",
+      "toggleTheme": "Toggle theme",
+      "accountMenu": "Account menu for {{ name }}",
+      "account": "Account",
+      "profile": "Profile",
+      "settings": "Settings",
+      "logout": "Sign out",
+      "roles": {
+        "admin": "Administrator",
+        "employee": "Employee"
+      }
+    },
+    "page": {
+      "placeholder": {
+        "subtitle": "This surface is being built.",
+        "title": "Coming soon",
+        "description": "The {{ title }} surface is under construction."
+      }
+    }
+  }
+}
