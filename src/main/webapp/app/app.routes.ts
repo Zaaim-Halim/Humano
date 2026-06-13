@@ -1,7 +1,13 @@
 import { Routes } from '@angular/router';
 
-// Routes are intentionally empty during the Humano frontend rebuild.
-// Feature routes will be (re)introduced per persona surface.
-const routes: Routes = [];
+// Feature routes are (re)introduced per persona surface during the rebuild.
+// `/dev/ui` is the design-system gallery / verification harness.
+const routes: Routes = [
+  {
+    path: 'dev/ui',
+    title: 'UI gallery',
+    loadComponent: () => import('./dev/ui-gallery.component'),
+  },
+];
 
 export default routes;
