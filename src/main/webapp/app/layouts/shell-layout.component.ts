@@ -39,7 +39,7 @@ import { SHELL_NAV } from './shell-nav';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterOutlet, TranslatePipe, AppShellComponent, CommandPaletteComponent, IconButtonComponent, MenuComponent, AvatarComponent],
   template: `
-    <!-- TODO: backend endpoint missing — no tenant context endpoint yet; [tenant] omitted until one exists (e.g. /api/me). -->
+    <!-- TODO: wire [tenant] from CurrentTenantService (GET /api/tenant/me); omitted until data-wiring in Phase 7. -->
     <hum-app-shell
       [nav]="nav()"
       [user]="user()"
