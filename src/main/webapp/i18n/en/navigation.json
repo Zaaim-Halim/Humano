@@ -48,7 +48,37 @@
       "cancel": "Cancel",
       "save": "Save",
       "delete": "Delete",
-      "create": "Create"
+      "create": "Create",
+      "clearFilters": "Clear filters"
+    },
+    "directory": {
+      "title": "Employees",
+      "search": "Search by job title…",
+      "filterDepartment": "Department",
+      "filterStatus": "Status",
+      "all": "All",
+      "count": "{{ total }} employees",
+      "colJobTitle": "Job title",
+      "colDepartment": "Department",
+      "colPosition": "Position",
+      "colStatus": "Status",
+      "emptyTitle": "No employees found",
+      "emptyDescription": "Adjust your filters, or add the first employee.",
+      "addEmployee": "Add employee",
+      "bulkSelected": "selected"
+    },
+    "employee": {
+      "drawerTitle": "Employee preview",
+      "jobTitle": "Job title",
+      "department": "Department",
+      "position": "Position",
+      "unit": "Org unit",
+      "manager": "Manager",
+      "country": "Country",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "status": "Status",
+      "openProfile": "Open full profile"
     }
   }
 }

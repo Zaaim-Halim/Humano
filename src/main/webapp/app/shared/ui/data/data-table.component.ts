@@ -15,7 +15,7 @@ export interface Column<T extends Row = Row> {
   cell?: TemplateRef<{ $implicit: T; value: unknown }>;
 }
 
-interface SortState {
+export interface SortState {
   key: string;
   dir: 'asc' | 'desc';
 }
@@ -110,6 +110,8 @@ export class DataTableComponent<T extends Row = Row> {
   readonly rowKey = input('id');
   readonly selectable = input(false, { transform: booleanAttribute });
   readonly initialSort = input<SortState | null>(null);
+  /** Server-side sort: don't sort rows locally; emit `(sortChange)` for the caller to re-query. */
+  readonly manualSort = input(false, { transform: booleanAttribute });
   readonly hasFooter = input(false, { transform: booleanAttribute });
   /** Show the pointer cursor + emit `rowClick` on row click. */
   readonly clickableRows = input(false, { transform: booleanAttribute });
@@ -120,12 +122,14 @@ export class DataTableComponent<T extends Row = Row> {
 
   readonly rowClick = output<T>();
   readonly selectionChange = output<T[]>();
+  readonly sortChange = output<SortState>();
 
   protected readonly effectiveSort = computed(() => this.userSort() ?? this.initialSort());
   protected readonly sorted = computed(() => {
     const sort = this.effectiveSort();
     const rows = this.rows();
-    if (!sort) {
+    // Server-sorted rows arrive in order; don't re-sort locally.
+    if (!sort || this.manualSort()) {
       return rows;
     }
     return [...rows].sort((a, b) => {
@@ -161,7 +165,11 @@ export class DataTableComponent<T extends Row = Row> {
     }
     const current = this.effectiveSort();
     const dir: 'asc' | 'desc' = current?.key === c.key && current.dir === 'asc' ? 'desc' : 'asc';
-    this.userSort.set({ key: c.key, dir });
+    const next = { key: c.key, dir };
+    this.userSort.set(next);
+    if (this.manualSort()) {
+      this.sortChange.emit(next);
+    }
   }
 
   protected isRowSelected(row: T): boolean {

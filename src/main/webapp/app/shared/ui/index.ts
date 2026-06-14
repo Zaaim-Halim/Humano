@@ -44,7 +44,7 @@ export type { MenuItem } from './navigation/menu.component';
 // Data / workflow
 export { StepperComponent } from './data/stepper.component';
 export { DataTableComponent } from './data/data-table.component';
-export type { Column, Row } from './data/data-table.component';
+export type { Column, Row, SortState } from './data/data-table.component';
 
 // Shell
 export { AppShellComponent } from './shell/app-shell.component';
