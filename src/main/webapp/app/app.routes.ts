@@ -27,12 +27,54 @@ const routes: Routes = [
     title: 'UI gallery',
     loadComponent: () => import('./dev/ui-gallery.component'),
   },
+  // Public auth screens (outside the shell chrome).
+  {
+    path: 'login',
+    title: 'login.title',
+    loadComponent: () => import('./login/login.component'),
+  },
+  {
+    path: 'register',
+    title: 'register.title',
+    loadComponent: () => import('./login/register.component'),
+  },
+  {
+    path: 'activate',
+    title: 'activate.title',
+    loadComponent: () => import('./login/activate.component'),
+  },
+  {
+    path: 'account/reset/request',
+    title: 'reset.request.title',
+    loadComponent: () => import('./login/password-reset-request.component'),
+  },
+  {
+    path: 'account/reset/finish',
+    title: 'reset.finish.title',
+    loadComponent: () => import('./login/password-reset-finish.component'),
+  },
   {
     path: '',
     loadComponent: () => import('./layouts/shell-layout.component'),
     canActivate: [UserRouteAccessService],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      { path: 'accessdenied', title: 'error.title', loadComponent: () => import('./layouts/access-denied.component') },
+      {
+        path: 'account/settings',
+        title: 'global.menu.account.settings',
+        loadComponent: () => import('./account/settings/settings.component'),
+      },
+      {
+        path: 'account/password',
+        title: 'global.menu.account.password',
+        loadComponent: () => import('./account/password/password.component'),
+      },
+      {
+        path: 'account/sessions',
+        title: 'global.menu.account.sessions',
+        loadComponent: () => import('./account/sessions/sessions.component'),
+      },
       page('dashboard', 'humano.nav.dashboard'),
       page('leave', 'humano.nav.leave'),
       page('timesheets', 'humano.nav.timesheets'),
@@ -43,6 +85,13 @@ const routes: Routes = [
       page('payroll/payslips', 'humano.nav.payslips', [Authority.ADMIN]),
       page('approvals', 'humano.nav.approvals', [Authority.ADMIN]),
       page('settings', 'humano.nav.settings', [Authority.ADMIN]),
+      {
+        path: 'admin/users',
+        title: 'humano.nav.users',
+        loadComponent: () => import('./admin/user-management.component'),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: [Authority.ADMIN] },
+      },
     ],
   },
 ];

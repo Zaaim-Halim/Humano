@@ -20,6 +20,7 @@ import { LucideAngularModule } from 'lucide-angular';
       <input
         class="hum-input"
         [class.hum-input--mono]="mono()"
+        [attr.id]="inputId()"
         [type]="type()"
         [value]="value()"
         [attr.placeholder]="placeholder()"
@@ -45,6 +46,8 @@ import { LucideAngularModule } from 'lucide-angular';
   `,
 })
 export class InputComponent implements ControlValueAccessor {
+  /** Native input id — set to match a `FormField` `controlId` for label association. */
+  readonly inputId = input<string>();
   readonly type = input('text');
   readonly placeholder = input<string>();
   readonly icon = input<string>();

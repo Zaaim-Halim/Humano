@@ -167,7 +167,7 @@ export default class ShellLayoutComponent {
         break;
       case 'profile':
       case 'settings':
-        // TODO: account/settings surfaces land in Phase 5 (auth/account re-skin).
+        void this.router.navigate(['/account/settings']);
         break;
     }
   }

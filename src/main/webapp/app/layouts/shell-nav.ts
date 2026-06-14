@@ -74,6 +74,7 @@ export const SHELL_NAV: ShellNavGroup[] = [
     roles: [Authority.ADMIN],
     items: [
       { id: 'settings', labelKey: 'humano.nav.settings', icon: 'settings', link: '/settings', keywords: 'configuration preferences admin' },
+      { id: 'users', labelKey: 'humano.nav.users', icon: 'user', link: '/admin/users', keywords: 'users accounts roles admin' },
     ],
   },
 ];

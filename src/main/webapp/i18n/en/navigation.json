@@ -17,7 +17,8 @@
       "runs": "Pay runs",
       "payslips": "Payslips",
       "approvals": "Approvals",
-      "settings": "Workspace"
+      "settings": "Workspace",
+      "users": "Users"
     },
     "shell": {
       "search": "Search…  ⌘K",
@@ -41,6 +42,13 @@
         "title": "Coming soon",
         "description": "The {{ title }} surface is under construction."
       }
+    },
+    "action": {
+      "retry": "Retry",
+      "cancel": "Cancel",
+      "save": "Save",
+      "delete": "Delete",
+      "create": "Create"
     }
   }
 }

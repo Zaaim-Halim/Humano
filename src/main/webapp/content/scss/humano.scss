@@ -1178,6 +1178,61 @@
   color: var(--text-muted);
 }
 
+/* auth surfaces (login / register / reset / activate) — centered panel */
+.hum-auth {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background: var(--bg-app);
+}
+.hum-auth__panel {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.hum-auth__brand {
+  position: relative;
+  font: var(--weight-semibold) var(--text-lg) var(--font-sans);
+  color: var(--text-strong);
+  letter-spacing: var(--tracking-tight);
+}
+.hum-auth__title {
+  font: var(--weight-semibold) var(--text-xl) var(--font-sans);
+  color: var(--text-strong);
+  margin: 0;
+}
+.hum-auth__remember {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  color: var(--text-default);
+  cursor: pointer;
+  user-select: none;
+}
+.hum-auth__links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+.hum-auth__links a {
+  color: var(--brand-text);
+  text-decoration: none;
+}
+.hum-auth__links a:hover {
+  text-decoration: underline;
+}
+
 /* ---------- App shell -------------------------------------- */
 .hum-shell {
   display: grid;
