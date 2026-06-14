@@ -1,0 +1,213 @@
+<div class="hum-page">
+  <hum-button variant="ghost" size="sm" icon="arrow-left" (click)="back()">{{ 'humano.employee360.back' | translate }}</hum-button>
+
+  @if (identity().loading) {
+    <div style="display: grid; gap: var(--space-3); margin-top: var(--space-3)">
+      <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+    </div>
+  } @else if (identity().error; as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="retryIdentity()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (identity().data; as emp) {
+    <!-- Identity header -->
+    <header style="display: flex; align-items: center; gap: var(--space-4); margin: var(--space-3) 0 var(--space-5)">
+      <hum-avatar [name]="emp.jobTitle ?? emp.id" size="xl" />
+      <div style="flex: 1">
+        <h1 class="hum-pagehead__title">{{ emp.jobTitle ?? '—' }}</h1>
+        <div class="hum-pagehead__sub">{{ emp.departmentName ?? '—' }} · {{ emp.positionName ?? '—' }}</div>
+        <div style="margin-top: var(--space-2)"><hum-badge [status]="emp.status" /></div>
+      </div>
+    </header>
+
+    <hum-tabs [items]="tabs()" [(value)]="activeTab" />
+
+    <div style="margin-top: var(--space-4)">
+      @switch (activeTab()) {
+        @case ('overview') {
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4)">
+            <div>
+              <div class="hum-field__label">{{ 'humano.employee.unit' | translate }}</div>
+              <div>{{ emp.unitName ?? '—' }}</div>
+            </div>
+            <div>
+              <div class="hum-field__label">{{ 'humano.employee.manager' | translate }}</div>
+              <div>{{ emp.managerInfo ?? '—' }}</div>
+            </div>
+            <div>
+              <div class="hum-field__label">{{ 'humano.employee.country' | translate }}</div>
+              <div>{{ emp.countryName ?? '—' }}</div>
+            </div>
+            <div>
+              <div class="hum-field__label">{{ 'humano.employee.startDate' | translate }}</div>
+              <div class="tabular-nums">{{ emp.startDate ?? '—' }}</div>
+            </div>
+            <div>
+              <div class="hum-field__label">{{ 'humano.employee.endDate' | translate }}</div>
+              <div class="tabular-nums">{{ emp.endDate ?? '—' }}</div>
+            </div>
+          </div>
+        }
+
+        @case ('compensation') {
+          @if (compensation().loading) {
+            <hum-skeleton-row /><hum-skeleton-row />
+          } @else if (compensation().error; as e) {
+            <hum-alert tone="danger" [title]="e"
+              ><hum-button variant="outline" size="sm" (click)="retryTab('compensation')">{{
+                'humano.action.retry' | translate
+              }}</hum-button></hum-alert
+            >
+          } @else if (compensation().data; as comp) {
+            @if (comp.currentCompensation; as cur) {
+              <div style="display: flex; gap: var(--space-6); margin-bottom: var(--space-4)">
+                <div>
+                  <div class="hum-field__label">{{ 'humano.employee360.currentSalary' | translate }}</div>
+                  <div class="tabular-nums" style="font-size: var(--text-xl); font-weight: var(--weight-semibold)">
+                    {{ cur.baseAmount }} {{ cur.currencyCode }}
+                  </div>
+                  <div class="hum-field__hint">{{ cur.basis }}</div>
+                </div>
+                @if (comp.totalGrowthPercentage !== null) {
+                  <div>
+                    <div class="hum-field__label">{{ 'humano.employee360.growth' | translate }}</div>
+                    <div class="tabular-nums" style="font-size: var(--text-xl); font-weight: var(--weight-semibold)">
+                      {{ comp.totalGrowthPercentage }}%
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+            @if (comp.history.length) {
+              <table class="hum-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'humano.employee360.effectiveFrom' | translate }}</th>
+                    <th class="hum-table__num">{{ 'humano.employee360.colAmount' | translate }}</th>
+                    <th>{{ 'humano.employee360.colReason' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (h of comp.history; track h.compensationId) {
+                    <tr>
+                      <td class="tabular-nums">{{ h.effectiveFrom }}</td>
+                      <td class="hum-table__num tabular-nums">{{ h.newAmount }} {{ h.currencyCode }}</td>
+                      <td>{{ h.reason ?? '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            } @else {
+              <hum-empty-state icon="wallet" [title]="'humano.employee360.noCompensation' | translate" />
+            }
+          }
+        }
+
+        @case ('leaves') {
+          @if (leaves().loading) {
+            <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+          } @else if (leaves().error; as e) {
+            <hum-alert tone="danger" [title]="e"
+              ><hum-button variant="outline" size="sm" (click)="retryTab('leaves')">{{
+                'humano.action.retry' | translate
+              }}</hum-button></hum-alert
+            >
+          } @else if (leaves().data?.length) {
+            <table class="hum-table">
+              <thead>
+                <tr>
+                  <th>{{ 'humano.employee360.colType' | translate }}</th>
+                  <th>{{ 'humano.employee360.colDates' | translate }}</th>
+                  <th class="hum-table__num">{{ 'humano.employee360.colDays' | translate }}</th>
+                  <th>{{ 'humano.employee360.colStatus' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of leaves().data; track l.id) {
+                  <tr>
+                    <td>{{ l.leaveType }}</td>
+                    <td class="tabular-nums">{{ l.startDate }} → {{ l.endDate }}</td>
+                    <td class="hum-table__num tabular-nums">{{ l.daysCount ?? '—' }}</td>
+                    <td><hum-badge [status]="l.status" /></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <hum-empty-state icon="palmtree" [title]="'humano.employee360.noLeaves' | translate" />
+          }
+        }
+
+        @case ('documents') {
+          @if (documents().loading) {
+            <hum-skeleton-row /><hum-skeleton-row />
+          } @else if (documents().error; as e) {
+            <hum-alert tone="danger" [title]="e"
+              ><hum-button variant="outline" size="sm" (click)="retryTab('documents')">{{
+                'humano.action.retry' | translate
+              }}</hum-button></hum-alert
+            >
+          } @else if (documents().data?.length) {
+            <table class="hum-table">
+              <thead>
+                <tr>
+                  <th>{{ 'humano.employee360.colDocType' | translate }}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of documents().data; track d.id) {
+                  <tr>
+                    <td>{{ d.type ?? '—' }}</td>
+                    <td style="text-align: right">
+                      <hum-button variant="outline" size="sm" icon="download" (click)="download(d)">{{
+                        'humano.employee360.download' | translate
+                      }}</hum-button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <hum-empty-state icon="file-text" [title]="'humano.employee360.noDocuments' | translate" />
+          }
+        }
+
+        @case ('performance') {
+          @if (performance().loading) {
+            <hum-skeleton-row /><hum-skeleton-row />
+          } @else if (performance().error; as e) {
+            <hum-alert tone="danger" [title]="e"
+              ><hum-button variant="outline" size="sm" (click)="retryTab('performance')">{{
+                'humano.action.retry' | translate
+              }}</hum-button></hum-alert
+            >
+          } @else if (performance().data?.length) {
+            <table class="hum-table">
+              <thead>
+                <tr>
+                  <th>{{ 'humano.employee360.colDate' | translate }}</th>
+                  <th>{{ 'humano.employee360.colReviewer' | translate }}</th>
+                  <th class="hum-table__num">{{ 'humano.employee360.colRating' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of performance().data; track p.id) {
+                  <tr>
+                    <td class="tabular-nums">{{ p.reviewDate }}</td>
+                    <td>{{ p.reviewerName ?? '—' }}</td>
+                    <td class="hum-table__num tabular-nums">{{ p.rating ?? '—' }} / 5</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <hum-empty-state icon="check-check" [title]="'humano.employee360.noPerformance' | translate" />
+          }
+        }
+      }
+    </div>
+  } @else {
+    <hum-empty-state icon="users" [title]="'humano.employee360.notFound' | translate" />
+  }
+</div>

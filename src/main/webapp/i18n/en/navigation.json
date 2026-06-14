@@ -6,7 +6,8 @@
         "people": "People",
         "timeLeave": "Time & Leave",
         "payroll": "Payroll",
-        "settings": "Settings"
+        "settings": "Settings",
+        "platform": "Platform"
       },
       "dashboard": "Dashboard",
       "employees": "Employees",
@@ -18,7 +19,8 @@
       "payslips": "Payslips",
       "approvals": "Approvals",
       "settings": "Workspace",
-      "users": "Users"
+      "users": "Users",
+      "tenants": "Tenants"
     },
     "shell": {
       "search": "Search…  ⌘K",
@@ -79,6 +81,61 @@
       "endDate": "End date",
       "status": "Status",
       "openProfile": "Open full profile"
+    },
+    "employee360": {
+      "back": "Back to directory",
+      "tabOverview": "Overview",
+      "tabCompensation": "Compensation",
+      "tabLeaves": "Leave",
+      "tabDocuments": "Documents",
+      "tabPerformance": "Performance",
+      "notFound": "Employee not found",
+      "currentSalary": "Current salary",
+      "salaryHistory": "Salary history",
+      "growth": "Total growth",
+      "effectiveFrom": "Effective from",
+      "noCompensation": "No compensation on record",
+      "noLeaves": "No leave requests",
+      "noDocuments": "No documents",
+      "noPerformance": "No performance reviews",
+      "colType": "Type",
+      "colDates": "Dates",
+      "colDays": "Days",
+      "colStatus": "Status",
+      "colReviewer": "Reviewer",
+      "colDate": "Date",
+      "colRating": "Rating",
+      "colReason": "Reason",
+      "colAmount": "Amount",
+      "colDocType": "Type",
+      "download": "Download"
+    },
+    "tenants": {
+      "title": "Tenants",
+      "subtitle": "{{ total }} tenants",
+      "kpiTotal": "Total tenants",
+      "kpiActive": "Active",
+      "filterStatus": "Status",
+      "all": "All",
+      "colName": "Name",
+      "colPlan": "Plan",
+      "colStatus": "Status",
+      "colOrgs": "Organizations",
+      "emptyTitle": "No tenants",
+      "emptyDescription": "No tenants match the current filter.",
+      "drawerTitle": "Tenant details",
+      "region": "Region",
+      "subdomain": "Subdomain",
+      "plan": "Plan",
+      "orgs": "Organizations",
+      "poolStats": "Connection pool",
+      "suspend": "Suspend",
+      "activate": "Activate",
+      "deprovision": "Deprovision",
+      "deprovisionConfirm": "Deprovision tenant {{ name }}? This permanently removes their database and cannot be undone.",
+      "suspended": "Tenant suspended",
+      "activated": "Tenant activated",
+      "deprovisioned": "Tenant deprovisioned"
     }
   }
 }

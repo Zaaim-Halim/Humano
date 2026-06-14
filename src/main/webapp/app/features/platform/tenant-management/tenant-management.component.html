@@ -1,0 +1,141 @@
+<div class="hum-page">
+  <hum-page-header
+    [title]="'humano.tenants.title' | translate"
+    [subtitle]="'humano.tenants.subtitle' | translate: { total: list.total() }"
+  />
+
+  <div
+    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4)"
+  >
+    <hum-stat-tile [label]="'humano.tenants.kpiTotal' | translate" [value]="list.total()" icon="building-2" />
+  </div>
+
+  <form [formGroup]="filters" style="display: flex; gap: var(--space-3); margin-bottom: var(--space-4)">
+    <hum-select formControlName="status" [options]="statusOptions()" />
+  </form>
+
+  @if (list.loading()) {
+    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (list.error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="list.reload()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (list.empty()) {
+    <hum-empty-state
+      icon="building-2"
+      [title]="'humano.tenants.emptyTitle' | translate"
+      [description]="'humano.tenants.emptyDescription' | translate"
+    />
+  } @else {
+    <table class="hum-table">
+      <thead>
+        <tr>
+          <th>{{ 'humano.tenants.colName' | translate }}</th>
+          <th>{{ 'humano.tenants.colPlan' | translate }}</th>
+          <th>{{ 'humano.tenants.colStatus' | translate }}</th>
+          <th class="hum-table__num">{{ 'humano.tenants.colOrgs' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (t of list.items(); track t.id) {
+          <tr style="cursor: pointer" (click)="openDetail(t)">
+            <td>{{ t.name }}</td>
+            <td>{{ t.subscriptionPlanName ?? '—' }}</td>
+            <td><hum-badge [status]="t.status" /></td>
+            <td class="hum-table__num tabular-nums">{{ t.organizationCount }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <div style="display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3)">
+      <hum-button
+        variant="outline"
+        size="sm"
+        [disabled]="(list.params().page ?? 0) === 0"
+        (click)="list.setParams({ page: (list.params().page ?? 0) - 1 })"
+        aria-label="Previous page"
+        >‹</hum-button
+      >
+      <hum-button
+        variant="outline"
+        size="sm"
+        [disabled]="((list.params().page ?? 0) + 1) * (list.params().size ?? 25) >= list.total()"
+        (click)="list.setParams({ page: (list.params().page ?? 0) + 1 })"
+        aria-label="Next page"
+        >›</hum-button
+      >
+    </div>
+  }
+</div>
+
+<hum-drawer [open]="selected() !== null" [title]="'humano.tenants.drawerTitle' | translate" hasFooter (closed)="closeDetail()">
+  @if (detailLoading()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (detailError(); as e) {
+    <hum-alert tone="danger" [title]="e"
+      ><hum-button variant="outline" size="sm" (click)="reloadDetail()">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+    >
+  } @else if (detail()?.tenant; as t) {
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4)">
+      <div>
+        <div class="hum-field__label">{{ 'humano.tenants.colName' | translate }}</div>
+        <div>{{ t.name }}</div>
+      </div>
+      <div>
+        <div class="hum-field__label">{{ 'humano.tenants.colStatus' | translate }}</div>
+        <hum-badge [status]="t.status" />
+      </div>
+      <div>
+        <div class="hum-field__label">{{ 'humano.tenants.subdomain' | translate }}</div>
+        <div>{{ t.subdomain ?? '—' }}</div>
+      </div>
+      <div>
+        <div class="hum-field__label">{{ 'humano.tenants.plan' | translate }}</div>
+        <div>{{ t.subscriptionPlanName ?? '—' }}</div>
+      </div>
+      <div>
+        <div class="hum-field__label">{{ 'humano.tenants.orgs' | translate }}</div>
+        <div class="tabular-nums">{{ t.organizationCount }}</div>
+      </div>
+    </div>
+
+    @if (poolEntries().length) {
+      <div style="margin-top: var(--space-5)">
+        <div class="hum-field__label">{{ 'humano.tenants.poolStats' | translate }}</div>
+        <table class="hum-table" style="margin-top: var(--space-2)">
+          <tbody>
+            @for (e of poolEntries(); track e[0]) {
+              <tr>
+                <td>{{ e[0] }}</td>
+                <td class="hum-table__num tabular-nums">{{ e[1] }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    @if (selected(); as t) {
+      <hum-button variant="secondary" [loading]="busy()" (click)="suspend(t)">{{ 'humano.tenants.suspend' | translate }}</hum-button>
+      <hum-button variant="secondary" [loading]="busy()" (click)="activate(t)">{{ 'humano.tenants.activate' | translate }}</hum-button>
+      <hum-button variant="destructive" (click)="deleteTarget.set(t)">{{ 'humano.tenants.deprovision' | translate }}</hum-button>
+    }
+  </div>
+</hum-drawer>
+
+<hum-dialog
+  [open]="deleteTarget() !== null"
+  [title]="'humano.tenants.deprovision' | translate"
+  [description]="deleteTarget() ? ('humano.tenants.deprovisionConfirm' | translate: { name: deleteTarget()!.name }) : ''"
+  hasFooter
+  (closed)="deleteTarget.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="deleteTarget.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" [loading]="busy()" (click)="confirmDeprovision()">{{
+      'humano.tenants.deprovision' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>

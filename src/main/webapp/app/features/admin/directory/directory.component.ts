@@ -38,6 +38,10 @@ import {
  * the single source of truth), so the view is shareable and back-button-correct.
  * Full async states: skeleton / empty-with-CTA / error-retry. Bulk-select
  * structure is present but actions are disabled (backend pending).
+ *
+ * TODO: backend — the employee profile DTOs expose no person name (only jobTitle),
+ * so the table/search key on jobTitle; firstName/lastName live on User/MeResponse,
+ * not the employee profile. Swap to names once a user-join endpoint exists.
  */
 @Component({
   selector: 'hum-directory',

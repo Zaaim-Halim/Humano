@@ -77,4 +77,17 @@ export const SHELL_NAV: ShellNavGroup[] = [
       { id: 'users', labelKey: 'humano.nav.users', icon: 'user', link: '/admin/users', keywords: 'users accounts roles admin' },
     ],
   },
+  {
+    headingKey: 'humano.nav.groups.platform',
+    roles: [Authority.ADMIN],
+    items: [
+      {
+        id: 'tenants',
+        labelKey: 'humano.nav.tenants',
+        icon: 'building-2',
+        link: '/platform/tenants',
+        keywords: 'tenants superadmin platform',
+      },
+    ],
+  },
 ];
