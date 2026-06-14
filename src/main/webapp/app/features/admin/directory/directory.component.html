@@ -1,0 +1,115 @@
+<ng-template #statusCell let-row>
+  <hum-badge [status]="$any(row).status" />
+</ng-template>
+
+<div class="hum-page">
+  <hum-page-header
+    [title]="'humano.directory.title' | translate"
+    [subtitle]="'humano.directory.count' | translate: { total: list.total() }"
+  />
+
+  <form [formGroup]="filters" style="display: flex; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4)">
+    <div style="flex: 1; min-width: 220px">
+      <hum-input icon="search" formControlName="q" [placeholder]="'humano.directory.search' | translate" />
+    </div>
+    <hum-select formControlName="dept" [options]="departmentOptions()" />
+    <hum-select formControlName="status" [options]="statusOptions()" />
+  </form>
+
+  @if (list.loading()) {
+    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (list.error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="list.reload()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (list.empty()) {
+    <hum-empty-state
+      icon="users"
+      [title]="'humano.directory.emptyTitle' | translate"
+      [description]="'humano.directory.emptyDescription' | translate"
+      hasAction
+    >
+      <hum-button hum-empty-action variant="secondary" (click)="clearFilters()">{{ 'humano.action.clearFilters' | translate }}</hum-button>
+    </hum-empty-state>
+  } @else {
+    <hum-data-table
+      [columns]="columns()"
+      [rows]="rows()"
+      rowKey="id"
+      [clickableRows]="true"
+      [manualSort]="true"
+      [initialSort]="sort()"
+      selectable
+      [selectedSuffix]="'humano.directory.bulkSelected' | translate"
+      hasFooter
+      (rowClick)="openDetail($event)"
+      (sortChange)="onSort($event)"
+    >
+      <div hum-table-bulk>
+        <!-- TODO: backend endpoint missing — bulk actions (deactivate/export) not available; structure kept, controls disabled. -->
+        <hum-button variant="outline" size="sm" [disabled]="true">{{ 'humano.action.delete' | translate }}</hum-button>
+      </div>
+
+      <div hum-table-footer style="display: flex; align-items: center; gap: var(--space-3); width: 100%; justify-content: flex-end">
+        <span class="tabular-nums">{{ rangeLabel() }}</span>
+        <hum-button variant="outline" size="sm" [disabled]="page() === 0" (click)="goto(page() - 1)" aria-label="Previous page"
+          >‹</hum-button
+        >
+        <hum-button variant="outline" size="sm" [disabled]="isLastPage()" (click)="goto(page() + 1)" aria-label="Next page">›</hum-button>
+      </div>
+    </hum-data-table>
+  }
+</div>
+
+<hum-drawer [open]="selectedId() !== null" [title]="'humano.employee.drawerTitle' | translate" hasFooter (closed)="closeDetail()">
+  @if (detailLoading()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (detailError(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="reloadDetail()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (detail(); as d) {
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4)">
+      <div>
+        <div class="hum-field__label">{{ 'humano.employee.jobTitle' | translate }}</div>
+        <div>{{ d.jobTitle ?? '—' }}</div>
+      </div>
+      <div>
+        <div class="hum-field__label">{{ 'humano.employee.status' | translate }}</div>
+        <hum-badge [status]="d.status" />
+      </div>
+      <div>
+        <div class="hum-field__label">{{ 'humano.employee.department' | translate }}</div>
+        <div>{{ d.departmentName ?? '—' }}</div>
+      </div>
+      <div>
+        <div class="hum-field__label">{{ 'humano.employee.position' | translate }}</div>
+        <div>{{ d.positionName ?? '—' }}</div>
+      </div>
+      <div>
+        <div class="hum-field__label">{{ 'humano.employee.unit' | translate }}</div>
+        <div>{{ d.unitName ?? '—' }}</div>
+      </div>
+      <div>
+        <div class="hum-field__label">{{ 'humano.employee.manager' | translate }}</div>
+        <div>{{ d.managerInfo ?? '—' }}</div>
+      </div>
+      <div>
+        <div class="hum-field__label">{{ 'humano.employee.country' | translate }}</div>
+        <div>{{ d.countryName ?? '—' }}</div>
+      </div>
+      <div>
+        <div class="hum-field__label">{{ 'humano.employee.startDate' | translate }}</div>
+        <div class="tabular-nums">{{ d.startDate ?? '—' }}</div>
+      </div>
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="closeDetail()">{{ 'humano.action.cancel' | translate }}</hum-button>
+    @if (detail(); as d) {
+      <hum-button variant="primary" trailingIcon="arrow-right" (click)="openFull(d.id)">{{
+        'humano.employee.openProfile' | translate
+      }}</hum-button>
+    }
+  </div>
+</hum-drawer>

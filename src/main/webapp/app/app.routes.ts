@@ -81,7 +81,7 @@ const routes: Routes = [
       {
         path: 'employees',
         title: 'humano.nav.employees',
-        loadComponent: () => import('./features/hr/directory/employee-directory.component'),
+        loadComponent: () => import('./features/admin/directory/directory.component'),
         canActivate: [UserRouteAccessService],
         data: { authorities: [Authority.ADMIN] },
       },
@@ -94,7 +94,7 @@ const routes: Routes = [
       {
         path: 'admin/users',
         title: 'humano.nav.users',
-        loadComponent: () => import('./admin/user-management.component'),
+        loadComponent: () => import('./features/admin/user-management/user-management.component'),
         canActivate: [UserRouteAccessService],
         data: { authorities: [Authority.ADMIN] },
       },

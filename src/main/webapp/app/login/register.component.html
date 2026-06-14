@@ -1,0 +1,76 @@
+<div class="hum-auth">
+  <div class="hum-auth__panel">
+    <div class="hum-auth__brand">humano<span class="hum-side__dot" aria-hidden="true"></span></div>
+    <h1 class="hum-auth__title">{{ 'register.title' | translate }}</h1>
+
+    @if (success()) {
+      <hum-alert tone="success"><span [innerHTML]="'register.messages.success' | translate"></span></hum-alert>
+      <div class="hum-auth__links">
+        <a routerLink="/login">{{ 'login.title' | translate }}</a>
+      </div>
+    } @else {
+      @if (errorKey(); as k) {
+        <hum-alert tone="danger"><span [innerHTML]="k | translate"></span></hum-alert>
+      }
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate style="display: grid; gap: var(--space-4)">
+        <hum-form-field
+          [label]="'global.form.username.label' | translate"
+          controlId="reg-login"
+          [error]="invalid('login') ? ('register.messages.validate.login.required' | translate) : undefined"
+        >
+          <hum-input
+            inputId="reg-login"
+            formControlName="login"
+            [placeholder]="'global.form.username.placeholder' | translate"
+            [invalid]="invalid('login')"
+          />
+        </hum-form-field>
+
+        <hum-form-field
+          [label]="'global.form.email.label' | translate"
+          controlId="reg-email"
+          [error]="invalid('email') ? ('global.messages.validate.email.invalid' | translate) : undefined"
+        >
+          <hum-input
+            inputId="reg-email"
+            type="email"
+            formControlName="email"
+            [placeholder]="'global.form.email.placeholder' | translate"
+            [invalid]="invalid('email')"
+          />
+        </hum-form-field>
+
+        <hum-form-field [label]="'global.form.newpassword.label' | translate" controlId="reg-password">
+          <hum-input
+            inputId="reg-password"
+            type="password"
+            formControlName="password"
+            [placeholder]="'global.form.newpassword.placeholder' | translate"
+            [invalid]="invalid('password')"
+          />
+        </hum-form-field>
+
+        <hum-form-field
+          [label]="'global.form.confirmpassword.label' | translate"
+          controlId="reg-confirm"
+          [error]="mismatch() ? ('global.messages.error.dontmatch' | translate) : undefined"
+        >
+          <hum-input
+            inputId="reg-confirm"
+            type="password"
+            formControlName="confirmPassword"
+            [placeholder]="'global.form.confirmpassword.placeholder' | translate"
+            [invalid]="mismatch()"
+          />
+        </hum-form-field>
+
+        <hum-button type="submit" variant="primary" [block]="true" [loading]="loading()" [disabled]="form.invalid">{{
+          'register.form.button' | translate
+        }}</hum-button>
+      </form>
+      <div class="hum-auth__links">
+        <a routerLink="/login">{{ 'login.title' | translate }}</a>
+      </div>
+    }
+  </div>
+</div>

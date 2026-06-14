@@ -16,55 +16,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   selector: 'hum-password-reset-finish',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe, AlertComponent, ButtonComponent, InputComponent, FormFieldComponent],
-  template: `
-    <div class="hum-auth">
-      <div class="hum-auth__panel">
-        <div class="hum-auth__brand">humano<span class="hum-side__dot" aria-hidden="true"></span></div>
-        <h1 class="hum-auth__title">{{ 'reset.finish.title' | translate }}</h1>
-
-        @if (!key()) {
-          <hum-alert tone="danger">{{ 'reset.finish.messages.keymissing' | translate }}</hum-alert>
-        } @else if (success()) {
-          <hum-alert tone="success">
-            <span [innerHTML]="'reset.finish.messages.success' | translate"></span
-            ><a routerLink="/login">{{ 'login.title' | translate }}</a>
-          </hum-alert>
-        } @else {
-          @if (failed()) {
-            <hum-alert tone="danger">{{ 'reset.finish.messages.error' | translate }}</hum-alert>
-          }
-          <p class="text-muted" style="font-size:var(--text-base)">{{ 'reset.finish.messages.info' | translate }}</p>
-          <form [formGroup]="form" (ngSubmit)="submit()" novalidate style="display:grid;gap:var(--space-4)">
-            <hum-form-field [label]="'global.form.newpassword.label' | translate" controlId="rf-password">
-              <hum-input
-                inputId="rf-password"
-                type="password"
-                formControlName="newPassword"
-                [placeholder]="'global.form.newpassword.placeholder' | translate"
-                [invalid]="invalid()"
-              />
-            </hum-form-field>
-            <hum-form-field
-              [label]="'global.form.confirmpassword.label' | translate"
-              controlId="rf-confirm"
-              [error]="mismatch() ? ('global.messages.error.dontmatch' | translate) : undefined"
-            >
-              <hum-input
-                inputId="rf-confirm"
-                type="password"
-                formControlName="confirmPassword"
-                [placeholder]="'global.form.confirmpassword.placeholder' | translate"
-                [invalid]="mismatch()"
-              />
-            </hum-form-field>
-            <hum-button type="submit" variant="primary" [block]="true" [loading]="loading()" [disabled]="form.invalid">{{
-              'reset.finish.form.button' | translate
-            }}</hum-button>
-          </form>
-        }
-      </div>
-    </div>
-  `,
+  templateUrl: './password-reset-finish.component.html',
 })
 export default class PasswordResetFinishComponent {
   /** Reset key from `?key=` (bound via `withComponentInputBinding()`). */

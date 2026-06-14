@@ -1,0 +1,45 @@
+<div class="hum-auth">
+  <div class="hum-auth__panel">
+    <div class="hum-auth__brand">humano<span class="hum-side__dot" aria-hidden="true"></span></div>
+    <h1 class="hum-auth__title">{{ 'login.title' | translate }}</h1>
+
+    @if (authError()) {
+      <hum-alert tone="danger"><span [innerHTML]="'login.messages.error.authentication' | translate"></span></hum-alert>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <hum-form-field [label]="'global.form.username.label' | translate" controlId="login-username">
+        <hum-input
+          inputId="login-username"
+          formControlName="username"
+          [placeholder]="'global.form.username.placeholder' | translate"
+          [invalid]="invalid('username')"
+        />
+      </hum-form-field>
+
+      <hum-form-field [label]="'login.form.password' | translate" controlId="login-password">
+        <hum-input
+          inputId="login-password"
+          type="password"
+          formControlName="password"
+          [placeholder]="'login.form.password.placeholder' | translate"
+          [invalid]="invalid('password')"
+        />
+      </hum-form-field>
+
+      <label class="hum-auth__remember">
+        <hum-checkbox formControlName="rememberMe" />
+        <span>{{ 'login.form.rememberme' | translate }}</span>
+      </label>
+
+      <hum-button type="submit" variant="primary" [block]="true" [loading]="loading()" [disabled]="form.invalid">
+        {{ 'login.form.button' | translate }}
+      </hum-button>
+    </form>
+
+    <div class="hum-auth__links">
+      <a routerLink="/account/reset/request">{{ 'login.password.forgot' | translate }}</a>
+      <a routerLink="/register">{{ 'global.menu.account.register' | translate }}</a>
+    </div>
+  </div>
+</div>

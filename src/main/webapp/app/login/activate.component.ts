@@ -11,28 +11,7 @@ import { AuthPublicService } from './auth-public.service';
   selector: 'hum-activate',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, TranslatePipe, AlertComponent],
-  template: `
-    <div class="hum-auth">
-      <div class="hum-auth__panel">
-        <div class="hum-auth__brand">humano<span class="hum-side__dot" aria-hidden="true"></span></div>
-        <h1 class="hum-auth__title">{{ 'activate.title' | translate }}</h1>
-
-        @switch (status()) {
-          @case ('success') {
-            <hum-alert tone="success">
-              <span [innerHTML]="'activate.messages.success' | translate"></span><a routerLink="/login">{{ 'login.title' | translate }}</a>
-            </hum-alert>
-          }
-          @case ('error') {
-            <hum-alert tone="danger"><span [innerHTML]="'activate.messages.error' | translate"></span></hum-alert>
-            <div class="hum-auth__links">
-              <a routerLink="/register">{{ 'register.title' | translate }}</a>
-            </div>
-          }
-        }
-      </div>
-    </div>
-  `,
+  templateUrl: './activate.component.html',
 })
 export default class ActivateComponent implements OnInit {
   /** Activation key from `?key=` (bound via `withComponentInputBinding()`). */

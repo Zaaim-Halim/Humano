@@ -1,0 +1,41 @@
+<div class="hum-page" style="max-width: 560px">
+  <hum-page-header [title]="title()" [subtitle]="'settings.form.button' | translate" />
+
+  <form [formGroup]="form" (ngSubmit)="save()" novalidate style="display: grid; gap: var(--space-4)">
+    <hum-form-field [label]="'settings.form.firstname' | translate" controlId="settings-firstname">
+      <hum-input
+        inputId="settings-firstname"
+        formControlName="firstName"
+        [placeholder]="'settings.form.firstname.placeholder' | translate"
+      />
+    </hum-form-field>
+
+    <hum-form-field [label]="'settings.form.lastname' | translate" controlId="settings-lastname">
+      <hum-input inputId="settings-lastname" formControlName="lastName" [placeholder]="'settings.form.lastname.placeholder' | translate" />
+    </hum-form-field>
+
+    <hum-form-field
+      [label]="'global.form.email.label' | translate"
+      controlId="settings-email"
+      [error]="invalid('email') ? ('global.messages.validate.email.invalid' | translate) : undefined"
+    >
+      <hum-input
+        inputId="settings-email"
+        type="email"
+        formControlName="email"
+        [placeholder]="'global.form.email.placeholder' | translate"
+        [invalid]="invalid('email')"
+      />
+    </hum-form-field>
+
+    <hum-form-field [label]="'settings.form.language' | translate" controlId="settings-lang">
+      <hum-select formControlName="langKey" [options]="languageOptions" />
+    </hum-form-field>
+
+    <div>
+      <hum-button type="submit" variant="primary" [loading]="saving()" [disabled]="form.invalid">{{
+        'settings.form.button' | translate
+      }}</hum-button>
+    </div>
+  </form>
+</div>

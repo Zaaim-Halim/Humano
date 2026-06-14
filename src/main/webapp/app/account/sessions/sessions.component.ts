@@ -13,48 +13,7 @@ import { AccountManagementService, Session } from '../account-management.service
   selector: 'hum-sessions',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, PageHeaderComponent, ButtonComponent, AlertComponent, EmptyStateComponent, SkeletonComponent],
-  template: `
-    <div class="hum-page" style="max-width:720px">
-      <hum-page-header [title]="title()" />
-
-      @if (loading()) {
-        <div style="display:grid;gap:var(--space-2)">
-          <hum-skeleton [height]="44" />
-          <hum-skeleton [height]="44" />
-          <hum-skeleton [height]="44" />
-        </div>
-      } @else if (error(); as e) {
-        <hum-alert tone="danger" [title]="e">
-          <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
-        </hum-alert>
-      } @else if (sessions().length === 0) {
-        <hum-empty-state icon="shield-x" [title]="'sessions.title' | translate" />
-      } @else {
-        <table class="hum-table">
-          <thead>
-            <tr>
-              <th>{{ 'sessions.table.ipaddress' | translate }}</th>
-              <th>{{ 'sessions.table.useragent' | translate }}</th>
-              <th>{{ 'sessions.table.date' | translate }}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (s of sessions(); track s.series) {
-              <tr>
-                <td>{{ s.ipAddress }}</td>
-                <td>{{ s.userAgent }}</td>
-                <td class="tabular-nums">{{ s.tokenDate }}</td>
-                <td style="text-align:right">
-                  <hum-button variant="outline" size="sm" (click)="invalidate(s)">{{ 'sessions.table.button' | translate }}</hum-button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      }
-    </div>
-  `,
+  templateUrl: './sessions.component.html',
 })
 export default class SessionsComponent {
   private readonly api = inject(AccountManagementService);
