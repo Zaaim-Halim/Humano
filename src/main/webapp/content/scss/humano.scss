@@ -1178,6 +1178,75 @@
   color: var(--text-muted);
 }
 
+/* payslip — print-ready letterhead document */
+.hum-payslip {
+  max-width: 800px;
+  margin: 0 auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+.hum-payslip__letterhead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 2px solid var(--border-default);
+  margin-bottom: var(--space-5);
+}
+.hum-payslip__brand {
+  font: var(--weight-semibold) var(--text-xl) var(--font-sans);
+  color: var(--text-strong);
+  letter-spacing: var(--tracking-tight);
+}
+.hum-payslip__section-title {
+  font: var(--weight-semibold) var(--text-sm) var(--font-sans);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  margin: var(--space-5) 0 var(--space-2);
+}
+.hum-payslip__totals {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 2px solid var(--border-default);
+  display: grid;
+  gap: var(--space-2);
+}
+.hum-payslip__total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-base);
+  color: var(--text-default);
+}
+.hum-payslip__total-row--net {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-lg);
+  color: var(--text-strong);
+}
+
+/* print: drop the app chrome + actions; show only the payslip document */
+@media print {
+  .hum-side,
+  .hum-topbar,
+  .hum-no-print {
+    display: none !important;
+  }
+  .hum-shell,
+  .hum-shell__main,
+  .hum-page {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .hum-payslip {
+    border: 0;
+    max-width: none;
+  }
+}
+
 /* auth surfaces (login / register / reset / activate) — centered panel */
 .hum-auth {
   min-height: 100vh;

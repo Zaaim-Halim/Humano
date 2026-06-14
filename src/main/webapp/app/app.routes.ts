@@ -75,7 +75,7 @@ const routes: Routes = [
         title: 'global.menu.account.sessions',
         loadComponent: () => import('./account/sessions/sessions.component'),
       },
-      page('dashboard', 'humano.nav.dashboard'),
+      { path: 'dashboard', title: 'humano.nav.dashboard', loadComponent: () => import('./features/admin/dashboard/dashboard.component') },
       page('leave', 'humano.nav.leave'),
       page('timesheets', 'humano.nav.timesheets'),
       {
@@ -95,7 +95,21 @@ const routes: Routes = [
       page('org', 'humano.nav.org', [Authority.ADMIN]),
       page('positions', 'humano.nav.positions', [Authority.ADMIN]),
       page('payroll/runs', 'humano.nav.runs', [Authority.ADMIN]),
+      {
+        path: 'payroll/runs/:id',
+        title: 'humano.nav.runs',
+        loadComponent: () => import('./features/admin/payroll-run/payroll-run.component'),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: [Authority.ADMIN] },
+      },
       page('payroll/payslips', 'humano.nav.payslips', [Authority.ADMIN]),
+      {
+        path: 'payroll/payslips/:id',
+        title: 'humano.nav.payslips',
+        loadComponent: () => import('./features/admin/payslip/payslip.component'),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: [Authority.ADMIN] },
+      },
       page('approvals', 'humano.nav.approvals', [Authority.ADMIN]),
       page('settings', 'humano.nav.settings', [Authority.ADMIN]),
       {

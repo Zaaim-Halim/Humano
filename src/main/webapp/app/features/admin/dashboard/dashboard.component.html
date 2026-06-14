@@ -1,0 +1,80 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.dashboard.title' | translate" [subtitle]="'humano.dashboard.subtitle' | translate" />
+
+  @if (!isAdmin) {
+    <hum-empty-state
+      icon="layout-grid"
+      [title]="'humano.dashboard.welcomeTitle' | translate"
+      [description]="'humano.dashboard.welcomeBody' | translate"
+    />
+  } @else {
+    <!-- KPI tiles — each resolves independently (concurrent skeletons) -->
+    <div
+      style="
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: var(--space-3);
+        margin-bottom: var(--space-5);
+      "
+    >
+      @for (
+        k of [
+          { s: headcount(), label: 'humano.dashboard.headcount', icon: 'users' },
+          { s: departments(), label: 'humano.dashboard.departments', icon: 'network' },
+          { s: pendingLeave(), label: 'humano.dashboard.pendingLeave', icon: 'check-check' },
+          { s: onLeaveToday(), label: 'humano.dashboard.onLeaveToday', icon: 'palmtree' },
+        ];
+        track k.label
+      ) {
+        @if (k.s.loading) {
+          <div class="hum-stat"><hum-skeleton [height]="44" /></div>
+        } @else if (k.s.error) {
+          <hum-stat-tile [label]="k.label | translate" value="—" [icon]="k.icon" />
+        } @else {
+          <hum-stat-tile [label]="k.label | translate" [value]="k.s.value ?? 0" [icon]="k.icon" />
+        }
+      }
+    </div>
+
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-4)">
+      <!-- Recent joiners -->
+      <hum-card [title]="'humano.dashboard.recentJoiners' | translate" hasHeader>
+        <hum-button hum-card-actions variant="ghost" size="sm" (click)="goToEmployees()">{{
+          'humano.dashboard.viewAll' | translate
+        }}</hum-button>
+        @if (joinersLoading()) {
+          <hum-skeleton [height]="40" /><hum-skeleton [height]="40" /><hum-skeleton [height]="40" />
+        } @else if (joinersError(); as e) {
+          <hum-alert tone="danger" [title]="e"
+            ><hum-button variant="outline" size="sm" (click)="retryJoiners()">{{
+              'humano.action.retry' | translate
+            }}</hum-button></hum-alert
+          >
+        } @else if (joiners()?.length) {
+          <table class="hum-table">
+            <tbody>
+              @for (j of joiners(); track j.id) {
+                <tr style="cursor: pointer" (click)="openEmployee(j.id)">
+                  <td>{{ j.jobTitle ?? '—' }}</td>
+                  <td>{{ j.departmentName ?? '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <hum-empty-state icon="users" [title]="'humano.dashboard.noJoiners' | translate" />
+        }
+      </hum-card>
+
+      <!-- Next pay run — endpoint absent -->
+      <hum-card [title]="'humano.dashboard.nextPayRun' | translate" hasHeader>
+        <!-- TODO: backend endpoint missing — no list/next payroll run; needs a calendar-scoped period lookup. -->
+        <hum-empty-state
+          icon="wallet"
+          [title]="'humano.dashboard.nextPayRun' | translate"
+          [description]="'humano.dashboard.nextPayRunTodo' | translate"
+        />
+      </hum-card>
+    </div>
+  }
+</div>

@@ -1,0 +1,151 @@
+<div class="hum-page">
+  @if (loading()) {
+    <div class="hum-payslip"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load(id())">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (payslip(); as p) {
+    <div class="hum-no-print" style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-bottom: var(--space-3)">
+      <hum-button variant="outline" icon="download" (click)="downloadPdf()">{{ 'humano.payslip.downloadPdf' | translate }}</hum-button>
+      <hum-button variant="primary" (click)="print()">{{ 'humano.payslip.print' | translate }}</hum-button>
+    </div>
+
+    <article class="hum-payslip">
+      <header class="hum-payslip__letterhead">
+        <div>
+          <div class="hum-payslip__brand">humano<span class="hum-side__dot" aria-hidden="true"></span></div>
+          <div class="hum-field__hint">{{ 'humano.payslip.title' | translate }}</div>
+        </div>
+        <div style="text-align: right">
+          <div class="hum-field__label">{{ 'humano.payslip.payslipNo' | translate }}</div>
+          <div class="tabular-nums">{{ p.number }}</div>
+        </div>
+      </header>
+
+      <!-- Identity / period -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-6)">
+        <div>
+          <div class="hum-field__label">{{ 'humano.payslip.employee' | translate }}</div>
+          <div>{{ p.employeeName ?? '—' }}</div>
+        </div>
+        <div>
+          <div class="hum-field__label">{{ 'humano.payslip.employeeCode' | translate }}</div>
+          <div class="tabular-nums">{{ p.employeeCode ?? '—' }}</div>
+        </div>
+        <div>
+          <div class="hum-field__label">{{ 'humano.payslip.department' | translate }}</div>
+          <div>{{ p.department ?? '—' }}</div>
+        </div>
+        <div>
+          <div class="hum-field__label">{{ 'humano.payslip.position' | translate }}</div>
+          <div>{{ p.position ?? '—' }}</div>
+        </div>
+        <div>
+          <div class="hum-field__label">{{ 'humano.payslip.period' | translate }}</div>
+          <div class="tabular-nums">{{ p.periodStart }} → {{ p.periodEnd }}</div>
+        </div>
+        <div>
+          <div class="hum-field__label">{{ 'humano.payslip.paymentDate' | translate }}</div>
+          <div class="tabular-nums">{{ p.paymentDate ?? '—' }}</div>
+        </div>
+      </div>
+
+      @if (p.details; as d) {
+        <!-- Earnings -->
+        <div class="hum-payslip__section-title">{{ 'humano.payslip.earnings' | translate }}</div>
+        @if (d.earnings.length) {
+          <table class="hum-table">
+            <thead>
+              <tr>
+                <th>{{ 'humano.payslip.component' | translate }}</th>
+                <th class="hum-table__num">{{ 'humano.payslip.amount' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (li of d.earnings; track li.id) {
+                <tr>
+                  <td>{{ li.componentName }}</td>
+                  <td class="hum-table__num tabular-nums">{{ li.amount }} {{ p.currencyCode }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <div class="hum-field__hint">{{ 'humano.payslip.noLines' | translate }}</div>
+        }
+
+        <!-- Deductions -->
+        <div class="hum-payslip__section-title">{{ 'humano.payslip.deductions' | translate }}</div>
+        @if (d.deductions.length) {
+          <table class="hum-table">
+            <tbody>
+              @for (li of d.deductions; track li.id) {
+                <tr>
+                  <td>{{ li.componentName }}</td>
+                  <td class="hum-table__num tabular-nums">{{ li.amount }} {{ p.currencyCode }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <div class="hum-field__hint">{{ 'humano.payslip.noLines' | translate }}</div>
+        }
+
+        <!-- Employer contributions -->
+        @if (d.employerCharges.length) {
+          <div class="hum-payslip__section-title">{{ 'humano.payslip.employerContributions' | translate }}</div>
+          <table class="hum-table">
+            <tbody>
+              @for (li of d.employerCharges; track li.id) {
+                <tr>
+                  <td>{{ li.componentName }}</td>
+                  <td class="hum-table__num tabular-nums">{{ li.amount }} {{ p.currencyCode }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      }
+
+      <!-- Totals -->
+      <div class="hum-payslip__totals">
+        <div class="hum-payslip__total-row">
+          <span>{{ 'humano.payslip.grossPay' | translate }}</span
+          ><span class="tabular-nums">{{ p.gross }} {{ p.currencyCode }}</span>
+        </div>
+        <div class="hum-payslip__total-row">
+          <span>{{ 'humano.payslip.totalDeductions' | translate }}</span
+          ><span class="tabular-nums">−{{ p.totalDeductions }} {{ p.currencyCode }}</span>
+        </div>
+        <div class="hum-payslip__total-row hum-payslip__total-row--net">
+          <span>{{ 'humano.payslip.netPay' | translate }}</span
+          ><span class="tabular-nums">{{ p.net }} {{ p.currencyCode }}</span>
+        </div>
+        @if (p.details?.employerCost; as ec) {
+          <div class="hum-payslip__total-row">
+            <span>{{ 'humano.payslip.employerCost' | translate }}</span
+            ><span class="tabular-nums">{{ ec }} {{ p.currencyCode }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- YTD footer -->
+      @if (ytdEntries().length) {
+        <div class="hum-payslip__section-title">{{ 'humano.payslip.ytd' | translate }}</div>
+        <table class="hum-table">
+          <tbody>
+            @for (e of ytdEntries(); track e[0]) {
+              <tr>
+                <td>{{ e[0] }}</td>
+                <td class="hum-table__num tabular-nums">{{ e[1] }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </article>
+  } @else {
+    <hum-empty-state icon="receipt" [title]="'humano.payslip.notFound' | translate" />
+  }
+</div>
