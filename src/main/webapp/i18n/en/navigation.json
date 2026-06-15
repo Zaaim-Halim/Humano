@@ -139,6 +139,18 @@
       "activated": "Tenant activated",
       "deprovisioned": "Tenant deprovisioned"
     },
+    "approvals": {
+      "title": "Approvals",
+      "subtitle": "Requests waiting on your decision",
+      "noApproverTitle": "No approvals to show",
+      "noApproverBody": "Your account isn't linked to an approver profile yet, so there's nothing to review here.",
+      "emptyTitle": "You're all caught up",
+      "emptyDescription": "No requests are waiting on your approval.",
+      "colType": "Request",
+      "colRequestor": "Requested by",
+      "colStatus": "Status",
+      "colWaiting": "Days waiting"
+    },
     "portal": {
       "greeting": "Hi, {{ name }} 👋",
       "subtitle": "Here's your space at a glance",

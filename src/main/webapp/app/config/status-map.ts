@@ -17,6 +17,11 @@ export const STATUS_MAP: Record<string, StatusMeta> = {
   ON_HOLD: { tone: 'warning', label: 'On hold' },
   CANCELLED: { tone: 'neutral', label: 'Cancelled' },
   CANCELED: { tone: 'neutral', label: 'Canceled' }, // backend LeaveStatus spelling (single L)
+  // approval workflows (WorkflowStatus) — APPROVED/REJECTED/ON_HOLD/CANCELLED/DRAFT shared above
+  IN_PROGRESS: { tone: 'info', label: 'In progress' },
+  PENDING_APPROVAL: { tone: 'warning', label: 'Pending approval' },
+  COMPLETED: { tone: 'success', label: 'Completed' },
+  ESCALATED: { tone: 'warning', label: 'Escalated' },
   // payroll runs (RunStatus: DRAFT → CALCULATED → APPROVED → POSTED)
   DRAFT: { tone: 'neutral', label: 'Draft' },
   CALCULATED: { tone: 'info', label: 'Calculated' },

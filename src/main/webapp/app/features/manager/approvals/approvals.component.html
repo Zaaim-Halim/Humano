@@ -1,0 +1,52 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.approvals.title' | translate" [subtitle]="'humano.approvals.subtitle' | translate" />
+
+  @if (!resolved()) {
+    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (!approverId()) {
+    <!-- No way to resolve the current user's approver (employee) id yet. -->
+    <hum-empty-state
+      icon="check-check"
+      [title]="'humano.approvals.noApproverTitle' | translate"
+      [description]="'humano.approvals.noApproverBody' | translate"
+    />
+  } @else if (loading()) {
+    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="reload()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (empty()) {
+    <hum-empty-state
+      icon="check-check"
+      [title]="'humano.approvals.emptyTitle' | translate"
+      [description]="'humano.approvals.emptyDescription' | translate"
+    />
+  } @else {
+    <table class="hum-table">
+      <thead>
+        <tr>
+          <th>{{ 'humano.approvals.colType' | translate }}</th>
+          <th>{{ 'humano.approvals.colRequestor' | translate }}</th>
+          <th>{{ 'humano.approvals.colStatus' | translate }}</th>
+          <th class="hum-table__num">{{ 'humano.approvals.colWaiting' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (a of items(); track a.approvalRequestId) {
+          <tr>
+            <td>
+              {{ a.approvalType }}
+              @if (a.entityDescription) {
+                <span style="color: var(--text-muted)"> · {{ a.entityDescription }}</span>
+              }
+            </td>
+            <td>{{ a.requestorName ?? '—' }}</td>
+            <td><hum-badge [status]="a.status" /></td>
+            <td class="hum-table__num tabular-nums">{{ a.daysWaiting }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

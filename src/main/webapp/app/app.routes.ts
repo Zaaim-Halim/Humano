@@ -115,7 +115,13 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { authorities: [Authority.ADMIN] },
       },
-      page('approvals', 'humano.nav.approvals', [Authority.ADMIN]),
+      {
+        path: 'approvals',
+        title: 'humano.nav.approvals',
+        loadComponent: () => import('./features/manager/approvals/approvals.component'),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: [Authority.ADMIN] },
+      },
       page('settings', 'humano.nav.settings', [Authority.ADMIN]),
       {
         path: 'admin/users',
