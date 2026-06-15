@@ -76,7 +76,12 @@ const routes: Routes = [
         loadComponent: () => import('./account/sessions/sessions.component'),
       },
       { path: 'dashboard', title: 'humano.nav.dashboard', loadComponent: () => import('./features/admin/dashboard/dashboard.component') },
-      page('leave', 'humano.nav.leave'),
+      { path: 'me', title: 'humano.nav.portal', loadComponent: () => import('./features/employee/portal/portal.component') },
+      {
+        path: 'leave',
+        title: 'humano.nav.leave',
+        loadComponent: () => import('./features/employee/leave-request/leave-request.component'),
+      },
       page('timesheets', 'humano.nav.timesheets'),
       {
         path: 'employees',

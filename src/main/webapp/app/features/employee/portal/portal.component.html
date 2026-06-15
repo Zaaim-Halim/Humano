@@ -1,0 +1,86 @@
+<div class="hum-page" style="max-width: 920px">
+  @if (account(); as me) {
+    <hum-page-header
+      [title]="'humano.portal.greeting' | translate: { name: firstName() }"
+      [subtitle]="'humano.portal.subtitle' | translate"
+    />
+
+    <!-- Quick actions — each navigates to a real, accessible surface. -->
+    <div
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-5)"
+    >
+      @for (a of quickActions; track a.link) {
+        <a
+          [routerLink]="a.link"
+          class="hum-card hum-card--interactive"
+          style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-4);
+            text-align: center;
+            text-decoration: none;
+          "
+        >
+          <span
+            aria-hidden="true"
+            style="
+              width: 38px;
+              height: 38px;
+              border-radius: var(--radius-md);
+              background: var(--brand-subtle);
+              color: var(--brand);
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            <lucide-icon [name]="a.icon" [size]="18" />
+          </span>
+          <span style="font-size: var(--text-sm); font-weight: 500; color: var(--text-strong)">{{ a.labelKey | translate }}</span>
+        </a>
+      }
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4)">
+      <!-- Latest payslip — no self-service payslip endpoint (payroll-restricted). -->
+      <hum-card [title]="'humano.portal.latestPayslip' | translate">
+        <hum-empty-state
+          icon="receipt"
+          [title]="'humano.portal.payslipUnavailableTitle' | translate"
+          [description]="'humano.portal.payslipUnavailableBody' | translate"
+        />
+      </hum-card>
+
+      <!-- Leave balance — no balance endpoint exists. -->
+      <hum-card [title]="'humano.portal.leaveBalance' | translate">
+        <hum-empty-state
+          icon="palmtree"
+          [title]="'humano.portal.leaveBalanceUnavailableTitle' | translate"
+          [description]="'humano.portal.leaveBalanceUnavailableBody' | translate"
+        />
+      </hum-card>
+    </div>
+
+    <!-- Tasks — no onboarding/tasks endpoint exists. -->
+    <div style="margin-top: var(--space-4)">
+      <hum-card [title]="'humano.portal.tasks' | translate">
+        <hum-empty-state
+          icon="check-check"
+          [title]="'humano.portal.tasksUnavailableTitle' | translate"
+          [description]="'humano.portal.tasksUnavailableBody' | translate"
+        />
+      </hum-card>
+    </div>
+  } @else {
+    <!-- Identity still resolving. -->
+    <hum-skeleton [height]="40" />
+    <div
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); margin-top: var(--space-5)"
+    >
+      <hum-skeleton [height]="160" />
+      <hum-skeleton [height]="160" />
+    </div>
+  }
+</div>

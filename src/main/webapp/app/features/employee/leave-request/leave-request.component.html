@@ -1,0 +1,68 @@
+<div class="hum-page" style="max-width: 720px">
+  <hum-page-header [title]="'humano.leaveRequest.title' | translate" [subtitle]="'humano.leaveRequest.subtitle' | translate" />
+
+  <form [formGroup]="form" (ngSubmit)="submit()" style="display: grid; gap: var(--space-4)">
+    <hum-card [title]="'humano.leaveRequest.details' | translate">
+      <div style="display: grid; gap: var(--space-4)">
+        <hum-form-field [label]="'humano.leaveRequest.leaveType' | translate" controlId="lr-type" required>
+          <hum-select inputId="lr-type" formControlName="leaveType" [options]="typeOptions()" [invalid]="invalid('leaveType')" />
+        </hum-form-field>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-4)">
+          <hum-form-field [label]="'humano.leaveRequest.startDate' | translate" controlId="lr-start" required>
+            <hum-input inputId="lr-start" type="date" formControlName="startDate" [invalid]="invalid('startDate')" />
+          </hum-form-field>
+          <hum-form-field
+            [label]="'humano.leaveRequest.endDate' | translate"
+            controlId="lr-end"
+            required
+            [error]="form.errors?.['dateOrder'] ? ('humano.leaveRequest.dateOrderError' | translate) : undefined"
+          >
+            <hum-input
+              inputId="lr-end"
+              type="date"
+              formControlName="endDate"
+              [invalid]="invalid('endDate') || !!form.errors?.['dateOrder']"
+            />
+          </hum-form-field>
+        </div>
+
+        <hum-form-field
+          [label]="'humano.leaveRequest.reason' | translate"
+          controlId="lr-reason"
+          required
+          [hint]="'humano.leaveRequest.reasonHint' | translate"
+          [error]="invalid('reason') ? ('humano.leaveRequest.reasonError' | translate) : undefined"
+        >
+          <hum-textarea inputId="lr-reason" formControlName="reason" [rows]="3" [invalid]="invalid('reason')" />
+        </hum-form-field>
+      </div>
+    </hum-card>
+
+    <!-- Balance impact — requested days only; no leave-balance endpoint exists. -->
+    <hum-card [title]="'humano.leaveRequest.balanceImpact' | translate" flat>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-2)">
+        <span style="color: var(--text-muted); font-size: var(--text-sm)">{{ 'humano.leaveRequest.requestedDays' | translate }}</span>
+        <span class="tabular-nums" style="color: var(--text-strong); font-weight: 600; font-size: var(--text-lg)">{{ workingDays() }}</span>
+      </div>
+      @if (workingDays() > 0) {
+        <hum-progress [value]="workingDays()" [max]="workingDays()" tone="brand" />
+      }
+      <div style="margin-top: var(--space-2); font-size: var(--text-xs); color: var(--text-muted)">
+        {{ 'humano.leaveRequest.balanceTodo' | translate }}
+      </div>
+    </hum-card>
+
+    @if (!employeeId()) {
+      <hum-alert tone="info" [title]="'humano.leaveRequest.noProfileTitle' | translate">
+        {{ 'humano.leaveRequest.noProfileBody' | translate }}
+      </hum-alert>
+    }
+
+    <div style="display: flex; gap: var(--space-2); justify-content: flex-end">
+      <hum-button type="submit" variant="primary" icon="send" [loading]="submitting()" [disabled]="form.invalid || !employeeId()">{{
+        'humano.leaveRequest.submit' | translate
+      }}</hum-button>
+    </div>
+  </form>
+</div>

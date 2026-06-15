@@ -9,6 +9,9 @@ export { AttendanceStatus } from './models/enums/attendance-status.enum';
 export { OvertimeType } from './models/enums/overtime-type.enum';
 export { OvertimeApprovalStatus } from './models/enums/overtime-approval-status.enum';
 
+// Self-service identity → employee resolution seam
+export { CurrentEmployeeService } from './services/current-employee.service';
+
 // Employee profile
 export { EmployeeService } from './services/employee.service';
 export type {
