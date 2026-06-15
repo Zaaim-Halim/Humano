@@ -219,6 +219,20 @@
       "noMatchTitle": "No matching invoices",
       "noMatchDescription": "No invoices match the current filter."
     },
+    "payslips": {
+      "title": "Payslips",
+      "subtitle": "{{ total }} payslips",
+      "search": "Search by payslip number…",
+      "colEmployee": "Employee",
+      "colPeriod": "Period",
+      "colPaymentDate": "Payment date",
+      "colGross": "Gross",
+      "colNet": "Net",
+      "emptyTitle": "No payslips",
+      "emptyDescription": "Payslips appear here once a payroll run generates them.",
+      "noMatchTitle": "No matching payslips",
+      "noMatchDescription": "No payslips match the current search."
+    },
     "payslip": {
       "title": "Payslip",
       "notFound": "Payslip not found",

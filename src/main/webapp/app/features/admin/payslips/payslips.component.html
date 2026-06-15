@@ -1,0 +1,86 @@
+<div class="hum-page">
+  <hum-page-header
+    [title]="'humano.payslips.title' | translate"
+    [subtitle]="'humano.payslips.subtitle' | translate: { total: list.total() }"
+  />
+
+  <form [formGroup]="filters" style="display: flex; gap: var(--space-3); margin-bottom: var(--space-4); max-width: 360px">
+    <hum-input formControlName="number" icon="search" [placeholder]="'humano.payslips.search' | translate" />
+  </form>
+
+  @if (list.loading()) {
+    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (list.error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="list.reload()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (list.empty()) {
+    @if (hasFilter()) {
+      <hum-empty-state
+        icon="filter"
+        hasAction
+        [title]="'humano.payslips.noMatchTitle' | translate"
+        [description]="'humano.payslips.noMatchDescription' | translate"
+      >
+        <hum-button hum-empty-action variant="outline" size="sm" (click)="clearFilters()">{{
+          'humano.action.clearFilters' | translate
+        }}</hum-button>
+      </hum-empty-state>
+    } @else {
+      <hum-empty-state
+        icon="receipt"
+        [title]="'humano.payslips.emptyTitle' | translate"
+        [description]="'humano.payslips.emptyDescription' | translate"
+      />
+    }
+  } @else {
+    <table class="hum-table">
+      <thead>
+        <tr>
+          <th>{{ 'humano.payslips.colEmployee' | translate }}</th>
+          <th>{{ 'humano.payslips.colPeriod' | translate }}</th>
+          <th>{{ 'humano.payslips.colPaymentDate' | translate }}</th>
+          <th class="hum-table__num">{{ 'humano.payslips.colGross' | translate }}</th>
+          <th class="hum-table__num">{{ 'humano.payslips.colNet' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of list.items(); track p.id) {
+          <tr style="cursor: pointer" (click)="open(p)">
+            <td>
+              <div style="font-weight: 500; color: var(--text-strong)">{{ p.employeeName ?? '—' }}</div>
+              @if (p.employeeCode) {
+                <div class="tabular-nums" style="color: var(--text-muted); font-size: var(--text-xs)">{{ p.employeeCode }}</div>
+              }
+            </td>
+            <td>{{ p.periodCode ?? (p.periodStart ? (p.periodStart | date: 'MMM y') : '—') }}</td>
+            <td>{{ p.paymentDate ? (p.paymentDate | date: 'mediumDate') : '—' }}</td>
+            <td class="hum-table__num tabular-nums">{{ p.gross }} {{ p.currencyCode }}</td>
+            <td class="hum-table__num tabular-nums" style="font-weight: 600; color: var(--text-strong)">
+              {{ p.net }} {{ p.currencyCode }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <div style="display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3)">
+      <hum-button
+        variant="outline"
+        size="sm"
+        [disabled]="(list.params().page ?? 0) === 0"
+        (click)="list.setParams({ page: (list.params().page ?? 0) - 1 })"
+        aria-label="Previous page"
+        >‹</hum-button
+      >
+      <hum-button
+        variant="outline"
+        size="sm"
+        [disabled]="((list.params().page ?? 0) + 1) * (list.params().size ?? 25) >= list.total()"
+        (click)="list.setParams({ page: (list.params().page ?? 0) + 1 })"
+        aria-label="Next page"
+        >›</hum-button
+      >
+    </div>
+  }
+</div>

@@ -107,7 +107,13 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { authorities: [Authority.ADMIN] },
       },
-      page('payroll/payslips', 'humano.nav.payslips', [Authority.ADMIN]),
+      {
+        path: 'payroll/payslips',
+        title: 'humano.nav.payslips',
+        loadComponent: () => import('./features/admin/payslips/payslips.component'),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: [Authority.ADMIN] },
+      },
       {
         path: 'payroll/payslips/:id',
         title: 'humano.nav.payslips',
