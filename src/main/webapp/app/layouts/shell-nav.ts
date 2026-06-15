@@ -88,6 +88,13 @@ export const SHELL_NAV: ShellNavGroup[] = [
         link: '/platform/tenants',
         keywords: 'tenants superadmin platform',
       },
+      {
+        id: 'billing',
+        labelKey: 'humano.nav.billing',
+        icon: 'credit-card',
+        link: '/platform/billing',
+        keywords: 'billing invoices subscription plan payment',
+      },
     ],
   },
 ];

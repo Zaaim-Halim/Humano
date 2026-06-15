@@ -126,6 +126,13 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { authorities: [Authority.ADMIN] },
       },
+      {
+        path: 'platform/billing',
+        title: 'humano.nav.billing',
+        loadComponent: () => import('./features/platform/billing/billing.component'),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: [Authority.ADMIN] },
+      },
     ],
   },
 ];

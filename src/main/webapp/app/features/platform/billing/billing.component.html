@@ -1,0 +1,129 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.billing.title' | translate" [subtitle]="'humano.billing.subtitle' | translate" />
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-4)">
+    <!-- Current plan -->
+    <hum-card [title]="'humano.billing.currentPlan' | translate">
+      @if (subLoading()) {
+        <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /></div>
+      } @else if (subError(); as e) {
+        <hum-alert tone="danger" [title]="e">
+          <hum-button variant="outline" size="sm" (click)="loadSubscription()">{{ 'humano.action.retry' | translate }}</hum-button>
+        </hum-alert>
+      } @else if (subscription(); as sub) {
+        <div style="display: flex; align-items: baseline; gap: var(--space-2)">
+          <span style="font-size: var(--text-2xl); font-weight: 700; color: var(--text-strong)">{{
+            plan()?.displayName ?? sub.subscriptionPlanName ?? ('humano.billing.noPlan' | translate)
+          }}</span>
+          @if (plan(); as p) {
+            <!-- TODO: backend — no currency code on plan; amount renders without a symbol. -->
+            <span class="tabular-nums" style="color: var(--text-muted)">{{ p.price }}</span>
+          }
+          @if (sub.billingCycle; as cycle) {
+            <hum-badge tone="neutral" [label]="cycle" />
+          }
+        </div>
+
+        <div style="margin-top: var(--space-3); display: flex; align-items: center; gap: var(--space-2)">
+          <span class="hum-field__label" style="margin: 0">{{ 'humano.billing.status' | translate }}</span>
+          <hum-badge [status]="sub.status" />
+        </div>
+
+        <!-- TODO: backend — no seats/usage endpoint; seat usage shown as disabled placeholder. -->
+        <div style="margin-top: var(--space-4); opacity: 0.5" aria-disabled="true">
+          <hum-progress [label]="'humano.billing.seatsUsed' | translate" [value]="0" [max]="100" showValue tone="brand" />
+          <div style="margin-top: var(--space-1); font-size: var(--text-xs); color: var(--text-muted)">
+            {{ 'humano.billing.seatsTodo' | translate }}
+          </div>
+        </div>
+
+        @if (nextInvoiceDate(); as next) {
+          <div style="margin-top: var(--space-3); font-size: var(--text-sm); color: var(--text-muted)">
+            {{ 'humano.billing.nextInvoice' | translate }}
+            <b class="tabular-nums" style="color: var(--text-strong)">{{ next | date: 'mediumDate' }}</b>
+          </div>
+        }
+      } @else {
+        <hum-empty-state icon="credit-card" [title]="'humano.billing.noSubscription' | translate" />
+      }
+    </hum-card>
+
+    <!-- Payment method — no endpoint, present-but-disabled. -->
+    <hum-card [title]="'humano.billing.paymentMethod' | translate">
+      <div style="opacity: 0.5" aria-disabled="true">
+        <hum-empty-state
+          icon="credit-card"
+          [title]="'humano.billing.noPaymentMethod' | translate"
+          [description]="'humano.billing.paymentMethodTodo' | translate"
+        />
+      </div>
+    </hum-card>
+  </div>
+
+  <!-- Invoices -->
+  <hum-card [title]="'humano.billing.invoices' | translate" hasHeader [padded]="false">
+    <div hum-card-actions>
+      <form [formGroup]="filters">
+        <hum-select formControlName="status" [options]="statusOptions()" />
+      </form>
+    </div>
+
+    @if (invLoading()) {
+      <div class="hum-table-wrap" style="padding: var(--space-3)">
+        <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+      </div>
+    } @else if (invError(); as e) {
+      <div style="padding: var(--space-4)">
+        <hum-alert tone="danger" [title]="e">
+          <hum-button variant="outline" size="sm" (click)="loadInvoices()">{{ 'humano.action.retry' | translate }}</hum-button>
+        </hum-alert>
+      </div>
+    } @else if (invEmpty()) {
+      @if (invFilteredOut()) {
+        <hum-empty-state
+          icon="filter"
+          hasAction
+          [title]="'humano.billing.noMatchTitle' | translate"
+          [description]="'humano.billing.noMatchDescription' | translate"
+        >
+          <hum-button hum-empty-action variant="outline" size="sm" (click)="clearFilters()">{{
+            'humano.action.clearFilters' | translate
+          }}</hum-button>
+        </hum-empty-state>
+      } @else {
+        <hum-empty-state
+          icon="receipt"
+          [title]="'humano.billing.emptyTitle' | translate"
+          [description]="'humano.billing.emptyDescription' | translate"
+        />
+      }
+    } @else {
+      <table class="hum-table">
+        <thead>
+          <tr>
+            <th>{{ 'humano.billing.colInvoice' | translate }}</th>
+            <th>{{ 'humano.billing.colDate' | translate }}</th>
+            <th>{{ 'humano.billing.colStatus' | translate }}</th>
+            <th class="hum-table__num">{{ 'humano.billing.colAmount' | translate }}</th>
+            <th class="hum-table__num"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (inv of visibleInvoices(); track inv.id) {
+            <tr>
+              <td class="tabular-nums" style="font-weight: 500; color: var(--text-strong)">{{ inv.invoiceNumber }}</td>
+              <td>{{ inv.issueDate ? (inv.issueDate | date: 'mediumDate') : '—' }}</td>
+              <td><hum-badge [status]="inv.status" /></td>
+              <!-- TODO: backend — no currency code on Invoice; amount renders without a symbol. -->
+              <td class="hum-table__num tabular-nums">{{ inv.totalAmount }}</td>
+              <td class="hum-table__num">
+                <!-- TODO: backend — no per-invoice PDF endpoint; download disabled. -->
+                <hum-button variant="ghost" size="sm" icon="download" disabled>{{ 'humano.billing.pdf' | translate }}</hum-button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </hum-card>
+</div>
