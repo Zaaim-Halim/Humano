@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { DatePipe } from '@angular/common';
+import { catchError, forkJoin, of } from 'rxjs';
 
 import { createListResource, normalizeHttpError } from 'app/core/api';
 import { ThemeService } from 'app/core/theme/theme.service';
@@ -20,8 +22,8 @@ import {
 } from 'app/shared/ui';
 import { stripHtml } from 'app/shared/util/strip-html';
 
-import { Tenant, TenantDetail, TenantStatus } from '../index';
-import { TenantService } from '../index';
+import { Invoice, Subscription, Tenant, TenantDetail, TenantStatus } from '../index';
+import { PlatformBillingService, TenantService } from '../index';
 
 /**
  * Tenant Management (Platform/Superadmin hero screen) — violet chrome. Lists
@@ -39,6 +41,7 @@ import { TenantService } from '../index';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
+    DatePipe,
     TranslatePipe,
     PageHeaderComponent,
     StatTileComponent,
@@ -56,6 +59,7 @@ import { TenantService } from '../index';
 export default class TenantManagementComponent {
   private readonly fb = inject(FormBuilder);
   private readonly tenantService = inject(TenantService);
+  private readonly platformBilling = inject(PlatformBillingService);
   private readonly theme = inject(ThemeService);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
@@ -77,6 +81,15 @@ export default class TenantManagementComponent {
   protected readonly detailError = signal<string | null>(null);
   protected readonly poolEntries = computed(() => Object.entries(this.detail()?.poolStats ?? {}));
 
+  // Per-tenant billing drill-in (superadmin, cross-tenant reads).
+  protected readonly billingSub = signal<Subscription | null>(null);
+  protected readonly billingInvoices = signal<Invoice[]>([]);
+  protected readonly billingLoading = signal(false);
+  protected readonly billingError = signal<string | null>(null);
+  protected readonly billingEmpty = computed(
+    () => !this.billingLoading() && !this.billingError() && !this.billingSub() && this.billingInvoices().length === 0,
+  );
+
   protected readonly deleteTarget = signal<Tenant | null>(null);
   protected readonly busy = signal(false);
 
@@ -94,11 +107,37 @@ export default class TenantManagementComponent {
   protected openDetail(tenant: Tenant): void {
     this.selected.set(tenant);
     this.loadDetail(tenant.id);
+    this.loadBilling(tenant.id);
   }
 
   protected reloadDetail(): void {
     const t = this.selected();
     if (t) this.loadDetail(t.id);
+  }
+
+  protected reloadBilling(): void {
+    const t = this.selected();
+    if (t) this.loadBilling(t.id);
+  }
+
+  private loadBilling(tenantId: string): void {
+    this.billingLoading.set(true);
+    this.billingError.set(null);
+    // A tenant may have no subscription; that 4xx must not fail the invoices.
+    forkJoin({
+      subscription: this.platformBilling.subscriptionByTenant(tenantId).pipe(catchError(() => of(null))),
+      invoices: this.platformBilling.invoicesByTenant(tenantId),
+    }).subscribe({
+      next: ({ subscription, invoices }) => {
+        this.billingSub.set(subscription);
+        this.billingInvoices.set(invoices);
+        this.billingLoading.set(false);
+      },
+      error: (err: unknown) => {
+        this.billingError.set(normalizeHttpError(err));
+        this.billingLoading.set(false);
+      },
+    });
   }
 
   private loadDetail(id: string): void {
@@ -120,6 +159,9 @@ export default class TenantManagementComponent {
     this.selected.set(null);
     this.detail.set(null);
     this.detailError.set(null);
+    this.billingSub.set(null);
+    this.billingInvoices.set([]);
+    this.billingError.set(null);
   }
 
   protected suspend(t: Tenant): void {

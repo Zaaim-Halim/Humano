@@ -115,6 +115,84 @@
         </table>
       </div>
     }
+
+    <!-- Per-tenant billing drill-in (superadmin, cross-tenant reads). -->
+    <div style="margin-top: var(--space-5)">
+      <div class="hum-field__label">{{ 'humano.tenants.billing' | translate }}</div>
+
+      @if (billingLoading()) {
+        <div style="margin-top: var(--space-2)"><hum-skeleton-row /><hum-skeleton-row /></div>
+      } @else if (billingError(); as e) {
+        <hum-alert tone="danger" [title]="e">
+          <hum-button variant="outline" size="sm" (click)="reloadBilling()">{{ 'humano.action.retry' | translate }}</hum-button>
+        </hum-alert>
+      } @else if (billingEmpty()) {
+        <div style="margin-top: var(--space-2); color: var(--text-muted); font-size: var(--text-sm)">
+          {{ 'humano.tenants.billingEmpty' | translate }}
+        </div>
+      } @else {
+        @if (billingSub(); as sub) {
+          <div
+            style="
+              margin-top: var(--space-2);
+              display: flex;
+              align-items: center;
+              gap: var(--space-2);
+              flex-wrap: wrap;
+              padding: var(--space-3);
+              border: 1px solid var(--border-subtle);
+              border-radius: var(--radius-md);
+            "
+          >
+            <span style="font-weight: 600; color: var(--text-strong)">{{ sub.subscriptionPlanName ?? '—' }}</span>
+            @if (sub.billingCycle; as cycle) {
+              <hum-badge tone="neutral" [label]="cycle" />
+            }
+            <hum-badge [status]="sub.status" />
+            @if (sub.currentPeriodEnd; as end) {
+              <span style="margin-left: auto; color: var(--text-muted); font-size: var(--text-xs)">
+                {{
+                  (sub.cancelAtPeriodEnd || sub.status === 'CANCELLED' || sub.status === 'EXPIRED'
+                    ? 'humano.tenants.ends'
+                    : 'humano.tenants.renews'
+                  ) | translate
+                }}
+                {{ end | date: 'mediumDate' }}
+              </span>
+            }
+          </div>
+        }
+
+        @if (billingInvoices().length) {
+          <table class="hum-table" style="margin-top: var(--space-3)">
+            <thead>
+              <tr>
+                <th>{{ 'humano.tenants.invoice' | translate }}</th>
+                <th>{{ 'humano.tenants.colStatus' | translate }}</th>
+                <th class="hum-table__num">{{ 'humano.tenants.payments' | translate }}</th>
+                <th class="hum-table__num">{{ 'humano.tenants.amount' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (inv of billingInvoices(); track inv.id) {
+                <tr>
+                  <td class="tabular-nums">
+                    {{ inv.invoiceNumber }}
+                    @if (inv.issueDate) {
+                      <span style="color: var(--text-muted)"> · {{ inv.issueDate | date: 'mediumDate' }}</span>
+                    }
+                  </td>
+                  <td><hum-badge [status]="inv.status" /></td>
+                  <td class="hum-table__num tabular-nums">{{ inv.paymentCount }}</td>
+                  <!-- TODO: backend — no currency code on Invoice; amount renders without a symbol. -->
+                  <td class="hum-table__num tabular-nums">{{ inv.totalAmount }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      }
+    </div>
   }
   <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
     @if (selected(); as t) {

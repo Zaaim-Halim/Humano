@@ -137,7 +137,14 @@
       "deprovisionConfirm": "Deprovision tenant {{ name }}? This permanently removes their database and cannot be undone.",
       "suspended": "Tenant suspended",
       "activated": "Tenant activated",
-      "deprovisioned": "Tenant deprovisioned"
+      "deprovisioned": "Tenant deprovisioned",
+      "billing": "Billing",
+      "billingEmpty": "No subscription or invoices for this tenant.",
+      "renews": "Renews",
+      "ends": "Ends",
+      "invoice": "Invoice",
+      "payments": "Payments",
+      "amount": "Amount"
     },
     "approvals": {
       "title": "Approvals",

@@ -27,3 +27,6 @@ export type { Subscription, CreateSubscriptionRequest, UpdateSubscriptionRequest
 
 // Self-service billing
 export { MeBillingService } from './services/me-billing.service';
+
+// Platform/superadmin cross-tenant billing (per-tenant drill-in)
+export { PlatformBillingService } from './services/platform-billing.service';
