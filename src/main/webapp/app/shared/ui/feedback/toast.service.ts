@@ -20,7 +20,7 @@ export interface ToastOptions {
 }
 
 /**
- * Signal-based toast stack. Replaces the JHipster `jhi-alert` notifier.
+ * Signal-based toast stack — the app's transient notification channel.
  * Render exactly one `<hum-toast-host>` near the app root; call `show(...)`
  * (or the tone helpers) from anywhere. Callers pass already-translated strings.
  */
