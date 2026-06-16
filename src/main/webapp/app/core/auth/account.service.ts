@@ -48,6 +48,27 @@ export class AccountService {
     return userIdentity.authorities.some((authority: string) => authorities.includes(authority));
   }
 
+  /**
+   * True if the current user holds the given permission (a single code or any
+   * of an array of codes). Permissions are the effective set derived from the
+   * user's roles, returned by `GET /api/account`.
+   */
+  hasAnyPermission(permissions: string[] | string): boolean {
+    const userIdentity = this.userIdentity();
+    if (!userIdentity?.permissions) {
+      return false;
+    }
+    if (!Array.isArray(permissions)) {
+      permissions = [permissions];
+    }
+    return userIdentity.permissions.some((permission: string) => permissions.includes(permission));
+  }
+
+  /** True if the current user holds the given single permission code. */
+  hasPermission(permission: string): boolean {
+    return this.hasAnyPermission(permission);
+  }
+
   identity(force?: boolean): Observable<Account | null> {
     if (!this.accountCache$ || force) {
       this.accountCache$ = this.fetch().pipe(

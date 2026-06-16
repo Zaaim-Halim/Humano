@@ -1,6 +1,7 @@
 package com.humano.web.rest.me;
 
 import com.humano.config.Constants;
+import com.humano.domain.shared.Authority;
 import com.humano.domain.shared.PersistentToken;
 import com.humano.domain.shared.User;
 import com.humano.dto.me.requests.ChangePasswordRequest;
@@ -8,6 +9,7 @@ import com.humano.dto.me.requests.UpdateMeRequest;
 import com.humano.dto.me.responses.MeResponse;
 import com.humano.repository.shared.PersistentTokenRepository;
 import com.humano.repository.shared.UserRepository;
+import com.humano.security.AuthorityPermissionService;
 import com.humano.security.SecurityUtils;
 import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.service.me.MeService;
@@ -50,22 +52,38 @@ public class MeResource {
     private final MeService meService;
     private final UserRepository userRepository;
     private final PersistentTokenRepository persistentTokenRepository;
+    private final AuthorityPermissionService authorityPermissionService;
 
-    public MeResource(MeService meService, UserRepository userRepository, PersistentTokenRepository persistentTokenRepository) {
+    public MeResource(
+        MeService meService,
+        UserRepository userRepository,
+        PersistentTokenRepository persistentTokenRepository,
+        AuthorityPermissionService authorityPermissionService
+    ) {
         this.meService = meService;
         this.userRepository = userRepository;
         this.persistentTokenRepository = persistentTokenRepository;
+        this.authorityPermissionService = authorityPermissionService;
     }
 
     /**
-     * Get the current user's profile + authorities.
+     * Get the current user's profile, authorities (roles) and the effective
+     * permissions derived from those roles in the current tenant.
      */
     @GetMapping("/account")
     @RequireAuthenticated
     public MeResponse getAccount() {
         return meService
             .getCurrentUser()
-            .map(MeResponse::fromUser)
+            .map(user -> {
+                java.util.Set<String> authorityNames = user
+                    .getAuthorities()
+                    .stream()
+                    .map(Authority::getName)
+                    .collect(java.util.stream.Collectors.toSet());
+                java.util.Set<String> permissions = authorityPermissionService.getPermissionsForAuthorities(authorityNames);
+                return MeResponse.fromUser(user, permissions);
+            })
             .orElseThrow(() -> new MeResourceException("Current user could not be found"));
     }
 

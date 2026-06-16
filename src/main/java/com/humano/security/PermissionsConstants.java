@@ -826,5 +826,58 @@ public final class PermissionsConstants {
      */
     public static final String ASSIGN_ROLES = "ASSIGN_ROLES";
 
+    // ==================== PLATFORM (SaaS OWNER) PERMISSIONS ====================
+    // These gate /api/platform/** operations against the master/platform realm and are
+    // seeded ONLY in the platform tenant. They are distinct from the tenant-management
+    // permissions above (CREATE_TENANT/VIEW_TENANT/...), which act inside a business tenant.
+
+    /**
+     * Permission to provision (create) a new tenant on the platform.
+     * <p>Typically granted to: {@link AuthoritiesConstants#PLATFORM_OWNER}, {@link AuthoritiesConstants#PLATFORM_ADMIN}</p>
+     */
+    public static final String PROVISION_TENANT = "PROVISION_TENANT";
+
+    /**
+     * Permission to suspend an active tenant.
+     * <p>Typically granted to: {@link AuthoritiesConstants#PLATFORM_OWNER}, {@link AuthoritiesConstants#PLATFORM_ADMIN}</p>
+     */
+    public static final String SUSPEND_TENANT = "SUSPEND_TENANT";
+
+    /**
+     * Permission to deprovision (delete) a tenant — destructive, owner-only.
+     * <p>Typically granted to: {@link AuthoritiesConstants#PLATFORM_OWNER}</p>
+     */
+    public static final String DEPROVISION_TENANT = "DEPROVISION_TENANT";
+
+    /**
+     * Permission to view the platform-wide tenant directory and status.
+     * <p>Typically granted to: {@link AuthoritiesConstants#PLATFORM_OWNER}, {@link AuthoritiesConstants#PLATFORM_ADMIN}</p>
+     */
+    public static final String VIEW_PLATFORM_TENANTS = "VIEW_PLATFORM_TENANTS";
+
+    /**
+     * Permission to view cross-tenant (platform) billing.
+     * <p>Typically granted to: {@link AuthoritiesConstants#PLATFORM_OWNER}, {@link AuthoritiesConstants#PLATFORM_ADMIN}</p>
+     */
+    public static final String VIEW_PLATFORM_BILLING = "VIEW_PLATFORM_BILLING";
+
+    /**
+     * Permission to manage cross-tenant (platform) billing — refunds, plan changes, etc.
+     * <p>Typically granted to: {@link AuthoritiesConstants#PLATFORM_OWNER}</p>
+     */
+    public static final String MANAGE_PLATFORM_BILLING = "MANAGE_PLATFORM_BILLING";
+
+    /**
+     * Permission to impersonate a tenant for support purposes.
+     * <p>Typically granted to: {@link AuthoritiesConstants#PLATFORM_OWNER}</p>
+     */
+    public static final String IMPERSONATE_TENANT = "IMPERSONATE_TENANT";
+
+    /**
+     * Permission to view platform-wide operational metrics.
+     * <p>Typically granted to: {@link AuthoritiesConstants#PLATFORM_OWNER}, {@link AuthoritiesConstants#PLATFORM_ADMIN}</p>
+     */
+    public static final String VIEW_PLATFORM_METRICS = "VIEW_PLATFORM_METRICS";
+
     private PermissionsConstants() {}
 }

@@ -6,7 +6,9 @@ const {
 
 module.exports = {
   transformIgnorePatterns: ['node_modules/(?!.*\\.mjs$|dayjs/esm)'],
-  resolver: 'jest-preset-angular/build/resolvers/ng-jest-resolver.js',
+  // Resolver is provided by @angular-builders/jest (v22) which merges its own Angular-aware
+  // defaults under this config; the previous jest-preset-angular resolver is no longer a
+  // dependency after the esbuild migration.
   globals: {
     __VERSION__: 'test',
   },

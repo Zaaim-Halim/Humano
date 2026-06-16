@@ -3,7 +3,8 @@ package com.humano.web.rest.billing;
 import com.humano.dto.billing.responses.InvoiceResponse;
 import com.humano.dto.billing.responses.PaymentResponse;
 import com.humano.dto.billing.responses.SubscriptionResponse;
-import com.humano.security.annotation.RequireAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.InvoiceService;
 import com.humano.service.billing.PaymentService;
 import com.humano.service.billing.SubscriptionService;
@@ -16,12 +17,13 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Cross-tenant billing reads for platform admins. Lives under
- * {@code /api/platform/billing/**} and is gated by {@code ROLE_ADMIN}.
+ * {@code /api/platform/billing/**} and is gated by the {@code VIEW_PLATFORM_BILLING}
+ * permission (held by platform roles seeded only in the platform tenant).
  * No mutations here — tenant-scoped writes stay on the per-tenant resources to keep ownership checks consistent.
  */
 @RestController
 @RequestMapping("/api/platform/billing")
-@RequireAdmin
+@RequirePermission(PermissionsConstants.VIEW_PLATFORM_BILLING)
 public class PlatformBillingResource {
 
     private final SubscriptionService subscriptionService;

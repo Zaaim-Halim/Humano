@@ -1,10 +1,11 @@
 package com.humano.security;
 
+import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.shared.Authority;
 import com.humano.domain.shared.Permission;
 import com.humano.repository.shared.AuthorityRepository;
-import com.humano.repository.shared.PermissionRepository;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,8 +13,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service for managing authority-based permissions.
- * This service provides methods to check if an authority has a specific permission.
+ * Resolves whether an authority grants a given permission, backed by an in-memory cache.
+ * <p>
+ * Humano is <strong>database-per-tenant</strong>: every tenant DB has its own
+ * {@code authority} / {@code permission} / {@code authority_permissions} rows (seeded from
+ * {@link DefaultRolePermissions} / {@link PlatformRolePermissions} by
+ * {@code TenantInitializationService}), so the same authority name (e.g. {@code ROLE_ADMIN})
+ * can map to different permission sets in different tenants. The cache is therefore keyed by
+ * tenant ({@link TenantContext}) — a single global map would let one tenant's mapping answer
+ * authorization checks for another (cross-tenant bleed).
+ * <p>
+ * Each tenant's map is loaded lazily on first access and cached as an immutable snapshot.
+ * After mutating a tenant's authorities/permissions, call {@link #evictCurrentTenant()} (or
+ * {@link #refreshPermissionCache()}) so the next read reflects the change. The cache is safe
+ * for concurrent access and resolves correctly on {@code @Async} workers, since
+ * {@code TenantAwareTaskDecorator} propagates {@link TenantContext}.
+ * <p>
+ * This service does not seed — seeding is owned solely by {@code TenantInitializationService},
+ * anchored to the same constants the {@code @RequirePermission} gates check.
  */
 @Service
 public class AuthorityPermissionService {
@@ -21,279 +38,128 @@ public class AuthorityPermissionService {
     private final Logger log = LoggerFactory.getLogger(AuthorityPermissionService.class);
 
     private final AuthorityRepository authorityRepository;
-    private final PermissionRepository permissionRepository;
 
-    // Cache of authority permissions for improved performance
-    private final Map<String, Set<String>> authorityPermissionCache = new HashMap<>();
+    /**
+     * Per-tenant cache: {@code tenantId -> (authorityName -> {permissionName})}. Inner maps
+     * and sets are immutable snapshots, so reads never need synchronization.
+     */
+    private final Map<String, Map<String, Set<String>>> cache = new ConcurrentHashMap<>();
 
-    public AuthorityPermissionService(AuthorityRepository authorityRepository, PermissionRepository permissionRepository) {
+    public AuthorityPermissionService(AuthorityRepository authorityRepository) {
         this.authorityRepository = authorityRepository;
-        this.permissionRepository = permissionRepository;
+    }
+
+    // ==================== cache resolution ====================
+
+    /**
+     * Cache key for the calling thread's tenant. Requests with no tenant — or the master
+     * context — collapse to {@link TenantContext#MASTER}; business {@code /api/**} requests
+     * are rejected for master upstream, so that bucket never serves real business
+     * permissions. Platform requests already carry the platform tenant key.
+     */
+    private String currentTenantKey() {
+        String tenant = TenantContext.getCurrentTenant();
+        return (tenant == null || TenantContext.MASTER.equals(tenant)) ? TenantContext.MASTER : tenant;
+    }
+
+    /** Lazily resolve the calling tenant's authority→permission map. */
+    private Map<String, Set<String>> tenantMap() {
+        return cache.computeIfAbsent(currentTenantKey(), key -> loadForCurrentTenant());
     }
 
     /**
-     * Initialize the permission system and cache authority-permission mappings.
-     * This method is called after dependency injection.
+     * Build an immutable authority→permission snapshot for the current tenant DB. Uses a
+     * fetch-join query so the permission collections are materialized in one round-trip and
+     * no open session is required when this runs from the {@code computeIfAbsent} lambda.
      */
-    /*@PostConstruct
-    @Transactional(readOnly = true)
-    public void init() {
-        log.debug("Initializing authority permission cache");
-        refreshPermissionCache();
-        ensureDefaultPermissions();
-    }*/
+    private Map<String, Set<String>> loadForCurrentTenant() {
+        Map<String, Set<String>> map = new HashMap<>();
+        for (Authority authority : authorityRepository.findAllWithPermissions()) {
+            Set<String> permissionNames = authority
+                .getPermissions()
+                .stream()
+                .map(Permission::getName)
+                .collect(Collectors.toUnmodifiableSet());
+            map.put(authority.getName(), permissionNames);
+        }
+        log.debug("Loaded permission cache for tenant '{}' with {} authorities", currentTenantKey(), map.size());
+        return Map.copyOf(map);
+    }
 
     /**
-     * Refresh the authority-permission cache.
-     * This should be called whenever authorities or permissions are updated.
+     * Evict the calling tenant's cached mapping; the next read reloads it. Call this after
+     * mutating authorities or permissions in the current tenant.
+     */
+    public void evictCurrentTenant() {
+        cache.remove(currentTenantKey());
+    }
+
+    /**
+     * Rebuild the calling tenant's cached mapping immediately (evict + reload), so the new
+     * mapping is visible without waiting for the next read.
      */
     @Transactional(readOnly = true)
     public void refreshPermissionCache() {
-        authorityPermissionCache.clear();
-
-        List<Authority> authorities = authorityRepository.findAll();
-        for (Authority authority : authorities) {
-            Set<String> permissionNames = authority.getPermissions().stream().map(Permission::getName).collect(Collectors.toSet());
-            authorityPermissionCache.put(authority.getName(), permissionNames);
-        }
-
-        log.debug("Authority permission cache refreshed with {} authorities", authorities.size());
+        cache.put(currentTenantKey(), loadForCurrentTenant());
     }
 
-    /**
-     * Ensure that default permissions exist in the database and are assigned to appropriate authorities.
-     * This method creates default permissions if they don't exist and assigns them to authorities.
-     */
-    @Transactional
-    public void ensureDefaultPermissions() {
-        // Create default permissions if they don't exist
-        createPermissionIfNotExists(PermissionsConstants.VIEW_DASHBOARD, "Access to view dashboard");
-        createPermissionIfNotExists(PermissionsConstants.ACCESS_API, "Access to use API endpoints");
-
-        // HR permissions
-        createPermissionIfNotExists(PermissionsConstants.CREATE_EMPLOYEE, "Create new employee records");
-        createPermissionIfNotExists(PermissionsConstants.READ_EMPLOYEE, "View employee records");
-        createPermissionIfNotExists(PermissionsConstants.UPDATE_EMPLOYEE, "Update employee records");
-        createPermissionIfNotExists(PermissionsConstants.DELETE_EMPLOYEE, "Delete employee records");
-        createPermissionIfNotExists(PermissionsConstants.MANAGE_DEPARTMENTS, "Manage department information");
-        createPermissionIfNotExists(PermissionsConstants.MANAGE_POSITIONS, "Manage position information");
-
-        // Employee self-service permissions
-        createPermissionIfNotExists(PermissionsConstants.VIEW_OWN_PROFILE, "View own profile information");
-        createPermissionIfNotExists(PermissionsConstants.UPDATE_OWN_PROFILE, "Update own profile information");
-        createPermissionIfNotExists(PermissionsConstants.VIEW_OWN_PAYSLIPS, "View own payslips");
-        createPermissionIfNotExists(PermissionsConstants.VIEW_OWN_TRAINING, "View own training records");
-        createPermissionIfNotExists(PermissionsConstants.REGISTER_FOR_TRAINING, "Register for training programs");
-        createPermissionIfNotExists(PermissionsConstants.VIEW_OWN_BENEFITS, "View own benefits");
-        createPermissionIfNotExists(PermissionsConstants.MANAGE_OWN_BENEFITS, "Manage own benefits");
-        createPermissionIfNotExists(PermissionsConstants.VIEW_OWN_LEAVE, "View own leave balances and history");
-        createPermissionIfNotExists(PermissionsConstants.REQUEST_LEAVE, "Submit leave requests");
-        createPermissionIfNotExists(PermissionsConstants.VIEW_OWN_ATTENDANCE, "View own attendance records");
-        createPermissionIfNotExists(PermissionsConstants.VIEW_OWN_PERFORMANCE, "View own performance reviews");
-        createPermissionIfNotExists(PermissionsConstants.VIEW_OWN_DOCUMENTS, "View own documents");
-        createPermissionIfNotExists(PermissionsConstants.UPLOAD_OWN_DOCUMENTS, "Upload own documents");
-
-        // Payroll permissions
-        createPermissionIfNotExists(PermissionsConstants.CREATE_PAYROLL_RUN, "Create a new payroll run");
-        createPermissionIfNotExists(PermissionsConstants.VIEW_PAYROLL_RUN, "View payroll run details");
-        createPermissionIfNotExists(PermissionsConstants.APPROVE_PAYROLL, "Approve payroll runs");
-        createPermissionIfNotExists(PermissionsConstants.PROCESS_PAYROLL, "Process payroll calculations");
-        createPermissionIfNotExists(PermissionsConstants.MANAGE_PAY_COMPONENTS, "Manage pay components");
-        createPermissionIfNotExists(PermissionsConstants.MANAGE_DEDUCTIONS, "Manage deduction configurations");
-        createPermissionIfNotExists(PermissionsConstants.MANAGE_BENEFITS, "Manage employee benefits");
-        createPermissionIfNotExists(PermissionsConstants.MANAGE_TAX_BRACKETS, "Manage tax bracket configurations");
-        createPermissionIfNotExists(PermissionsConstants.VIEW_PAYSLIPS, "View employee payslips");
-        createPermissionIfNotExists(PermissionsConstants.GENERATE_PAYSLIPS, "Generate payslips");
-
-        // Assign default permissions to authorities
-        Authority adminAuthority = ensureAuthority(AuthoritiesConstants.ADMIN);
-        assignAllPermissionsToAuthority(adminAuthority);
-
-        Authority userAuthority = ensureAuthority(AuthoritiesConstants.USER);
-        assignPermissionsToAuthority(userAuthority, Set.of(PermissionsConstants.VIEW_DASHBOARD, PermissionsConstants.ACCESS_API));
-
-        Authority hrManagerAuthority = ensureAuthority(AuthoritiesConstants.HR_MANAGER);
-        assignPermissionsToAuthority(
-            hrManagerAuthority,
-            Set.of(
-                PermissionsConstants.VIEW_DASHBOARD,
-                PermissionsConstants.ACCESS_API,
-                PermissionsConstants.CREATE_EMPLOYEE,
-                PermissionsConstants.READ_EMPLOYEE,
-                PermissionsConstants.UPDATE_EMPLOYEE,
-                PermissionsConstants.DELETE_EMPLOYEE,
-                PermissionsConstants.MANAGE_DEPARTMENTS,
-                PermissionsConstants.MANAGE_POSITIONS
-            )
-        );
-
-        Authority hrSpecialistAuthority = ensureAuthority(AuthoritiesConstants.HR_SPECIALIST);
-        assignPermissionsToAuthority(
-            hrSpecialistAuthority,
-            Set.of(
-                PermissionsConstants.VIEW_DASHBOARD,
-                PermissionsConstants.ACCESS_API,
-                PermissionsConstants.READ_EMPLOYEE,
-                PermissionsConstants.UPDATE_EMPLOYEE
-            )
-        );
-
-        Authority payrollAdminAuthority = ensureAuthority(AuthoritiesConstants.PAYROLL_ADMIN);
-        assignPermissionsToAuthority(
-            payrollAdminAuthority,
-            Set.of(
-                PermissionsConstants.VIEW_DASHBOARD,
-                PermissionsConstants.ACCESS_API,
-                PermissionsConstants.READ_EMPLOYEE,
-                PermissionsConstants.CREATE_PAYROLL_RUN,
-                PermissionsConstants.VIEW_PAYROLL_RUN,
-                PermissionsConstants.APPROVE_PAYROLL,
-                PermissionsConstants.PROCESS_PAYROLL,
-                PermissionsConstants.MANAGE_PAY_COMPONENTS,
-                PermissionsConstants.MANAGE_DEDUCTIONS,
-                PermissionsConstants.MANAGE_BENEFITS,
-                PermissionsConstants.MANAGE_TAX_BRACKETS,
-                PermissionsConstants.VIEW_PAYSLIPS,
-                PermissionsConstants.GENERATE_PAYSLIPS
-            )
-        );
-
-        // Create and assign permissions for Employee authority
-        Authority employeeAuthority = ensureAuthority(AuthoritiesConstants.EMPLOYEE);
-        assignPermissionsToAuthority(
-            employeeAuthority,
-            Set.of(
-                PermissionsConstants.VIEW_DASHBOARD,
-                PermissionsConstants.ACCESS_API,
-                PermissionsConstants.VIEW_OWN_PROFILE,
-                PermissionsConstants.UPDATE_OWN_PROFILE,
-                PermissionsConstants.VIEW_OWN_PAYSLIPS,
-                PermissionsConstants.VIEW_OWN_TRAINING,
-                PermissionsConstants.REGISTER_FOR_TRAINING,
-                PermissionsConstants.VIEW_OWN_BENEFITS,
-                PermissionsConstants.MANAGE_OWN_BENEFITS,
-                PermissionsConstants.VIEW_OWN_LEAVE,
-                PermissionsConstants.REQUEST_LEAVE,
-                PermissionsConstants.VIEW_OWN_ATTENDANCE,
-                PermissionsConstants.VIEW_OWN_PERFORMANCE,
-                PermissionsConstants.VIEW_OWN_DOCUMENTS,
-                PermissionsConstants.UPLOAD_OWN_DOCUMENTS
-            )
-        );
-
-        // Refresh cache after making changes
-        refreshPermissionCache();
+    /** Drop every tenant's cache (e.g. for tests). */
+    public void clearAllCaches() {
+        cache.clear();
     }
 
-    /**
-     * Create a permission if it doesn't already exist in the database.
-     *
-     * @param name the permission name
-     * @param description the permission description
-     * @return the permission entity
-     */
-    @Transactional
-    public Permission createPermissionIfNotExists(String name, String description) {
-        Optional<Permission> existingPermission = permissionRepository.findById(name);
-        if (existingPermission.isPresent()) {
-            return existingPermission.get();
-        }
-
-        Permission permission = new Permission();
-        permission.setName(name);
-        permission.setDescription(description);
-        return permissionRepository.save(permission);
-    }
+    // ==================== queries ====================
 
     /**
-     * Ensure that an authority exists in the database.
-     *
-     * @param name the authority name
-     * @return the authority entity
-     */
-    @Transactional
-    public Authority ensureAuthority(String name) {
-        Optional<Authority> existingAuthority = authorityRepository.findById(name);
-        if (existingAuthority.isPresent()) {
-            return existingAuthority.get();
-        }
-
-        Authority authority = new Authority();
-        authority.setName(name);
-        return authorityRepository.save(authority);
-    }
-
-    /**
-     * Assign a set of permissions to an authority.
-     *
-     * @param authority the authority entity
-     * @param permissionNames the set of permission names to assign
-     */
-    @Transactional
-    public void assignPermissionsToAuthority(Authority authority, Set<String> permissionNames) {
-        Set<Permission> existingPermissions = authority.getPermissions();
-        Set<String> existingPermissionNames = existingPermissions.stream().map(Permission::getName).collect(Collectors.toSet());
-
-        // Add only permissions that don't already exist
-        for (String permissionName : permissionNames) {
-            if (!existingPermissionNames.contains(permissionName)) {
-                Optional<Permission> permission = permissionRepository.findById(permissionName);
-                if (permission.isPresent()) {
-                    existingPermissions.add(permission.get());
-                } else {
-                    log.warn("Permission {} does not exist and cannot be assigned to authority {}", permissionName, authority.getName());
-                }
-            }
-        }
-
-        authority.setPermissions(existingPermissions);
-        authorityRepository.save(authority);
-    }
-
-    /**
-     * Assign all available permissions to an authority.
-     *
-     * @param authority the authority entity
-     */
-    @Transactional
-    public void assignAllPermissionsToAuthority(Authority authority) {
-        List<Permission> allPermissions = permissionRepository.findAll();
-        authority.setPermissions(new HashSet<>(allPermissions));
-        authorityRepository.save(authority);
-    }
-
-    /**
-     * Check if an authority has a specific permission.
+     * Check if an authority grants a permission <em>in the calling tenant</em>.
      *
      * @param authority the authority name to check
      * @param permission the permission name to check for
-     * @return true if the authority has the permission, false otherwise
+     * @return true if the authority grants the permission in the current tenant
      */
     public boolean hasPermission(String authority, String permission) {
-        Set<String> permissions = authorityPermissionCache.get(authority);
+        Set<String> permissions = tenantMap().get(authority);
         return permissions != null && permissions.contains(permission);
     }
 
     /**
-     * Get all permissions for an authority.
+     * Get all permissions granted by an authority in the calling tenant.
      *
-     * @param authority the authority name to get permissions for
-     * @return a set of permission names for the authority, or an empty set if the authority doesn't exist
+     * @param authority the authority name
+     * @return an unmodifiable set of permission names, empty if the authority is unknown
      */
     public Set<String> getPermissionsForAuthority(String authority) {
-        Set<String> permissions = authorityPermissionCache.get(authority);
-        return permissions != null ? Collections.unmodifiableSet(permissions) : Collections.emptySet();
+        return tenantMap().getOrDefault(authority, Set.of());
     }
 
     /**
-     * Get all authorities that have a specific permission.
+     * Get the union of permissions granted by a set of authorities in the calling tenant.
+     * Convenience for resolving a user's effective permissions from their roles.
      *
-     * @param permission the permission name to find authorities for
-     * @return a set of authority names that have the permission
+     * @param authorities the authority names
+     * @return an unmodifiable set of effective permission names
+     */
+    public Set<String> getPermissionsForAuthorities(Collection<String> authorities) {
+        Map<String, Set<String>> map = tenantMap();
+        Set<String> effective = new HashSet<>();
+        for (String authority : authorities) {
+            Set<String> perms = map.get(authority);
+            if (perms != null) {
+                effective.addAll(perms);
+            }
+        }
+        return Collections.unmodifiableSet(effective);
+    }
+
+    /**
+     * Get all authorities that grant a permission in the calling tenant.
+     *
+     * @param permission the permission name
+     * @return a set of authority names that grant the permission
      */
     public Set<String> getAuthoritiesWithPermission(String permission) {
         Set<String> authorities = new HashSet<>();
-        for (Map.Entry<String, Set<String>> entry : authorityPermissionCache.entrySet()) {
+        for (Map.Entry<String, Set<String>> entry : tenantMap().entrySet()) {
             if (entry.getValue().contains(permission)) {
                 authorities.add(entry.getKey());
             }

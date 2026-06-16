@@ -608,5 +608,27 @@ public final class AuthoritiesConstants {
      */
     public static final String INTEGRATION_ADMIN = "ROLE_INTEGRATION_ADMIN";
 
+    // ==================== PLATFORM (SaaS OWNER) ROLES ====================
+
+    /**
+     * Platform owner — operates the SaaS itself, not any single business tenant.
+     * <p>
+     * Holds every platform permission (tenant provisioning, cross-tenant billing,
+     * impersonation, platform metrics). Seeded <strong>only</strong> in the platform tenant
+     * DB (see {@code MultiTenantProperties#getPlatformTenant()}); never in a business tenant,
+     * so a tenant's own {@link #ADMIN} can never reach {@code /api/platform/**}.
+     * </p>
+     */
+    public static final String PLATFORM_OWNER = "ROLE_PLATFORM_OWNER";
+
+    /**
+     * Platform operations staff (support / provisioning) — a subset of {@link #PLATFORM_OWNER}.
+     * <p>
+     * Can provision and view tenants and platform billing, but not destructive owner-only
+     * actions. Seeded only in the platform tenant DB.
+     * </p>
+     */
+    public static final String PLATFORM_ADMIN = "ROLE_PLATFORM_ADMIN";
+
     private AuthoritiesConstants() {}
 }

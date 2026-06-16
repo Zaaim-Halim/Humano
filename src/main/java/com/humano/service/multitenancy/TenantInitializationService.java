@@ -1,5 +1,6 @@
 package com.humano.service.multitenancy;
 
+import com.humano.config.multitenancy.MultiTenantProperties;
 import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.enumeration.hr.ApprovalType;
 import com.humano.domain.enumeration.hr.ApproverType;
@@ -21,6 +22,9 @@ import com.humano.repository.payroll.PayrollCalendarRepository;
 import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.PermissionRepository;
 import com.humano.repository.shared.UserRepository;
+import com.humano.security.AuthoritiesConstants;
+import com.humano.security.DefaultRolePermissions;
+import com.humano.security.PlatformRolePermissions;
 import com.humano.service.hr.workflow.ApprovalChainValidator;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -53,22 +57,13 @@ public class TenantInitializationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantInitializationService.class);
 
-    /** Roles seeded for every new tenant. ROLE_USER stays so JHipster's baseline keeps working. */
-    public static final List<String> DEFAULT_ROLES = List.of("ROLE_ADMIN", "ROLE_USER", "ROLE_HR", "ROLE_MANAGER", "ROLE_EMPLOYEE");
-
     /**
-     * Baseline permission codes + which roles get them. Keep the alphabet small — finer-grained
-     * permissions can come later via {@code PermissionsConstants} . Order is preserved by
-     * {@link LinkedHashMap} so the bind step is deterministic.
+     * Roles + permissions seeded for every new tenant come from the single source of truth
+     * {@link DefaultRolePermissions} (and {@link PlatformRolePermissions} for the platform
+     * tenant). This anchors seeding to the same {@code AuthoritiesConstants}/
+     * {@code PermissionsConstants} the {@code @RequirePermission} gates check, eliminating the
+     * historical drift where seeded codes never matched gated codes.
      */
-    private static final Map<String, Set<String>> DEFAULT_PERMISSIONS = new LinkedHashMap<>();
-
-    static {
-        DEFAULT_PERMISSIONS.put("EMPLOYEE_READ", Set.of("ROLE_ADMIN", "ROLE_HR", "ROLE_MANAGER", "ROLE_EMPLOYEE"));
-        DEFAULT_PERMISSIONS.put("EMPLOYEE_WRITE", Set.of("ROLE_ADMIN", "ROLE_HR"));
-        DEFAULT_PERMISSIONS.put("PAYROLL_RUN", Set.of("ROLE_ADMIN", "ROLE_HR"));
-        DEFAULT_PERMISSIONS.put("BILLING_VIEW", Set.of("ROLE_ADMIN"));
-    }
 
     /**
      * Default approval chains seeded for every new tenant . Two-step DIRECT_MANAGER →
@@ -93,6 +88,7 @@ public class TenantInitializationService {
     private final PayComponentRepository payComponentRepository;
     private final ApprovalChainConfigRepository approvalChainConfigRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MultiTenantProperties multiTenantProperties;
     private final TransactionTemplate tenantTx;
 
     public TenantInitializationService(
@@ -103,6 +99,7 @@ public class TenantInitializationService {
         PayComponentRepository payComponentRepository,
         ApprovalChainConfigRepository approvalChainConfigRepository,
         PasswordEncoder passwordEncoder,
+        MultiTenantProperties multiTenantProperties,
         @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager
     ) {
         this.authorityRepository = authorityRepository;
@@ -112,6 +109,7 @@ public class TenantInitializationService {
         this.payComponentRepository = payComponentRepository;
         this.approvalChainConfigRepository = approvalChainConfigRepository;
         this.passwordEncoder = passwordEncoder;
+        this.multiTenantProperties = multiTenantProperties;
         this.tenantTx = new TransactionTemplate(tenantTransactionManager);
     }
 
@@ -125,9 +123,10 @@ public class TenantInitializationService {
         String previousTenant = TenantContext.getCurrentTenant();
         TenantContext.setCurrentTenant(tenant.getSubdomain());
         try {
+            Map<String, Set<String>> rolePermissions = effectiveRolePermissions(tenant);
             tenantTx.executeWithoutResult(status -> {
-                Map<String, Authority> roles = seedAuthorities();
-                seedPermissions(roles);
+                Map<String, Authority> roles = seedAuthorities(rolePermissions.keySet());
+                seedPermissions(rolePermissions, roles);
                 seedAdminUser(tenant, registration, roles);
                 seedDefaultConfiguration(tenant);
             });
@@ -141,9 +140,27 @@ public class TenantInitializationService {
         }
     }
 
-    private Map<String, Authority> seedAuthorities() {
+    /**
+     * The role → permission mapping to seed for this tenant: the business catalog
+     * ({@link DefaultRolePermissions}) for every tenant, plus the platform catalog
+     * ({@link PlatformRolePermissions}) when this is the platform tenant.
+     */
+    private Map<String, Set<String>> effectiveRolePermissions(Tenant tenant) {
+        Map<String, Set<String>> mapping = new LinkedHashMap<>(DefaultRolePermissions.rolePermissions());
+        if (isPlatformTenant(tenant)) {
+            mapping.putAll(PlatformRolePermissions.rolePermissions());
+        }
+        return mapping;
+    }
+
+    private boolean isPlatformTenant(Tenant tenant) {
+        String platform = multiTenantProperties.getPlatformTenant();
+        return platform != null && platform.equalsIgnoreCase(tenant.getSubdomain());
+    }
+
+    private Map<String, Authority> seedAuthorities(Set<String> roleNames) {
         Map<String, Authority> roles = new LinkedHashMap<>();
-        for (String name : DEFAULT_ROLES) {
+        for (String name : roleNames) {
             Authority role = authorityRepository
                 .findById(name)
                 .orElseGet(() -> {
@@ -157,8 +174,13 @@ public class TenantInitializationService {
         return roles;
     }
 
-    private void seedPermissions(Map<String, Authority> roles) {
-        DEFAULT_PERMISSIONS.forEach((permName, owningRoles) -> {
+    private void seedPermissions(Map<String, Set<String>> rolePermissions, Map<String, Authority> roles) {
+        // Distinct permission names across all roles, created once.
+        Set<String> allPermissions = new LinkedHashSet<>();
+        rolePermissions.values().forEach(allPermissions::addAll);
+
+        Map<String, Permission> permissions = new LinkedHashMap<>();
+        for (String permName : allPermissions) {
             Permission permission = permissionRepository
                 .findById(permName)
                 .orElseGet(() -> {
@@ -166,16 +188,27 @@ public class TenantInitializationService {
                     p.setName(permName);
                     return permissionRepository.save(p);
                 });
-            // Bind permission to its roles (owned side is Authority#permissions)
-            for (String roleName : owningRoles) {
-                Authority role = roles.get(roleName);
-                if (role != null && role.getPermissions().stream().noneMatch(p -> p.getName().equals(permName))) {
-                    role.getPermissions().add(permission);
-                    authorityRepository.save(role);
+            permissions.put(permName, permission);
+        }
+
+        // Bind each role's permissions (owned side is Authority#permissions).
+        rolePermissions.forEach((roleName, permNames) -> {
+            Authority role = roles.get(roleName);
+            if (role == null) {
+                return;
+            }
+            boolean changed = false;
+            for (String permName : permNames) {
+                if (role.getPermissions().stream().noneMatch(p -> p.getName().equals(permName))) {
+                    role.getPermissions().add(permissions.get(permName));
+                    changed = true;
                 }
             }
+            if (changed) {
+                authorityRepository.save(role);
+            }
         });
-        LOG.debug("Seeded {} permissions and bound them to roles", DEFAULT_PERMISSIONS.size());
+        LOG.debug("Seeded {} permissions and bound them to {} roles", permissions.size(), roles.size());
     }
 
     private void seedAdminUser(Tenant tenant, TenantRegistrationDTO registration, Map<String, Authority> roles) {
@@ -194,7 +227,14 @@ public class TenantInitializationService {
         admin.setLangKey("en");
         admin.setCreatedBy("system");
         admin.setCreatedDate(Instant.now());
-        admin.setAuthorities(new LinkedHashSet<>(List.of(roles.get("ROLE_ADMIN"), roles.get("ROLE_USER"))));
+        Set<Authority> adminAuthorities = new LinkedHashSet<>(
+            List.of(roles.get(AuthoritiesConstants.ADMIN), roles.get(AuthoritiesConstants.USER))
+        );
+        // The platform tenant's admin is also the SaaS platform owner.
+        if (isPlatformTenant(tenant) && roles.containsKey(AuthoritiesConstants.PLATFORM_OWNER)) {
+            adminAuthorities.add(roles.get(AuthoritiesConstants.PLATFORM_OWNER));
+        }
+        admin.setAuthorities(adminAuthorities);
         userRepository.save(admin);
         LOG.info("Created admin user '{}' for tenant '{}'", login, tenant.getSubdomain());
     }

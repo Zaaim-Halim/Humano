@@ -7,7 +7,8 @@ import com.humano.domain.tenant.Tenant;
 import com.humano.dto.tenant.TenantRegistrationDTO;
 import com.humano.dto.tenant.responses.TenantResponse;
 import com.humano.repository.tenant.TenantRepository;
-import com.humano.security.annotation.RequireAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.multitenancy.TenantProvisioningService;
 import com.humano.service.tenant.TenantService;
@@ -35,7 +36,6 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/platform/tenants")
-@RequireAdmin
 public class PlatformTenantResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(PlatformTenantResource.class);
@@ -59,6 +59,7 @@ public class PlatformTenantResource {
 
     /** Provision a new tenant. Idempotent / resumable for matching subdomain . */
     @PostMapping
+    @RequirePermission(PermissionsConstants.PROVISION_TENANT)
     public ResponseEntity<TenantResponse> provision(@Valid @RequestBody TenantRegistrationDTO request) {
         LOG.info("REST request to provision tenant subdomain={}", request.getSubdomain());
         Tenant tenant = provisioningService.provisionTenant(request);
@@ -68,6 +69,7 @@ public class PlatformTenantResource {
 
     /** List tenants, optionally filtered by status. */
     @GetMapping
+    @RequirePermission(PermissionsConstants.VIEW_PLATFORM_TENANTS)
     public Page<TenantResponse> list(@RequestParam(required = false) TenantStatus status, Pageable pageable) {
         LOG.debug("REST request to list tenants status={} page={}", status, pageable);
         return tenantService.getTenantsByStatus(status, pageable);
@@ -75,6 +77,7 @@ public class PlatformTenantResource {
 
     /** Tenant details + live DB pool stats for the active Hikari pool (if loaded). */
     @GetMapping("/{id}")
+    @RequirePermission(PermissionsConstants.VIEW_PLATFORM_TENANTS)
     public TenantDetailResponse getOne(@PathVariable("id") UUID id) {
         Tenant tenant = tenantRepository.findById(id).orElseThrow(() -> EntityNotFoundException.create("Tenant", id));
         ConnectionPoolStats stats = dataSourceProvider.getPoolStats().get(tenant.getSubdomain());
@@ -82,6 +85,7 @@ public class PlatformTenantResource {
     }
 
     @PostMapping("/{id}/suspend")
+    @RequirePermission(PermissionsConstants.SUSPEND_TENANT)
     public ResponseEntity<Void> suspend(@PathVariable("id") UUID id) {
         LOG.info("REST request to suspend tenant {}", id);
         provisioningService.suspendTenant(id);
@@ -89,6 +93,7 @@ public class PlatformTenantResource {
     }
 
     @PostMapping("/{id}/activate")
+    @RequirePermission(PermissionsConstants.SUSPEND_TENANT)
     public ResponseEntity<Void> activate(@PathVariable("id") UUID id) {
         LOG.info("REST request to activate tenant {}", id);
         provisioningService.activateTenant(id);
@@ -96,6 +101,7 @@ public class PlatformTenantResource {
     }
 
     @DeleteMapping("/{id}")
+    @RequirePermission(PermissionsConstants.DEPROVISION_TENANT)
     public ResponseEntity<Void> deprovision(@PathVariable("id") UUID id) {
         LOG.warn("REST request to deprovision tenant {}", id);
         provisioningService.deprovisionTenant(id);

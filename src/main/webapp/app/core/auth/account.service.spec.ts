@@ -14,7 +14,7 @@ import { ApplicationConfigService } from 'app/core/config/application-config.ser
 
 import { AccountService } from './account.service';
 
-function accountWithAuthorities(authorities: string[]): Account {
+function accountWithAuthorities(authorities: string[], permissions: string[] = []): Account {
   return {
     activated: true,
     authorities,
@@ -24,6 +24,7 @@ function accountWithAuthorities(authorities: string[]): Account {
     lastName: '',
     login: '',
     imageUrl: '',
+    permissions,
   };
 }
 
@@ -245,6 +246,33 @@ describe('Account Service', () => {
 
         expect(hasAuthority).toBe(true);
       });
+    });
+  });
+
+  describe('hasAnyPermission / hasPermission', () => {
+    it('should return false if user is not logged', () => {
+      expect(service.hasPermission('VIEW_PAYSLIPS')).toBe(false);
+      expect(service.hasAnyPermission(['VIEW_PAYSLIPS'])).toBe(false);
+    });
+
+    it('should return false if user is logged but lacks the permission', () => {
+      service.authenticate(accountWithAuthorities([Authority.USER], ['VIEW_DASHBOARD']));
+
+      expect(service.hasPermission('VIEW_PAYSLIPS')).toBe(false);
+      expect(service.hasAnyPermission(['VIEW_PAYSLIPS', 'GENERATE_PAYSLIPS'])).toBe(false);
+    });
+
+    it('should return true if user holds the permission (string or array)', () => {
+      service.authenticate(accountWithAuthorities([Authority.USER], ['VIEW_DASHBOARD', 'VIEW_PAYSLIPS']));
+
+      expect(service.hasPermission('VIEW_PAYSLIPS')).toBe(true);
+      expect(service.hasAnyPermission(['GENERATE_PAYSLIPS', 'VIEW_PAYSLIPS'])).toBe(true);
+    });
+
+    it('should return false when the account has no permissions array', () => {
+      service.authenticate(accountWithAuthorities([Authority.USER]));
+
+      expect(service.hasPermission('VIEW_PAYSLIPS')).toBe(false);
     });
   });
 });

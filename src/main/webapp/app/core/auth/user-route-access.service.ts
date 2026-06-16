@@ -12,14 +12,19 @@ export const UserRouteAccessService: CanActivateFn = (next: ActivatedRouteSnapsh
   return accountService.identity().pipe(
     map(account => {
       if (account) {
-        const { authorities } = next.data;
+        const { authorities, permissions } = next.data;
 
-        if (!authorities || authorities.length === 0 || accountService.hasAnyAuthority(authorities)) {
+        const authoritiesOk = !authorities || authorities.length === 0 || accountService.hasAnyAuthority(authorities);
+        const permissionsOk = !permissions || permissions.length === 0 || accountService.hasAnyPermission(permissions);
+
+        // A route may gate on authorities, permissions, or both; the user must satisfy
+        // every gate that is present.
+        if (authoritiesOk && permissionsOk) {
           return true;
         }
 
         if (isDevMode()) {
-          console.error('User does not have any of the required authorities:', authorities);
+          console.error('User does not satisfy the required access:', { authorities, permissions });
         }
         router.navigate(['accessdenied']);
         return false;

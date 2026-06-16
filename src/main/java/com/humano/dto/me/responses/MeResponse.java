@@ -8,7 +8,8 @@ import java.util.stream.Collectors;
 
 /**
  * Returned from {@code GET /api/account} — the current user's view of their
- * own record. Includes authorities (read-only here) so the SPA can adapt UI
+ * own record. Includes both authorities (roles) and the effective permissions
+ * derived from those roles, so the SPA can gate UI on fine-grained permissions
  * without a follow-up call.
  */
 public record MeResponse(
@@ -20,9 +21,15 @@ public record MeResponse(
     String imageUrl,
     boolean activated,
     String langKey,
-    Set<String> authorities
+    Set<String> authorities,
+    Set<String> permissions
 ) {
-    public static MeResponse fromUser(User user) {
+    /**
+     * Build the response from the user plus the effective permissions resolved
+     * for that user's authorities in the current tenant (see
+     * {@code AuthorityPermissionService#getPermissionsForAuthorities}).
+     */
+    public static MeResponse fromUser(User user, Set<String> permissions) {
         return new MeResponse(
             user.getId(),
             user.getLogin(),
@@ -32,7 +39,8 @@ public record MeResponse(
             user.getImageUrl(),
             user.isActivated(),
             user.getLangKey(),
-            user.getAuthorities().stream().map(Authority::getName).collect(Collectors.toUnmodifiableSet())
+            user.getAuthorities().stream().map(Authority::getName).collect(Collectors.toUnmodifiableSet()),
+            permissions
         );
     }
 }
