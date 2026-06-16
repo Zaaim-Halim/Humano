@@ -1,0 +1,319 @@
+<div class="lp">
+  <!-- ============ Nav ============ -->
+  <header class="lp-nav">
+    <div class="lp-container lp-nav__inner">
+      <a routerLink="/" class="lp-wordmark">humano<span class="lp-dot" aria-hidden="true"></span></a>
+
+      <nav class="lp-nav__links" aria-label="Primary">
+        @for (link of navLinks; track link) {
+          <a class="lp-nav__link" href="#">{{ link }}</a>
+        }
+      </nav>
+
+      <div class="lp-nav__actions">
+        <button
+          type="button"
+          class="hum-btn hum-btn--icon hum-btn--ghost"
+          [attr.aria-label]="'humano.shell.toggleTheme' | translate"
+          (click)="theme.toggleTheme()"
+        >
+          <lucide-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" [size]="16" />
+        </button>
+
+        @if (authenticated()) {
+          <hum-button variant="primary" routerLink="/dashboard" trailingIcon="arrow-right">Open app</hum-button>
+        } @else {
+          <hum-button variant="ghost" routerLink="/login">Sign in</hum-button>
+          <hum-button variant="primary" routerLink="/register">Start free trial</hum-button>
+        }
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ Hero ============ -->
+    <section class="lp-section">
+      <div class="lp-container lp-hero">
+        <div class="lp-hero__copy">
+          <span class="lp-chip">
+            <span class="lp-chip__tag">New</span>
+            <span>Multi-country payroll, now in 150+ regions</span>
+          </span>
+          <h1 class="lp-hero__title">HR &amp; payroll your team can <span class="lp-accent">actually trust</span>.</h1>
+          <p class="lp-hero__sub">
+            Humano is the calm system of record for people, payroll and time — one workspace for HR, managers and employees, in every
+            country you operate.
+          </p>
+          <div class="lp-hero__cta">
+            <hum-button variant="primary" size="lg" routerLink="/register">Start free trial</hum-button>
+            <hum-button variant="secondary" size="lg">Book a demo</hum-button>
+          </div>
+          <p class="lp-trust">
+            <lucide-icon name="check" [size]="16" class="lp-trust__check" />
+            No credit card required · 14-day trial · SOC 2 Type II
+          </p>
+        </div>
+
+        <!-- Product window mock -->
+        <div class="lp-mock" role="img" aria-label="Humano payroll dashboard preview">
+          <div class="lp-mock__bar">
+            <span class="lp-mock__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="lp-mock__addr"><lucide-icon name="lock" [size]="11" /> app.humano.com/payroll</span>
+          </div>
+          <div class="lp-mock__body">
+            <aside class="lp-mock__side">
+              <div class="lp-mock__brand">humano<span class="lp-dot" aria-hidden="true"></span></div>
+              <span class="lp-mock__nav">Overview</span>
+              <span class="lp-mock__nav">People</span>
+              <span class="lp-mock__nav is-active">Payroll</span>
+              <span class="lp-mock__nav">Time off</span>
+              <span class="lp-mock__nav">Billing</span>
+            </aside>
+            <div class="lp-mock__main">
+              <div class="lp-mock__head">March payroll run</div>
+              <div class="lp-mock__kpis">
+                <div class="lp-mock__kpi">
+                  <span class="lp-mock__kpi-label">Net pay</span>
+                  <span class="lp-mock__kpi-val tabular-nums">$486,204 <lucide-icon name="trending-up" [size]="13" /></span>
+                </div>
+                <div class="lp-mock__kpi">
+                  <span class="lp-mock__kpi-label">Headcount</span>
+                  <span class="lp-mock__kpi-val tabular-nums">312 <lucide-icon name="trending-up" [size]="13" /></span>
+                </div>
+                <div class="lp-mock__kpi">
+                  <span class="lp-mock__kpi-label">Taxes</span>
+                  <span class="lp-mock__kpi-val lp-mock__kpi-val--down tabular-nums"
+                    >$92,418 <lucide-icon name="trending-down" [size]="13"
+                  /></span>
+                </div>
+              </div>
+              <div class="lp-mock__table">
+                <div class="lp-mock__row">
+                  <hum-avatar name="Ava Romano" size="sm" />
+                  <span class="lp-mock__name">Ava Romano</span>
+                  <span class="lp-mock__amt tabular-nums">$5,420</span>
+                  <hum-badge tone="success" [dot]="false">Paid</hum-badge>
+                </div>
+                <div class="lp-mock__row">
+                  <hum-avatar name="Diego Santos" size="sm" />
+                  <span class="lp-mock__name">Diego Santos</span>
+                  <span class="lp-mock__amt tabular-nums">$4,180</span>
+                  <hum-badge tone="success" [dot]="false">Paid</hum-badge>
+                </div>
+                <div class="lp-mock__row">
+                  <hum-avatar name="Mei Chen" size="sm" />
+                  <span class="lp-mock__name">Mei Chen</span>
+                  <span class="lp-mock__amt tabular-nums">$6,015</span>
+                  <hum-badge tone="warning" [dot]="false">Pending</hum-badge>
+                </div>
+                <div class="lp-mock__row">
+                  <hum-avatar name="Omar Haddad" size="sm" />
+                  <span class="lp-mock__name">Omar Haddad</span>
+                  <span class="lp-mock__amt tabular-nums">$3,790</span>
+                  <hum-badge tone="info" [dot]="false">Processing</hum-badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Stats ============ -->
+    <section class="lp-section lp-section--surface lp-section--tight">
+      <div class="lp-container lp-stats">
+        @for (stat of stats; track stat.label) {
+          <div class="lp-stat">
+            <div class="lp-stat__figure tabular-nums">{{ stat.figure }}</div>
+            <div class="lp-stat__label">{{ stat.label }}</div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ============ Personas ============ -->
+    <section class="lp-section">
+      <div class="lp-container">
+        <div class="lp-head">
+          <span class="lp-eyebrow">Built for everyone</span>
+          <h2 class="lp-h2">One system, three jobs done well</h2>
+          <p class="lp-head__sub">HR, managers and employees each get a surface tuned to their work — on the same source of truth.</p>
+        </div>
+        <div class="lp-grid-3">
+          @for (p of personas; track p.role) {
+            <article class="lp-card lp-card--hover">
+              <span class="lp-tile"><lucide-icon [name]="p.icon" [size]="20" /></span>
+              <span class="lp-card__role">{{ p.role }}</span>
+              <h3 class="lp-card__title">{{ p.title }}</h3>
+              <ul class="lp-checklist">
+                @for (point of p.points; track point) {
+                  <li>
+                    <lucide-icon name="check" [size]="16" /> <span>{{ point }}</span>
+                  </li>
+                }
+              </ul>
+            </article>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Features ============ -->
+    <section class="lp-section lp-section--surface">
+      <div class="lp-container">
+        <div class="lp-head">
+          <span class="lp-eyebrow">The platform</span>
+          <h2 class="lp-h2">Everything HR &amp; payroll needs</h2>
+          <p class="lp-head__sub">A complete suite that replaces the spreadsheets and point tools your team has outgrown.</p>
+        </div>
+        <div class="lp-grid-3">
+          @for (f of features; track f.title) {
+            <article class="lp-card">
+              <span class="lp-tile"><lucide-icon [name]="f.icon" [size]="20" /></span>
+              <h3 class="lp-card__title">{{ f.title }}</h3>
+              <p class="lp-card__desc">{{ f.desc }}</p>
+            </article>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Testimonials ============ -->
+    <section class="lp-section">
+      <div class="lp-container lp-quotes">
+        <figure class="lp-quote lp-quote--feature">
+          <blockquote>“We consolidated three tools into Humano and cut our monthly payroll close from two days to two hours.”</blockquote>
+          <figcaption>
+            <span class="lp-quote__avatar lp-quote__avatar--light">RA</span>
+            <span>
+              <span class="lp-quote__name">Renata Alves</span>
+              <span class="lp-quote__role">Head of People · Lumen Labs</span>
+            </span>
+          </figcaption>
+        </figure>
+        <div class="lp-quote-stack">
+          <figure class="lp-quote">
+            <blockquote>“Approvals that used to live in my inbox now route themselves. My managers actually use it.”</blockquote>
+            <figcaption>
+              <hum-avatar name="James Okoro" size="sm" />
+              <span>
+                <span class="lp-quote__name">James Okoro</span>
+                <span class="lp-quote__role">COO · Northwind</span>
+              </span>
+            </figcaption>
+          </figure>
+          <figure class="lp-quote">
+            <blockquote>“Onboarding a new country took an afternoon, not a quarter. Compliance just works.”</blockquote>
+            <figcaption>
+              <hum-avatar name="Sofia Marin" size="sm" />
+              <span>
+                <span class="lp-quote__name">Sofia Marin</span>
+                <span class="lp-quote__role">People Ops · Vela</span>
+              </span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Pricing ============ -->
+    <section class="lp-section lp-section--surface">
+      <div class="lp-container">
+        <div class="lp-head">
+          <span class="lp-eyebrow">Pricing</span>
+          <h2 class="lp-h2">Simple, per-employee pricing</h2>
+          <p class="lp-head__sub">Start free for 14 days. Scale to multi-country payroll when you're ready.</p>
+        </div>
+        <div class="lp-grid-3 lp-pricing">
+          @for (tier of tiers; track tier.name) {
+            <article class="lp-tier" [class.lp-tier--featured]="tier.featured">
+              @if (tier.featured) {
+                <span class="lp-tier__flag">Most popular</span>
+              }
+              <h3 class="lp-tier__name">{{ tier.name }}</h3>
+              <p class="lp-tier__desc">{{ tier.desc }}</p>
+              <div class="lp-tier__price">
+                <span class="lp-tier__amount tabular-nums">{{ tier.price }}</span>
+                @if (tier.unit) {
+                  <span class="lp-tier__unit">{{ tier.unit }}</span>
+                }
+              </div>
+              <p class="lp-tier__note">{{ tier.note }}</p>
+              <ul class="lp-checklist lp-tier__features">
+                @for (feat of tier.features; track feat) {
+                  <li>
+                    <lucide-icon name="check" [size]="16" /> <span>{{ feat }}</span>
+                  </li>
+                }
+              </ul>
+              <hum-button [variant]="tier.featured ? 'primary' : 'secondary'" size="lg" [block]="true" routerLink="/register">
+                {{ tier.cta }}
+              </hum-button>
+            </article>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FAQ ============ -->
+    <section class="lp-section">
+      <div class="lp-container lp-faq">
+        <div class="lp-head">
+          <span class="lp-eyebrow">FAQ</span>
+          <h2 class="lp-h2">Questions, answered</h2>
+        </div>
+        <div class="lp-faq__list">
+          @for (faq of faqs; track faq.q; let i = $index) {
+            <div class="lp-faq__item" [class.is-open]="openFaq() === i">
+              <button type="button" class="lp-faq__q" [attr.aria-expanded]="openFaq() === i" (click)="toggleFaq(i)">
+                <span>{{ faq.q }}</span>
+                <lucide-icon name="plus" [size]="18" class="lp-faq__icon" />
+              </button>
+              <div class="lp-faq__a" [style.maxHeight]="openFaq() === i ? '12rem' : '0'">
+                <p>{{ faq.a }}</p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Final CTA ============ -->
+    <section class="lp-section lp-section--tight">
+      <div class="lp-container">
+        <div class="lp-cta">
+          <h2 class="lp-cta__title">Ready to run people ops with confidence?</h2>
+          <p class="lp-cta__sub">Start your free trial today — no credit card, no setup project, no risk.</p>
+          <div class="lp-cta__actions">
+            <a class="hum-btn hum-btn--lg lp-btn-on-brand" routerLink="/register">Start free trial</a>
+            <a class="hum-btn hum-btn--lg lp-btn-ghost-brand" href="#">Book a demo</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ Footer ============ -->
+  <footer class="lp-section lp-section--surface lp-section--tight lp-footer">
+    <div class="lp-container">
+      <div class="lp-footer__top">
+        <div class="lp-footer__brand">
+          <a routerLink="/" class="lp-wordmark">humano<span class="lp-dot" aria-hidden="true"></span></a>
+          <p class="lp-footer__tagline">The calm system of record for HR &amp; payroll.</p>
+        </div>
+        @for (col of footerColumns; track col.heading) {
+          <div class="lp-footer__col">
+            <h4 class="lp-footer__heading">{{ col.heading }}</h4>
+            @for (link of col.links; track link) {
+              <a class="lp-footer__link" href="#">{{ link }}</a>
+            }
+          </div>
+        }
+      </div>
+      <div class="lp-footer__bottom">
+        <span>© {{ year }} Humano, Inc. All rights reserved.</span>
+        <span class="lp-footer__status"><span class="lp-footer__status-dot" aria-hidden="true"></span> All systems operational</span>
+      </div>
+    </div>
+  </footer>
+</div>

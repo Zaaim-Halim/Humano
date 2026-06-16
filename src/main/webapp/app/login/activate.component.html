@@ -1,20 +1,24 @@
-<div class="hum-auth">
-  <div class="hum-auth__panel">
-    <div class="hum-auth__brand">humano<span class="hum-side__dot" aria-hidden="true"></span></div>
-    <h1 class="hum-auth__title">{{ 'activate.title' | translate }}</h1>
-
-    @switch (status()) {
-      @case ('success') {
-        <hum-alert tone="success">
-          <span [innerHTML]="'activate.messages.success' | translate"></span><a routerLink="/login">{{ 'login.title' | translate }}</a>
-        </hum-alert>
-      }
-      @case ('error') {
-        <hum-alert tone="danger"><span [innerHTML]="'activate.messages.error' | translate"></span></hum-alert>
-        <div class="hum-auth__links">
-          <a routerLink="/register">{{ 'register.title' | translate }}</a>
-        </div>
-      }
-    }
-  </div>
+<div class="hum-auth__head">
+  @if (status() === 'success') {
+    <span class="hum-auth__icon"><lucide-icon name="check-circle-2" [size]="22" /></span>
+  }
+  <h1 class="hum-auth__title">{{ 'activate.title' | translate }}</h1>
 </div>
+
+@switch (status()) {
+  @case ('pending') {
+    <p class="hum-auth__desc">{{ 'activate.messages.pending' | translate }}</p>
+  }
+  @case ('success') {
+    <hum-alert tone="success"><span [innerHTML]="'activate.messages.success' | translate"></span></hum-alert>
+    <p class="hum-auth__meta">
+      <a routerLink="/login">{{ 'login.title' | translate }}</a>
+    </p>
+  }
+  @case ('error') {
+    <hum-alert tone="danger"><span [innerHTML]="'activate.messages.error' | translate"></span></hum-alert>
+    <p class="hum-auth__meta">
+      <a routerLink="/register">{{ 'register.title' | translate }}</a>
+    </p>
+  }
+}

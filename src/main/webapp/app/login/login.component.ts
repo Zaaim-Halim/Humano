@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { LucideAngularModule } from 'lucide-angular';
 
 import { AlertComponent, ButtonComponent, CheckboxComponent, FormFieldComponent, InputComponent } from 'app/shared/ui';
 
@@ -20,6 +21,7 @@ import { LoginService } from './login.service';
     ReactiveFormsModule,
     RouterLink,
     TranslatePipe,
+    LucideAngularModule,
     AlertComponent,
     ButtonComponent,
     InputComponent,
@@ -35,6 +37,7 @@ export default class LoginComponent {
 
   protected readonly loading = signal(false);
   protected readonly authError = signal(false);
+  protected readonly showPassword = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
     username: ['', [Validators.required]],

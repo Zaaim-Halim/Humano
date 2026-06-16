@@ -1,8 +1,31 @@
 {
   "register": {
     "title": "Registration",
+    "eyebrow": "Start free",
+    "heading": "Create your account",
+    "subtitle": "14-day free trial. No credit card required.",
     "form": {
-      "button": "Register"
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Work email",
+      "password": "Password",
+      "button": "Create account"
+    },
+    "strength": {
+      "label": "Password strength:",
+      "hint": "Use 8+ characters with a mix of letters, numbers & symbols.",
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Good",
+      "strong": "Strong"
+    },
+    "legal": "By creating an account you agree to our <a href=\"#\">Terms</a> and <a href=\"#\">Privacy Policy</a>.",
+    "meta": {
+      "have": "Already have an account?",
+      "signin": "Sign in"
+    },
+    "success": {
+      "heading": "Check your inbox"
     },
     "messages": {
       "validate": {

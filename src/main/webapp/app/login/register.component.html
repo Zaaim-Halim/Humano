@@ -1,76 +1,76 @@
-<div class="hum-auth">
-  <div class="hum-auth__panel">
-    <div class="hum-auth__brand">humano<span class="hum-side__dot" aria-hidden="true"></span></div>
-    <h1 class="hum-auth__title">{{ 'register.title' | translate }}</h1>
-
-    @if (success()) {
-      <hum-alert tone="success"><span [innerHTML]="'register.messages.success' | translate"></span></hum-alert>
-      <div class="hum-auth__links">
-        <a routerLink="/login">{{ 'login.title' | translate }}</a>
-      </div>
-    } @else {
-      @if (errorKey(); as k) {
-        <hum-alert tone="danger"><span [innerHTML]="k | translate"></span></hum-alert>
-      }
-      <form [formGroup]="form" (ngSubmit)="submit()" novalidate style="display: grid; gap: var(--space-4)">
-        <hum-form-field
-          [label]="'global.form.username.label' | translate"
-          controlId="reg-login"
-          [error]="invalid('login') ? ('register.messages.validate.login.required' | translate) : undefined"
-        >
-          <hum-input
-            inputId="reg-login"
-            formControlName="login"
-            [placeholder]="'global.form.username.placeholder' | translate"
-            [invalid]="invalid('login')"
-          />
-        </hum-form-field>
-
-        <hum-form-field
-          [label]="'global.form.email.label' | translate"
-          controlId="reg-email"
-          [error]="invalid('email') ? ('global.messages.validate.email.invalid' | translate) : undefined"
-        >
-          <hum-input
-            inputId="reg-email"
-            type="email"
-            formControlName="email"
-            [placeholder]="'global.form.email.placeholder' | translate"
-            [invalid]="invalid('email')"
-          />
-        </hum-form-field>
-
-        <hum-form-field [label]="'global.form.newpassword.label' | translate" controlId="reg-password">
-          <hum-input
-            inputId="reg-password"
-            type="password"
-            formControlName="password"
-            [placeholder]="'global.form.newpassword.placeholder' | translate"
-            [invalid]="invalid('password')"
-          />
-        </hum-form-field>
-
-        <hum-form-field
-          [label]="'global.form.confirmpassword.label' | translate"
-          controlId="reg-confirm"
-          [error]="mismatch() ? ('global.messages.error.dontmatch' | translate) : undefined"
-        >
-          <hum-input
-            inputId="reg-confirm"
-            type="password"
-            formControlName="confirmPassword"
-            [placeholder]="'global.form.confirmpassword.placeholder' | translate"
-            [invalid]="mismatch()"
-          />
-        </hum-form-field>
-
-        <hum-button type="submit" variant="primary" [block]="true" [loading]="loading()" [disabled]="form.invalid">{{
-          'register.form.button' | translate
-        }}</hum-button>
-      </form>
-      <div class="hum-auth__links">
-        <a routerLink="/login">{{ 'login.title' | translate }}</a>
-      </div>
-    }
+@if (success()) {
+  <div class="hum-auth__head">
+    <span class="hum-auth__icon"><lucide-icon name="mail-check" [size]="22" /></span>
+    <h1 class="hum-auth__title">{{ 'register.success.heading' | translate }}</h1>
+    <p class="hum-auth__desc"><span [innerHTML]="'register.messages.success' | translate"></span></p>
   </div>
-</div>
+  <p class="hum-auth__meta">
+    {{ 'register.meta.have' | translate }} <a routerLink="/login">{{ 'register.meta.signin' | translate }}</a>
+  </p>
+} @else {
+  <div class="hum-auth__head">
+    <span class="hum-auth__eyebrow">{{ 'register.eyebrow' | translate }}</span>
+    <h1 class="hum-auth__title">{{ 'register.heading' | translate }}</h1>
+    <p class="hum-auth__desc">{{ 'register.subtitle' | translate }}</p>
+  </div>
+
+  @if (errorKey(); as k) {
+    <hum-alert tone="danger"><span [innerHTML]="k | translate"></span></hum-alert>
+  }
+
+  <form class="hum-auth__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="hum-auth__row">
+      <hum-form-field [label]="'register.form.firstName' | translate" controlId="reg-first">
+        <hum-input inputId="reg-first" formControlName="firstName" [invalid]="invalid('firstName')" />
+      </hum-form-field>
+      <hum-form-field [label]="'register.form.lastName' | translate" controlId="reg-last">
+        <hum-input inputId="reg-last" formControlName="lastName" [invalid]="invalid('lastName')" />
+      </hum-form-field>
+    </div>
+
+    <hum-form-field
+      [label]="'register.form.email' | translate"
+      controlId="reg-email"
+      [error]="invalid('email') ? ('global.messages.validate.email.invalid' | translate) : undefined"
+    >
+      <hum-input
+        inputId="reg-email"
+        type="email"
+        formControlName="email"
+        [placeholder]="'login.form.email.placeholder' | translate"
+        [invalid]="invalid('email')"
+      />
+    </hum-form-field>
+
+    <hum-form-field [label]="'register.form.password' | translate" controlId="reg-password">
+      <div class="hum-auth__pw">
+        <hum-input
+          inputId="reg-password"
+          [type]="showPassword() ? 'text' : 'password'"
+          formControlName="password"
+          [placeholder]="'global.form.newpassword.placeholder' | translate"
+          [invalid]="invalid('password')"
+        />
+        <button
+          type="button"
+          class="hum-auth__eye"
+          [attr.aria-label]="'login.form.togglePassword' | translate"
+          (click)="showPassword.set(!showPassword())"
+        >
+          <lucide-icon [name]="showPassword() ? 'eye-off' : 'eye'" [size]="16" />
+        </button>
+      </div>
+      <hum-password-strength [value]="passwordValue()" />
+    </hum-form-field>
+
+    <hum-button type="submit" variant="primary" size="lg" [block]="true" [loading]="loading()" [disabled]="form.invalid">
+      {{ 'register.form.button' | translate }}
+    </hum-button>
+
+    <p class="hum-auth__legal"><span [innerHTML]="'register.legal' | translate"></span></p>
+  </form>
+
+  <p class="hum-auth__meta">
+    {{ 'register.meta.have' | translate }} <a routerLink="/login">{{ 'register.meta.signin' | translate }}</a>
+  </p>
+}

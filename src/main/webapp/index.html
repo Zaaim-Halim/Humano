@@ -9,6 +9,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="theme-color" content="#000000" />
     <base href="/" />
+    <script>
+      // Apply the persisted theme before first paint to avoid a flash of the
+      // wrong palette. Mirrors ThemeService (localStorage key "humano-theme").
+      try {
+        if (localStorage.getItem('humano-theme') === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch (e) {
+        /* storage unavailable — fall back to default light theme */
+      }
+    </script>
     <link rel="icon" href="favicon.ico" />
     <link rel="manifest" href="manifest.webapp" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

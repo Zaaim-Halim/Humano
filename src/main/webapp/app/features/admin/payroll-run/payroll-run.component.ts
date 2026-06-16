@@ -6,7 +6,6 @@ import { normalizeHttpError } from 'app/core/api';
 import { AccountService } from 'app/core/auth/account.service';
 import {
   AlertComponent,
-  BadgeComponent,
   ButtonComponent,
   DialogComponent,
   EmptyStateComponent,
@@ -51,7 +50,6 @@ const idle = <T>(): Holder<T> => ({ data: null, loading: false, error: null });
     PageHeaderComponent,
     StepperComponent,
     StatTileComponent,
-    BadgeComponent,
     ButtonComponent,
     DialogComponent,
     AlertComponent,

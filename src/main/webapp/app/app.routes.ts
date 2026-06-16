@@ -27,31 +27,44 @@ const routes: Routes = [
     title: 'UI gallery',
     loadComponent: () => import('./dev/ui-gallery.component'),
   },
-  // Public auth screens (outside the shell chrome).
+  // Public marketing landing — matches exact `/` only; shell children still prefix-match below.
   {
-    path: 'login',
-    title: 'login.title',
-    loadComponent: () => import('./login/login.component'),
+    path: '',
+    pathMatch: 'full',
+    title: 'humano.landing.title',
+    loadComponent: () => import('./features/marketing/landing-page.component'),
   },
+  // Public auth screens — split-screen brand chrome shared via AuthLayoutComponent.
   {
-    path: 'register',
-    title: 'register.title',
-    loadComponent: () => import('./login/register.component'),
-  },
-  {
-    path: 'activate',
-    title: 'activate.title',
-    loadComponent: () => import('./login/activate.component'),
-  },
-  {
-    path: 'account/reset/request',
-    title: 'reset.request.title',
-    loadComponent: () => import('./login/password-reset-request.component'),
-  },
-  {
-    path: 'account/reset/finish',
-    title: 'reset.finish.title',
-    loadComponent: () => import('./login/password-reset-finish.component'),
+    path: '',
+    loadComponent: () => import('./layouts/auth-layout.component'),
+    children: [
+      {
+        path: 'login',
+        title: 'login.title',
+        loadComponent: () => import('./login/login.component'),
+      },
+      {
+        path: 'register',
+        title: 'register.title',
+        loadComponent: () => import('./login/register.component'),
+      },
+      {
+        path: 'activate',
+        title: 'activate.title',
+        loadComponent: () => import('./login/activate.component'),
+      },
+      {
+        path: 'account/reset/request',
+        title: 'reset.request.title',
+        loadComponent: () => import('./login/password-reset-request.component'),
+      },
+      {
+        path: 'account/reset/finish',
+        title: 'reset.finish.title',
+        loadComponent: () => import('./login/password-reset-finish.component'),
+      },
+    ],
   },
   {
     path: '',

@@ -1,11 +1,14 @@
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { LucideAngularModule } from 'lucide-angular';
 
 import { AlertComponent, ButtonComponent, FormFieldComponent, InputComponent } from 'app/shared/ui';
 
 import { AuthPublicService } from './auth-public.service';
+import { PasswordStrengthComponent } from './password-strength.component';
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   return group.get('newPassword')!.value === group.get('confirmPassword')!.value ? null : { dontmatch: true };
@@ -15,7 +18,17 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'hum-password-reset-finish',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, AlertComponent, ButtonComponent, InputComponent, FormFieldComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    TranslatePipe,
+    LucideAngularModule,
+    AlertComponent,
+    ButtonComponent,
+    InputComponent,
+    FormFieldComponent,
+    PasswordStrengthComponent,
+  ],
   templateUrl: './password-reset-finish.component.html',
 })
 export default class PasswordResetFinishComponent {
@@ -28,14 +41,19 @@ export default class PasswordResetFinishComponent {
   protected readonly loading = signal(false);
   protected readonly success = signal(false);
   protected readonly failed = signal(false);
+  protected readonly showNew = signal(false);
+  protected readonly showConfirm = signal(false);
 
   protected readonly form = this.fb.nonNullable.group(
     {
-      newPassword: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(50)]],
+      newPassword: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(50)]],
       confirmPassword: ['', [Validators.required]],
     },
     { validators: passwordsMatch },
   );
+
+  /** Live password value for the strength meter (reactive under zoneless CD). */
+  protected readonly passwordValue = toSignal(this.form.controls.newPassword.valueChanges, { initialValue: '' });
 
   protected invalid(): boolean {
     const c = this.form.controls.newPassword;

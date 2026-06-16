@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { LucideAngularModule } from 'lucide-angular';
 
 import { AlertComponent } from 'app/shared/ui';
 
@@ -10,7 +11,7 @@ import { AuthPublicService } from './auth-public.service';
 @Component({
   selector: 'hum-activate',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe, AlertComponent],
+  imports: [RouterLink, TranslatePipe, LucideAngularModule, AlertComponent],
   templateUrl: './activate.component.html',
 })
 export default class ActivateComponent implements OnInit {

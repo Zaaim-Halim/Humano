@@ -1,10 +1,16 @@
 {
   "login": {
     "title": "Sign in",
+    "eyebrow": "Welcome back",
+    "heading": "Sign in to Humano",
+    "subtitle": "Enter your details to access your workspace.",
     "form": {
+      "email": "Work email",
+      "email.placeholder": "you@company.com",
       "password": "Password",
       "password.placeholder": "Your password",
-      "rememberme": "Remember me",
+      "togglePassword": "Show or hide password",
+      "rememberme": "Keep me signed in",
       "button": "Sign in"
     },
     "messages": {
@@ -13,7 +19,11 @@
       }
     },
     "password": {
-      "forgot": "Did you forget your password?"
+      "forgot": "Forgot password?"
+    },
+    "meta": {
+      "new": "New to Humano?",
+      "create": "Create an account"
     }
   }
 }

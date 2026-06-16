@@ -20,7 +20,6 @@ import {
   BadgeComponent,
   ButtonComponent,
   EmptyStateComponent,
-  PageHeaderComponent,
   SkeletonRowComponent,
   TabItem,
   TabsComponent,
@@ -53,7 +52,6 @@ const idle = <T>(): TabState<T> => ({ data: null, loading: false, error: null })
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TranslatePipe,
-    PageHeaderComponent,
     AvatarComponent,
     BadgeComponent,
     ButtonComponent,

@@ -2,8 +2,16 @@
   "reset": {
     "request": {
       "title": "Reset your password",
+      "subtitle": "Enter the email linked to your account and we'll send a reset link.",
+      "back": "Back to sign in",
       "form": {
-        "button": "Reset password"
+        "button": "Send reset link"
+      },
+      "sent": {
+        "heading": "Check your inbox",
+        "body": "We sent a secure link to",
+        "expiry": "It expires in 30 minutes.",
+        "different": "Use a different email"
       },
       "messages": {
         "info": "Enter the email address you used to register",
@@ -12,8 +20,15 @@
     },
     "finish": {
       "title": "Reset password",
+      "heading": "Set a new password",
+      "subtitle": "Choose a strong password you don't already use elsewhere.",
       "form": {
-        "button": "Validate new password"
+        "button": "Update password"
+      },
+      "done": {
+        "heading": "Password updated",
+        "body": "Your password has been changed. You can now sign in with your new password.",
+        "button": "Continue to sign in"
       },
       "messages": {
         "info": "Choose a new password",
