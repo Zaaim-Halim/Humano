@@ -75,7 +75,10 @@ export interface SortState {
           <tr
             [attr.data-selected]="isRowSelected(row) ? 'true' : null"
             [style.cursor]="clickableRows() ? 'pointer' : null"
+            [attr.tabindex]="clickableRows() ? 0 : null"
             (click)="emitRowClick(row)"
+            (keydown.enter)="clickableRows() && emitRowClick(row)"
+            (keydown.space)="clickableRows() && emitRowClick(row); clickableRows() && $event.preventDefault()"
           >
             @if (selectable()) {
               <td (click)="$event.stopPropagation()">

@@ -54,7 +54,13 @@
           <table class="hum-table">
             <tbody>
               @for (j of joiners(); track j.id) {
-                <tr style="cursor: pointer" (click)="openEmployee(j.id)">
+                <tr
+                  style="cursor: pointer"
+                  tabindex="0"
+                  (click)="openEmployee(j.id)"
+                  (keydown.enter)="openEmployee(j.id)"
+                  (keydown.space)="openEmployee(j.id); $event.preventDefault()"
+                >
                   <td>{{ j.jobTitle ?? '—' }}</td>
                   <td>{{ j.departmentName ?? '—' }}</td>
                 </tr>

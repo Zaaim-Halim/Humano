@@ -38,7 +38,13 @@
       </thead>
       <tbody>
         @for (t of list.items(); track t.id) {
-          <tr style="cursor: pointer" (click)="openDetail(t)">
+          <tr
+            style="cursor: pointer"
+            tabindex="0"
+            (click)="openDetail(t)"
+            (keydown.enter)="openDetail(t)"
+            (keydown.space)="openDetail(t); $event.preventDefault()"
+          >
             <td>{{ t.name }}</td>
             <td>{{ t.subscriptionPlanName ?? '—' }}</td>
             <td><hum-badge [status]="t.status" /></td>
