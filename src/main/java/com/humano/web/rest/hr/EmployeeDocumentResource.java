@@ -3,9 +3,9 @@ package com.humano.web.rest.hr;
 import com.humano.dto.hr.requests.CreateEmployeeDocumentRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeDocumentRequest;
 import com.humano.dto.hr.responses.EmployeeDocumentResponse;
-import com.humano.security.annotation.RequireHrManager;
-import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.EmployeeDocumentService;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -60,7 +60,7 @@ public class EmployeeDocumentResource {
      * @throws IOException if file upload fails
      */
     @PostMapping("/employee/{employeeId}")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.MANAGE_EMPLOYEE_DOCUMENTS)
     public ResponseEntity<EmployeeDocumentResponse> uploadDocument(
         @PathVariable UUID employeeId,
         @Valid @RequestPart("metadata") CreateEmployeeDocumentRequest request,
@@ -83,7 +83,7 @@ public class EmployeeDocumentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated document
      */
     @PutMapping("/{id}")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.MANAGE_EMPLOYEE_DOCUMENTS)
     public ResponseEntity<EmployeeDocumentResponse> updateDocument(
         @PathVariable UUID id,
         @Valid @RequestBody UpdateEmployeeDocumentRequest request
@@ -106,7 +106,7 @@ public class EmployeeDocumentResource {
      * @throws IOException if file upload fails
      */
     @PutMapping("/{id}/file")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.MANAGE_EMPLOYEE_DOCUMENTS)
     public ResponseEntity<EmployeeDocumentResponse> replaceDocumentFile(@PathVariable UUID id, @RequestPart("file") MultipartFile file)
         throws IOException {
         LOG.debug("REST request to replace file for Document: {}", id);
@@ -125,7 +125,7 @@ public class EmployeeDocumentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of documents in body
      */
     @GetMapping
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_EMPLOYEE_DOCUMENTS)
     public ResponseEntity<Page<EmployeeDocumentResponse>> getAllDocuments(Pageable pageable) {
         LOG.debug("REST request to get all Documents");
 
@@ -198,7 +198,7 @@ public class EmployeeDocumentResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_EMPLOYEE_DOCUMENTS)
     public ResponseEntity<Void> deleteDocument(@PathVariable UUID id) {
         LOG.debug("REST request to delete Document: {}", id);
 

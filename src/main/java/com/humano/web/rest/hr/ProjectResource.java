@@ -3,8 +3,9 @@ package com.humano.web.rest.hr;
 import com.humano.dto.hr.requests.CreateProjectRequest;
 import com.humano.dto.hr.requests.UpdateProjectRequest;
 import com.humano.dto.hr.responses.ProjectResponse;
-import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.ProjectService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -49,7 +50,7 @@ public class ProjectResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_PROJECTS)
     public ResponseEntity<ProjectResponse> createProject(@Valid @RequestBody CreateProjectRequest request) throws URISyntaxException {
         LOG.debug("REST request to create Project: {}", request);
 
@@ -68,7 +69,7 @@ public class ProjectResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated project
      */
     @PutMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_PROJECTS)
     public ResponseEntity<ProjectResponse> updateProject(@PathVariable UUID id, @Valid @RequestBody UpdateProjectRequest request) {
         LOG.debug("REST request to update Project: {}", id);
 
@@ -119,7 +120,7 @@ public class ProjectResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_PROJECTS)
     public ResponseEntity<Void> deleteProject(@PathVariable UUID id) {
         LOG.debug("REST request to delete Project: {}", id);
 

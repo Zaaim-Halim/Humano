@@ -5,9 +5,9 @@ import com.humano.dto.hr.requests.SubmitSurveyResponseRequest;
 import com.humano.dto.hr.requests.UpdateSurveyRequest;
 import com.humano.dto.hr.responses.SurveyResponse;
 import com.humano.dto.hr.responses.SurveyResponseResponse;
-import com.humano.security.annotation.RequireHrManager;
-import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.SurveyService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -52,7 +52,7 @@ public class SurveyResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_SURVEYS)
     public ResponseEntity<SurveyResponse> createSurvey(@Valid @RequestBody CreateSurveyRequest request) throws URISyntaxException {
         LOG.debug("REST request to create Survey: {}", request);
 
@@ -71,7 +71,7 @@ public class SurveyResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated survey
      */
     @PutMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_SURVEYS)
     public ResponseEntity<SurveyResponse> updateSurvey(@PathVariable UUID id, @Valid @RequestBody UpdateSurveyRequest request) {
         LOG.debug("REST request to update Survey: {}", id);
 
@@ -89,7 +89,7 @@ public class SurveyResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of surveys in body
      */
     @GetMapping
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_SURVEYS)
     public ResponseEntity<Page<SurveyResponse>> getAllSurveys(Pageable pageable) {
         LOG.debug("REST request to get all Surveys");
 
@@ -139,7 +139,7 @@ public class SurveyResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_SURVEYS)
     public ResponseEntity<Void> deleteSurvey(@PathVariable UUID id) {
         LOG.debug("REST request to delete Survey: {}", id);
 
@@ -183,7 +183,7 @@ public class SurveyResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of survey responses in body
      */
     @GetMapping("/{surveyId}/responses")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_SURVEYS)
     public ResponseEntity<Page<SurveyResponseResponse>> getSurveyResponses(@PathVariable UUID surveyId, Pageable pageable) {
         LOG.debug("REST request to get Survey Responses for survey: {}", surveyId);
 
@@ -200,7 +200,7 @@ public class SurveyResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/responses/{responseId}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_SURVEYS)
     public ResponseEntity<Void> deleteSurveyResponse(@PathVariable UUID responseId) {
         LOG.debug("REST request to delete Survey Response: {}", responseId);
 

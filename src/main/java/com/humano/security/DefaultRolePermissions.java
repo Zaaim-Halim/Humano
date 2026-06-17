@@ -93,6 +93,14 @@ public final class DefaultRolePermissions {
         );
         grant(PermissionsConstants.VIEW_TEAM_MEMBERS, AuthoritiesConstants.MANAGER, AuthoritiesConstants.DEPARTMENT_HEAD);
 
+        // ---- HR resource catalogs (Phase 2 migration) ----
+        grant(PermissionsConstants.MANAGE_SKILLS, AuthoritiesConstants.HR_MANAGER);
+        grant(PermissionsConstants.MANAGE_PROJECTS, AuthoritiesConstants.HR_MANAGER);
+        grant(PermissionsConstants.MANAGE_SURVEYS, AuthoritiesConstants.HR_MANAGER);
+        grant(PermissionsConstants.VIEW_SURVEYS, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.HR_SPECIALIST);
+        grant(PermissionsConstants.MANAGE_EMPLOYEE_DOCUMENTS, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.HR_SPECIALIST);
+        grant(PermissionsConstants.VIEW_EMPLOYEE_DOCUMENTS, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.HR_SPECIALIST);
+
         // ---- Recruitment ----
         grant(PermissionsConstants.CREATE_JOB_POSTING, AuthoritiesConstants.RECRUITER, AuthoritiesConstants.HR_MANAGER);
         grant(PermissionsConstants.VIEW_JOB_POSTING, AuthoritiesConstants.RECRUITER, AuthoritiesConstants.HR_SPECIALIST);
@@ -134,21 +142,48 @@ public final class DefaultRolePermissions {
         }
 
         // ---- Attendance & time tracking ----
-        grant(PermissionsConstants.VIEW_ATTENDANCE, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.ATTENDANCE_ADMIN);
-        grant(PermissionsConstants.MANAGE_ATTENDANCE, AuthoritiesConstants.ATTENDANCE_ADMIN, AuthoritiesConstants.HR_SPECIALIST);
+        grant(
+            PermissionsConstants.VIEW_ATTENDANCE,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST,
+            AuthoritiesConstants.ATTENDANCE_ADMIN
+        );
+        grant(
+            PermissionsConstants.MANAGE_ATTENDANCE,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST,
+            AuthoritiesConstants.ATTENDANCE_ADMIN
+        );
         grant(PermissionsConstants.CONFIGURE_ATTENDANCE_POLICIES, AuthoritiesConstants.ATTENDANCE_ADMIN);
-        grant(PermissionsConstants.VIEW_TIMESHEETS, AuthoritiesConstants.MANAGER, AuthoritiesConstants.TIMESHEET_APPROVER);
+        grant(
+            PermissionsConstants.VIEW_TIMESHEETS,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST,
+            AuthoritiesConstants.MANAGER,
+            AuthoritiesConstants.TIMESHEET_APPROVER
+        );
+        grant(PermissionsConstants.MANAGE_TIMESHEETS, AuthoritiesConstants.HR_MANAGER);
         grant(PermissionsConstants.APPROVE_TIMESHEETS, AuthoritiesConstants.MANAGER, AuthoritiesConstants.TIMESHEET_APPROVER);
         grant(PermissionsConstants.MANAGE_SHIFTS, AuthoritiesConstants.ATTENDANCE_ADMIN, AuthoritiesConstants.MANAGER);
         grant(PermissionsConstants.APPROVE_OVERTIME, AuthoritiesConstants.MANAGER, AuthoritiesConstants.TIMESHEET_APPROVER);
+        grant(
+            PermissionsConstants.VIEW_OVERTIME_RECORDS,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST,
+            AuthoritiesConstants.MANAGER,
+            AuthoritiesConstants.TIMESHEET_APPROVER
+        );
+        grant(PermissionsConstants.MANAGE_OVERTIME_RECORDS, AuthoritiesConstants.HR_MANAGER);
 
         // ---- Leave management ----
         grant(
             PermissionsConstants.VIEW_LEAVE_REQUESTS,
             AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST,
             AuthoritiesConstants.LEAVE_ADMIN,
             AuthoritiesConstants.MANAGER
         );
+        grant(PermissionsConstants.MANAGE_LEAVE_REQUESTS, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.LEAVE_ADMIN);
         grant(PermissionsConstants.APPROVE_LEAVE, AuthoritiesConstants.MANAGER, AuthoritiesConstants.LEAVE_APPROVER);
         grant(PermissionsConstants.CONFIGURE_LEAVE_POLICIES, AuthoritiesConstants.LEAVE_ADMIN, AuthoritiesConstants.HR_MANAGER);
         grant(PermissionsConstants.ADJUST_LEAVE_BALANCE, AuthoritiesConstants.LEAVE_ADMIN, AuthoritiesConstants.HR_MANAGER);
@@ -160,11 +195,17 @@ public final class DefaultRolePermissions {
             PermissionsConstants.VIEW_TRAINING,
             AuthoritiesConstants.TRAINING_ADMIN,
             AuthoritiesConstants.TRAINING_COORDINATOR,
-            AuthoritiesConstants.HR_MANAGER
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST
         );
-        grant(PermissionsConstants.MANAGE_TRAINING, AuthoritiesConstants.TRAINING_ADMIN);
+        grant(PermissionsConstants.MANAGE_TRAINING, AuthoritiesConstants.TRAINING_ADMIN, AuthoritiesConstants.HR_MANAGER);
         grant(PermissionsConstants.SCHEDULE_TRAINING, AuthoritiesConstants.TRAINING_COORDINATOR, AuthoritiesConstants.TRAINING_ADMIN);
-        grant(PermissionsConstants.MANAGE_TRAINING_ENROLLMENTS, AuthoritiesConstants.TRAINING_COORDINATOR);
+        grant(
+            PermissionsConstants.MANAGE_TRAINING_ENROLLMENTS,
+            AuthoritiesConstants.TRAINING_COORDINATOR,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST
+        );
         grant(PermissionsConstants.MANAGE_CERTIFICATIONS, AuthoritiesConstants.TRAINING_ADMIN, AuthoritiesConstants.HR_SPECIALIST);
         grant(PermissionsConstants.MANAGE_TRAINING_BUDGET, AuthoritiesConstants.TRAINING_ADMIN, AuthoritiesConstants.HR_MANAGER);
 
@@ -172,14 +213,37 @@ public final class DefaultRolePermissions {
         grant(PermissionsConstants.CONFIGURE_PERFORMANCE_CYCLES, AuthoritiesConstants.PERFORMANCE_ADMIN, AuthoritiesConstants.HR_MANAGER);
         grant(PermissionsConstants.MANAGE_PERFORMANCE_FRAMEWORKS, AuthoritiesConstants.PERFORMANCE_ADMIN);
         grant(PermissionsConstants.SUBMIT_PERFORMANCE_REVIEW, AuthoritiesConstants.MANAGER, AuthoritiesConstants.PERFORMANCE_REVIEWER);
-        grant(PermissionsConstants.VIEW_PERFORMANCE_REVIEWS, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.PERFORMANCE_ADMIN);
+        grant(
+            PermissionsConstants.VIEW_PERFORMANCE_REVIEWS,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST,
+            AuthoritiesConstants.PERFORMANCE_ADMIN
+        );
+        grant(
+            PermissionsConstants.MANAGE_PERFORMANCE_REVIEWS,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST,
+            AuthoritiesConstants.PERFORMANCE_ADMIN
+        );
         grant(PermissionsConstants.VIEW_TEAM_PERFORMANCE, AuthoritiesConstants.MANAGER, AuthoritiesConstants.DEPARTMENT_HEAD);
         grant(PermissionsConstants.MANAGE_CALIBRATION, AuthoritiesConstants.PERFORMANCE_ADMIN, AuthoritiesConstants.HR_MANAGER);
         grant(PermissionsConstants.MANAGE_GOALS, AuthoritiesConstants.MANAGER, AuthoritiesConstants.PERFORMANCE_REVIEWER);
 
         // ---- Benefits administration ----
         grant(PermissionsConstants.CONFIGURE_BENEFIT_PLANS, AuthoritiesConstants.BENEFITS_ADMIN);
-        grant(PermissionsConstants.MANAGE_HEALTH_INSURANCE, AuthoritiesConstants.BENEFITS_ADMIN);
+        grant(
+            PermissionsConstants.MANAGE_HEALTH_INSURANCE,
+            AuthoritiesConstants.BENEFITS_ADMIN,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST
+        );
+        grant(
+            PermissionsConstants.VIEW_HEALTH_INSURANCE,
+            AuthoritiesConstants.BENEFITS_ADMIN,
+            AuthoritiesConstants.BENEFITS_SPECIALIST,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST
+        );
         grant(PermissionsConstants.MANAGE_OPEN_ENROLLMENT, AuthoritiesConstants.BENEFITS_ADMIN);
         grant(
             PermissionsConstants.PROCESS_BENEFIT_ENROLLMENTS,
@@ -199,8 +263,11 @@ public final class DefaultRolePermissions {
             PermissionsConstants.VIEW_EXPENSE_CLAIMS,
             AuthoritiesConstants.EXPENSE_ADMIN,
             AuthoritiesConstants.MANAGER,
-            AuthoritiesConstants.FINANCE_MANAGER
+            AuthoritiesConstants.FINANCE_MANAGER,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST
         );
+        grant(PermissionsConstants.MANAGE_EXPENSE_CLAIMS, AuthoritiesConstants.EXPENSE_ADMIN, AuthoritiesConstants.HR_MANAGER);
         grant(PermissionsConstants.APPROVE_EXPENSE_CLAIMS, AuthoritiesConstants.MANAGER, AuthoritiesConstants.EXPENSE_APPROVER);
         grant(PermissionsConstants.CONFIGURE_EXPENSE_POLICIES, AuthoritiesConstants.EXPENSE_ADMIN, AuthoritiesConstants.FINANCE_MANAGER);
         grant(PermissionsConstants.MANAGE_CORPORATE_CARDS, AuthoritiesConstants.EXPENSE_ADMIN, AuthoritiesConstants.FINANCE_MANAGER);
@@ -217,7 +284,12 @@ public final class DefaultRolePermissions {
         grant(PermissionsConstants.PROCESS_PAYROLL, AuthoritiesConstants.PAYROLL_ADMIN);
         grant(PermissionsConstants.MANAGE_PAY_COMPONENTS, AuthoritiesConstants.PAYROLL_ADMIN);
         grant(PermissionsConstants.MANAGE_DEDUCTIONS, AuthoritiesConstants.PAYROLL_ADMIN);
-        grant(PermissionsConstants.MANAGE_BENEFITS, AuthoritiesConstants.PAYROLL_ADMIN, AuthoritiesConstants.BENEFITS_ADMIN);
+        grant(
+            PermissionsConstants.MANAGE_BENEFITS,
+            AuthoritiesConstants.PAYROLL_ADMIN,
+            AuthoritiesConstants.BENEFITS_ADMIN,
+            AuthoritiesConstants.HR_MANAGER
+        );
         grant(PermissionsConstants.MANAGE_TAX_BRACKETS, AuthoritiesConstants.PAYROLL_ADMIN);
         grant(
             PermissionsConstants.VIEW_PAYSLIPS,

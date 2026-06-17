@@ -4,9 +4,9 @@ import com.humano.dto.hr.requests.CreateLeaveRequest;
 import com.humano.dto.hr.requests.LeaveRequestSearchRequest;
 import com.humano.dto.hr.requests.ProcessLeaveRequest;
 import com.humano.dto.hr.responses.LeaveRequestResponse;
-import com.humano.security.annotation.RequireHrManager;
-import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.LeaveRequestService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -71,7 +71,7 @@ public class LeaveRequestResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated leave request
      */
     @PutMapping("/{id}/process")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_LEAVE_REQUESTS)
     public ResponseEntity<LeaveRequestResponse> processLeaveRequest(
         @PathVariable UUID id,
         @Valid @RequestBody ProcessLeaveRequest request
@@ -92,7 +92,7 @@ public class LeaveRequestResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of leave requests in body
      */
     @GetMapping
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_LEAVE_REQUESTS)
     public ResponseEntity<Page<LeaveRequestResponse>> getAllLeaveRequests(Pageable pageable) {
         LOG.debug("REST request to get all LeaveRequests");
 
@@ -126,7 +126,7 @@ public class LeaveRequestResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of leave requests in body
      */
     @GetMapping("/search")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_LEAVE_REQUESTS)
     public ResponseEntity<Page<LeaveRequestResponse>> searchLeaveRequests(LeaveRequestSearchRequest searchRequest, Pageable pageable) {
         LOG.debug("REST request to search LeaveRequests with criteria: {}", searchRequest);
 
@@ -166,7 +166,7 @@ public class LeaveRequestResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_LEAVE_REQUESTS)
     public ResponseEntity<Void> deleteLeaveRequest(@PathVariable UUID id) {
         LOG.debug("REST request to delete LeaveRequest: {}", id);
 

@@ -4,9 +4,9 @@ import com.humano.dto.hr.requests.CreateTimesheetRequest;
 import com.humano.dto.hr.requests.TimesheetSearchRequest;
 import com.humano.dto.hr.requests.UpdateTimesheetRequest;
 import com.humano.dto.hr.responses.TimesheetResponse;
-import com.humano.security.annotation.RequireHrManager;
-import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.TimesheetService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -88,7 +88,7 @@ public class TimesheetResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of timesheets in body
      */
     @GetMapping
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_TIMESHEETS)
     public ResponseEntity<Page<TimesheetResponse>> getAllTimesheets(Pageable pageable) {
         LOG.debug("REST request to get all Timesheets");
 
@@ -122,7 +122,7 @@ public class TimesheetResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of timesheets in body
      */
     @GetMapping("/search")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_TIMESHEETS)
     public ResponseEntity<Page<TimesheetResponse>> searchTimesheets(TimesheetSearchRequest searchRequest, Pageable pageable) {
         LOG.debug("REST request to search Timesheets with criteria: {}", searchRequest);
 
@@ -162,7 +162,7 @@ public class TimesheetResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_TIMESHEETS)
     public ResponseEntity<Void> deleteTimesheet(@PathVariable UUID id) {
         LOG.debug("REST request to delete Timesheet: {}", id);
 

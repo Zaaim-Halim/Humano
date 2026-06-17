@@ -3,8 +3,9 @@ package com.humano.web.rest.hr;
 import com.humano.dto.hr.requests.CreateSkillRequest;
 import com.humano.dto.hr.requests.UpdateSkillRequest;
 import com.humano.dto.hr.responses.SkillResponse;
-import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.SkillService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -49,7 +50,7 @@ public class SkillResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_SKILLS)
     public ResponseEntity<SkillResponse> createSkill(@Valid @RequestBody CreateSkillRequest request) throws URISyntaxException {
         LOG.debug("REST request to create Skill: {}", request);
 
@@ -68,7 +69,7 @@ public class SkillResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated skill
      */
     @PutMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_SKILLS)
     public ResponseEntity<SkillResponse> updateSkill(@PathVariable UUID id, @Valid @RequestBody UpdateSkillRequest request) {
         LOG.debug("REST request to update Skill: {}", id);
 
@@ -137,7 +138,7 @@ public class SkillResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_SKILLS)
     public ResponseEntity<Void> deleteSkill(@PathVariable UUID id) {
         LOG.debug("REST request to delete Skill: {}", id);
 

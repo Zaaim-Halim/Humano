@@ -7,8 +7,8 @@ import com.humano.dto.hr.requests.CreateAttendanceRequest;
 import com.humano.dto.hr.requests.UpdateAttendanceRequest;
 import com.humano.dto.hr.responses.AttendanceEventResponse;
 import com.humano.dto.hr.responses.AttendanceResponse;
-import com.humano.security.annotation.RequireHrManager;
-import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.AttendanceService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -53,7 +53,7 @@ public class AttendanceResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.MANAGE_ATTENDANCE)
     public ResponseEntity<AttendanceResponse> createAttendance(@Valid @RequestBody CreateAttendanceRequest request)
         throws URISyntaxException {
         LOG.debug("REST request to create Attendance: {}", request);
@@ -73,7 +73,7 @@ public class AttendanceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated attendance
      */
     @PutMapping("/{id}")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.MANAGE_ATTENDANCE)
     public ResponseEntity<AttendanceResponse> updateAttendance(@PathVariable UUID id, @Valid @RequestBody UpdateAttendanceRequest request) {
         LOG.debug("REST request to update Attendance: {}", id);
 
@@ -91,7 +91,7 @@ public class AttendanceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of attendances in body
      */
     @GetMapping
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_ATTENDANCE)
     public ResponseEntity<Page<AttendanceResponse>> getAllAttendances(Pageable pageable) {
         LOG.debug("REST request to get all Attendances");
 
@@ -108,7 +108,7 @@ public class AttendanceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the attendance
      */
     @GetMapping("/{id}")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_ATTENDANCE)
     public ResponseEntity<AttendanceResponse> getAttendance(@PathVariable UUID id) {
         LOG.debug("REST request to get Attendance: {}", id);
 
@@ -125,7 +125,7 @@ public class AttendanceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of attendances in body
      */
     @GetMapping("/search")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_ATTENDANCE)
     public ResponseEntity<Page<AttendanceResponse>> searchAttendances(AttendanceSearchRequest searchRequest, Pageable pageable) {
         LOG.debug("REST request to search Attendances with criteria: {}", searchRequest);
 
@@ -144,7 +144,7 @@ public class AttendanceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of attendances in body
      */
     @GetMapping("/employee/{employeeId}/search")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_ATTENDANCE)
     public ResponseEntity<Page<AttendanceResponse>> searchAttendancesByEmployee(
         @PathVariable UUID employeeId,
         AttendanceSearchRequest searchRequest,
@@ -165,7 +165,7 @@ public class AttendanceResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_ATTENDANCE)
     public ResponseEntity<Void> deleteAttendance(@PathVariable UUID id) {
         LOG.debug("REST request to delete Attendance: {}", id);
 
@@ -186,7 +186,7 @@ public class AttendanceResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping("/events")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.MANAGE_ATTENDANCE)
     public ResponseEntity<AttendanceResponse> createAttendanceEvent(@Valid @RequestBody CreateAttendanceEventRequest request)
         throws URISyntaxException {
         LOG.debug("REST request to create AttendanceEvent: {}", request);
@@ -206,7 +206,7 @@ public class AttendanceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of attendance events in body
      */
     @GetMapping("/events/search")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_ATTENDANCE)
     public ResponseEntity<Page<AttendanceEventResponse>> searchAttendanceEvents(
         AttendanceEventSearchRequest searchRequest,
         Pageable pageable
@@ -228,7 +228,7 @@ public class AttendanceResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of attendance events in body
      */
     @GetMapping("/employee/{employeeId}/events/search")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_ATTENDANCE)
     public ResponseEntity<Page<AttendanceEventResponse>> searchAttendanceEventsByEmployee(
         @PathVariable UUID employeeId,
         AttendanceEventSearchRequest searchRequest,

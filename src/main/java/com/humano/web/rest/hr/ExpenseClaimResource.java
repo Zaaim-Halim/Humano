@@ -4,9 +4,9 @@ import com.humano.dto.hr.requests.CreateExpenseClaimRequest;
 import com.humano.dto.hr.requests.ExpenseClaimSearchRequest;
 import com.humano.dto.hr.requests.ProcessExpenseClaimRequest;
 import com.humano.dto.hr.responses.ExpenseClaimResponse;
-import com.humano.security.annotation.RequireHrManager;
-import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.ExpenseClaimService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -71,7 +71,7 @@ public class ExpenseClaimResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated expense claim
      */
     @PutMapping("/{id}/process")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_EXPENSE_CLAIMS)
     public ResponseEntity<ExpenseClaimResponse> processExpenseClaim(
         @PathVariable UUID id,
         @Valid @RequestBody ProcessExpenseClaimRequest request
@@ -92,7 +92,7 @@ public class ExpenseClaimResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of expense claims in body
      */
     @GetMapping
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_EXPENSE_CLAIMS)
     public ResponseEntity<Page<ExpenseClaimResponse>> getAllExpenseClaims(Pageable pageable) {
         LOG.debug("REST request to get all ExpenseClaims");
 
@@ -126,7 +126,7 @@ public class ExpenseClaimResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of expense claims in body
      */
     @GetMapping("/search")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_EXPENSE_CLAIMS)
     public ResponseEntity<Page<ExpenseClaimResponse>> searchExpenseClaims(ExpenseClaimSearchRequest searchRequest, Pageable pageable) {
         LOG.debug("REST request to search ExpenseClaims with criteria: {}", searchRequest);
 
@@ -166,7 +166,7 @@ public class ExpenseClaimResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_EXPENSE_CLAIMS)
     public ResponseEntity<Void> deleteExpenseClaim(@PathVariable UUID id) {
         LOG.debug("REST request to delete ExpenseClaim: {}", id);
 

@@ -4,9 +4,9 @@ import com.humano.dto.hr.requests.CreateOvertimeRecordRequest;
 import com.humano.dto.hr.requests.OvertimeRecordSearchRequest;
 import com.humano.dto.hr.requests.ProcessOvertimeRecordRequest;
 import com.humano.dto.hr.responses.OvertimeRecordResponse;
-import com.humano.security.annotation.RequireHrManager;
-import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.OvertimeRecordService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -71,7 +71,7 @@ public class OvertimeRecordResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated overtime record
      */
     @PutMapping("/{id}/process")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_OVERTIME_RECORDS)
     public ResponseEntity<OvertimeRecordResponse> processOvertimeRecord(
         @PathVariable UUID id,
         @Valid @RequestBody ProcessOvertimeRecordRequest request
@@ -92,7 +92,7 @@ public class OvertimeRecordResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of overtime records in body
      */
     @GetMapping
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_OVERTIME_RECORDS)
     public ResponseEntity<Page<OvertimeRecordResponse>> getAllOvertimeRecords(Pageable pageable) {
         LOG.debug("REST request to get all OvertimeRecords");
 
@@ -126,7 +126,7 @@ public class OvertimeRecordResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of overtime records in body
      */
     @GetMapping("/search")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_OVERTIME_RECORDS)
     public ResponseEntity<Page<OvertimeRecordResponse>> searchOvertimeRecords(
         OvertimeRecordSearchRequest searchRequest,
         Pageable pageable
@@ -169,7 +169,7 @@ public class OvertimeRecordResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_OVERTIME_RECORDS)
     public ResponseEntity<Void> deleteOvertimeRecord(@PathVariable UUID id) {
         LOG.debug("REST request to delete OvertimeRecord: {}", id);
 

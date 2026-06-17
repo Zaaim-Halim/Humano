@@ -3,8 +3,8 @@ package com.humano.web.rest.hr;
 import com.humano.dto.hr.requests.CreatePositionRequest;
 import com.humano.dto.hr.requests.UpdatePositionRequest;
 import com.humano.dto.hr.responses.PositionResponse;
-import com.humano.security.annotation.RequireHrManager;
-import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.PositionService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -49,7 +49,7 @@ public class PositionResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_POSITIONS)
     public ResponseEntity<PositionResponse> createPosition(@Valid @RequestBody CreatePositionRequest request) throws URISyntaxException {
         LOG.debug("REST request to create Position: {}", request);
 
@@ -68,7 +68,7 @@ public class PositionResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated position
      */
     @PutMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_POSITIONS)
     public ResponseEntity<PositionResponse> updatePosition(@PathVariable UUID id, @Valid @RequestBody UpdatePositionRequest request) {
         LOG.debug("REST request to update Position: {}", id);
 
@@ -86,7 +86,7 @@ public class PositionResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of positions in body
      */
     @GetMapping
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_POSITIONS)
     public ResponseEntity<Page<PositionResponse>> getAllPositions(Pageable pageable) {
         LOG.debug("REST request to get all Positions");
 
@@ -103,7 +103,7 @@ public class PositionResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the position
      */
     @GetMapping("/{id}")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_POSITIONS)
     public ResponseEntity<PositionResponse> getPosition(@PathVariable UUID id) {
         LOG.debug("REST request to get Position: {}", id);
 
@@ -120,7 +120,7 @@ public class PositionResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of positions in body
      */
     @GetMapping("/unit/{unitId}")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_POSITIONS)
     public ResponseEntity<Page<PositionResponse>> getPositionsByUnit(@PathVariable UUID unitId, Pageable pageable) {
         LOG.debug("REST request to get Positions by Unit: {}", unitId);
 
@@ -137,7 +137,7 @@ public class PositionResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_POSITIONS)
     public ResponseEntity<Void> deletePosition(@PathVariable UUID id) {
         LOG.debug("REST request to delete Position: {}", id);
 

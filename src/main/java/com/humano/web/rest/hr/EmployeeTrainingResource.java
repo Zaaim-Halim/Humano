@@ -4,8 +4,8 @@ import com.humano.dto.hr.requests.EmployeeTrainingSearchRequest;
 import com.humano.dto.hr.requests.EnrollEmployeeTrainingRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeTrainingRequest;
 import com.humano.dto.hr.responses.EmployeeTrainingResponse;
-import com.humano.security.annotation.RequireHrManager;
-import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.TrainingService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -50,7 +50,7 @@ public class EmployeeTrainingResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.MANAGE_TRAINING_ENROLLMENTS)
     public ResponseEntity<EmployeeTrainingResponse> createEmployeeTraining(@Valid @RequestBody EnrollEmployeeTrainingRequest request)
         throws URISyntaxException {
         LOG.debug("REST request to create EmployeeTraining: {}", request);
@@ -70,7 +70,7 @@ public class EmployeeTrainingResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated employee training
      */
     @PutMapping("/{id}")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.MANAGE_TRAINING_ENROLLMENTS)
     public ResponseEntity<EmployeeTrainingResponse> updateEmployeeTraining(
         @PathVariable UUID id,
         @Valid @RequestBody UpdateEmployeeTrainingRequest request
@@ -91,7 +91,7 @@ public class EmployeeTrainingResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of employee trainings in body
      */
     @GetMapping
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_TRAINING)
     public ResponseEntity<Page<EmployeeTrainingResponse>> getAllEmployeeTrainings(Pageable pageable) {
         LOG.debug("REST request to get all EmployeeTrainings");
 
@@ -108,7 +108,7 @@ public class EmployeeTrainingResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the employee training
      */
     @GetMapping("/{id}")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_TRAINING)
     public ResponseEntity<EmployeeTrainingResponse> getEmployeeTraining(@PathVariable UUID id) {
         LOG.debug("REST request to get EmployeeTraining: {}", id);
 
@@ -125,7 +125,7 @@ public class EmployeeTrainingResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of employee trainings in body
      */
     @GetMapping("/search")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_TRAINING)
     public ResponseEntity<Page<EmployeeTrainingResponse>> searchEmployeeTrainings(
         EmployeeTrainingSearchRequest searchRequest,
         Pageable pageable
@@ -145,7 +145,7 @@ public class EmployeeTrainingResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_TRAINING_ENROLLMENTS)
     public ResponseEntity<Void> deleteEmployeeTraining(@PathVariable UUID id) {
         LOG.debug("REST request to delete EmployeeTraining: {}", id);
 

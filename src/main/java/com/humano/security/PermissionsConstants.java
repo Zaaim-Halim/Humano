@@ -844,6 +844,49 @@ public final class PermissionsConstants {
      */
     public static final String ASSIGN_ROLES = "ASSIGN_ROLES";
 
+    // ==================== HR RESOURCE PERMISSIONS (Phase 2) ====================
+    // Fine-grained permissions backing the HR endpoints migrated from role composites.
+    // VIEW_* gate reads; MANAGE_* gate create/update/delete. See docs/HR_PERMISSION_MIGRATION.md.
+
+    /** Manage the skill catalog (create/update/delete). */
+    public static final String MANAGE_SKILLS = "MANAGE_SKILLS";
+
+    /** Manage projects (create/update/delete). */
+    public static final String MANAGE_PROJECTS = "MANAGE_PROJECTS";
+
+    /** Manage surveys (create/update/delete, including responses). */
+    public static final String MANAGE_SURVEYS = "MANAGE_SURVEYS";
+
+    /** View surveys and survey responses (admin read). */
+    public static final String VIEW_SURVEYS = "VIEW_SURVEYS";
+
+    /** Manage employee documents on behalf of others (replace/delete). */
+    public static final String MANAGE_EMPLOYEE_DOCUMENTS = "MANAGE_EMPLOYEE_DOCUMENTS";
+
+    /** View employee documents across employees (admin read). */
+    public static final String VIEW_EMPLOYEE_DOCUMENTS = "VIEW_EMPLOYEE_DOCUMENTS";
+
+    /** View employee health insurance records (admin read). */
+    public static final String VIEW_HEALTH_INSURANCE = "VIEW_HEALTH_INSURANCE";
+
+    /** View overtime records across employees (admin read). */
+    public static final String VIEW_OVERTIME_RECORDS = "VIEW_OVERTIME_RECORDS";
+
+    /** Manage overtime records (administrative delete/correction). */
+    public static final String MANAGE_OVERTIME_RECORDS = "MANAGE_OVERTIME_RECORDS";
+
+    /** Manage expense claims administratively (delete/correction); distinct from approval. */
+    public static final String MANAGE_EXPENSE_CLAIMS = "MANAGE_EXPENSE_CLAIMS";
+
+    /** Manage leave requests administratively (delete/correction); distinct from approval. */
+    public static final String MANAGE_LEAVE_REQUESTS = "MANAGE_LEAVE_REQUESTS";
+
+    /** Manage timesheets administratively (delete/correction); distinct from approval. */
+    public static final String MANAGE_TIMESHEETS = "MANAGE_TIMESHEETS";
+
+    /** Manage performance review records administratively (create/delete). */
+    public static final String MANAGE_PERFORMANCE_REVIEWS = "MANAGE_PERFORMANCE_REVIEWS";
+
     // ==================== PLATFORM (SaaS OWNER) PERMISSIONS ====================
     // These gate /api/platform/** operations against the master/platform realm and are
     // seeded ONLY in the platform tenant. They are distinct from the tenant-management

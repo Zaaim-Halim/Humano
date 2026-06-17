@@ -3,8 +3,9 @@ package com.humano.web.rest.hr;
 import com.humano.dto.hr.requests.CreateTrainingRequest;
 import com.humano.dto.hr.requests.UpdateTrainingRequest;
 import com.humano.dto.hr.responses.TrainingResponse;
-import com.humano.security.annotation.RequireHrManager;
+import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.TrainingService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -49,7 +50,7 @@ public class TrainingResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
     @PostMapping
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_TRAINING)
     public ResponseEntity<TrainingResponse> createTraining(@Valid @RequestBody CreateTrainingRequest request) throws URISyntaxException {
         LOG.debug("REST request to create Training: {}", request);
 
@@ -68,7 +69,7 @@ public class TrainingResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated training
      */
     @PutMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_TRAINING)
     public ResponseEntity<TrainingResponse> updateTraining(@PathVariable UUID id, @Valid @RequestBody UpdateTrainingRequest request) {
         LOG.debug("REST request to update Training: {}", id);
 
@@ -119,7 +120,7 @@ public class TrainingResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}
      */
     @DeleteMapping("/{id}")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_TRAINING)
     public ResponseEntity<Void> deleteTraining(@PathVariable UUID id) {
         LOG.debug("REST request to delete Training: {}", id);
 

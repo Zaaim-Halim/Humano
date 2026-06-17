@@ -4,7 +4,8 @@ import com.humano.dto.hr.responses.hierarchy.EmployeeHierarchyResponse;
 import com.humano.dto.hr.responses.hierarchy.EmployeeTreeNode;
 import com.humano.dto.hr.responses.hierarchy.HierarchyAncestorsResponse;
 import com.humano.dto.hr.responses.hierarchy.OrganizationalUnitHierarchyResponse;
-import com.humano.security.annotation.RequireHrStaff;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.HrHierarchyService;
 import jakarta.validation.constraints.Min;
 import java.util.List;
@@ -64,7 +65,7 @@ public class HrHierarchyResource {
      * @param maxDepth max levels below the root; omit for "no limit"
      */
     @GetMapping("/employees/{id}/subtree")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.READ_EMPLOYEE)
     public ResponseEntity<EmployeeHierarchyResponse> getEmployeeSubtree(
         @PathVariable UUID id,
         @RequestParam(required = false) @Min(0) Integer maxDepth
@@ -78,7 +79,7 @@ public class HrHierarchyResource {
      * first, the employee themselves last.
      */
     @GetMapping("/employees/{id}/ancestors")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.READ_EMPLOYEE)
     public ResponseEntity<HierarchyAncestorsResponse> getEmployeeAncestors(@PathVariable UUID id) {
         LOG.debug("REST request to get employee ancestor chain: id={}", id);
         return ResponseEntity.ok(hierarchyService.getEmployeeAncestors(id));
@@ -91,7 +92,7 @@ public class HrHierarchyResource {
      * expanded). Pass {@code includeHeadcount=true} to attach per-root counts.
      */
     @GetMapping("/units/roots")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_ORGANIZATIONAL_UNITS)
     public ResponseEntity<OrganizationalUnitHierarchyResponse> getOrganizationalUnitRoots(
         @RequestParam(defaultValue = "false") boolean includeHeadcount
     ) {
@@ -107,7 +108,7 @@ public class HrHierarchyResource {
      *                         (adds one GROUP BY query)
      */
     @GetMapping("/units/{id}/subtree")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_ORGANIZATIONAL_UNITS)
     public ResponseEntity<OrganizationalUnitHierarchyResponse> getOrganizationalUnitSubtree(
         @PathVariable UUID id,
         @RequestParam(required = false) @Min(0) Integer maxDepth,
@@ -122,7 +123,7 @@ public class HrHierarchyResource {
      * top-level unit first, the unit itself last.
      */
     @GetMapping("/units/{id}/ancestors")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.VIEW_ORGANIZATIONAL_UNITS)
     public ResponseEntity<HierarchyAncestorsResponse> getOrganizationalUnitAncestors(@PathVariable UUID id) {
         LOG.debug("REST request to get org-unit ancestor chain: id={}", id);
         return ResponseEntity.ok(hierarchyService.getOrganizationalUnitAncestors(id));
@@ -133,7 +134,7 @@ public class HrHierarchyResource {
      * unit. Single-query fused view — each node carries its unit ref.
      */
     @GetMapping("/units/{id}/employees")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.READ_EMPLOYEE)
     public ResponseEntity<List<EmployeeTreeNode>> getEmployeesInUnitSubtree(@PathVariable UUID id) {
         LOG.debug("REST request to list employees under org-unit subtree: id={}", id);
         return ResponseEntity.ok(hierarchyService.getEmployeesInUnitSubtree(id));
