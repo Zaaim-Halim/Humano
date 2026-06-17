@@ -16,6 +16,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authorization.method.PrePostTemplateDefaults;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer.FrameOptionsConfig;
@@ -63,6 +64,19 @@ public class SecurityConfiguration {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Enables Spring Security 6.4 meta-annotation template substitution (the {@code {value}}
+     * placeholder) used by {@link com.humano.security.annotation.RequirePermission} and
+     * {@link com.humano.security.annotation.RequireAuthority}. Without this bean the
+     * {@code @PreAuthorize("@securityExpressions.hasPermission('{value}')")} template stays
+     * literal and every annotated endpoint is denied. Declared {@code static} so it is
+     * available before the method-security infrastructure is initialized.
+     */
+    @Bean
+    static PrePostTemplateDefaults prePostTemplateDefaults() {
+        return new PrePostTemplateDefaults();
     }
 
     /**
