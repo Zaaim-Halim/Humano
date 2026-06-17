@@ -3,7 +3,7 @@
  *
  * Effective permissions for the current user are returned by `GET /api/account`
  * (see `Account.permissions`) and gated via `AccountService.hasPermission` /
- * the `*appHasPermission` structural directive and the route guard's
+ * the `*humHasPermission` structural directive and the route guard's
  * `data.permissions`.
  */
 export enum Permission {
@@ -18,8 +18,11 @@ export enum Permission {
   UPDATE_EMPLOYEE = 'UPDATE_EMPLOYEE',
   DELETE_EMPLOYEE = 'DELETE_EMPLOYEE',
   MANAGE_DEPARTMENTS = 'MANAGE_DEPARTMENTS',
+  VIEW_DEPARTMENTS = 'VIEW_DEPARTMENTS',
   MANAGE_POSITIONS = 'MANAGE_POSITIONS',
+  VIEW_POSITIONS = 'VIEW_POSITIONS',
   MANAGE_ORGANIZATIONAL_UNITS = 'MANAGE_ORGANIZATIONAL_UNITS',
+  VIEW_ORGANIZATIONAL_UNITS = 'VIEW_ORGANIZATIONAL_UNITS',
   VIEW_TEAM_MEMBERS = 'VIEW_TEAM_MEMBERS',
   CREATE_JOB_POSTING = 'CREATE_JOB_POSTING',
   VIEW_JOB_POSTING = 'VIEW_JOB_POSTING',

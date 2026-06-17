@@ -36,10 +36,16 @@ public class StartupTenantMigrator {
 
     private final TenantRepository tenantRepository;
     private final TenantMigrationService migrationService;
+    private final TenantInitializationService initializationService;
 
-    public StartupTenantMigrator(TenantRepository tenantRepository, TenantMigrationService migrationService) {
+    public StartupTenantMigrator(
+        TenantRepository tenantRepository,
+        TenantMigrationService migrationService,
+        TenantInitializationService initializationService
+    ) {
         this.tenantRepository = tenantRepository;
         this.migrationService = migrationService;
+        this.initializationService = initializationService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -84,6 +90,14 @@ public class StartupTenantMigrator {
                 return;
             }
             migrationService.runMigrations(tenant);
+            // Backfill the role/permission catalog after the schema exists. Non-fatal and
+            // separate from migration success accounting: a tenant whose schema migrated should
+            // not be flipped to MIGRATION_FAILED just because the additive seed backfill hiccuped.
+            try {
+                initializationService.backfillRolesAndPermissions(tenant);
+            } catch (Exception seedEx) {
+                LOG.error("Role/permission backfill failed for tenant '{}' (schema migration succeeded)", subdomain, seedEx);
+            }
             ok.incrementAndGet();
             LOG.info("Migrated tenant '{}'", subdomain);
         } catch (Exception e) {

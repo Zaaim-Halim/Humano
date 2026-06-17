@@ -103,6 +103,12 @@ public final class PermissionsConstants {
     public static final String MANAGE_DEPARTMENTS = "MANAGE_DEPARTMENTS";
 
     /**
+     * Permission to view department structures (read-only).
+     * <p>Typically granted to: {@link AuthoritiesConstants#HR_MANAGER}, {@link AuthoritiesConstants#HR_SPECIALIST}, {@link AuthoritiesConstants#MANAGER}, {@link AuthoritiesConstants#ORGANIZATION_ADMIN}</p>
+     */
+    public static final String VIEW_DEPARTMENTS = "VIEW_DEPARTMENTS";
+
+    /**
      * Permission to manage job positions.
      * <p>Includes creating, updating, and deleting positions.</p>
      * <p>Typically granted to: {@link AuthoritiesConstants#HR_MANAGER}</p>
@@ -110,10 +116,22 @@ public final class PermissionsConstants {
     public static final String MANAGE_POSITIONS = "MANAGE_POSITIONS";
 
     /**
+     * Permission to view job positions (read-only).
+     * <p>Typically granted to: {@link AuthoritiesConstants#HR_MANAGER}, {@link AuthoritiesConstants#HR_SPECIALIST}, {@link AuthoritiesConstants#MANAGER}</p>
+     */
+    public static final String VIEW_POSITIONS = "VIEW_POSITIONS";
+
+    /**
      * Permission to manage organizational units and hierarchy.
      * <p>Typically granted to: {@link AuthoritiesConstants#HR_MANAGER}, {@link AuthoritiesConstants#ORGANIZATION_ADMIN}</p>
      */
     public static final String MANAGE_ORGANIZATIONAL_UNITS = "MANAGE_ORGANIZATIONAL_UNITS";
+
+    /**
+     * Permission to view organizational units and hierarchy (read-only).
+     * <p>Typically granted to: {@link AuthoritiesConstants#HR_MANAGER}, {@link AuthoritiesConstants#HR_SPECIALIST}, {@link AuthoritiesConstants#MANAGER}, {@link AuthoritiesConstants#ORGANIZATION_ADMIN}</p>
+     */
+    public static final String VIEW_ORGANIZATIONAL_UNITS = "VIEW_ORGANIZATIONAL_UNITS";
 
     /**
      * Permission to view team members' information (for managers).

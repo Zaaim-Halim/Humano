@@ -69,8 +69,28 @@ public final class DefaultRolePermissions {
         grant(PermissionsConstants.UPDATE_EMPLOYEE, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.HR_SPECIALIST);
         grant(PermissionsConstants.DELETE_EMPLOYEE, AuthoritiesConstants.HR_MANAGER);
         grant(PermissionsConstants.MANAGE_DEPARTMENTS, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.ORGANIZATION_ADMIN);
+        grant(
+            PermissionsConstants.VIEW_DEPARTMENTS,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST,
+            AuthoritiesConstants.MANAGER,
+            AuthoritiesConstants.ORGANIZATION_ADMIN
+        );
         grant(PermissionsConstants.MANAGE_POSITIONS, AuthoritiesConstants.HR_MANAGER);
+        grant(
+            PermissionsConstants.VIEW_POSITIONS,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST,
+            AuthoritiesConstants.MANAGER
+        );
         grant(PermissionsConstants.MANAGE_ORGANIZATIONAL_UNITS, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.ORGANIZATION_ADMIN);
+        grant(
+            PermissionsConstants.VIEW_ORGANIZATIONAL_UNITS,
+            AuthoritiesConstants.HR_MANAGER,
+            AuthoritiesConstants.HR_SPECIALIST,
+            AuthoritiesConstants.MANAGER,
+            AuthoritiesConstants.ORGANIZATION_ADMIN
+        );
         grant(PermissionsConstants.VIEW_TEAM_MEMBERS, AuthoritiesConstants.MANAGER, AuthoritiesConstants.DEPARTMENT_HEAD);
 
         // ---- Recruitment ----

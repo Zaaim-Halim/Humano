@@ -23,6 +23,7 @@ import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.PermissionRepository;
 import com.humano.repository.shared.UserRepository;
 import com.humano.security.AuthoritiesConstants;
+import com.humano.security.AuthorityPermissionService;
 import com.humano.security.DefaultRolePermissions;
 import com.humano.security.PlatformRolePermissions;
 import com.humano.service.hr.workflow.ApprovalChainValidator;
@@ -89,6 +90,7 @@ public class TenantInitializationService {
     private final ApprovalChainConfigRepository approvalChainConfigRepository;
     private final PasswordEncoder passwordEncoder;
     private final MultiTenantProperties multiTenantProperties;
+    private final AuthorityPermissionService authorityPermissionService;
     private final TransactionTemplate tenantTx;
 
     public TenantInitializationService(
@@ -100,6 +102,7 @@ public class TenantInitializationService {
         ApprovalChainConfigRepository approvalChainConfigRepository,
         PasswordEncoder passwordEncoder,
         MultiTenantProperties multiTenantProperties,
+        AuthorityPermissionService authorityPermissionService,
         @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager
     ) {
         this.authorityRepository = authorityRepository;
@@ -110,6 +113,7 @@ public class TenantInitializationService {
         this.approvalChainConfigRepository = approvalChainConfigRepository;
         this.passwordEncoder = passwordEncoder;
         this.multiTenantProperties = multiTenantProperties;
+        this.authorityPermissionService = authorityPermissionService;
         this.tenantTx = new TransactionTemplate(tenantTransactionManager);
     }
 
@@ -138,6 +142,84 @@ public class TenantInitializationService {
                 TenantContext.clear();
             }
         }
+    }
+
+    /**
+     * Backfill the role/permission catalog for an <em>already-provisioned</em> tenant, plus —
+     * for the platform tenant only — grant {@link AuthoritiesConstants#PLATFORM_OWNER} to
+     * existing platform admins. Idempotent and <strong>additive only</strong> (never removes a
+     * role/permission/grant), so it is safe to run on every boot.
+     * <p>
+     * Why this exists: tenants provisioned before the catalog/seeder unification hold only the
+     * legacy role/permission set; without backfill, finer-grained permission checks resolve
+     * against an empty catalog and the new platform gates would 403 the platform admin. Run
+     * after the tenant's schema migration so the {@code authority}/{@code permission} tables
+     * exist (see {@code StartupTenantMigrator}).
+     */
+    public void backfillRolesAndPermissions(Tenant tenant) {
+        String previousTenant = TenantContext.getCurrentTenant();
+        TenantContext.setCurrentTenant(tenant.getSubdomain());
+        try {
+            Map<String, Set<String>> rolePermissions = effectiveRolePermissions(tenant);
+            tenantTx.executeWithoutResult(status -> {
+                // (1) Behaviour-neutral, additive: ensure the full catalog exists. Nothing holds
+                // the new roles and nothing checks the new permissions yet, so this cannot change
+                // any access decision on its own.
+                Map<String, Authority> roles = seedAuthorities(rolePermissions.keySet());
+                seedPermissions(rolePermissions, roles);
+
+                // (2) The sharp edge — a user-authority grant — strictly bounded to the platform
+                // tenant. If the platformTenant property were ever misconfigured to a business
+                // tenant this would escalate a business admin, so the guard is the only thing
+                // standing between safe and a cross-tenant breach; keep it additive and loud.
+                if (isPlatformTenant(tenant)) {
+                    int granted = applyPlatformOwnerGrant(userRepository.findAll(), roles.get(AuthoritiesConstants.PLATFORM_OWNER));
+                    if (granted > 0) {
+                        LOG.warn(
+                            "Backfill: granted {} to {} existing admin user(s) in platform tenant '{}'",
+                            AuthoritiesConstants.PLATFORM_OWNER,
+                            granted,
+                            tenant.getSubdomain()
+                        );
+                    }
+                }
+            });
+            // The per-tenant permission cache is lazy; evict in case it was already warmed.
+            authorityPermissionService.evictCurrentTenant();
+            LOG.info("Backfilled roles/permissions for tenant '{}'", tenant.getSubdomain());
+        } finally {
+            if (previousTenant != null) {
+                TenantContext.setCurrentTenant(previousTenant);
+            } else {
+                TenantContext.clear();
+            }
+        }
+    }
+
+    /**
+     * Additively grant {@code ownerRole} to every user that already holds
+     * {@link AuthoritiesConstants#ADMIN} but not the owner role. Package-private and free of
+     * tenant/transaction concerns so the grant policy can be unit-tested in isolation — this is
+     * the security-sensitive decision the caller bounds to the platform tenant.
+     *
+     * @return the number of users granted the owner role
+     */
+    int applyPlatformOwnerGrant(Iterable<User> users, Authority ownerRole) {
+        if (ownerRole == null) {
+            return 0;
+        }
+        int granted = 0;
+        for (User user : users) {
+            boolean isAdmin = user.getAuthorities().stream().anyMatch(a -> AuthoritiesConstants.ADMIN.equals(a.getName()));
+            boolean alreadyOwner = user.getAuthorities().stream().anyMatch(a -> AuthoritiesConstants.PLATFORM_OWNER.equals(a.getName()));
+            if (isAdmin && !alreadyOwner) {
+                user.getAuthorities().add(ownerRole);
+                userRepository.save(user);
+                granted++;
+                LOG.warn("Backfill: granted {} to user '{}'", AuthoritiesConstants.PLATFORM_OWNER, user.getLogin());
+            }
+        }
+        return granted;
     }
 
     /**
