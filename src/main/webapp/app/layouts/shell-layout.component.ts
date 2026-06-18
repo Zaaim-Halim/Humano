@@ -127,12 +127,12 @@ export default class ShellLayoutComponent {
     { id: 'logout', label: this.t('humano.shell.logout'), icon: 'log-out', danger: true },
   ]);
 
-  /** Role-filtered nav (sidebar + palette both derive from this). */
+  /** Permission-filtered nav (sidebar + palette both derive from this). */
   private readonly visible = computed(() => {
     const a = this.account();
-    const allowed = (roles?: string[]): boolean => !roles?.length || (!!a && roles.some(r => a.authorities.includes(r)));
-    return SHELL_NAV.filter(g => allowed(g.roles))
-      .map(g => ({ ...g, items: g.items.filter(it => allowed(it.roles)) }))
+    const allowed = (permissions?: string[]): boolean => !permissions?.length || (!!a && permissions.some(p => a.permissions?.includes(p)));
+    return SHELL_NAV.filter(g => allowed(g.permissions))
+      .map(g => ({ ...g, items: g.items.filter(it => allowed(it.permissions)) }))
       .filter(g => g.items.length > 0);
   });
 

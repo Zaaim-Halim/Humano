@@ -1,21 +1,22 @@
 import { Routes } from '@angular/router';
 
-import { Authority } from 'app/config/authority.constants';
+import { Permission } from 'app/config/permission.constants';
 import { UserRouteAccessService } from 'app/core/auth/user-route-access.service';
 
 const placeholder = () => import('./layouts/placeholder-page.component');
 
 /**
  * Build a placeholder route. `titleKey` drives both the browser title (via
- * `AppPageTitleStrategy`) and the in-page header. `authorities`, when set, gate
- * the route with the existing auth guard.
+ * `AppPageTitleStrategy`) and the in-page header. `permissions` (any-of), when
+ * set, gate the route with the auth guard against the account's effective
+ * permissions — mirroring the backend `@RequirePermission` checks.
  */
-const page = (path: string, titleKey: string, authorities?: string[]) => ({
+const page = (path: string, titleKey: string, permissions?: string[]) => ({
   path,
   title: titleKey,
   loadComponent: placeholder,
-  data: { titleKey, ...(authorities ? { authorities } : {}) },
-  ...(authorities ? { canActivate: [UserRouteAccessService] } : {}),
+  data: { titleKey, ...(permissions ? { permissions } : {}) },
+  ...(permissions ? { canActivate: [UserRouteAccessService] } : {}),
 });
 
 // `/dev/ui` is the design-system gallery / verification harness (outside the shell).
@@ -101,67 +102,67 @@ const routes: Routes = [
         title: 'humano.nav.employees',
         loadComponent: () => import('./features/admin/directory/directory.component'),
         canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.ADMIN] },
+        data: { permissions: [Permission.READ_EMPLOYEE] },
       },
       {
         path: 'employees/:id',
         title: 'humano.nav.employees',
         loadComponent: () => import('./features/admin/employee-detail/employee-detail.component'),
         canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.ADMIN] },
+        data: { permissions: [Permission.READ_EMPLOYEE] },
       },
-      page('org', 'humano.nav.org', [Authority.ADMIN]),
-      page('positions', 'humano.nav.positions', [Authority.ADMIN]),
-      page('payroll/runs', 'humano.nav.runs', [Authority.ADMIN]),
+      page('org', 'humano.nav.org', [Permission.VIEW_ORGANIZATIONAL_UNITS]),
+      page('positions', 'humano.nav.positions', [Permission.VIEW_POSITIONS]),
+      page('payroll/runs', 'humano.nav.runs', [Permission.VIEW_PAYROLL_RUN]),
       {
         path: 'payroll/runs/:id',
         title: 'humano.nav.runs',
         loadComponent: () => import('./features/admin/payroll-run/payroll-run.component'),
         canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.ADMIN] },
+        data: { permissions: [Permission.VIEW_PAYROLL_RUN] },
       },
       {
         path: 'payroll/payslips',
         title: 'humano.nav.payslips',
         loadComponent: () => import('./features/admin/payslips/payslips.component'),
         canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.ADMIN] },
+        data: { permissions: [Permission.VIEW_PAYSLIPS] },
       },
       {
         path: 'payroll/payslips/:id',
         title: 'humano.nav.payslips',
         loadComponent: () => import('./features/admin/payslip/payslip.component'),
         canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.ADMIN] },
+        data: { permissions: [Permission.VIEW_PAYSLIPS] },
       },
       {
         path: 'approvals',
         title: 'humano.nav.approvals',
         loadComponent: () => import('./features/manager/approvals/approvals.component'),
         canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.ADMIN] },
+        data: { permissions: [Permission.APPROVE_LEAVE, Permission.APPROVE_EXPENSE_CLAIMS, Permission.APPROVE_OVERTIME] },
       },
-      page('settings', 'humano.nav.settings', [Authority.ADMIN]),
+      page('settings', 'humano.nav.settings', [Permission.SYSTEM_CONFIGURATION]),
       {
         path: 'admin/users',
         title: 'humano.nav.users',
         loadComponent: () => import('./features/admin/user-management/user-management.component'),
         canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.ADMIN] },
+        data: { permissions: [Permission.READ_USER] },
       },
       {
         path: 'platform/tenants',
         title: 'humano.nav.tenants',
         loadComponent: () => import('./features/platform/tenant-management/tenant-management.component'),
         canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.ADMIN] },
+        data: { permissions: [Permission.VIEW_PLATFORM_TENANTS] },
       },
       {
         path: 'platform/billing',
         title: 'humano.nav.billing',
         loadComponent: () => import('./features/platform/billing/billing.component'),
         canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.ADMIN] },
+        data: { permissions: [Permission.VIEW_PLATFORM_BILLING] },
       },
     ],
   },

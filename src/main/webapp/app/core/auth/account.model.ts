@@ -9,7 +9,8 @@ export class Account {
     public login: string,
     public imageUrl: string | null,
     // Effective permissions derived from the user's authorities (roles) in the
-    // current tenant. Optional for backward compatibility with older payloads.
-    public permissions: string[] = [],
+    // current tenant. Optional — older payloads (or a not-yet-backfilled tenant)
+    // may omit it, so consumers must null-guard.
+    public permissions?: string[],
   ) {}
 }

@@ -1,15 +1,18 @@
-import { Authority } from 'app/config/authority.constants';
+import { Permission } from 'app/config/permission.constants';
 
 /**
  * Single source of truth for the authenticated navigation. Both the sidebar
  * (via `AppShell`) and the ⌘K command palette derive from this list, so a route
- * never drifts between the two. `roles` gates visibility against the account's
- * authorities; omit it to show the item to any authenticated user.
+ * never drifts between the two. `permissions` gates visibility against the
+ * account's effective permissions (any-of); omit it to show the item to any
+ * authenticated user.
  *
  * Labels are i18n keys (resolved by the consumer, since the design-system
  * components take already-translated strings) — see `i18n/en/navigation.json`.
- * Mirrors the reference `ui-kits/hr-admin/nav.js` IA, with self-service items
- * ungated and operational/admin sections behind `ROLE_ADMIN`.
+ * Permission gating mirrors the backend `@RequirePermission` checks, so a hidden
+ * item is also a forbidden endpoint. The platform group is gated on platform
+ * permissions, which only exist in the platform tenant — so it no longer shows
+ * to ordinary tenant admins.
  */
 export interface ShellNavItem {
   id: string;
@@ -21,15 +24,15 @@ export interface ShellNavItem {
   badge?: string | number;
   /** Extra (already-localised or language-neutral) terms folded into the command-palette match. */
   keywords?: string;
-  /** Authorities allowed to see this item; omit = any authenticated user. */
-  roles?: string[];
+  /** Permissions allowed to see this item (any-of); omit = any authenticated user. */
+  permissions?: string[];
 }
 
 export interface ShellNavGroup {
   /** i18n key for the group heading. */
   headingKey: string;
-  /** Gate the whole group; individual items can narrow further. */
-  roles?: string[];
+  /** Gate the whole group (any-of); individual items can narrow further. */
+  permissions?: string[];
   items: ShellNavItem[];
 }
 
@@ -43,11 +46,32 @@ export const SHELL_NAV: ShellNavGroup[] = [
   },
   {
     headingKey: 'humano.nav.groups.people',
-    roles: [Authority.ADMIN],
+    permissions: [Permission.READ_EMPLOYEE, Permission.VIEW_ORGANIZATIONAL_UNITS, Permission.VIEW_POSITIONS],
     items: [
-      { id: 'employees', labelKey: 'humano.nav.employees', icon: 'users', link: '/employees', keywords: 'people directory staff' },
-      { id: 'org', labelKey: 'humano.nav.org', icon: 'network', link: '/org', keywords: 'organization departments teams' },
-      { id: 'positions', labelKey: 'humano.nav.positions', icon: 'briefcase', link: '/positions', keywords: 'jobs roles openings' },
+      {
+        id: 'employees',
+        labelKey: 'humano.nav.employees',
+        icon: 'users',
+        link: '/employees',
+        keywords: 'people directory staff',
+        permissions: [Permission.READ_EMPLOYEE],
+      },
+      {
+        id: 'org',
+        labelKey: 'humano.nav.org',
+        icon: 'network',
+        link: '/org',
+        keywords: 'organization departments teams',
+        permissions: [Permission.VIEW_ORGANIZATIONAL_UNITS],
+      },
+      {
+        id: 'positions',
+        labelKey: 'humano.nav.positions',
+        icon: 'briefcase',
+        link: '/positions',
+        keywords: 'jobs roles openings',
+        permissions: [Permission.VIEW_POSITIONS],
+      },
     ],
   },
   {
@@ -59,30 +83,59 @@ export const SHELL_NAV: ShellNavGroup[] = [
   },
   {
     headingKey: 'humano.nav.groups.payroll',
-    roles: [Authority.ADMIN],
+    permissions: [Permission.VIEW_PAYROLL_RUN, Permission.VIEW_PAYSLIPS, Permission.APPROVE_LEAVE],
     items: [
-      { id: 'runs', labelKey: 'humano.nav.runs', icon: 'wallet', link: '/payroll/runs', keywords: 'payroll salary process' },
+      {
+        id: 'runs',
+        labelKey: 'humano.nav.runs',
+        icon: 'wallet',
+        link: '/payroll/runs',
+        keywords: 'payroll salary process',
+        permissions: [Permission.VIEW_PAYROLL_RUN],
+      },
       {
         id: 'payslips',
         labelKey: 'humano.nav.payslips',
         icon: 'receipt',
         link: '/payroll/payslips',
         keywords: 'salary slip pay statement',
+        permissions: [Permission.VIEW_PAYSLIPS],
       },
-      { id: 'approvals', labelKey: 'humano.nav.approvals', icon: 'check-check', link: '/approvals', keywords: 'pending review sign off' },
+      {
+        id: 'approvals',
+        labelKey: 'humano.nav.approvals',
+        icon: 'check-check',
+        link: '/approvals',
+        keywords: 'pending review sign off',
+        permissions: [Permission.APPROVE_LEAVE, Permission.APPROVE_EXPENSE_CLAIMS, Permission.APPROVE_OVERTIME],
+      },
     ],
   },
   {
     headingKey: 'humano.nav.groups.settings',
-    roles: [Authority.ADMIN],
+    permissions: [Permission.SYSTEM_CONFIGURATION, Permission.READ_USER],
     items: [
-      { id: 'settings', labelKey: 'humano.nav.settings', icon: 'settings', link: '/settings', keywords: 'configuration preferences admin' },
-      { id: 'users', labelKey: 'humano.nav.users', icon: 'user', link: '/admin/users', keywords: 'users accounts roles admin' },
+      {
+        id: 'settings',
+        labelKey: 'humano.nav.settings',
+        icon: 'settings',
+        link: '/settings',
+        keywords: 'configuration preferences admin',
+        permissions: [Permission.SYSTEM_CONFIGURATION],
+      },
+      {
+        id: 'users',
+        labelKey: 'humano.nav.users',
+        icon: 'user',
+        link: '/admin/users',
+        keywords: 'users accounts roles admin',
+        permissions: [Permission.READ_USER],
+      },
     ],
   },
   {
     headingKey: 'humano.nav.groups.platform',
-    roles: [Authority.ADMIN],
+    permissions: [Permission.VIEW_PLATFORM_TENANTS, Permission.VIEW_PLATFORM_BILLING],
     items: [
       {
         id: 'tenants',
@@ -90,6 +143,7 @@ export const SHELL_NAV: ShellNavGroup[] = [
         icon: 'building-2',
         link: '/platform/tenants',
         keywords: 'tenants superadmin platform',
+        permissions: [Permission.VIEW_PLATFORM_TENANTS],
       },
       {
         id: 'billing',
@@ -97,6 +151,7 @@ export const SHELL_NAV: ShellNavGroup[] = [
         icon: 'credit-card',
         link: '/platform/billing',
         keywords: 'billing invoices subscription plan payment',
+        permissions: [Permission.VIEW_PLATFORM_BILLING],
       },
     ],
   },
