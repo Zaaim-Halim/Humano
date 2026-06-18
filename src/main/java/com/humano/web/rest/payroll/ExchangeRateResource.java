@@ -2,7 +2,8 @@ package com.humano.web.rest.payroll;
 
 import com.humano.dto.payroll.request.CreateExchangeRateRequest;
 import com.humano.dto.payroll.response.ExchangeRateResponse;
-import com.humano.security.annotation.RequirePayrollAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.ExchangeRateService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -24,7 +25,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/exchange-rates")
-@RequirePayrollAdmin
+@RequirePermission(PermissionsConstants.MANAGE_EXCHANGE_RATES)
 public class ExchangeRateResource {
 
     private final ExchangeRateService exchangeRateService;

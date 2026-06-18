@@ -4,7 +4,8 @@ import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.dto.billing.requests.CreateSubscriptionRequest;
 import com.humano.dto.billing.requests.UpdateSubscriptionRequest;
 import com.humano.dto.billing.responses.SubscriptionResponse;
-import com.humano.security.annotation.RequireAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.SubscriptionService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -22,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/billing/subscriptions")
-@RequireAdmin
+@RequirePermission(PermissionsConstants.MANAGE_SUBSCRIPTIONS)
 public class SubscriptionResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(SubscriptionResource.class);

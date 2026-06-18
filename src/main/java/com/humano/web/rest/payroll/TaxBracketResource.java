@@ -4,7 +4,8 @@ import com.humano.domain.enumeration.payroll.TaxCode;
 import com.humano.dto.payroll.request.CreateTaxBracketRequest;
 import com.humano.dto.payroll.response.TaxBracketResponse;
 import com.humano.dto.payroll.response.TaxCalculationResponse;
-import com.humano.security.annotation.RequirePayrollAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.TaxCalculationService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -21,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/payroll/tax-brackets")
-@RequirePayrollAdmin
+@RequirePermission(PermissionsConstants.MANAGE_TAX_BRACKETS)
 public class TaxBracketResource {
 
     private final TaxCalculationService taxCalculationService;

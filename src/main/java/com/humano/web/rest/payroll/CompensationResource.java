@@ -5,7 +5,8 @@ import com.humano.dto.payroll.request.CreateCompensationRequest;
 import com.humano.dto.payroll.request.SalaryAdjustmentRequest;
 import com.humano.dto.payroll.response.CompensationResponse;
 import com.humano.dto.payroll.response.SalaryHistoryResponse;
-import com.humano.security.annotation.RequirePayrollOrHrManager;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.CompensationService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -26,7 +27,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/compensations")
-@RequirePayrollOrHrManager
+@RequirePermission(PermissionsConstants.MANAGE_COMPENSATION)
 public class CompensationResource {
 
     private final CompensationService compensationService;

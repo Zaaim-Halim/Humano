@@ -4,8 +4,9 @@ import com.humano.domain.enumeration.billing.SubscriptionType;
 import com.humano.dto.billing.requests.CreateSubscriptionPlanRequest;
 import com.humano.dto.billing.requests.UpdateSubscriptionPlanRequest;
 import com.humano.dto.billing.responses.SubscriptionPlanResponse;
-import com.humano.security.annotation.RequireAdmin;
+import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireAuthenticated;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.SubscriptionPlanService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -57,7 +58,7 @@ public class SubscriptionPlanResource {
     }
 
     @PostMapping
-    @RequireAdmin
+    @RequirePermission(PermissionsConstants.MANAGE_SUBSCRIPTION_PLANS)
     public ResponseEntity<SubscriptionPlanResponse> create(@Valid @RequestBody CreateSubscriptionPlanRequest request) {
         LOG.debug("REST request to create SubscriptionPlan: {}", request);
         SubscriptionPlanResponse created = planService.createSubscriptionPlan(request);
@@ -65,7 +66,7 @@ public class SubscriptionPlanResource {
     }
 
     @PutMapping("/{id}")
-    @RequireAdmin
+    @RequirePermission(PermissionsConstants.MANAGE_SUBSCRIPTION_PLANS)
     public ResponseEntity<SubscriptionPlanResponse> update(
         @PathVariable UUID id,
         @Valid @RequestBody UpdateSubscriptionPlanRequest request
@@ -74,19 +75,19 @@ public class SubscriptionPlanResource {
     }
 
     @PostMapping("/{id}/activate")
-    @RequireAdmin
+    @RequirePermission(PermissionsConstants.MANAGE_SUBSCRIPTION_PLANS)
     public ResponseEntity<SubscriptionPlanResponse> activate(@PathVariable UUID id) {
         return ResponseEntity.ok(planService.activateSubscriptionPlan(id));
     }
 
     @PostMapping("/{id}/deactivate")
-    @RequireAdmin
+    @RequirePermission(PermissionsConstants.MANAGE_SUBSCRIPTION_PLANS)
     public ResponseEntity<SubscriptionPlanResponse> deactivate(@PathVariable UUID id) {
         return ResponseEntity.ok(planService.deactivateSubscriptionPlan(id));
     }
 
     @DeleteMapping("/{id}")
-    @RequireAdmin
+    @RequirePermission(PermissionsConstants.MANAGE_SUBSCRIPTION_PLANS)
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         planService.deleteSubscriptionPlan(id);
         return ResponseEntity.noContent().build();

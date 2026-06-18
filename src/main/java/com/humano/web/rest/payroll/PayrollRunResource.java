@@ -7,7 +7,8 @@ import com.humano.dto.payroll.response.PayrollResultResponse;
 import com.humano.dto.payroll.response.PayrollRunResponse;
 import com.humano.dto.payroll.response.PayrollRunSummaryResponse;
 import com.humano.dto.payroll.response.PayslipResponse;
-import com.humano.security.annotation.RequirePayrollAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.PayrollProcessingService;
 import com.humano.service.payroll.PayslipService;
 import jakarta.validation.Valid;
@@ -42,7 +43,6 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/payroll/runs")
-@RequirePayrollAdmin
 public class PayrollRunResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(PayrollRunResource.class);
@@ -56,6 +56,7 @@ public class PayrollRunResource {
     }
 
     @PostMapping
+    @RequirePermission(PermissionsConstants.CREATE_PAYROLL_RUN)
     public ResponseEntity<PayrollRunResponse> initiate(@Valid @RequestBody InitiatePayrollRunRequest request) {
         LOG.debug("REST request to initiate PayrollRun: {}", request);
         PayrollRunResponse run = processingService.initiatePayrollRun(request);
@@ -63,6 +64,7 @@ public class PayrollRunResource {
     }
 
     @PostMapping("/{id}/calculate")
+    @RequirePermission(PermissionsConstants.PROCESS_PAYROLL)
     public ResponseEntity<PayrollRunResponse> calculate(@PathVariable UUID id) {
         return ResponseEntity.ok(processingService.calculatePayroll(id));
     }
@@ -72,12 +74,14 @@ public class PayrollRunResource {
      * overridden with {@code id} so they can't disagree.
      */
     @PostMapping("/{id}/approve")
+    @RequirePermission(PermissionsConstants.APPROVE_PAYROLL)
     public ResponseEntity<PayrollRunResponse> approve(@PathVariable UUID id, @Valid @RequestBody ApprovePayrollRunRequest body) {
         ApprovePayrollRunRequest safe = new ApprovePayrollRunRequest(id, body.approverId(), body.approvalNotes(), body.forceApproval());
         return ResponseEntity.ok(processingService.approvePayrollRun(safe));
     }
 
     @PostMapping("/{id}/post")
+    @RequirePermission(PermissionsConstants.PROCESS_PAYROLL)
     public ResponseEntity<PayrollRunResponse> post(@PathVariable UUID id) {
         return ResponseEntity.ok(processingService.postPayrollRun(id));
     }
@@ -86,6 +90,7 @@ public class PayrollRunResource {
      * Recalculates. Path id is authoritative (see {@link #approve}).
      */
     @PostMapping("/{id}/recalculate")
+    @RequirePermission(PermissionsConstants.PROCESS_PAYROLL)
     public ResponseEntity<PayrollRunResponse> recalculate(@PathVariable UUID id, @Valid @RequestBody RecalculatePayrollRequest body) {
         RecalculatePayrollRequest safe = new RecalculatePayrollRequest(
             id,
@@ -98,16 +103,19 @@ public class PayrollRunResource {
     }
 
     @GetMapping("/{id}/summary")
+    @RequirePermission(PermissionsConstants.VIEW_PAYROLL_RUN)
     public ResponseEntity<PayrollRunSummaryResponse> summary(@PathVariable UUID id) {
         return ResponseEntity.ok(processingService.getPayrollRunSummary(id));
     }
 
     @GetMapping("/{id}/results")
+    @RequirePermission(PermissionsConstants.VIEW_PAYROLL_RUN)
     public ResponseEntity<List<PayrollResultResponse>> results(@PathVariable UUID id) {
         return ResponseEntity.ok(payslipService.getResultsForRun(id));
     }
 
     @PostMapping("/{id}/generate-payslips")
+    @RequirePermission(PermissionsConstants.GENERATE_PAYSLIPS)
     public ResponseEntity<List<PayslipResponse>> generatePayslips(@PathVariable UUID id) {
         return ResponseEntity.ok(payslipService.generatePayslipsForRun(id));
     }
@@ -118,6 +126,7 @@ public class PayrollRunResource {
      * bytes, see {@link PayslipResource#downloadPdf}.
      */
     @GetMapping("/{id}/payslips/{employeeId}")
+    @RequirePermission(PermissionsConstants.VIEW_PAYSLIPS)
     public ResponseEntity<?> payslipFor(@PathVariable UUID id, @PathVariable UUID employeeId) {
         return payslipService
             .findByRunAndEmployee(id, employeeId)
@@ -137,6 +146,7 @@ public class PayrollRunResource {
      * cached artifact on subsequent calls.
      */
     @GetMapping("/{id}/payslips/{employeeId}/pdf")
+    @RequirePermission(PermissionsConstants.VIEW_PAYSLIPS)
     public ResponseEntity<?> payslipPdfFor(@PathVariable UUID id, @PathVariable UUID employeeId) {
         var slipOpt = payslipService.findByRunAndEmployee(id, employeeId);
         if (slipOpt.isEmpty()) {

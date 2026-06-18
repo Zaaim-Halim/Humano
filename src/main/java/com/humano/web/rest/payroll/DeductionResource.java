@@ -4,7 +4,8 @@ import com.humano.domain.enumeration.payroll.DeductionType;
 import com.humano.dto.payroll.request.CreateDeductionRequest;
 import com.humano.dto.payroll.request.DeductionSearchRequest;
 import com.humano.dto.payroll.response.DeductionResponse;
-import com.humano.security.annotation.RequirePayrollAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.DeductionService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -26,7 +27,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/deductions")
-@RequirePayrollAdmin
+@RequirePermission(PermissionsConstants.MANAGE_DEDUCTIONS)
 public class DeductionResource {
 
     private final DeductionService deductionService;

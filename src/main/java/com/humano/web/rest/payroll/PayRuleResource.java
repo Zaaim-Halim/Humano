@@ -2,7 +2,8 @@ package com.humano.web.rest.payroll;
 
 import com.humano.dto.payroll.request.CreatePayRuleRequest;
 import com.humano.dto.payroll.response.PayComponentResponse;
-import com.humano.security.annotation.RequirePayrollAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.PayComponentService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/payroll/pay-rules")
-@RequirePayrollAdmin
+@RequirePermission(PermissionsConstants.MANAGE_PAY_COMPONENTS)
 public class PayRuleResource {
 
     private final PayComponentService payComponentService;

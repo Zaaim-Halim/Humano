@@ -282,6 +282,7 @@ public final class DefaultRolePermissions {
         );
         grant(PermissionsConstants.APPROVE_PAYROLL, AuthoritiesConstants.PAYROLL_ADMIN, AuthoritiesConstants.FINANCE_MANAGER);
         grant(PermissionsConstants.PROCESS_PAYROLL, AuthoritiesConstants.PAYROLL_ADMIN);
+        grant(PermissionsConstants.MANAGE_PAYROLL_INPUTS, AuthoritiesConstants.PAYROLL_ADMIN, AuthoritiesConstants.PAYROLL_SPECIALIST);
         grant(PermissionsConstants.MANAGE_PAY_COMPONENTS, AuthoritiesConstants.PAYROLL_ADMIN);
         grant(PermissionsConstants.MANAGE_DEDUCTIONS, AuthoritiesConstants.PAYROLL_ADMIN);
         grant(
@@ -295,7 +296,8 @@ public final class DefaultRolePermissions {
             PermissionsConstants.VIEW_PAYSLIPS,
             AuthoritiesConstants.PAYROLL_ADMIN,
             AuthoritiesConstants.PAYROLL_SPECIALIST,
-            AuthoritiesConstants.PAYROLL_VIEWER
+            AuthoritiesConstants.PAYROLL_VIEWER,
+            AuthoritiesConstants.HR_MANAGER
         );
         grant(PermissionsConstants.GENERATE_PAYSLIPS, AuthoritiesConstants.PAYROLL_ADMIN, AuthoritiesConstants.PAYROLL_SPECIALIST);
         grant(PermissionsConstants.MANAGE_COMPENSATION, AuthoritiesConstants.PAYROLL_ADMIN, AuthoritiesConstants.HR_MANAGER);

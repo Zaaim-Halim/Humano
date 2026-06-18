@@ -2,7 +2,8 @@ package com.humano.web.rest.payroll;
 
 import com.humano.dto.payroll.request.PayslipSearchRequest;
 import com.humano.dto.payroll.response.PayslipResponse;
-import com.humano.security.annotation.RequirePayrollOrHrManager;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.PayslipService;
 import jakarta.validation.Valid;
 import java.util.Map;
@@ -32,7 +33,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/payslips")
-@RequirePayrollOrHrManager
+@RequirePermission(PermissionsConstants.VIEW_PAYSLIPS)
 public class PayslipResource {
 
     private final PayslipService payslipService;

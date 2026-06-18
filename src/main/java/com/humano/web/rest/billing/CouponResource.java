@@ -2,8 +2,9 @@ package com.humano.web.rest.billing;
 
 import com.humano.dto.billing.requests.CreateCouponRequest;
 import com.humano.dto.billing.responses.CouponResponse;
-import com.humano.security.annotation.RequireAdmin;
+import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireAuthenticated;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.CouponService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -24,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/billing/coupons")
-@RequireAdmin
+@RequirePermission(PermissionsConstants.MANAGE_COUPONS)
 public class CouponResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(CouponResource.class);

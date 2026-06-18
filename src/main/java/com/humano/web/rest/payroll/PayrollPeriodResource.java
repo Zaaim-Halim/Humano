@@ -2,7 +2,8 @@ package com.humano.web.rest.payroll;
 
 import com.humano.dto.payroll.request.GeneratePayrollPeriodsRequest;
 import com.humano.dto.payroll.response.PayrollPeriodResponse;
-import com.humano.security.annotation.RequirePayrollAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.PayrollCalendarService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -24,7 +25,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/periods")
-@RequirePayrollAdmin
+@RequirePermission(PermissionsConstants.CONFIGURE_PAYROLL_CALENDAR)
 public class PayrollPeriodResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(PayrollPeriodResource.class);

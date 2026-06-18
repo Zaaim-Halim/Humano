@@ -4,7 +4,8 @@ import com.humano.domain.enumeration.payroll.Kind;
 import com.humano.domain.enumeration.payroll.PayComponentCode;
 import com.humano.dto.payroll.request.CreatePayComponentRequest;
 import com.humano.dto.payroll.response.PayComponentResponse;
-import com.humano.security.annotation.RequirePayrollAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.PayComponentService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -26,7 +27,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/pay-components")
-@RequirePayrollAdmin
+@RequirePermission(PermissionsConstants.MANAGE_PAY_COMPONENTS)
 public class PayComponentResource {
 
     private final PayComponentService payComponentService;

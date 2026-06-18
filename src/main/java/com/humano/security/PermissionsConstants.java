@@ -604,6 +604,12 @@ public final class PermissionsConstants {
      */
     public static final String CONFIGURE_PAYROLL_CALENDAR = "CONFIGURE_PAYROLL_CALENDAR";
 
+    /**
+     * Permission to manage payroll inputs (per-period variable pay data entry).
+     * <p>Typically granted to: {@link AuthoritiesConstants#PAYROLL_ADMIN}, {@link AuthoritiesConstants#PAYROLL_SPECIALIST}</p>
+     */
+    public static final String MANAGE_PAYROLL_INPUTS = "MANAGE_PAYROLL_INPUTS";
+
     // ==================== FINANCE PERMISSIONS ====================
 
     /**

@@ -3,7 +3,8 @@ package com.humano.web.rest.billing;
 import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.dto.billing.requests.CreateInvoiceRequest;
 import com.humano.dto.billing.responses.InvoiceResponse;
-import com.humano.security.annotation.RequireAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.InvoiceService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -21,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/billing/invoices")
-@RequireAdmin
 public class InvoiceResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(InvoiceResource.class);
@@ -35,12 +35,14 @@ public class InvoiceResource {
     }
 
     @GetMapping
+    @RequirePermission(PermissionsConstants.VIEW_INVOICE)
     public ResponseEntity<List<InvoiceResponse>> list() {
         UUID tenantId = tenantIdResolver.requireCurrentTenantId();
         return ResponseEntity.ok(invoiceService.getInvoicesByTenant(tenantId));
     }
 
     @GetMapping("/{id}")
+    @RequirePermission(PermissionsConstants.VIEW_INVOICE)
     public ResponseEntity<InvoiceResponse> get(@PathVariable UUID id) {
         InvoiceResponse invoice = invoiceService.getInvoiceById(id);
         verifyTenantOwnership(invoice);
@@ -48,6 +50,7 @@ public class InvoiceResource {
     }
 
     @PostMapping
+    @RequirePermission(PermissionsConstants.CREATE_INVOICE)
     public ResponseEntity<InvoiceResponse> create(@Valid @RequestBody CreateInvoiceRequest request) {
         LOG.debug("REST request to create Invoice: {}", request);
         UUID currentTenantId = tenantIdResolver.requireCurrentTenantId();
@@ -69,18 +72,21 @@ public class InvoiceResource {
      * ergonomics even though the underlying service operation is "mark paid".
      */
     @PostMapping("/{id}/pay")
+    @RequirePermission(PermissionsConstants.UPDATE_INVOICE)
     public ResponseEntity<InvoiceResponse> markPaid(@PathVariable UUID id) {
         verifyTenantOwnership(invoiceService.getInvoiceById(id));
         return ResponseEntity.ok(invoiceService.markAsPaid(id));
     }
 
     @PostMapping("/{id}/mark-overdue")
+    @RequirePermission(PermissionsConstants.UPDATE_INVOICE)
     public ResponseEntity<InvoiceResponse> markOverdue(@PathVariable UUID id) {
         verifyTenantOwnership(invoiceService.getInvoiceById(id));
         return ResponseEntity.ok(invoiceService.markAsOverdue(id));
     }
 
     @DeleteMapping("/{id}")
+    @RequirePermission(PermissionsConstants.DELETE_INVOICE)
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         verifyTenantOwnership(invoiceService.getInvoiceById(id));
         invoiceService.deleteInvoice(id);

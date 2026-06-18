@@ -4,7 +4,8 @@ import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.dto.billing.requests.CreatePaymentRequest;
 import com.humano.dto.billing.responses.InvoiceResponse;
 import com.humano.dto.billing.responses.PaymentResponse;
-import com.humano.security.annotation.RequireAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.InvoiceService;
 import com.humano.service.billing.PaymentService;
 import jakarta.validation.Valid;
@@ -25,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/billing/payments")
-@RequireAdmin
+@RequirePermission(PermissionsConstants.PROCESS_PAYMENTS)
 public class PaymentResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(PaymentResource.class);

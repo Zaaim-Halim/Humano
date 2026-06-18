@@ -5,7 +5,8 @@ import com.humano.dto.payroll.request.BonusSearchRequest;
 import com.humano.dto.payroll.request.BulkBonusRequest;
 import com.humano.dto.payroll.response.BonusResponse;
 import com.humano.dto.payroll.response.BonusSummaryResponse;
-import com.humano.security.annotation.RequirePayrollOrHrManager;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.BonusService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -26,7 +27,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/bonuses")
-@RequirePayrollOrHrManager
+@RequirePermission(PermissionsConstants.MANAGE_BONUSES)
 public class BonusResource {
 
     private final BonusService bonusService;

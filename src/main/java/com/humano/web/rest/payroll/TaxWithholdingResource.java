@@ -3,7 +3,8 @@ package com.humano.web.rest.payroll;
 import com.humano.domain.enumeration.payroll.TaxType;
 import com.humano.dto.payroll.request.CreateTaxWithholdingRequest;
 import com.humano.dto.payroll.response.TaxWithholdingResponse;
-import com.humano.security.annotation.RequirePayrollAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.TaxWithholdingService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -25,7 +26,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/tax-withholdings")
-@RequirePayrollAdmin
+@RequirePermission(PermissionsConstants.MANAGE_TAX_BRACKETS)
 public class TaxWithholdingResource {
 
     private final TaxWithholdingService withholdingService;

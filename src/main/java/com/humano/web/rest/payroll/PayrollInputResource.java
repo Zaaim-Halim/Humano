@@ -3,7 +3,8 @@ package com.humano.web.rest.payroll;
 import com.humano.dto.payroll.request.BulkPayrollInputRequest;
 import com.humano.dto.payroll.request.CreatePayrollInputRequest;
 import com.humano.dto.payroll.response.PayrollInputResponse;
-import com.humano.security.annotation.RequirePayrollAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.PayrollInputService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -24,7 +25,7 @@ import tech.jhipster.web.util.PaginationUtil;
  */
 @RestController
 @RequestMapping("/api/payroll/inputs")
-@RequirePayrollAdmin
+@RequirePermission(PermissionsConstants.MANAGE_PAYROLL_INPUTS)
 public class PayrollInputResource {
 
     private final PayrollInputService inputService;

@@ -3,7 +3,8 @@ package com.humano.web.rest.payroll;
 import com.humano.dto.payroll.request.CreatePayrollCalendarRequest;
 import com.humano.dto.payroll.response.PayrollCalendarResponse;
 import com.humano.dto.payroll.response.PayrollPeriodResponse;
-import com.humano.security.annotation.RequirePayrollAdmin;
+import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequirePermission;
 import com.humano.service.payroll.PayrollCalendarService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/payroll/calendars")
-@RequirePayrollAdmin
+@RequirePermission(PermissionsConstants.CONFIGURE_PAYROLL_CALENDAR)
 public class PayrollCalendarResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(PayrollCalendarResource.class);
