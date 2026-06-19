@@ -28,8 +28,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
     @Query(
         """
         SELECT new com.humano.repository.hr.projection.EmployeeHierarchyRow(
-            e.id, e.firstName, e.lastName, e.jobTitle, e.status, e.path,
-            m.id, m.firstName, m.lastName, m.jobTitle,
+            e.id, e.firstName, e.lastName, e.jobTitle, e.imageUrl, e.status, e.path,
+            m.id, m.firstName, m.lastName, m.jobTitle, m.imageUrl,
             u.id, u.name, u.type, u.path
         )
         FROM Employee e
@@ -49,8 +49,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
     @Query(
         """
         SELECT new com.humano.repository.hr.projection.EmployeeHierarchyRow(
-            e.id, e.firstName, e.lastName, e.jobTitle, e.status, e.path,
-            m.id, m.firstName, m.lastName, m.jobTitle,
+            e.id, e.firstName, e.lastName, e.jobTitle, e.imageUrl, e.status, e.path,
+            m.id, m.firstName, m.lastName, m.jobTitle, m.imageUrl,
             u.id, u.name, u.type, u.path
         )
         FROM Employee e
@@ -68,8 +68,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
     @Query(
         """
         SELECT new com.humano.repository.hr.projection.EmployeeHierarchyRow(
-            e.id, e.firstName, e.lastName, e.jobTitle, e.status, e.path,
-            m.id, m.firstName, m.lastName, m.jobTitle,
+            e.id, e.firstName, e.lastName, e.jobTitle, e.imageUrl, e.status, e.path,
+            m.id, m.firstName, m.lastName, m.jobTitle, m.imageUrl,
             u.id, u.name, u.type, u.path
         )
         FROM Employee e

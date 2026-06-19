@@ -6,12 +6,12 @@ import java.util.UUID;
  * Minimal embedded reference to an employee — enough to render a person chip
  * (avatar/name/title) without round-tripping back to {@code /employees/{id}}.
  */
-public record EmployeeRef(UUID id, String fullName, String jobTitle) {
-    public static EmployeeRef of(UUID id, String firstName, String lastName, String jobTitle) {
+public record EmployeeRef(UUID id, String fullName, String jobTitle, String imageUrl) {
+    public static EmployeeRef of(UUID id, String firstName, String lastName, String jobTitle, String imageUrl) {
         if (id == null) {
             return null;
         }
-        return new EmployeeRef(id, joinFullName(firstName, lastName), jobTitle);
+        return new EmployeeRef(id, joinFullName(firstName, lastName), jobTitle, imageUrl);
     }
 
     private static String joinFullName(String firstName, String lastName) {

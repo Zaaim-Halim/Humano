@@ -1,0 +1,112 @@
+:host {
+  display: block;
+}
+
+.hum-treenode__card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+
+.hum-treenode__card:hover {
+  border-color: var(--border-default);
+}
+
+.hum-treenode__main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.hum-treenode__toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-subtle);
+  cursor: pointer;
+}
+
+.hum-treenode__toggle:hover {
+  background: var(--bg-muted);
+  color: var(--text-default);
+}
+
+.hum-treenode__toggle--leaf {
+  cursor: default;
+}
+
+.hum-treenode__avatar {
+  flex: none;
+}
+
+.hum-treenode__body {
+  min-width: 0;
+}
+
+.hum-treenode__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.hum-treenode__name {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.hum-treenode__meta {
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.hum-treenode__meta--subtle {
+  color: var(--text-subtle);
+}
+
+.hum-treenode__aside {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  font-size: var(--text-sm);
+}
+
+.hum-treenode__aside-label {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+
+.hum-treenode__aside-value {
+  color: var(--text-default);
+  font-weight: 500;
+}
+
+.hum-treenode__children {
+  margin: var(--space-3) 0 0 var(--space-5);
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hum-treenode__collapsed {
+  margin: var(--space-2) 0 0 var(--space-5);
+  font-size: var(--text-sm);
+  font-style: italic;
+  color: var(--text-subtle);
+}

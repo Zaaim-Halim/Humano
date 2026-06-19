@@ -17,6 +17,7 @@ public record EmployeeTreeNode(
     UUID id,
     String fullName,
     String jobTitle,
+    String imageUrl,
     EmployeeStatus status,
     int depth,
     String path,

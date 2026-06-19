@@ -111,6 +111,36 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { permissions: [Permission.READ_EMPLOYEE] },
       },
+      {
+        path: 'people-tree',
+        title: 'humano.nav.peopleTree',
+        loadComponent: () => import('./features/employee/people-tree/people-tree.component').then(m => m.PeopleTreeComponent),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.READ_EMPLOYEE] },
+      },
+      {
+        path: 'people-tree/:employeeId',
+        title: 'humano.nav.peopleTree',
+        loadComponent: () => import('./features/employee/people-tree/people-tree.component').then(m => m.PeopleTreeComponent),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.READ_EMPLOYEE] },
+      },
+      {
+        path: 'organization-tree',
+        title: 'humano.nav.organizationTree',
+        loadComponent: () =>
+          import('./features/employee/organization-tree/organization-tree.component').then(m => m.OrganizationTreeComponent),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.VIEW_ORGANIZATIONAL_UNITS] },
+      },
+      {
+        path: 'organization-tree/:unitId',
+        title: 'humano.nav.organizationTree',
+        loadComponent: () =>
+          import('./features/employee/organization-tree/organization-tree.component').then(m => m.OrganizationTreeComponent),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.VIEW_ORGANIZATIONAL_UNITS] },
+      },
       page('org', 'humano.nav.org', [Permission.VIEW_ORGANIZATIONAL_UNITS]),
       page('positions', 'humano.nav.positions', [Permission.VIEW_POSITIONS]),
       page('payroll/runs', 'humano.nav.runs', [Permission.VIEW_PAYROLL_RUN]),

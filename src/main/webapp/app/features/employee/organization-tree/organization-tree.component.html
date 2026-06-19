@@ -1,0 +1,33 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.organizationTree.title' | translate" [subtitle]="'humano.organizationTree.subtitle' | translate" />
+
+  @if (loading()) {
+    <hum-card><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></hum-card>
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="'humano.organizationTree.errorTitle' | translate">
+      <p style="margin: 0 0 var(--space-2)">{{ e }}</p>
+      <hum-button variant="outline" size="sm" (click)="reload()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (roots().length) {
+    <div
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4)"
+    >
+      <hum-stat-tile icon="network" [label]="'humano.organizationTree.statUnits' | translate" [value]="totalNodes()" />
+      <hum-stat-tile icon="layers" [label]="'humano.organizationTree.statLevels' | translate" [value]="maxLevels()" />
+      <hum-stat-tile icon="building-2" [label]="'humano.organizationTree.statRoots' | translate" [value]="roots().length" />
+    </div>
+    <hum-card>
+      <div style="display: flex; flex-direction: column; gap: var(--space-4)">
+        @for (root of roots(); track root.id) {
+          <hum-organizational-unit-node [node]="root" />
+        }
+      </div>
+    </hum-card>
+  } @else {
+    <hum-empty-state
+      icon="network"
+      [title]="'humano.organizationTree.emptyTitle' | translate"
+      [description]="'humano.organizationTree.emptyBody' | translate"
+    />
+  }
+</div>

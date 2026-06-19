@@ -20,5 +20,6 @@ public record OrganizationalUnitHierarchyRow(
     UUID managerId,
     String managerFirstName,
     String managerLastName,
-    String managerJobTitle
+    String managerJobTitle,
+    String managerImageUrl
 ) {}

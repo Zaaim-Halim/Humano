@@ -57,11 +57,27 @@ export const SHELL_NAV: ShellNavGroup[] = [
         permissions: [Permission.READ_EMPLOYEE],
       },
       {
+        id: 'people-tree',
+        labelKey: 'humano.nav.peopleTree',
+        icon: 'git-fork',
+        link: '/people-tree',
+        keywords: 'reporting hierarchy managers org chart subordinates',
+        permissions: [Permission.READ_EMPLOYEE],
+      },
+      {
         id: 'org',
         labelKey: 'humano.nav.org',
         icon: 'network',
         link: '/org',
         keywords: 'organization departments teams',
+        permissions: [Permission.VIEW_ORGANIZATIONAL_UNITS],
+      },
+      {
+        id: 'organization-tree',
+        labelKey: 'humano.nav.organizationTree',
+        icon: 'list-tree',
+        link: '/organization-tree',
+        keywords: 'org chart units departments sectors hierarchy structure',
         permissions: [Permission.VIEW_ORGANIZATIONAL_UNITS],
       },
       {

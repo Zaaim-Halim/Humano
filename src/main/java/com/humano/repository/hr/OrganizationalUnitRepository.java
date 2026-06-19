@@ -35,7 +35,7 @@ public interface OrganizationalUnitRepository
         SELECT new com.humano.repository.hr.projection.OrganizationalUnitHierarchyRow(
             u.id, u.name, u.type, u.path,
             p.id, p.name,
-            m.id, m.firstName, m.lastName, m.jobTitle
+            m.id, m.firstName, m.lastName, m.jobTitle, m.imageUrl
         )
         FROM OrganizationalUnit u
         LEFT JOIN u.parentUnit p
@@ -54,7 +54,7 @@ public interface OrganizationalUnitRepository
         SELECT new com.humano.repository.hr.projection.OrganizationalUnitHierarchyRow(
             u.id, u.name, u.type, u.path,
             p.id, p.name,
-            m.id, m.firstName, m.lastName, m.jobTitle
+            m.id, m.firstName, m.lastName, m.jobTitle, m.imageUrl
         )
         FROM OrganizationalUnit u
         LEFT JOIN u.parentUnit p
@@ -74,7 +74,7 @@ public interface OrganizationalUnitRepository
         SELECT new com.humano.repository.hr.projection.OrganizationalUnitHierarchyRow(
             u.id, u.name, u.type, u.path,
             p.id, p.name,
-            m.id, m.firstName, m.lastName, m.jobTitle
+            m.id, m.firstName, m.lastName, m.jobTitle, m.imageUrl
         )
         FROM OrganizationalUnit u
         LEFT JOIN u.parentUnit p
@@ -96,7 +96,7 @@ public interface OrganizationalUnitRepository
         SELECT new com.humano.repository.hr.projection.OrganizationalUnitHierarchyRow(
             u.id, u.name, u.type, u.path,
             p.id, p.name,
-            m.id, m.firstName, m.lastName, m.jobTitle
+            m.id, m.firstName, m.lastName, m.jobTitle, m.imageUrl
         )
         FROM OrganizationalUnit u
         LEFT JOIN u.parentUnit p

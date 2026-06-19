@@ -262,10 +262,27 @@ public class HrHierarchyService {
     }
 
     private EmployeeTreeNode toEmployeeNode(EmployeeHierarchyRow row, int depth, List<EmployeeTreeNode> children) {
-        EmployeeRef manager = EmployeeRef.of(row.managerId(), row.managerFirstName(), row.managerLastName(), row.managerJobTitle());
+        EmployeeRef manager = EmployeeRef.of(
+            row.managerId(),
+            row.managerFirstName(),
+            row.managerLastName(),
+            row.managerJobTitle(),
+            row.managerImageUrl()
+        );
         OrganizationalUnitRef unit = new OrganizationalUnitRef(row.unitId(), row.unitName(), row.unitType(), row.unitPath());
         String fullName = joinFullName(row.firstName(), row.lastName());
-        return new EmployeeTreeNode(row.id(), fullName, row.jobTitle(), row.status(), depth, row.path(), manager, unit, children);
+        return new EmployeeTreeNode(
+            row.id(),
+            fullName,
+            row.jobTitle(),
+            row.imageUrl(),
+            row.status(),
+            depth,
+            row.path(),
+            manager,
+            unit,
+            children
+        );
     }
 
     private static String joinFullName(String firstName, String lastName) {
@@ -282,7 +299,13 @@ public class HrHierarchyService {
         Long headcount,
         List<OrganizationalUnitTreeNode> children
     ) {
-        EmployeeRef manager = EmployeeRef.of(row.managerId(), row.managerFirstName(), row.managerLastName(), row.managerJobTitle());
+        EmployeeRef manager = EmployeeRef.of(
+            row.managerId(),
+            row.managerFirstName(),
+            row.managerLastName(),
+            row.managerJobTitle(),
+            row.managerImageUrl()
+        );
         return new OrganizationalUnitTreeNode(
             row.id(),
             row.name(),

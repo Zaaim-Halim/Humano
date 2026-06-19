@@ -1,0 +1,52 @@
+<div class="hum-treenode">
+  <div class="hum-treenode__card">
+    <div class="hum-treenode__main">
+      @if (hasChildren()) {
+        <button
+          type="button"
+          class="hum-treenode__toggle"
+          (click)="toggle()"
+          [attr.aria-expanded]="expanded()"
+          [attr.aria-label]="(expanded() ? 'humano.action.collapse' : 'humano.action.expand') | translate"
+        >
+          <lucide-icon [name]="expanded() ? 'chevron-down' : 'chevron-right'" [size]="16" />
+        </button>
+      } @else {
+        <span class="hum-treenode__toggle hum-treenode__toggle--leaf" aria-hidden="true"></span>
+      }
+
+      <div class="hum-treenode__body">
+        <div class="hum-treenode__heading">
+          <span class="hum-treenode__name">{{ node().name }}</span>
+          <hum-badge [tone]="typeTone()" [label]="typeLabel()" [dot]="false" />
+          @if (hasHeadcount()) {
+            <hum-badge
+              tone="neutral"
+              [label]="'humano.organizationTree.headcount' | translate: { count: node().headcount }"
+              [dot]="false"
+            />
+          }
+        </div>
+      </div>
+    </div>
+
+    @if (node().manager) {
+      <div class="hum-treenode__aside">
+        <span class="hum-treenode__aside-label">{{ 'humano.organizationTree.manager' | translate }}</span>
+        <span class="hum-treenode__aside-value">{{ node().manager?.fullName }}</span>
+      </div>
+    }
+  </div>
+
+  @if (hasChildren()) {
+    @if (expanded()) {
+      <div class="hum-treenode__children">
+        @for (child of node().children; track child.id) {
+          <hum-organizational-unit-node [node]="child" />
+        }
+      </div>
+    } @else {
+      <div class="hum-treenode__collapsed">{{ 'humano.organizationTree.subUnitsHidden' | translate: { count: childCount() } }}</div>
+    }
+  }
+</div>

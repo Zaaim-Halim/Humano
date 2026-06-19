@@ -15,6 +15,8 @@
       "dashboard": "Dashboard",
       "portal": "My space",
       "employees": "Employees",
+      "peopleTree": "People tree",
+      "organizationTree": "Organization tree",
       "org": "Org units",
       "positions": "Positions",
       "leave": "Leave requests",
@@ -56,7 +58,34 @@
       "save": "Save",
       "delete": "Delete",
       "create": "Create",
-      "clearFilters": "Clear filters"
+      "clearFilters": "Clear filters",
+      "expand": "Expand",
+      "collapse": "Collapse"
+    },
+    "peopleTree": {
+      "title": "People tree",
+      "subtitle": "Browse the reporting hierarchy by manager",
+      "statTotal": "People",
+      "statLevels": "Levels",
+      "reportsTo": "Reports to",
+      "subordinatesHidden": "{{ count }} hidden",
+      "noRootTitle": "Pick someone to start",
+      "noRootBody": "Open an employee from the directory to explore their reporting line.",
+      "goToDirectory": "Go to directory",
+      "errorTitle": "Couldn't load the people tree"
+    },
+    "organizationTree": {
+      "title": "Organization tree",
+      "subtitle": "Browse units, sub-units and their leadership",
+      "statUnits": "Units",
+      "statLevels": "Levels",
+      "statRoots": "Top-level",
+      "manager": "Manager",
+      "headcount": "{{ count }} people",
+      "subUnitsHidden": "{{ count }} hidden",
+      "errorTitle": "Couldn't load the organization tree",
+      "emptyTitle": "No organizational units",
+      "emptyBody": "No organizational units are available yet."
     },
     "directory": {
       "title": "Employees",

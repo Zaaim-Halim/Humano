@@ -1,0 +1,33 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.peopleTree.title' | translate" [subtitle]="'humano.peopleTree.subtitle' | translate" />
+
+  @if (loading()) {
+    <hum-card><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></hum-card>
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="'humano.peopleTree.errorTitle' | translate">
+      <p style="margin: 0 0 var(--space-2)">{{ e }}</p>
+      <hum-button variant="outline" size="sm" (click)="reload()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (root(); as r) {
+    <div
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4)"
+    >
+      <hum-stat-tile icon="users" [label]="'humano.peopleTree.statTotal' | translate" [value]="totalNodes()" />
+      <hum-stat-tile icon="layers" [label]="'humano.peopleTree.statLevels' | translate" [value]="maxLevels()" />
+    </div>
+    <hum-card>
+      <hum-employee-tree-node [node]="r" />
+    </hum-card>
+  } @else {
+    <hum-empty-state
+      icon="users"
+      [title]="'humano.peopleTree.noRootTitle' | translate"
+      [description]="'humano.peopleTree.noRootBody' | translate"
+      hasAction
+    >
+      <hum-button hum-empty-action variant="primary" (click)="goToDirectory()">{{
+        'humano.peopleTree.goToDirectory' | translate
+      }}</hum-button>
+    </hum-empty-state>
+  }
+</div>

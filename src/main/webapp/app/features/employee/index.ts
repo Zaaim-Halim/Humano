@@ -59,3 +59,21 @@ export type {
 // Documents
 export { EmployeeDocumentService } from './services/employee-document.service';
 export type { EmployeeDocument, CreateEmployeeDocumentRequest, UpdateEmployeeDocumentRequest } from './models/employee-document.model';
+
+// Hierarchy (People Tree and Organization Tree)
+export { HrHierarchyService } from './services/hr-hierarchy.service';
+export type {
+  EmployeeRef,
+  OrganizationalUnitRef,
+  EmployeeTreeNode,
+  EmployeeHierarchyResponse,
+  OrganizationalUnitTreeNode,
+  OrganizationalUnitHierarchyResponse,
+  HierarchyAncestorsResponse,
+} from './models/hierarchy.model';
+
+// Tree Components
+export { PeopleTreeComponent } from './people-tree/people-tree.component';
+export { EmployeeTreeNodeComponent } from './people-tree/employee-tree-node/employee-tree-node.component';
+export { OrganizationTreeComponent } from './organization-tree/organization-tree.component';
+export { OrganizationalUnitNodeComponent } from './organization-tree/organizational-unit-node/organizational-unit-node.component';
