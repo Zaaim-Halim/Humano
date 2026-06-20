@@ -3,6 +3,8 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
+import { Permission } from 'app/config/permission.constants';
+import { AccountService } from 'app/core/auth/account.service';
 import { normalizeHttpError } from 'app/core/api';
 import {
   EmployeeDocument,
@@ -75,6 +77,10 @@ export default class EmployeeDetailComponent {
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
   private readonly document = inject(DOCUMENT);
+  private readonly account = inject(AccountService);
+
+  /** Gate the Edit action on the same permission the edit route requires. */
+  protected readonly canEdit = this.account.hasPermission(Permission.UPDATE_EMPLOYEE);
 
   // TODO: backend — the employee profile DTOs expose no person name (only jobTitle);
   // firstName/lastName live on User/MeResponse, not the employee profile. Using
@@ -196,5 +202,9 @@ export default class EmployeeDetailComponent {
 
   protected back(): void {
     void this.router.navigate(['/employees']);
+  }
+
+  protected goEdit(): void {
+    void this.router.navigate(['/employees', this.id(), 'edit']);
   }
 }

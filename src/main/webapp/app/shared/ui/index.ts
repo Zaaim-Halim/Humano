@@ -29,6 +29,8 @@ export { ToastHostComponent } from './feedback/toast-host.component';
 export { InputComponent, TextareaComponent } from './forms/input.component';
 export { SelectComponent } from './forms/select.component';
 export type { SelectOption } from './forms/select.component';
+export { AutocompleteComponent } from './forms/autocomplete.component';
+export type { AutocompleteOption } from './forms/autocomplete.component';
 export { CheckboxComponent, RadioComponent } from './forms/checkbox.component';
 export { SwitchComponent } from './forms/switch.component';
 export { FormFieldComponent } from './forms/form-field.component';

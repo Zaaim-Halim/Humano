@@ -60,6 +60,10 @@ export type {
 export { EmployeeDocumentService } from './services/employee-document.service';
 export type { EmployeeDocument, CreateEmployeeDocumentRequest, UpdateEmployeeDocumentRequest } from './models/employee-document.model';
 
+// Custom attributes
+export { EmployeeAttributeService } from './services/employee-attribute.service';
+export type { EmployeeAttribute, UpdateEmployeeAttributesRequest } from './models/employee-attribute.model';
+
 // Hierarchy (People Tree and Organization Tree)
 export { HrHierarchyService } from './services/hr-hierarchy.service';
 export type {

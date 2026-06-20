@@ -1,0 +1,145 @@
+<div class="hum-page" style="max-width: 720px">
+  <hum-page-header
+    [title]="(isEdit() ? 'humano.employeeForm.editTitle' : 'humano.employeeForm.createTitle') | translate"
+    [subtitle]="'humano.employeeForm.subtitle' | translate"
+  />
+
+  @if (!isEdit() && !userId()) {
+    <hum-alert tone="info" [title]="'humano.employeeForm.noUserTitle' | translate">
+      <p style="margin: 0 0 var(--space-2)">{{ 'humano.employeeForm.noUserBody' | translate }}</p>
+      <hum-button variant="secondary" size="sm" routerLink="/admin/users">{{ 'humano.employeeForm.goToUsers' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (loading()) {
+    <hum-card><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></hum-card>
+  } @else if (loadError(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="cancel()">{{ 'humano.action.cancel' | translate }}</hum-button>
+    </hum-alert>
+  } @else {
+    <hum-card>
+      <form [formGroup]="form" (ngSubmit)="save()" novalidate style="display: grid; gap: var(--space-4)">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4)">
+          <hum-form-field [label]="'humano.employeeForm.jobTitle' | translate" controlId="emp-jobTitle">
+            <hum-input inputId="emp-jobTitle" formControlName="jobTitle" />
+          </hum-form-field>
+
+          <hum-form-field [label]="'humano.employeeForm.phone' | translate" controlId="emp-phone">
+            <hum-input inputId="emp-phone" formControlName="phone" />
+          </hum-form-field>
+
+          <hum-form-field
+            [label]="'humano.employeeForm.startDate' | translate"
+            controlId="emp-startDate"
+            [error]="invalid('startDate') ? ('humano.employeeForm.required' | translate) : undefined"
+          >
+            <hum-input inputId="emp-startDate" type="date" formControlName="startDate" [invalid]="invalid('startDate')" />
+          </hum-form-field>
+
+          <hum-form-field
+            [label]="'humano.employeeForm.endDate' | translate"
+            controlId="emp-endDate"
+            [error]="form.errors?.['dateOrder'] ? ('humano.employeeForm.dateOrder' | translate) : undefined"
+          >
+            <hum-input inputId="emp-endDate" type="date" formControlName="endDate" />
+          </hum-form-field>
+
+          <hum-form-field [label]="'humano.employeeForm.status' | translate" controlId="emp-status">
+            <hum-select formControlName="status" [options]="statusOptions" />
+          </hum-form-field>
+
+          <hum-form-field [label]="'humano.employeeForm.department' | translate" controlId="emp-department">
+            <hum-select formControlName="departmentId" [options]="departments()" />
+          </hum-form-field>
+
+          <hum-form-field
+            [label]="'humano.employeeForm.position' | translate"
+            controlId="emp-position"
+            [error]="invalid('positionId') ? ('humano.employeeForm.required' | translate) : undefined"
+          >
+            <hum-select formControlName="positionId" [options]="positions()" />
+          </hum-form-field>
+
+          <hum-form-field
+            [label]="'humano.employeeForm.unit' | translate"
+            controlId="emp-unit"
+            [error]="invalid('unitId') ? ('humano.employeeForm.required' | translate) : undefined"
+          >
+            <hum-select formControlName="unitId" [options]="units()" />
+          </hum-form-field>
+
+          <hum-form-field [label]="'humano.employeeForm.manager' | translate" controlId="emp-manager">
+            <hum-autocomplete
+              formControlName="managerId"
+              [searchFn]="searchManagers"
+              [initialOption]="managerInitial()"
+              [placeholder]="'humano.employeeForm.managerPlaceholder' | translate"
+              [loadingText]="'humano.employeeForm.searching' | translate"
+              [noResultsText]="'humano.employeeForm.noResults' | translate"
+              [clearLabel]="'humano.action.clear' | translate"
+            />
+          </hum-form-field>
+        </div>
+
+        <div style="display: flex; gap: var(--space-2); justify-content: flex-end">
+          <hum-button type="button" variant="secondary" (click)="cancel()">{{ 'humano.action.cancel' | translate }}</hum-button>
+          <hum-button type="submit" variant="primary" [loading]="saving()" [disabled]="form.invalid">{{
+            (isEdit() ? 'humano.employeeForm.saveEdit' : 'humano.employeeForm.saveCreate') | translate
+          }}</hum-button>
+        </div>
+      </form>
+    </hum-card>
+
+    @if (isEdit()) {
+      <hum-card [title]="'humano.employeeForm.attributesTitle' | translate" style="margin-top: var(--space-4)">
+        <p class="hum-pagehead__sub" style="margin: 0 0 var(--space-3)">{{ 'humano.employeeForm.attributesHint' | translate }}</p>
+
+        @if (attributesLoading()) {
+          <hum-skeleton-row />
+        } @else if (attributesLoadError(); as e) {
+          <hum-alert tone="danger" [title]="e">
+            <hum-button variant="outline" size="sm" (click)="retryAttributes()">{{ 'humano.action.retry' | translate }}</hum-button>
+          </hum-alert>
+        } @else {
+          @if (attributes.controls.length === 0) {
+            <p style="color: var(--text-subtle); margin: 0 0 var(--space-3)">{{ 'humano.employeeForm.attributesNone' | translate }}</p>
+          }
+
+          <div style="display: grid; gap: var(--space-2)">
+            @for (row of attributes.controls; track $index) {
+              <div [formGroup]="row" style="display: flex; gap: var(--space-2); align-items: start">
+                <div style="flex: 1">
+                  <hum-input formControlName="key" [placeholder]="'humano.employeeForm.attributeKey' | translate" />
+                </div>
+                <div style="flex: 2">
+                  <hum-input formControlName="value" [placeholder]="'humano.employeeForm.attributeValue' | translate" />
+                </div>
+                <hum-button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  icon="trash-2"
+                  [attr.aria-label]="'humano.action.delete' | translate"
+                  (click)="removeAttribute($index)"
+                />
+              </div>
+            }
+          </div>
+
+          <div style="display: flex; gap: var(--space-2); justify-content: space-between; margin-top: var(--space-3)">
+            <hum-button type="button" variant="secondary" size="sm" icon="plus" (click)="addAttribute()">{{
+              'humano.employeeForm.addAttribute' | translate
+            }}</hum-button>
+            <hum-button
+              type="button"
+              variant="primary"
+              [loading]="attributesSaving()"
+              [disabled]="attributes.invalid"
+              (click)="saveAttributes()"
+              >{{ 'humano.employeeForm.saveAttributes' | translate }}</hum-button
+            >
+          </div>
+        }
+      </hum-card>
+    }
+  }
+</div>

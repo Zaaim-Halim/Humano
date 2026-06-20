@@ -105,11 +105,25 @@ const routes: Routes = [
         data: { permissions: [Permission.READ_EMPLOYEE] },
       },
       {
+        path: 'employees/new',
+        title: 'humano.employeeForm.createTitle',
+        loadComponent: () => import('./features/admin/employee-form/employee-form.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.CREATE_EMPLOYEE] },
+      },
+      {
         path: 'employees/:id',
         title: 'humano.nav.employees',
         loadComponent: () => import('./features/admin/employee-detail/employee-detail.component'),
         canActivate: [UserRouteAccessService],
         data: { permissions: [Permission.READ_EMPLOYEE] },
+      },
+      {
+        path: 'employees/:id/edit',
+        title: 'humano.employeeForm.editTitle',
+        loadComponent: () => import('./features/admin/employee-form/employee-form.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.UPDATE_EMPLOYEE] },
       },
       {
         path: 'people-tree',

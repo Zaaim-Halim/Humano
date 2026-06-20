@@ -2,6 +2,8 @@
   "settings": {
     "title": "User settings for [<strong>{{username}}</strong>]",
     "form": {
+      "avatar": "Profile picture",
+      "avatar.placeholder": "Image URL (https://…)",
       "firstname": "First Name",
       "firstname.placeholder": "Your first name",
       "lastname": "Last Name",

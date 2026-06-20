@@ -18,6 +18,11 @@
         <div class="hum-pagehead__sub">{{ emp.departmentName ?? '—' }} · {{ emp.positionName ?? '—' }}</div>
         <div style="margin-top: var(--space-2)"><hum-badge [status]="emp.status" /></div>
       </div>
+      @if (canEdit) {
+        <hum-button variant="secondary" size="sm" icon="pencil" (click)="goEdit()">{{
+          'humano.employeeForm.editTitle' | translate
+        }}</hum-button>
+      }
     </header>
 
     <hum-tabs [items]="tabs()" [(value)]="activeTab" />

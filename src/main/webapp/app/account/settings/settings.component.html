@@ -2,6 +2,15 @@
   <hum-page-header [title]="title()" [subtitle]="'settings.form.button' | translate" />
 
   <form [formGroup]="form" (ngSubmit)="save()" novalidate style="display: grid; gap: var(--space-4)">
+    <hum-form-field [label]="'settings.form.avatar' | translate" controlId="settings-image">
+      <div style="display: flex; align-items: center; gap: var(--space-3)">
+        <hum-avatar size="lg" [name]="previewName()" [src]="previewSrc()" />
+        <div style="flex: 1">
+          <hum-input inputId="settings-image" formControlName="imageUrl" [placeholder]="'settings.form.avatar.placeholder' | translate" />
+        </div>
+      </div>
+    </hum-form-field>
+
     <hum-form-field [label]="'settings.form.firstname' | translate" controlId="settings-firstname">
       <hum-input
         inputId="settings-firstname"
