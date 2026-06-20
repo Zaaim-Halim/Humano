@@ -64,6 +64,13 @@
               }}</hum-button></hum-alert
             >
           } @else if (compensation().data; as comp) {
+            @if (canManageCompensation) {
+              <div style="display: flex; justify-content: flex-end; margin-bottom: var(--space-3)">
+                <hum-button variant="secondary" size="sm" icon="wallet" (click)="openCompEditor()">{{
+                  (compMode() === 'adjust' ? 'humano.compensationEditor.adjustCta' : 'humano.compensationEditor.createCta') | translate
+                }}</hum-button>
+              </div>
+            }
             @if (comp.currentCompensation; as cur) {
               <div style="display: flex; gap: var(--space-6); margin-bottom: var(--space-4)">
                 <div>
@@ -268,3 +275,89 @@
     }}</hum-button>
   </div>
 </hum-dialog>
+
+<!-- Compensation editor: create the first record, then adjust thereafter -->
+<hum-drawer
+  [open]="compFormOpen()"
+  [title]="(compMode() === 'adjust' ? 'humano.compensationEditor.adjustTitle' : 'humano.compensationEditor.createTitle') | translate"
+  hasFooter
+  (closed)="compFormOpen.set(false)"
+>
+  @if (compMode() === 'adjust') {
+    <form [formGroup]="adjustForm" style="display: grid; gap: var(--space-4)">
+      <hum-form-field
+        [label]="'humano.compensationEditor.newAmount' | translate"
+        controlId="comp-newAmount"
+        [error]="compInvalid('newAmount') ? ('humano.employeeForm.required' | translate) : undefined"
+      >
+        <hum-input inputId="comp-newAmount" type="number" formControlName="newAmount" [invalid]="compInvalid('newAmount')" />
+      </hum-form-field>
+
+      <hum-form-field [label]="'humano.compensationEditor.basis' | translate" controlId="comp-newBasis">
+        <hum-select formControlName="newBasis" [options]="adjustBasisOptions()" />
+      </hum-form-field>
+
+      <hum-form-field
+        [label]="'humano.compensationEditor.effectiveFrom' | translate"
+        controlId="comp-adj-effFrom"
+        [error]="compInvalid('effectiveFrom') ? ('humano.employeeForm.required' | translate) : undefined"
+      >
+        <hum-input inputId="comp-adj-effFrom" type="date" formControlName="effectiveFrom" [invalid]="compInvalid('effectiveFrom')" />
+      </hum-form-field>
+
+      <hum-form-field
+        [label]="'humano.compensationEditor.reason' | translate"
+        controlId="comp-reason"
+        [error]="compInvalid('reason') ? ('humano.employeeForm.required' | translate) : undefined"
+      >
+        <hum-input inputId="comp-reason" formControlName="reason" [invalid]="compInvalid('reason')" />
+      </hum-form-field>
+    </form>
+  } @else {
+    <form [formGroup]="createForm" style="display: grid; gap: var(--space-4)">
+      <hum-form-field
+        [label]="'humano.compensationEditor.position' | translate"
+        controlId="comp-position"
+        [error]="compInvalid('positionId') ? ('humano.employeeForm.required' | translate) : undefined"
+      >
+        <hum-select formControlName="positionId" [options]="positionOptions()" />
+      </hum-form-field>
+
+      <hum-form-field
+        [label]="'humano.compensationEditor.currency' | translate"
+        controlId="comp-currency"
+        [error]="compInvalid('currencyId') ? ('humano.employeeForm.required' | translate) : undefined"
+      >
+        <hum-select formControlName="currencyId" [options]="currencyOptions()" />
+      </hum-form-field>
+
+      <hum-form-field
+        [label]="'humano.compensationEditor.baseAmount' | translate"
+        controlId="comp-baseAmount"
+        [error]="compInvalid('baseAmount') ? ('humano.employeeForm.required' | translate) : undefined"
+      >
+        <hum-input inputId="comp-baseAmount" type="number" formControlName="baseAmount" [invalid]="compInvalid('baseAmount')" />
+      </hum-form-field>
+
+      <hum-form-field [label]="'humano.compensationEditor.basis' | translate" controlId="comp-basis">
+        <hum-select formControlName="basis" [options]="basisOptions" />
+      </hum-form-field>
+
+      <hum-form-field
+        [label]="'humano.compensationEditor.effectiveFrom' | translate"
+        controlId="comp-effFrom"
+        [error]="compInvalid('effectiveFrom') ? ('humano.employeeForm.required' | translate) : undefined"
+      >
+        <hum-input inputId="comp-effFrom" type="date" formControlName="effectiveFrom" [invalid]="compInvalid('effectiveFrom')" />
+      </hum-form-field>
+
+      <hum-form-field [label]="'humano.compensationEditor.effectiveTo' | translate" controlId="comp-effTo">
+        <hum-input inputId="comp-effTo" type="date" formControlName="effectiveTo" />
+      </hum-form-field>
+    </form>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="compFormOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" [loading]="compSaving()" (click)="saveCompensation()">{{ 'humano.action.save' | translate }}</hum-button>
+  </div>
+</hum-drawer>

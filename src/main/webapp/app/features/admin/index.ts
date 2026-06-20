@@ -53,6 +53,9 @@ export type {
 export { PayrollPeriodService } from './services/payroll-period.service';
 export type { PayrollPeriod, GeneratePayrollPeriodsRequest } from './models/payroll-period.model';
 
+export { CurrencyService } from './services/currency.service';
+export type { Currency } from './models/currency.model';
+
 // User administration
 export { AdminUserService } from './services/admin-user.service';
 export type { ManagedUserPage } from './services/admin-user.service';

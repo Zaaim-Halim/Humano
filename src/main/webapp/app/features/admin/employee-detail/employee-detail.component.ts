@@ -1,8 +1,9 @@
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { Observable } from 'rxjs';
 
 import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
@@ -28,13 +29,25 @@ import {
   FormFieldComponent,
   IconButtonComponent,
   InputComponent,
+  SelectComponent,
+  SelectOption,
   SkeletonRowComponent,
   TabItem,
   TabsComponent,
   ToastService,
 } from 'app/shared/ui';
 
-import { CompensationService, SalaryHistory } from '../index';
+import {
+  Basis,
+  CompensationService,
+  CreateCompensationRequest,
+  Currency,
+  CurrencyService,
+  Position,
+  PositionService,
+  SalaryAdjustmentRequest,
+  SalaryHistory,
+} from '../index';
 
 type TabId = 'overview' | 'compensation' | 'leaves' | 'documents' | 'performance';
 
@@ -72,6 +85,7 @@ const idle = <T>(): TabState<T> => ({ data: null, loading: false, error: null })
     DrawerComponent,
     DialogComponent,
     InputComponent,
+    SelectComponent,
     FormFieldComponent,
   ],
   templateUrl: './employee-detail.component.html',
@@ -83,6 +97,8 @@ export default class EmployeeDetailComponent {
   private readonly fb = inject(FormBuilder);
   private readonly employeeService = inject(EmployeeService);
   private readonly compensationService = inject(CompensationService);
+  private readonly positionService = inject(PositionService);
+  private readonly currencyService = inject(CurrencyService);
   private readonly leaveService = inject(LeaveRequestService);
   private readonly documentService = inject(EmployeeDocumentService);
   private readonly performanceService = inject(PerformanceReviewService);
@@ -118,6 +134,47 @@ export default class EmployeeDetailComponent {
   protected readonly leaves = signal<TabState<LeaveRequest[]>>(idle());
   protected readonly documents = signal<TabState<EmployeeDocument[]>>(idle());
   protected readonly performance = signal<TabState<PerformanceReview[]>>(idle());
+
+  /** Gate the compensation editor on the compensation write permission. */
+  protected readonly canManageCompensation = this.account.hasPermission(Permission.MANAGE_COMPENSATION);
+
+  // Compensation editor — creates the first record, then adjusts thereafter
+  // (a second active compensation would conflict on the backend).
+  protected readonly compFormOpen = signal(false);
+  protected readonly compSaving = signal(false);
+  protected readonly compMode = computed<'create' | 'adjust'>(() => (this.compensation().data?.currentCompensation ? 'adjust' : 'create'));
+
+  private readonly positions = signal<Position[]>([]);
+  private readonly currencies = signal<Currency[]>([]);
+  protected readonly positionOptions = computed<SelectOption[]>(() => [
+    { value: '', label: this.translate.instant('humano.compensationEditor.selectPosition') },
+    ...this.positions().map(p => ({ value: p.id, label: p.name })),
+  ]);
+  protected readonly currencyOptions = computed<SelectOption[]>(() => [
+    { value: '', label: this.translate.instant('humano.compensationEditor.selectCurrency') },
+    ...this.currencies().map(c => ({ value: c.id, label: `${c.code} — ${c.name}` })),
+  ]);
+  protected readonly basisOptions: SelectOption[] = Object.values(Basis).map(b => ({ value: b, label: b }));
+  protected readonly adjustBasisOptions = computed<SelectOption[]>(() => [
+    { value: '', label: this.translate.instant('humano.compensationEditor.keepBasis') },
+    ...Object.values(Basis).map(b => ({ value: b, label: b })),
+  ]);
+
+  // Amount controls hold strings (hum-input emits strings); coerced on submit.
+  protected readonly createForm = this.fb.nonNullable.group({
+    positionId: ['', Validators.required],
+    currencyId: ['', Validators.required],
+    baseAmount: ['', [Validators.required, Validators.min(0.01)]],
+    basis: [Basis.MONTHLY as Basis, Validators.required],
+    effectiveFrom: ['', Validators.required],
+    effectiveTo: [''],
+  });
+  protected readonly adjustForm = this.fb.nonNullable.group({
+    newAmount: ['', [Validators.required, Validators.min(0.01)]],
+    newBasis: [''],
+    effectiveFrom: ['', Validators.required],
+    reason: ['', [Validators.required, Validators.maxLength(1000)]],
+  });
 
   protected readonly activeTab = signal<TabId>('overview');
   private readonly loadedKeys = new Set<string>();
@@ -276,6 +333,92 @@ export default class EmployeeDetailComponent {
   /** Re-fetch the documents tab after a write (reuses the tab's cache-busting retry). */
   private reloadDocuments(): void {
     this.retryTab('documents');
+  }
+
+  protected openCompEditor(): void {
+    if (this.compMode() === 'adjust') {
+      this.adjustForm.reset({ newAmount: '', newBasis: '', effectiveFrom: '', reason: '' });
+    } else {
+      this.createForm.reset({
+        positionId: this.identity().data?.positionId ?? '',
+        currencyId: '',
+        baseAmount: '',
+        basis: Basis.MONTHLY,
+        effectiveFrom: '',
+        effectiveTo: '',
+      });
+    }
+    // Reference data is bounded; load once and cache.
+    if (this.positions().length === 0) this.loadPositions();
+    if (this.currencies().length === 0) this.loadCurrencies();
+    this.compFormOpen.set(true);
+  }
+
+  protected compInvalid(control: string): boolean {
+    const form: FormGroup = this.compMode() === 'adjust' ? this.adjustForm : this.createForm;
+    const c = form.get(control);
+    return !!c && c.invalid && (c.dirty || c.touched);
+  }
+
+  protected saveCompensation(): void {
+    const employeeId = this.id();
+    if (this.compMode() === 'adjust') {
+      if (this.adjustForm.invalid) {
+        this.adjustForm.markAllAsTouched();
+        return;
+      }
+      const raw = this.adjustForm.getRawValue();
+      const body: SalaryAdjustmentRequest = {
+        employeeId,
+        newAmount: Number(raw.newAmount),
+        effectiveFrom: raw.effectiveFrom,
+        reason: raw.reason,
+        ...(raw.newBasis ? { newBasis: raw.newBasis as Basis } : {}),
+      };
+      this.submitCompensation(this.compensationService.adjust(body));
+    } else {
+      if (this.createForm.invalid) {
+        this.createForm.markAllAsTouched();
+        return;
+      }
+      const raw = this.createForm.getRawValue();
+      const body: CreateCompensationRequest = {
+        employeeId,
+        positionId: raw.positionId,
+        currencyId: raw.currencyId,
+        baseAmount: Number(raw.baseAmount),
+        basis: raw.basis,
+        effectiveFrom: raw.effectiveFrom,
+        ...(raw.effectiveTo ? { effectiveTo: raw.effectiveTo } : {}),
+      };
+      this.submitCompensation(this.compensationService.create(body));
+    }
+  }
+
+  private submitCompensation(request$: Observable<unknown>): void {
+    this.compSaving.set(true);
+    request$.subscribe({
+      next: () => {
+        this.toast.success(this.translate.instant('humano.compensationEditor.saved'));
+        this.compFormOpen.set(false);
+        this.compSaving.set(false);
+        this.retryTab('compensation');
+      },
+      error: (err: unknown) => {
+        this.toast.danger(normalizeHttpError(err));
+        this.compSaving.set(false);
+      },
+    });
+  }
+
+  private loadPositions(): void {
+    this.positionService.query({ page: 0, size: 200, sort: ['name,asc'] }).subscribe({
+      next: res => this.positions.set(res.content),
+    });
+  }
+
+  private loadCurrencies(): void {
+    this.currencyService.list().subscribe({ next: res => this.currencies.set(res) });
   }
 
   protected back(): void {

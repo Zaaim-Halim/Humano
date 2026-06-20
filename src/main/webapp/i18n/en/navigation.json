@@ -454,6 +454,24 @@
       "noProfileTitle": "Documents not available yet",
       "noProfileBody": "Your account isn't linked to an employee profile yet, so your documents can't be shown here.",
       "empty": "No documents on your profile yet"
+    },
+    "compensationEditor": {
+      "createTitle": "Set compensation",
+      "adjustTitle": "Adjust salary",
+      "createCta": "Set compensation",
+      "adjustCta": "Adjust salary",
+      "position": "Position",
+      "selectPosition": "Select a position",
+      "currency": "Currency",
+      "selectCurrency": "Select a currency",
+      "baseAmount": "Base amount",
+      "newAmount": "New amount",
+      "basis": "Pay basis",
+      "keepBasis": "Keep current basis",
+      "effectiveFrom": "Effective from",
+      "effectiveTo": "Effective to",
+      "reason": "Reason",
+      "saved": "Compensation saved"
     }
   }
 }
