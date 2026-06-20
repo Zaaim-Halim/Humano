@@ -1,5 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
@@ -21,7 +22,12 @@ import {
   AvatarComponent,
   BadgeComponent,
   ButtonComponent,
+  DialogComponent,
+  DrawerComponent,
   EmptyStateComponent,
+  FormFieldComponent,
+  IconButtonComponent,
+  InputComponent,
   SkeletonRowComponent,
   TabItem,
   TabsComponent,
@@ -53,14 +59,20 @@ const idle = <T>(): TabState<T> => ({ data: null, loading: false, error: null })
   selector: 'hum-employee-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ReactiveFormsModule,
     TranslatePipe,
     AvatarComponent,
     BadgeComponent,
     ButtonComponent,
+    IconButtonComponent,
     TabsComponent,
     AlertComponent,
     EmptyStateComponent,
     SkeletonRowComponent,
+    DrawerComponent,
+    DialogComponent,
+    InputComponent,
+    FormFieldComponent,
   ],
   templateUrl: './employee-detail.component.html',
 })
@@ -68,6 +80,7 @@ export default class EmployeeDetailComponent {
   /** Employee id from the route (`/employees/:id`). */
   readonly id = input.required<string>();
 
+  private readonly fb = inject(FormBuilder);
   private readonly employeeService = inject(EmployeeService);
   private readonly compensationService = inject(CompensationService);
   private readonly leaveService = inject(LeaveRequestService);
@@ -81,6 +94,18 @@ export default class EmployeeDetailComponent {
 
   /** Gate the Edit action on the same permission the edit route requires. */
   protected readonly canEdit = this.account.hasPermission(Permission.UPDATE_EMPLOYEE);
+  /** Gate document upload/delete on the same permission the write endpoints require. */
+  protected readonly canManageDocuments = this.account.hasPermission(Permission.MANAGE_EMPLOYEE_DOCUMENTS);
+
+  // Document upload drawer + delete confirm.
+  protected readonly uploadOpen = signal(false);
+  protected readonly uploading = signal(false);
+  protected readonly selectedFile = signal<File | null>(null);
+  protected readonly uploadForm = this.fb.nonNullable.group({
+    type: ['', [Validators.maxLength(255)]],
+  });
+  protected readonly deleteTarget = signal<EmployeeDocument | null>(null);
+  protected readonly deleting = signal(false);
 
   // TODO: backend — the employee profile DTOs expose no person name (only jobTitle);
   // firstName/lastName live on User/MeResponse, not the employee profile. Using
@@ -169,8 +194,8 @@ export default class EmployeeDetailComponent {
         break;
       case 'documents':
         this.documents.set({ data: null, loading: true, error: null });
-        this.documentService.forEmployee(id, { size: 100 }).subscribe({
-          next: page => this.documents.set({ data: page.content, loading: false, error: null }),
+        this.documentService.forEmployee(id).subscribe({
+          next: data => this.documents.set({ data, loading: false, error: null }),
           error: (err: unknown) => this.documents.set({ data: null, loading: false, error: normalizeHttpError(err) }),
         });
         break;
@@ -198,6 +223,59 @@ export default class EmployeeDetailComponent {
       },
       error: (err: unknown) => this.toast.danger(normalizeHttpError(err)),
     });
+  }
+
+  protected openUpload(): void {
+    this.uploadForm.reset({ type: '' });
+    this.selectedFile.set(null);
+    this.uploadOpen.set(true);
+  }
+
+  protected onFileSelected(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.selectedFile.set(target.files?.[0] ?? null);
+  }
+
+  protected submitUpload(): void {
+    const file = this.selectedFile();
+    if (!file) return;
+    const type = this.uploadForm.getRawValue().type.trim();
+    this.uploading.set(true);
+    this.documentService.uploadForEmployee(this.id(), file, type ? { type } : {}).subscribe({
+      next: () => {
+        this.toast.success(this.translate.instant('humano.employee360.docUploaded'));
+        this.uploadOpen.set(false);
+        this.uploading.set(false);
+        this.reloadDocuments();
+      },
+      error: (err: unknown) => {
+        this.toast.danger(normalizeHttpError(err));
+        this.uploading.set(false);
+      },
+    });
+  }
+
+  protected confirmDeleteDocument(): void {
+    const target = this.deleteTarget();
+    if (!target) return;
+    this.deleting.set(true);
+    this.documentService.delete(target.id).subscribe({
+      next: () => {
+        this.toast.success(this.translate.instant('humano.employee360.docDeleted'));
+        this.deleting.set(false);
+        this.deleteTarget.set(null);
+        this.reloadDocuments();
+      },
+      error: (err: unknown) => {
+        this.toast.danger(normalizeHttpError(err));
+        this.deleting.set(false);
+      },
+    });
+  }
+
+  /** Re-fetch the documents tab after a write (reuses the tab's cache-busting retry). */
+  private reloadDocuments(): void {
+    this.retryTab('documents');
   }
 
   protected back(): void {

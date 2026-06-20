@@ -238,7 +238,13 @@
       "colReason": "Reason",
       "colAmount": "Amount",
       "colDocType": "Type",
-      "download": "Download"
+      "download": "Download",
+      "uploadDocument": "Upload document",
+      "docFile": "File",
+      "docTypeHint": "e.g. Contract, ID, Certificate",
+      "docUploaded": "Document uploaded",
+      "docDeleted": "Document deleted",
+      "docDeleteQuestion": "Delete {{ name }}? This can't be undone."
     },
     "tenants": {
       "title": "Tenants",
