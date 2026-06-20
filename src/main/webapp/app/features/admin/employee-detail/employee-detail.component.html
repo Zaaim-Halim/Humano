@@ -144,6 +144,13 @@
         }
 
         @case ('documents') {
+          @if (canManageDocuments) {
+            <div style="display: flex; justify-content: flex-end; margin-bottom: var(--space-3)">
+              <hum-button variant="secondary" size="sm" icon="upload" (click)="openUpload()">{{
+                'humano.employee360.uploadDocument' | translate
+              }}</hum-button>
+            </div>
+          }
           @if (documents().loading) {
             <hum-skeleton-row /><hum-skeleton-row />
           } @else if (documents().error; as e) {
@@ -164,10 +171,18 @@
                 @for (d of documents().data; track d.id) {
                   <tr>
                     <td>{{ d.type ?? '—' }}</td>
-                    <td style="text-align: right">
+                    <td style="text-align: right; white-space: nowrap">
                       <hum-button variant="outline" size="sm" icon="download" (click)="download(d)">{{
                         'humano.employee360.download' | translate
                       }}</hum-button>
+                      @if (canManageDocuments) {
+                        <hum-icon-button
+                          icon="trash-2"
+                          variant="ghost"
+                          [label]="'entity.action.delete' | translate"
+                          (click)="deleteTarget.set(d)"
+                        />
+                      }
                     </td>
                   </tr>
                 }
@@ -216,3 +231,40 @@
     <hum-empty-state icon="users" [title]="'humano.employee360.notFound' | translate" />
   }
 </div>
+
+<!-- Upload document -->
+<hum-drawer [open]="uploadOpen()" [title]="'humano.employee360.uploadDocument' | translate" hasFooter (closed)="uploadOpen.set(false)">
+  <form [formGroup]="uploadForm" style="display: grid; gap: var(--space-4)">
+    <hum-form-field [label]="'humano.employee360.colDocType' | translate" controlId="doc-type">
+      <hum-input inputId="doc-type" formControlName="type" [placeholder]="'humano.employee360.docTypeHint' | translate" />
+    </hum-form-field>
+
+    <hum-form-field [label]="'humano.employee360.docFile' | translate" controlId="doc-file">
+      <input id="doc-file" type="file" (change)="onFileSelected($event)" />
+    </hum-form-field>
+  </form>
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="uploadOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" [loading]="uploading()" [disabled]="!selectedFile()" (click)="submitUpload()">{{
+      'humano.action.save' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Delete document confirm -->
+<hum-dialog
+  [open]="deleteTarget() !== null"
+  [title]="'entity.delete.title' | translate"
+  [description]="
+    deleteTarget() ? ('humano.employee360.docDeleteQuestion' | translate: { name: deleteTarget()!.type ?? deleteTarget()!.id }) : ''
+  "
+  hasFooter
+  (closed)="deleteTarget.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="deleteTarget.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" [loading]="deleting()" (click)="confirmDeleteDocument()">{{
+      'humano.action.delete' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>
