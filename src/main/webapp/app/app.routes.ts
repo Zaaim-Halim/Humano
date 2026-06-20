@@ -155,7 +155,13 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { permissions: [Permission.VIEW_ORGANIZATIONAL_UNITS] },
       },
-      page('org', 'humano.nav.org', [Permission.VIEW_ORGANIZATIONAL_UNITS]),
+      {
+        path: 'org',
+        title: 'humano.nav.org',
+        loadComponent: () => import('./features/admin/org-units/org-units.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.VIEW_ORGANIZATIONAL_UNITS] },
+      },
       page('positions', 'humano.nav.positions', [Permission.VIEW_POSITIONS]),
       page('payroll/runs', 'humano.nav.runs', [Permission.VIEW_PAYROLL_RUN]),
       {

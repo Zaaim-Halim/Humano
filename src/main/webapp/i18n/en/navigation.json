@@ -156,6 +156,26 @@
       "attributesSaved": "Attributes saved",
       "duplicateKeys": "Attribute keys must be unique."
     },
+    "orgUnits": {
+      "title": "Org units",
+      "subtitle": "Departments, sectors and teams that make up the organization",
+      "create": "New unit",
+      "editTitle": "Edit unit",
+      "colName": "Name",
+      "colType": "Type",
+      "colParent": "Parent",
+      "colManager": "Manager",
+      "colPeople": "People",
+      "colSubUnits": "Sub-units",
+      "typeUnset": "Select a type…",
+      "noParent": "No parent (top-level)",
+      "emptyTitle": "No organizational units",
+      "emptyBody": "Create the first unit to start building your org structure.",
+      "created": "Unit created",
+      "updated": "Unit updated",
+      "deleted": "Unit deleted",
+      "deleteQuestion": "Delete {{ name }}? Units with sub-units or members can't be removed."
+    },
     "employee360": {
       "back": "Back to directory",
       "tabOverview": "Overview",
