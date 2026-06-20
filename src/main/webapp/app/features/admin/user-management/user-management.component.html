@@ -40,6 +40,9 @@
               }
             </td>
             <td style="text-align: right; white-space: nowrap">
+              @if (canCreateEmployee) {
+                <hum-icon-button icon="user-plus" [label]="'humano.employeeForm.promote' | translate" (click)="promote(u)" />
+              }
               <hum-icon-button icon="pencil" [label]="'entity.action.edit' | translate" (click)="openEdit(u)" />
               <hum-icon-button icon="trash-2" variant="ghost" [label]="'entity.action.delete' | translate" (click)="deleteTarget.set(u)" />
             </td>

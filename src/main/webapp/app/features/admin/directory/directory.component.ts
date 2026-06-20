@@ -5,6 +5,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { debounceTime } from 'rxjs/operators';
 
+import { Permission } from 'app/config/permission.constants';
+import { AccountService } from 'app/core/auth/account.service';
 import { DEFAULT_PAGE_SIZE, createListResource, normalizeHttpError } from 'app/core/api';
 import {
   AlertComponent,
@@ -69,6 +71,10 @@ export default class DirectoryComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly translate = inject(TranslateService);
+  private readonly account = inject(AccountService);
+
+  /** Gate the "Add employee" CTA on the create permission. */
+  protected readonly canCreateEmployee = this.account.hasPermission(Permission.CREATE_EMPLOYEE);
 
   private readonly size = DEFAULT_PAGE_SIZE;
   private readonly criteria = signal<EmployeeSearchRequest>({});
@@ -199,6 +205,11 @@ export default class DirectoryComponent {
 
   protected openFull(id: string): void {
     void this.router.navigate(['/employees', id]);
+  }
+
+  /** Start the invite-then-promote flow; the create screen guides to a user when none is set. */
+  protected addEmployee(): void {
+    void this.router.navigate(['/employees', 'new']);
   }
 
   private patchQuery(patch: Record<string, string | number | null>): void {

@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
+import { Permission } from 'app/config/permission.constants';
+import { AccountService } from 'app/core/auth/account.service';
 import { DEFAULT_PAGE_SIZE, normalizeHttpError } from 'app/core/api';
 import {
   AlertComponent,
@@ -54,6 +57,11 @@ export default class UserManagementComponent {
   private readonly api = inject(AdminUserService);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
+  private readonly account = inject(AccountService);
+
+  /** Whether to offer the "promote to employee" shortcut (invite-then-promote flow). */
+  protected readonly canCreateEmployee = this.account.hasPermission(Permission.CREATE_EMPLOYEE);
 
   protected readonly size = DEFAULT_PAGE_SIZE;
   protected readonly users = signal<ManagedUser[]>([]);
@@ -124,6 +132,11 @@ export default class UserManagementComponent {
     this.form.controls.login.enable();
     this.selectedAuthorities.set(new Set(['ROLE_USER']));
     this.formOpen.set(true);
+  }
+
+  /** Open the employee-profile form pre-targeted at this user (invite-then-promote). */
+  protected promote(user: ManagedUser): void {
+    void this.router.navigate(['/employees', 'new'], { queryParams: { userId: user.id } });
   }
 
   protected openEdit(user: ManagedUser): void {
