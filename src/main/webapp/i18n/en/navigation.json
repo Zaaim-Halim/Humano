@@ -157,6 +157,25 @@
       "attributesSaved": "Attributes saved",
       "duplicateKeys": "Attribute keys must be unique."
     },
+    "positions": {
+      "title": "Positions",
+      "subtitle": "Roles and levels people can hold",
+      "create": "New position",
+      "editTitle": "Edit position",
+      "colName": "Name",
+      "colLevel": "Level",
+      "colUnit": "Org unit",
+      "colDescription": "Description",
+      "colPeople": "People",
+      "levelHint": "e.g. Junior, Senior, L5",
+      "noUnit": "No unit",
+      "emptyTitle": "No positions",
+      "emptyBody": "Create the first position to define roles for your org.",
+      "created": "Position created",
+      "updated": "Position updated",
+      "deleted": "Position deleted",
+      "deleteQuestion": "Delete {{ name }}? Positions held by employees can't be removed."
+    },
     "departments": {
       "title": "Departments",
       "subtitle": "Functional groupings and their heads",
