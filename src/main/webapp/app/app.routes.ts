@@ -98,6 +98,11 @@ const routes: Routes = [
       },
       page('timesheets', 'humano.nav.timesheets'),
       {
+        path: 'my-documents',
+        title: 'humano.nav.myDocuments',
+        loadComponent: () => import('./features/employee/my-documents/my-documents.component'),
+      },
+      {
         path: 'employees',
         title: 'humano.nav.employees',
         loadComponent: () => import('./features/admin/directory/directory.component'),
