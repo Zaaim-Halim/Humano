@@ -18,6 +18,7 @@
       "peopleTree": "People tree",
       "organizationTree": "Organization tree",
       "org": "Org units",
+      "departments": "Departments",
       "positions": "Positions",
       "leave": "Leave requests",
       "timesheets": "Timesheets",
@@ -155,6 +156,22 @@
       "saveAttributes": "Save attributes",
       "attributesSaved": "Attributes saved",
       "duplicateKeys": "Attribute keys must be unique."
+    },
+    "departments": {
+      "title": "Departments",
+      "subtitle": "Functional groupings and their heads",
+      "create": "New department",
+      "editTitle": "Edit department",
+      "colName": "Name",
+      "colDescription": "Description",
+      "colHead": "Head",
+      "colPeople": "People",
+      "emptyTitle": "No departments",
+      "emptyBody": "Create the first department to organize your people.",
+      "created": "Department created",
+      "updated": "Department updated",
+      "deleted": "Department deleted",
+      "deleteQuestion": "Delete {{ name }}? Departments with members can't be removed."
     },
     "orgUnits": {
       "title": "Org units",

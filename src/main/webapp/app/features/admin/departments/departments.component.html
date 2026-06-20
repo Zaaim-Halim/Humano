@@ -1,0 +1,129 @@
+<div class="hum-page">
+  <hum-page-header
+    [title]="'humano.departments.title' | translate"
+    [subtitle]="'humano.departments.subtitle' | translate"
+    [hasActions]="canManage"
+  >
+    @if (canManage) {
+      <hum-button hum-page-actions variant="primary" icon="plus" (click)="openCreate()">{{
+        'humano.departments.create' | translate
+      }}</hum-button>
+    }
+  </hum-page-header>
+
+  @if (loading()) {
+    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (departments().length === 0) {
+    <hum-empty-state
+      icon="layers"
+      [title]="'humano.departments.emptyTitle' | translate"
+      [description]="'humano.departments.emptyBody' | translate"
+      [hasAction]="canManage"
+    >
+      @if (canManage) {
+        <hum-button hum-empty-action variant="primary" icon="plus" (click)="openCreate()">{{
+          'humano.departments.create' | translate
+        }}</hum-button>
+      }
+    </hum-empty-state>
+  } @else {
+    <table class="hum-table">
+      <thead>
+        <tr>
+          <th>{{ 'humano.departments.colName' | translate }}</th>
+          <th>{{ 'humano.departments.colDescription' | translate }}</th>
+          <th>{{ 'humano.departments.colHead' | translate }}</th>
+          <th class="tabular-nums">{{ 'humano.departments.colPeople' | translate }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (d of departments(); track d.id) {
+          <tr>
+            <td>{{ d.name }}</td>
+            <td>{{ d.description ?? '—' }}</td>
+            <td>{{ d.headName ?? '—' }}</td>
+            <td class="tabular-nums">{{ d.employeeCount }}</td>
+            <td style="text-align: right; white-space: nowrap">
+              @if (canManage) {
+                <hum-icon-button icon="pencil" [label]="'entity.action.edit' | translate" (click)="openEdit(d)" />
+                <hum-icon-button
+                  icon="trash-2"
+                  variant="ghost"
+                  [label]="'entity.action.delete' | translate"
+                  (click)="deleteTarget.set(d)"
+                />
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-3)">
+      <span style="color: var(--text-muted); font-size: var(--text-sm)">{{ total() }}</span>
+      <div style="display: flex; gap: var(--space-2)">
+        <hum-button variant="outline" size="sm" [disabled]="page() === 0" (click)="goto(page() - 1)">‹</hum-button>
+        <hum-button variant="outline" size="sm" [disabled]="(page() + 1) * size >= total()" (click)="goto(page() + 1)">›</hum-button>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Create / edit -->
+<hum-drawer
+  [open]="formOpen()"
+  [title]="(editing() ? 'humano.departments.editTitle' : 'humano.departments.create') | translate"
+  hasFooter
+  (closed)="formOpen.set(false)"
+>
+  <form [formGroup]="form" style="display: grid; gap: var(--space-4)">
+    <hum-form-field
+      [label]="'humano.departments.colName' | translate"
+      controlId="dept-name"
+      [error]="invalid('name') ? ('humano.employeeForm.required' | translate) : undefined"
+    >
+      <hum-input inputId="dept-name" formControlName="name" [invalid]="invalid('name')" />
+    </hum-form-field>
+
+    <hum-form-field [label]="'humano.departments.colDescription' | translate" controlId="dept-desc">
+      <hum-textarea formControlName="description" />
+    </hum-form-field>
+
+    <hum-form-field [label]="'humano.departments.colHead' | translate" controlId="dept-head">
+      <hum-autocomplete
+        formControlName="headId"
+        [searchFn]="searchEmployees"
+        [initialOption]="headInitial()"
+        [placeholder]="'humano.employeeForm.managerPlaceholder' | translate"
+        [loadingText]="'humano.employeeForm.searching' | translate"
+        [noResultsText]="'humano.employeeForm.noResults' | translate"
+        [clearLabel]="'humano.action.clear' | translate"
+      />
+    </hum-form-field>
+  </form>
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="formOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" [loading]="saving()" [disabled]="form.invalid" (click)="save()">{{
+      'humano.action.save' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Delete confirm -->
+<hum-dialog
+  [open]="deleteTarget() !== null"
+  [title]="'entity.delete.title' | translate"
+  [description]="deleteTarget() ? ('humano.departments.deleteQuestion' | translate: { name: deleteTarget()!.name }) : ''"
+  hasFooter
+  (closed)="deleteTarget.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="deleteTarget.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" [loading]="deleting()" (click)="confirmDelete()">{{ 'humano.action.delete' | translate }}</hum-button>
+  </div>
+</hum-dialog>

@@ -46,7 +46,7 @@ export const SHELL_NAV: ShellNavGroup[] = [
   },
   {
     headingKey: 'humano.nav.groups.people',
-    permissions: [Permission.READ_EMPLOYEE, Permission.VIEW_ORGANIZATIONAL_UNITS, Permission.VIEW_POSITIONS],
+    permissions: [Permission.READ_EMPLOYEE, Permission.VIEW_ORGANIZATIONAL_UNITS, Permission.VIEW_POSITIONS, Permission.VIEW_DEPARTMENTS],
     items: [
       {
         id: 'employees',
@@ -69,8 +69,16 @@ export const SHELL_NAV: ShellNavGroup[] = [
         labelKey: 'humano.nav.org',
         icon: 'network',
         link: '/org',
-        keywords: 'organization departments teams',
+        keywords: 'organization units teams sectors',
         permissions: [Permission.VIEW_ORGANIZATIONAL_UNITS],
+      },
+      {
+        id: 'departments',
+        labelKey: 'humano.nav.departments',
+        icon: 'layers',
+        link: '/departments',
+        keywords: 'departments division team head',
+        permissions: [Permission.VIEW_DEPARTMENTS],
       },
       {
         id: 'organization-tree',
