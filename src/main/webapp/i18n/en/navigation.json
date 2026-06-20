@@ -28,7 +28,8 @@
       "settings": "Workspace",
       "users": "Users",
       "tenants": "Tenants",
-      "billing": "Billing"
+      "billing": "Billing",
+      "myDocuments": "My documents"
     },
     "shell": {
       "search": "Search…  ⌘K",
@@ -306,7 +307,8 @@
       "tasksUnavailableBody": "Onboarding tasks aren't available yet.",
       "actionLeave": "Request leave",
       "actionTimesheet": "Log timesheet",
-      "actionAccount": "My account"
+      "actionAccount": "My account",
+      "actionDocuments": "My documents"
     },
     "leaveRequest": {
       "title": "Request leave",
@@ -445,6 +447,13 @@
       "welcomeTitle": "Welcome to Humano",
       "welcomeBody": "Use the sidebar to access leave, timesheets and your account.",
       "viewAll": "View all"
+    },
+    "myDocuments": {
+      "title": "My documents",
+      "subtitle": "Files HR has shared on your profile",
+      "noProfileTitle": "Documents not available yet",
+      "noProfileBody": "Your account isn't linked to an employee profile yet, so your documents can't be shown here.",
+      "empty": "No documents on your profile yet"
     }
   }
 }

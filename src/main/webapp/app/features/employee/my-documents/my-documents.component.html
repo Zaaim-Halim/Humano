@@ -1,0 +1,40 @@
+<div class="hum-page" style="max-width: 920px">
+  <hum-page-header [title]="'humano.myDocuments.title' | translate" [subtitle]="'humano.myDocuments.subtitle' | translate" />
+
+  @if (!resolved()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (!employeeId()) {
+    <hum-alert tone="info" [title]="'humano.myDocuments.noProfileTitle' | translate">
+      {{ 'humano.myDocuments.noProfileBody' | translate }}
+    </hum-alert>
+  } @else if (loading()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="retry()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (documents()?.length) {
+    <table class="hum-table">
+      <thead>
+        <tr>
+          <th>{{ 'humano.employee360.colDocType' | translate }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (d of documents(); track d.id) {
+          <tr>
+            <td>{{ d.type ?? '—' }}</td>
+            <td style="text-align: right">
+              <hum-button variant="outline" size="sm" icon="download" (click)="download(d)">{{
+                'humano.employee360.download' | translate
+              }}</hum-button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  } @else {
+    <hum-empty-state icon="file-text" [title]="'humano.myDocuments.empty' | translate" />
+  }
+</div>
