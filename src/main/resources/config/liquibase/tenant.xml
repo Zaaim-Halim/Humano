@@ -65,6 +65,9 @@
     <!-- Payroll correctness: optimistic-lock versions + typed payroll_line classification columns -->
     <include file="config/liquibase/changelog/tenant/20260612-payroll-optimistic-lock-changelog.xml" relativeToChangelogFile="false"/>
 
+    <!-- P5.2 — Company-level payroll policy singleton (organization_settings) -->
+    <include file="config/liquibase/changelog/tenant/20260621-organization-settings-changelog.xml" relativeToChangelogFile="false"/>
+
     <!--  will add tenant liquibase changelogs here -->
 
 </databaseChangeLog>

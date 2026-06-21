@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- P5.2 — Company-level payroll policy (OrganizationSettings): a singleton per tenant
+         schema holding standard hours, default basis/OT multiplier, default calendar/currency
+         and timezone. Column defaults carry the safe baseline; the row is created lazily on the
+         first PUT (GET returns transient defaults without writing). See
+         com.humano.domain.payroll.OrganizationSettings and com.humano.service.payroll.
+         OrganizationSettingsService. -->
+    <changeSet id="tenant-org-settings-001" author="halimzaaim">
+        <createTable tableName="organization_settings">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_organization_settings"/>
+            </column>
+            <column name="standard_hours_per_day" type="decimal(38,2)" defaultValueNumeric="8">
+                <constraints nullable="false"/>
+            </column>
+            <column name="standard_hours_per_week" type="decimal(38,2)" defaultValueNumeric="40">
+                <constraints nullable="false"/>
+            </column>
+            <column name="standard_monthly_hours" type="decimal(38,2)" defaultValueNumeric="160">
+                <constraints nullable="false"/>
+            </column>
+            <column name="default_basis" type="VARCHAR(30)" defaultValue="MONTHLY">
+                <constraints nullable="false"/>
+            </column>
+            <column name="default_overtime_multiplier" type="decimal(38,2)" defaultValueNumeric="1.5">
+                <constraints nullable="false"/>
+            </column>
+            <column name="timezone" type="VARCHAR(255)" defaultValue="UTC">
+                <constraints nullable="false"/>
+            </column>
+            <column name="default_currency_id" type="${uuidType}"/>
+            <column name="default_payroll_calendar_id" type="${uuidType}"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
