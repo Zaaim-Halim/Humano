@@ -220,7 +220,13 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { permissions: [Permission.APPROVE_LEAVE, Permission.APPROVE_EXPENSE_CLAIMS, Permission.APPROVE_OVERTIME] },
       },
-      page('settings', 'humano.nav.settings', [Permission.SYSTEM_CONFIGURATION]),
+      {
+        path: 'settings',
+        title: 'humano.nav.settings',
+        loadComponent: () => import('./features/admin/settings/settings.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.CONFIGURE_TENANT_SETTINGS] },
+      },
       {
         path: 'admin/users',
         title: 'humano.nav.users',

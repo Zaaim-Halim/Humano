@@ -1,0 +1,90 @@
+<div class="hum-page" style="max-width: 760px">
+  <hum-page-header [title]="'humano.orgSettings.title' | translate" [subtitle]="'humano.orgSettings.subtitle' | translate" />
+
+  @if (loading()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="save()" style="display: grid; gap: var(--space-4)">
+      <hum-card [title]="'humano.orgSettings.workingHours' | translate">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-4)">
+          <hum-form-field
+            [label]="'humano.orgSettings.hoursPerDay' | translate"
+            controlId="os-hpd"
+            required
+            [error]="invalid('standardHoursPerDay') ? ('humano.orgSettings.hoursError' | translate) : undefined"
+          >
+            <hum-input inputId="os-hpd" type="number" formControlName="standardHoursPerDay" [invalid]="invalid('standardHoursPerDay')" />
+          </hum-form-field>
+
+          <hum-form-field
+            [label]="'humano.orgSettings.hoursPerWeek' | translate"
+            controlId="os-hpw"
+            required
+            [error]="invalid('standardHoursPerWeek') ? ('humano.orgSettings.hoursError' | translate) : undefined"
+          >
+            <hum-input inputId="os-hpw" type="number" formControlName="standardHoursPerWeek" [invalid]="invalid('standardHoursPerWeek')" />
+          </hum-form-field>
+
+          <hum-form-field
+            [label]="'humano.orgSettings.monthlyHours' | translate"
+            controlId="os-mh"
+            required
+            [hint]="'humano.orgSettings.monthlyHoursHint' | translate"
+            [error]="invalid('standardMonthlyHours') ? ('humano.orgSettings.hoursError' | translate) : undefined"
+          >
+            <hum-input inputId="os-mh" type="number" formControlName="standardMonthlyHours" [invalid]="invalid('standardMonthlyHours')" />
+          </hum-form-field>
+        </div>
+      </hum-card>
+
+      <hum-card [title]="'humano.orgSettings.payDefaults' | translate">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-4)">
+          <hum-form-field [label]="'humano.orgSettings.defaultBasis' | translate" controlId="os-basis" required>
+            <hum-select inputId="os-basis" formControlName="defaultBasis" [options]="basisOptions" />
+          </hum-form-field>
+
+          <hum-form-field
+            [label]="'humano.orgSettings.overtimeMultiplier' | translate"
+            controlId="os-ot"
+            required
+            [error]="invalid('defaultOvertimeMultiplier') ? ('humano.orgSettings.multiplierError' | translate) : undefined"
+          >
+            <hum-input
+              inputId="os-ot"
+              type="number"
+              formControlName="defaultOvertimeMultiplier"
+              [invalid]="invalid('defaultOvertimeMultiplier')"
+            />
+          </hum-form-field>
+
+          <hum-form-field
+            [label]="'humano.orgSettings.timezone' | translate"
+            controlId="os-tz"
+            required
+            [error]="invalid('timezone') ? ('humano.employeeForm.required' | translate) : undefined"
+          >
+            <hum-input inputId="os-tz" formControlName="timezone" [invalid]="invalid('timezone')" [placeholder]="'UTC'" />
+          </hum-form-field>
+
+          <hum-form-field [label]="'humano.orgSettings.defaultCurrency' | translate" controlId="os-currency">
+            <hum-select inputId="os-currency" formControlName="defaultCurrencyId" [options]="currencyOptions()" />
+          </hum-form-field>
+
+          <hum-form-field [label]="'humano.orgSettings.defaultCalendar' | translate" controlId="os-calendar">
+            <hum-select inputId="os-calendar" formControlName="defaultPayrollCalendarId" [options]="calendarOptions()" />
+          </hum-form-field>
+        </div>
+      </hum-card>
+
+      <div style="display: flex; justify-content: flex-end">
+        <hum-button type="submit" variant="primary" icon="save" [loading]="saving()" [disabled]="form.invalid">{{
+          'humano.action.save' | translate
+        }}</hum-button>
+      </div>
+    </form>
+  }
+</div>

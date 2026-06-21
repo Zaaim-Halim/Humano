@@ -503,6 +503,25 @@
       "noPermissionTitle": "View only",
       "noPermissionBody": "You can view payroll runs but need the create-run permission to start one.",
       "loadHint": "Loading periods needs payroll-calendar access."
+    },
+    "orgSettings": {
+      "title": "Company settings",
+      "subtitle": "Payroll policy defaults for your organization",
+      "workingHours": "Working hours",
+      "hoursPerDay": "Standard hours / day",
+      "hoursPerWeek": "Standard hours / week",
+      "monthlyHours": "Standard hours / month",
+      "monthlyHoursHint": "Used to convert hourly pay to a monthly figure",
+      "hoursError": "Enter a valid number of hours",
+      "payDefaults": "Pay defaults",
+      "defaultBasis": "Default pay basis",
+      "overtimeMultiplier": "Overtime multiplier",
+      "multiplierError": "Enter a multiplier between 1 and 5",
+      "timezone": "Timezone",
+      "defaultCurrency": "Default currency",
+      "defaultCalendar": "Default payroll calendar",
+      "none": "None",
+      "saved": "Settings saved"
     }
   }
 }

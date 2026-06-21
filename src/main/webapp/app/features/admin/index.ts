@@ -59,6 +59,9 @@ export type { Currency } from './models/currency.model';
 export { PayrollCalendarService } from './services/payroll-calendar.service';
 export type { PayrollCalendar, PayrollPeriodSummary } from './models/payroll-calendar.model';
 
+export { OrganizationSettingsService } from './services/org-settings.service';
+export type { OrganizationSettings, UpdateOrganizationSettingsRequest } from './models/org-settings.model';
+
 // User administration
 export { AdminUserService } from './services/admin-user.service';
 export type { ManagedUserPage } from './services/admin-user.service';
