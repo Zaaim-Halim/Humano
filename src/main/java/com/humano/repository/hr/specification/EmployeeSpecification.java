@@ -136,6 +136,27 @@ public class EmployeeSpecification {
     }
 
     /**
+     * Single free-text term matched (case-insensitive, partial) against first name OR last
+     * name OR job title — for single-box pickers/typeaheads. Blank term matches everything.
+     *
+     * @param term the search term
+     * @return Specification
+     */
+    public static Specification<Employee> matchesNameOrJobTitle(String term) {
+        return (root, query, criteriaBuilder) -> {
+            if (term == null || term.isBlank()) {
+                return criteriaBuilder.conjunction();
+            }
+            String like = "%" + term.toLowerCase() + "%";
+            return criteriaBuilder.or(
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("firstName")), like),
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("lastName")), like),
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("jobTitle")), like)
+            );
+        };
+    }
+
+    /**
      * Filter employees by active status.
      *
      * @return Specification

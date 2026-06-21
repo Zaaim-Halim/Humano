@@ -224,6 +224,10 @@ public class EmployeeProfileService {
             searchRequest.endDateTo()
         );
 
+        if (searchRequest.query() != null && !searchRequest.query().isBlank()) {
+            specification = specification.and(EmployeeSpecification.matchesNameOrJobTitle(searchRequest.query()));
+        }
+
         return employeeRepository.findAll(specification, pageable).map(this::mapToSimpleEmployeeProfileResponse);
     }
 
@@ -485,6 +489,8 @@ public class EmployeeProfileService {
     private SimpleEmployeeProfileResponse mapToSimpleEmployeeProfileResponse(Employee employee) {
         return new SimpleEmployeeProfileResponse(
             employee.getId(),
+            employee.getFirstName(),
+            employee.getLastName(),
             employee.getJobTitle(),
             employee.getPhone(),
             employee.getStatus(),

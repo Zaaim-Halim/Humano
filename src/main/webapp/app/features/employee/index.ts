@@ -14,6 +14,7 @@ export { CurrentEmployeeService } from './services/current-employee.service';
 
 // Employee profile
 export { EmployeeService } from './services/employee.service';
+export { personName } from './models/employee.model';
 export type {
   SimpleEmployeeProfile,
   EmployeeProfile,

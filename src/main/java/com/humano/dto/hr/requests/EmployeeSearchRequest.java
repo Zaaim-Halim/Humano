@@ -6,9 +6,12 @@ import java.util.UUID;
 
 /**
  * Request DTO for searching employees with multiple criteria.
- * All fields are optional and will be combined with AND logic.
+ * All field-specific criteria are optional and combined with AND logic. {@code query}
+ * is a single free-text term matched (OR) against first name, last name, and job title —
+ * for single-box pickers/typeaheads.
  */
 public record EmployeeSearchRequest(
+    String query,
     String firstName,
     String lastName,
     String email,

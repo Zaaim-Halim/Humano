@@ -28,6 +28,7 @@ import { DepartmentService } from 'app/features/admin';
 import {
   EmployeeService,
   EmployeeStatus,
+  personName,
   type EmployeeProfile,
   type EmployeeSearchRequest,
   type SimpleEmployeeProfile,
@@ -41,9 +42,10 @@ import {
  * Full async states: skeleton / empty-with-CTA / error-retry. Bulk-select
  * structure is present but actions are disabled (backend pending).
  *
- * TODO: backend — the employee profile DTOs expose no person name (only jobTitle),
- * so the table/search key on jobTitle; firstName/lastName live on User/MeResponse,
- * not the employee profile. Swap to names once a user-join endpoint exists.
+ * The list projection now exposes first/last name (Employee extends User), so the
+ * table shows a Name column and search matches on name OR job title (`query`).
+ * Sort stays on job title — name-sort would need backend sort support on the
+ * projection.
  */
 @Component({
   selector: 'hum-directory',
@@ -108,9 +110,10 @@ export default class DirectoryComponent {
   private readonly statusCellTpl = viewChild<TemplateRef<{ $implicit: Record<string, unknown>; value: unknown }>>('statusCell');
 
   /** DataTable is loosely typed (`Row`); rows are cast for binding, cells use `$any`. */
-  protected readonly rows = computed<Record<string, unknown>[]>(() => this.list.items() as unknown as Record<string, unknown>[]);
+  protected readonly rows = computed<Record<string, unknown>[]>(() => this.list.items().map(e => ({ ...e, name: personName(e) })));
 
   protected readonly columns = computed<Column[]>(() => [
+    { key: 'name', label: this.translate.instant('humano.directory.colName') },
     { key: 'jobTitle', label: this.translate.instant('humano.directory.colJobTitle'), sortable: true },
     { key: 'departmentName', label: this.translate.instant('humano.directory.colDepartment') },
     { key: 'positionName', label: this.translate.instant('humano.directory.colPosition') },
@@ -136,7 +139,7 @@ export default class DirectoryComponent {
       const status = qp.get('status') ?? '';
       this.filters.patchValue({ q, dept, status }, { emitEvent: false });
       this.criteria.set({
-        ...(q ? { jobTitle: q } : {}),
+        ...(q ? { query: q } : {}),
         ...(dept ? { departmentId: dept } : {}),
         ...(status ? { status: status as EmployeeStatus } : {}),
       });

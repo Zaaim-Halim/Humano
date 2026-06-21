@@ -97,6 +97,7 @@
       "filterStatus": "Status",
       "all": "All",
       "count": "{{ total }} employees",
+      "colName": "Name",
       "colJobTitle": "Job title",
       "colDepartment": "Department",
       "colPosition": "Position",

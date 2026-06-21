@@ -36,6 +36,7 @@ import {
   EmployeeAttributeService,
   EmployeeService,
   EmployeeStatus,
+  personName,
   type EmployeeProfile,
 } from 'app/features/employee';
 
@@ -138,13 +139,14 @@ export default class EmployeeFormComponent implements OnInit {
 
   /**
    * Manager picker source — employees are unbounded, so this hits the backend
-   * search per keystroke rather than pre-loading a page. The list projection
-   * exposes job title (not a person name) today, so it matches/labels on that.
+   * search per keystroke rather than pre-loading a page. `query` matches (OR) on
+   * first name, last name, and job title; the option labels on the person's name
+   * (falling back to job title) with the job title as sublabel.
    */
   protected readonly searchManagers = (term: string): Observable<AutocompleteOption[]> =>
     this.employeeService
-      .search({ jobTitle: term }, { page: 0, size: 10 })
-      .pipe(map(res => res.content.map(e => ({ value: e.id, label: e.jobTitle ?? e.id, sublabel: e.departmentName }))));
+      .search({ query: term }, { page: 0, size: 10 })
+      .pipe(map(res => res.content.map(e => ({ value: e.id, label: personName(e), sublabel: e.jobTitle ?? e.departmentName }))));
 
   ngOnInit(): void {
     this.loadOptions();

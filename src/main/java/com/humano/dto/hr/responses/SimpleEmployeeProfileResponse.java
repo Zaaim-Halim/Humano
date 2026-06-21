@@ -9,6 +9,8 @@ import java.util.UUID;
  */
 public record SimpleEmployeeProfileResponse(
     UUID id,
+    String firstName,
+    String lastName,
     String jobTitle,
     String phone,
     EmployeeStatus status,

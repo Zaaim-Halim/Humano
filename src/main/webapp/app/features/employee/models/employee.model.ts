@@ -5,11 +5,19 @@ import { EmployeeStatus } from './enums/employee-status.enum';
 /** List-row projection — `GET /api/hr/employees`. */
 export interface SimpleEmployeeProfile {
   id: string;
+  firstName: string | null;
+  lastName: string | null;
   jobTitle: string | null;
   phone: string | null;
   status: EmployeeStatus;
   departmentName: string | null;
   positionName: string | null;
+}
+
+/** Display name for an employee row: "First Last", else job title, else id. */
+export function personName(e: Pick<SimpleEmployeeProfile, 'id' | 'firstName' | 'lastName' | 'jobTitle'>): string {
+  const name = `${e.firstName ?? ''} ${e.lastName ?? ''}`.trim();
+  return name ? name : (e.jobTitle ?? e.id);
 }
 
 /** Full profile — `GET /api/hr/employees/{id}`. Dates are ISO-8601 strings. */
@@ -53,6 +61,8 @@ export type UpdateEmployeeProfileRequest = Partial<CreateEmployeeProfileRequest>
 
 /** Criteria for `POST /api/hr/employees/search` (AND-combined, all optional). */
 export interface EmployeeSearchRequest {
+  /** Free-text term matched (OR) against first name, last name, and job title. */
+  query?: string;
   firstName?: string;
   lastName?: string;
   email?: string;
