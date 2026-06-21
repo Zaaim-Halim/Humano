@@ -1,0 +1,47 @@
+<div class="hum-page" style="max-width: 720px">
+  <hum-page-header [title]="'humano.payrollRuns.title' | translate" [subtitle]="'humano.payrollRuns.subtitle' | translate" />
+
+  @if (!canCreate) {
+    <hum-alert tone="info" [title]="'humano.payrollRuns.noPermissionTitle' | translate">
+      {{ 'humano.payrollRuns.noPermissionBody' | translate }}
+    </hum-alert>
+  } @else if (loading()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <div style="margin-bottom: var(--space-2)">{{ 'humano.payrollRuns.loadHint' | translate }}</div>
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (noPeriods()) {
+    <hum-alert tone="info" [title]="'humano.payrollRuns.noPeriodsTitle' | translate">
+      {{ 'humano.payrollRuns.noPeriodsBody' | translate }}
+    </hum-alert>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="submit()" style="display: grid; gap: var(--space-4)">
+      <hum-card [title]="'humano.payrollRuns.newRun' | translate">
+        <div style="display: grid; gap: var(--space-4)">
+          <hum-form-field
+            [label]="'humano.payrollRuns.period' | translate"
+            controlId="run-period"
+            required
+            [error]="invalid('periodId') ? ('humano.employeeForm.required' | translate) : undefined"
+          >
+            <hum-select inputId="run-period" formControlName="periodId" [options]="periodOptions()" [invalid]="invalid('periodId')" />
+          </hum-form-field>
+
+          <hum-switch formControlName="draftMode" [label]="'humano.payrollRuns.draftMode' | translate" />
+
+          <hum-form-field [label]="'humano.payrollRuns.notes' | translate" controlId="run-notes">
+            <hum-textarea inputId="run-notes" formControlName="notes" [rows]="3" />
+          </hum-form-field>
+        </div>
+      </hum-card>
+
+      <div style="display: flex; justify-content: flex-end">
+        <hum-button type="submit" variant="primary" icon="play" [loading]="submitting()" [disabled]="form.invalid">{{
+          'humano.payrollRuns.start' | translate
+        }}</hum-button>
+      </div>
+    </form>
+  }
+</div>

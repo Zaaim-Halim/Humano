@@ -487,6 +487,22 @@
       "recentUnavailable": "Your entries will appear here once your account is linked to an employee profile.",
       "noProfileTitle": "Logging not available yet",
       "noProfileBody": "Your account isn't linked to an employee profile yet, so timesheets can't be logged from here."
+    },
+    "payrollRuns": {
+      "title": "Payroll runs",
+      "subtitle": "Start a payroll run for an open period",
+      "newRun": "New run",
+      "period": "Period",
+      "selectPeriod": "Select a period",
+      "draftMode": "Draft run (calculate without committing)",
+      "notes": "Notes",
+      "start": "Start run",
+      "initiated": "Payroll run started",
+      "noPeriodsTitle": "No open periods",
+      "noPeriodsBody": "There are no open payroll periods to run. Generate or open a period in the payroll calendar first.",
+      "noPermissionTitle": "View only",
+      "noPermissionBody": "You can view payroll runs but need the create-run permission to start one.",
+      "loadHint": "Loading periods needs payroll-calendar access."
     }
   }
 }
