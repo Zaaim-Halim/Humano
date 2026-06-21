@@ -167,6 +167,11 @@ public class PayrollFormulaEngine {
         "workDays",
         "periodYear",
         "periodMonth",
+        // Company payroll-policy defaults (OrganizationSettings), injected by the calc service
+        "standardHoursPerDay",
+        "standardHoursPerWeek",
+        "standardMonthlyHours",
+        "overtimeMultiplier",
         // Employee attributes (injected by the calc service when present)
         "employeeCountry",
         "employeeBirthDate",

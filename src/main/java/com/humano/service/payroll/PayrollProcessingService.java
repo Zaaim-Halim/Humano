@@ -132,6 +132,7 @@ public class PayrollProcessingService {
     private final PayComponentRepository payComponentRepository;
     private final PayRuleRepository payRuleRepository;
     private final CompensationRepository compensationRepository;
+    private final OrganizationSettingsRepository organizationSettingsRepository;
     private final EmployeeRepository employeeRepository;
     private final CurrencyRepository currencyRepository;
     private final BonusRepository bonusRepository;
@@ -165,6 +166,7 @@ public class PayrollProcessingService {
         PayComponentRepository payComponentRepository,
         PayRuleRepository payRuleRepository,
         CompensationRepository compensationRepository,
+        OrganizationSettingsRepository organizationSettingsRepository,
         EmployeeRepository employeeRepository,
         CurrencyRepository currencyRepository,
         BonusRepository bonusRepository,
@@ -190,6 +192,7 @@ public class PayrollProcessingService {
         this.payComponentRepository = payComponentRepository;
         this.payRuleRepository = payRuleRepository;
         this.compensationRepository = compensationRepository;
+        this.organizationSettingsRepository = organizationSettingsRepository;
         this.employeeRepository = employeeRepository;
         this.currencyRepository = currencyRepository;
         this.bonusRepository = bonusRepository;
@@ -470,9 +473,10 @@ public class PayrollProcessingService {
         // ---- Pipeline state ----
         List<PayrollLine> lines = new ArrayList<>();
         SequenceCounter seq = new SequenceCounter();
-        BigDecimal baseSalary = calculateBaseSalary(compensation, period).setScale(MONEY_SCALE, MONEY_ROUNDING);
+        OrganizationSettings settings = resolveSettings();
+        BigDecimal baseSalary = calculateBaseSalary(compensation, period, settings).setScale(MONEY_SCALE, MONEY_ROUNDING);
         List<PayrollInput> inputs = getPayrollInputs(employee.getId(), period.getId());
-        Map<String, Object> context = buildCalculationContext(employee, compensation, period, inputs, baseSalary);
+        Map<String, Object> context = buildCalculationContext(employee, compensation, period, inputs, baseSalary, settings);
 
         BigDecimal gross = BigDecimal.ZERO;
         BigDecimal nonTaxableEarnings = BigDecimal.ZERO;
@@ -1289,13 +1293,23 @@ public class PayrollProcessingService {
             .orElse(null);
     }
 
-    private BigDecimal calculateBaseSalary(Compensation compensation, PayrollPeriod period) {
+    private BigDecimal calculateBaseSalary(Compensation compensation, PayrollPeriod period, OrganizationSettings settings) {
         return switch (compensation.getBasis()) {
             case MONTHLY -> compensation.getBaseAmount();
             case ANNUAL -> compensation.getBaseAmount().divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
-            case HOURLY -> compensation.getBaseAmount().multiply(BigDecimal.valueOf(160));
+            // HOURLY → monthly via the company-configured standard monthly hours (default 160).
+            case HOURLY -> compensation.getBaseAmount().multiply(settings.getStandardMonthlyHours());
             default -> compensation.getBaseAmount();
         };
+    }
+
+    /**
+     * Current company payroll policy, or transient defaults (8h/40h/160h, 1.5× OT,
+     * MONTHLY) when none is saved — so behaviour is unchanged until a tenant sets it.
+     * Read per-employee because each calculation runs in its own {@code REQUIRES_NEW} tx.
+     */
+    private OrganizationSettings resolveSettings() {
+        return organizationSettingsRepository.findAll().stream().findFirst().orElseGet(OrganizationSettings::new);
     }
 
     private List<PayrollInput> getPayrollInputs(UUID employeeId, UUID periodId) {
@@ -1320,7 +1334,8 @@ public class PayrollProcessingService {
         Compensation compensation,
         PayrollPeriod period,
         List<PayrollInput> inputs,
-        BigDecimal baseSalary
+        BigDecimal baseSalary,
+        OrganizationSettings settings
     ) {
         Map<String, Object> context = new HashMap<>();
         context.put("employeeId", employee.getId());
@@ -1329,6 +1344,14 @@ public class PayrollProcessingService {
         context.put("periodStartDate", period.getStartDate());
         context.put("periodEndDate", period.getEndDate());
         context.put("workDays", calculateWorkDays(period));
+
+        // Company payroll-policy defaults, so tenant formulas can reference the configured
+        // overtime multiplier / standard hours instead of hardcoding them. Keep these keys in
+        // sync with PayrollFormulaEngine.ALLOWED_VARIABLE_NAMES (the whitelist invariant below).
+        context.put("standardHoursPerDay", settings.getStandardHoursPerDay());
+        context.put("standardHoursPerWeek", settings.getStandardHoursPerWeek());
+        context.put("standardMonthlyHours", settings.getStandardMonthlyHours());
+        context.put("overtimeMultiplier", settings.getDefaultOvertimeMultiplier());
 
         // Add inputs to context
         for (PayrollInput input : inputs) {
