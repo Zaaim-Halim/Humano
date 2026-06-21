@@ -96,7 +96,11 @@ const routes: Routes = [
         title: 'humano.nav.leave',
         loadComponent: () => import('./features/employee/leave-request/leave-request.component'),
       },
-      page('timesheets', 'humano.nav.timesheets'),
+      {
+        path: 'timesheets',
+        title: 'humano.nav.timesheets',
+        loadComponent: () => import('./features/employee/timesheets/timesheets.component'),
+      },
       {
         path: 'my-documents',
         title: 'humano.nav.myDocuments',

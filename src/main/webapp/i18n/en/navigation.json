@@ -472,6 +472,21 @@
       "effectiveTo": "Effective to",
       "reason": "Reason",
       "saved": "Compensation saved"
+    },
+    "timesheets": {
+      "title": "Timesheets",
+      "subtitle": "Log the hours you worked",
+      "logTitle": "Log hours",
+      "date": "Date",
+      "hours": "Hours",
+      "hoursError": "Enter between 0.1 and 24 hours",
+      "log": "Log hours",
+      "recent": "Recent entries",
+      "empty": "No timesheet entries yet",
+      "project": "Project",
+      "recentUnavailable": "Your entries will appear here once your account is linked to an employee profile.",
+      "noProfileTitle": "Logging not available yet",
+      "noProfileBody": "Your account isn't linked to an employee profile yet, so timesheets can't be logged from here."
     }
   }
 }

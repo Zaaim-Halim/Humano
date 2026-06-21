@@ -1,0 +1,72 @@
+<div class="hum-page" style="max-width: 720px">
+  <hum-page-header [title]="'humano.timesheets.title' | translate" [subtitle]="'humano.timesheets.subtitle' | translate" />
+
+  <form [formGroup]="form" (ngSubmit)="submit()" style="display: grid; gap: var(--space-4)">
+    <hum-card [title]="'humano.timesheets.logTitle' | translate">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-4)">
+        <hum-form-field
+          [label]="'humano.timesheets.date' | translate"
+          controlId="ts-date"
+          required
+          [error]="invalid('date') ? ('humano.employeeForm.required' | translate) : undefined"
+        >
+          <hum-input inputId="ts-date" type="date" formControlName="date" [invalid]="invalid('date')" />
+        </hum-form-field>
+
+        <hum-form-field
+          [label]="'humano.timesheets.hours' | translate"
+          controlId="ts-hours"
+          required
+          [error]="invalid('hoursWorked') ? ('humano.timesheets.hoursError' | translate) : undefined"
+        >
+          <hum-input inputId="ts-hours" type="number" formControlName="hoursWorked" [invalid]="invalid('hoursWorked')" />
+        </hum-form-field>
+      </div>
+    </hum-card>
+
+    @if (resolved() && !employeeId()) {
+      <hum-alert tone="info" [title]="'humano.timesheets.noProfileTitle' | translate">
+        {{ 'humano.timesheets.noProfileBody' | translate }}
+      </hum-alert>
+    }
+
+    <div style="display: flex; justify-content: flex-end">
+      <hum-button type="submit" variant="primary" icon="plus" [loading]="submitting()" [disabled]="form.invalid || !employeeId()">{{
+        'humano.timesheets.log' | translate
+      }}</hum-button>
+    </div>
+  </form>
+
+  <h2 class="hum-field__label" style="margin: var(--space-5) 0 var(--space-3)">{{ 'humano.timesheets.recent' | translate }}</h2>
+
+  @if (!resolved() || loading()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (!employeeId()) {
+    <hum-empty-state icon="clock" [title]="'humano.timesheets.recentUnavailable' | translate" />
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="retry()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (entries()?.length) {
+    <table class="hum-table">
+      <thead>
+        <tr>
+          <th>{{ 'humano.timesheets.date' | translate }}</th>
+          <th class="hum-table__num">{{ 'humano.timesheets.hours' | translate }}</th>
+          <th>{{ 'humano.timesheets.project' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (t of entries(); track t.id) {
+          <tr>
+            <td class="tabular-nums">{{ t.date }}</td>
+            <td class="hum-table__num tabular-nums">{{ t.hoursWorked }}</td>
+            <td>{{ t.projectName ?? '—' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  } @else {
+    <hum-empty-state icon="clock" [title]="'humano.timesheets.empty' | translate" />
+  }
+</div>
