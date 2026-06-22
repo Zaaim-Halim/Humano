@@ -1,6 +1,7 @@
 package com.humano.web.rest.payroll;
 
 import com.humano.dto.payroll.request.CreatePayRuleRequest;
+import com.humano.dto.payroll.response.FormulaMetadataResponse;
 import com.humano.dto.payroll.response.PayComponentResponse;
 import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequirePermission;
@@ -48,5 +49,14 @@ public class PayRuleResource {
     @PostMapping("/validate-formula")
     public ResponseEntity<Map<String, Object>> validateFormula(@RequestBody UpdateRuleFormulaRequest body) {
         return ResponseEntity.ok(payComponentService.validateFormula(body.formula()));
+    }
+
+    /**
+     * Engine contract (functions, variables, constants, limits) for building a guided
+     * formula editor. Static per deployment, so the client may cache it.
+     */
+    @GetMapping("/formula-metadata")
+    public ResponseEntity<FormulaMetadataResponse> formulaMetadata() {
+        return ResponseEntity.ok(payComponentService.getFormulaMetadata());
     }
 }

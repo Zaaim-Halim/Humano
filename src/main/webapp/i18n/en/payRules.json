@@ -1,0 +1,36 @@
+{
+  "humano": {
+    "nav": {
+      "payRules": "Pay rules"
+    },
+    "payRules": {
+      "title": "Pay rule formulas",
+      "subtitle": "Compose and validate pay-component formulas using the engine's functions and variables.",
+      "targetTitle": "Rule target",
+      "component": "Pay component",
+      "selectComponent": "Select a component…",
+      "componentRequired": "Choose a pay component",
+      "priority": "Priority",
+      "priorityHint": "Higher wins when multiple rules apply",
+      "priorityBadge": "Priority {{ value }}",
+      "effectiveFrom": "Effective from",
+      "effectiveTo": "Effective to",
+      "active": "Active",
+      "inactive": "Inactive",
+      "formulaTitle": "Formula",
+      "formula": "Formula",
+      "formulaRequired": "A formula is required",
+      "formulaPlaceholder": "e.g. #pct(#min(#grossSalary, 176100), 6.2)",
+      "charsRemaining": "{{ count }} characters remaining",
+      "validate": "Validate",
+      "validResult": "Valid · sample result {{ value }}",
+      "invalid": "Invalid",
+      "functions": "Functions",
+      "variables": "Variables",
+      "constants": "Constants",
+      "existingTitle": "Active rules on this component",
+      "save": "Save rule",
+      "saved": "Pay rule saved"
+    }
+  }
+}

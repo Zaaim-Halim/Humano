@@ -6,6 +6,7 @@ import com.humano.domain.payroll.PayComponent;
 import com.humano.domain.payroll.PayRule;
 import com.humano.dto.payroll.request.CreatePayComponentRequest;
 import com.humano.dto.payroll.request.CreatePayRuleRequest;
+import com.humano.dto.payroll.response.FormulaMetadataResponse;
 import com.humano.dto.payroll.response.PayComponentResponse;
 import com.humano.repository.payroll.PayComponentRepository;
 import com.humano.repository.payroll.PayRuleRepository;
@@ -237,6 +238,26 @@ public class PayComponentService {
             .stream()
             .map(this::toResponse)
             .toList();
+    }
+
+    /**
+     * Returns the formula-engine contract (functions, variables, constants, limits) so a
+     * UI can build a guided pay-rule editor driven by the real engine. Read-only.
+     */
+    @Transactional(readOnly = true)
+    public FormulaMetadataResponse getFormulaMetadata() {
+        List<FormulaMetadataResponse.FunctionMeta> functions = formulaEngine
+            .functionSignatures()
+            .stream()
+            .map(s -> new FormulaMetadataResponse.FunctionMeta(s.name(), s.parameterTypes()))
+            .collect(Collectors.toList());
+        return new FormulaMetadataResponse(
+            functions,
+            formulaEngine.allowedVariableNames().stream().sorted().collect(Collectors.toList()),
+            formulaEngine.constantNames().stream().sorted().collect(Collectors.toList()),
+            formulaEngine.dynamicVariablePattern(),
+            formulaEngine.maxFormulaLength()
+        );
     }
 
     /**

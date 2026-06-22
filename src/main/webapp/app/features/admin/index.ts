@@ -62,6 +62,17 @@ export type { PayrollCalendar, PayrollPeriodSummary } from './models/payroll-cal
 export { OrganizationSettingsService } from './services/org-settings.service';
 export type { OrganizationSettings, UpdateOrganizationSettingsRequest } from './models/org-settings.model';
 
+export { PayRuleService } from './services/pay-rule.service';
+export { PayComponentCode } from './models/enums/pay-component-code.enum';
+export type {
+  FormulaMetadata,
+  FunctionMeta,
+  PayComponent,
+  PayRuleSummary,
+  CreatePayRuleRequest,
+  FormulaValidationResult,
+} from './models/pay-rule.model';
+
 // User administration
 export { AdminUserService } from './services/admin-user.service';
 export type { ManagedUserPage } from './services/admin-user.service';

@@ -221,6 +221,13 @@ const routes: Routes = [
         data: { permissions: [Permission.APPROVE_LEAVE, Permission.APPROVE_EXPENSE_CLAIMS, Permission.APPROVE_OVERTIME] },
       },
       {
+        path: 'payroll/pay-rules',
+        title: 'humano.nav.payRules',
+        loadComponent: () => import('./features/admin/pay-rules/pay-rule-editor.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.MANAGE_PAY_COMPONENTS] },
+      },
+      {
         path: 'settings',
         title: 'humano.nav.settings',
         loadComponent: () => import('./features/admin/settings/settings.component'),

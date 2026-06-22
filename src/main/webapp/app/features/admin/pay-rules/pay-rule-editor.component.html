@@ -1,0 +1,152 @@
+<div class="hum-page" style="max-width: 920px">
+  <hum-page-header [title]="'humano.payRules.title' | translate" [subtitle]="'humano.payRules.subtitle' | translate" />
+
+  @if (loading()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="save()" style="display: grid; gap: var(--space-4)">
+      <!-- Rule target -->
+      <hum-card [title]="'humano.payRules.targetTitle' | translate">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4)">
+          <hum-form-field
+            [label]="'humano.payRules.component' | translate"
+            controlId="pr-component"
+            required
+            [error]="invalid('payComponentId') ? ('humano.payRules.componentRequired' | translate) : undefined"
+          >
+            <hum-select
+              inputId="pr-component"
+              formControlName="payComponentId"
+              [options]="componentOptions()"
+              [invalid]="invalid('payComponentId')"
+            />
+          </hum-form-field>
+
+          <hum-form-field
+            [label]="'humano.payRules.priority' | translate"
+            controlId="pr-priority"
+            [hint]="'humano.payRules.priorityHint' | translate"
+          >
+            <hum-input inputId="pr-priority" type="number" formControlName="priority" />
+          </hum-form-field>
+
+          <hum-form-field [label]="'humano.payRules.effectiveFrom' | translate" controlId="pr-from">
+            <hum-input inputId="pr-from" type="date" formControlName="effectiveFrom" />
+          </hum-form-field>
+
+          <hum-form-field [label]="'humano.payRules.effectiveTo' | translate" controlId="pr-to">
+            <hum-input inputId="pr-to" type="date" formControlName="effectiveTo" />
+          </hum-form-field>
+        </div>
+
+        <div style="margin-top: var(--space-3)">
+          <hum-switch formControlName="active" [label]="'humano.payRules.active' | translate" />
+        </div>
+      </hum-card>
+
+      <!-- Formula -->
+      <hum-card [title]="'humano.payRules.formulaTitle' | translate">
+        <hum-form-field
+          [label]="'humano.payRules.formula' | translate"
+          controlId="pr-formula"
+          required
+          [hint]="'humano.payRules.charsRemaining' | translate: { count: remaining() }"
+          [error]="invalid('formula') ? ('humano.payRules.formulaRequired' | translate) : undefined"
+        >
+          <hum-textarea
+            formControlName="formula"
+            [rows]="4"
+            [invalid]="invalid('formula')"
+            [placeholder]="'humano.payRules.formulaPlaceholder' | translate"
+          />
+        </hum-form-field>
+
+        <div style="display: flex; gap: var(--space-2); align-items: center; margin-top: var(--space-3)">
+          <hum-button variant="outline" size="sm" icon="check-check" [loading]="validating()" (click)="validate()">{{
+            'humano.payRules.validate' | translate
+          }}</hum-button>
+
+          @if (validation(); as v) {
+            @if (v.valid) {
+              <hum-badge tone="success" [label]="'humano.payRules.validResult' | translate: { value: v.testResult }" />
+            } @else {
+              <hum-badge tone="danger" [label]="'humano.payRules.invalid' | translate" />
+            }
+          }
+        </div>
+
+        @if (validation(); as v) {
+          @if (!v.valid && v.error) {
+            <hum-alert tone="danger" [title]="v.error" style="display: block; margin-top: var(--space-3)" />
+          }
+        }
+
+        <!-- Palette: functions / variables / constants from the live engine contract -->
+        @if (metadata(); as meta) {
+          <div style="margin-top: var(--space-4); display: grid; gap: var(--space-3)">
+            <div>
+              <p class="hum-label">{{ 'humano.payRules.functions' | translate }}</p>
+              <div style="display: flex; flex-wrap: wrap; gap: var(--space-2)">
+                @for (fn of meta.functions; track fn.name) {
+                  <hum-button variant="ghost" size="sm" [title]="signature(fn)" (click)="insert(fn.name, 'function')">{{
+                    fn.name
+                  }}</hum-button>
+                }
+              </div>
+            </div>
+
+            <div>
+              <p class="hum-label">{{ 'humano.payRules.variables' | translate }}</p>
+              <div style="display: flex; flex-wrap: wrap; gap: var(--space-2)">
+                @for (v of meta.variables; track v) {
+                  <hum-button variant="ghost" size="sm" (click)="insert(v, 'variable')">{{ v }}</hum-button>
+                }
+              </div>
+            </div>
+
+            <div>
+              <p class="hum-label">{{ 'humano.payRules.constants' | translate }}</p>
+              <div style="display: flex; flex-wrap: wrap; gap: var(--space-2)">
+                @for (c of meta.constants; track c) {
+                  <hum-button variant="ghost" size="sm" (click)="insert(c, 'constant')">{{ c }}</hum-button>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </hum-card>
+
+      <!-- Existing rules on the selected component -->
+      @if (activeRules().length) {
+        <hum-card [title]="'humano.payRules.existingTitle' | translate">
+          <div style="display: grid; gap: var(--space-2)">
+            @for (r of activeRules(); track r.id) {
+              <div style="display: flex; align-items: center; gap: var(--space-2); justify-content: space-between">
+                <code style="font-family: var(--font-mono); font-size: var(--text-sm)">{{ r.formula }}</code>
+                <span style="display: flex; gap: var(--space-2); align-items: center">
+                  @if (r.priority !== null) {
+                    <hum-badge tone="neutral" [label]="'humano.payRules.priorityBadge' | translate: { value: r.priority }" />
+                  }
+                  <hum-badge
+                    [tone]="r.active ? 'success' : 'neutral'"
+                    [label]="(r.active ? 'humano.payRules.active' : 'humano.payRules.inactive') | translate"
+                  />
+                </span>
+              </div>
+            }
+          </div>
+        </hum-card>
+      }
+
+      <div style="display: flex; justify-content: flex-end">
+        <hum-button type="submit" variant="primary" icon="save" [loading]="saving()" [disabled]="form.invalid">{{
+          'humano.payRules.save' | translate
+        }}</hum-button>
+      </div>
+    </form>
+  }
+</div>

@@ -5,7 +5,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -318,6 +320,47 @@ public class PayrollFormulaEngine {
     /** Returns the set of variable names the engine will accept (whitelist + dynamic-pattern hint). */
     public Set<String> allowedVariableNames() {
         return ALLOWED_VARIABLE_NAMES;
+    }
+
+    /** Named numeric constants formulas may reference (e.g. {@code #WORKDAYS_IN_MONTH}). */
+    public Set<String> constantNames() {
+        return Collections.unmodifiableSet(CONSTANTS.keySet());
+    }
+
+    /** Maximum accepted formula length (characters). */
+    public int maxFormulaLength() {
+        return MAX_FORMULA_LENGTH;
+    }
+
+    /**
+     * Regex (as text) describing the dynamic variable names the engine also accepts —
+     * {@code PayComponentCode}-shaped names plus optional {@code _QTY}/{@code _RATE} suffix.
+     * Surfaced so a UI can hint that, e.g., {@code #OT_HOURS} is valid even though it is
+     * not in the static whitelist.
+     */
+    public String dynamicVariablePattern() {
+        return ALLOWED_DYNAMIC_NAME.pattern();
+    }
+
+    /** Name + parameter type list for one callable function, for editor palettes/autocomplete. */
+    public record FunctionSignature(String name, List<String> parameterTypes) {}
+
+    /**
+     * Signatures of every callable function, sorted by name. Parameter types are the
+     * simple Java type names (e.g. {@code BigDecimal}, {@code List}) reflected from the
+     * registered helper methods — enough for a UI to render {@code cap(BigDecimal, BigDecimal)}.
+     */
+    public List<FunctionSignature> functionSignatures() {
+        List<FunctionSignature> out = new ArrayList<>(functionRegistry.size());
+        functionRegistry.forEach((name, method) -> {
+            List<String> params = new ArrayList<>();
+            for (Class<?> p : method.getParameterTypes()) {
+                params.add(p.getSimpleName());
+            }
+            out.add(new FunctionSignature(name, params));
+        });
+        out.sort(Comparator.comparing(FunctionSignature::name));
+        return out;
     }
 
     /**

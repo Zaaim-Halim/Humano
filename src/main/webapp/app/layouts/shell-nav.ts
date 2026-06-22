@@ -107,7 +107,7 @@ export const SHELL_NAV: ShellNavGroup[] = [
   },
   {
     headingKey: 'humano.nav.groups.payroll',
-    permissions: [Permission.VIEW_PAYROLL_RUN, Permission.VIEW_PAYSLIPS, Permission.APPROVE_LEAVE],
+    permissions: [Permission.VIEW_PAYROLL_RUN, Permission.VIEW_PAYSLIPS, Permission.APPROVE_LEAVE, Permission.MANAGE_PAY_COMPONENTS],
     items: [
       {
         id: 'runs',
@@ -116,6 +116,14 @@ export const SHELL_NAV: ShellNavGroup[] = [
         link: '/payroll/runs',
         keywords: 'payroll salary process',
         permissions: [Permission.VIEW_PAYROLL_RUN],
+      },
+      {
+        id: 'pay-rules',
+        labelKey: 'humano.nav.payRules',
+        icon: 'function-square',
+        link: '/payroll/pay-rules',
+        keywords: 'formula rule pay component calculation tax',
+        permissions: [Permission.MANAGE_PAY_COMPONENTS],
       },
       {
         id: 'payslips',
