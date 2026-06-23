@@ -476,7 +476,18 @@ public class PayrollProcessingService {
         OrganizationSettings settings = resolveSettings();
         BigDecimal baseSalary = calculateBaseSalary(compensation, period, settings).setScale(MONEY_SCALE, MONEY_ROUNDING);
         List<PayrollInput> inputs = getPayrollInputs(employee.getId(), period.getId());
-        Map<String, Object> context = buildCalculationContext(employee, compensation, period, inputs, baseSalary, settings);
+        // Loaded once and shared with step 8 (other-withholdings) below: buildCalculationContext
+        // exposes each row's running YTD so capped formulas can reference it; step 8 emits the lines.
+        List<TaxWithholding> activeWithholdings = activeWithholdingsForPeriod(employee, period.getEndDate());
+        Map<String, Object> context = buildCalculationContext(
+            employee,
+            compensation,
+            period,
+            inputs,
+            baseSalary,
+            settings,
+            activeWithholdings
+        );
 
         BigDecimal gross = BigDecimal.ZERO;
         BigDecimal nonTaxableEarnings = BigDecimal.ZERO;
@@ -765,7 +776,7 @@ public class PayrollProcessingService {
         //   tagged lineCategory=WITHHOLDING and taxType=<the row's type> — the typed
         //   contract the post-time YTD reader keys off.
         // ============================================================
-        List<TaxWithholding> activeWithholdings = activeWithholdingsForPeriod(employee, period.getEndDate());
+        // activeWithholdings loaded once near the top of this method (shared with the formula context).
         for (TaxWithholding w : activeWithholdings) {
             if (w.getType() == TaxType.INCOME_TAX) continue;
             BigDecimal amt = computeWithholdingAmount(w, grossPay);
@@ -1335,7 +1346,8 @@ public class PayrollProcessingService {
         PayrollPeriod period,
         List<PayrollInput> inputs,
         BigDecimal baseSalary,
-        OrganizationSettings settings
+        OrganizationSettings settings,
+        List<TaxWithholding> activeWithholdings
     ) {
         Map<String, Object> context = new HashMap<>();
         context.put("employeeId", employee.getId());
@@ -1344,6 +1356,18 @@ public class PayrollProcessingService {
         context.put("periodStartDate", period.getStartDate());
         context.put("periodEndDate", period.getEndDate());
         context.put("workDays", calculateWorkDays(period));
+
+        // Year-to-date contribution per withholding type, as #YTD_<TYPE> (e.g. #YTD_SOCIAL_SECURITY).
+        // The value is the running total carried on the employee's active TaxWithholding row, which is
+        // advanced only when a run is POSTED (§P3.3), so during calc it reflects prior posted periods.
+        // This lets a PayRule formula enforce an annual ceiling across consecutive runs — e.g. a capped
+        // social-security contribution: min(rate% * grossSalary, max(0, SOCIAL_SECURITY_CAP - YTD)).
+        // Matches PayrollFormulaEngine.ALLOWED_DYNAMIC_NAME, so no static whitelist entry is needed.
+        Map<TaxType, BigDecimal> ytdByType = new EnumMap<>(TaxType.class);
+        for (TaxWithholding w : activeWithholdings) {
+            ytdByType.merge(w.getType(), nz(w.getYearToDateAmount()), BigDecimal::add);
+        }
+        ytdByType.forEach((type, ytd) -> context.put("YTD_" + type.name(), ytd));
 
         // Company payroll-policy defaults, so tenant formulas can reference the configured
         // overtime multiplier / standard hours instead of hardcoding them. Keep these keys in

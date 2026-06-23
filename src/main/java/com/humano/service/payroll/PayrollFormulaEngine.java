@@ -194,7 +194,10 @@ public class PayrollFormulaEngine {
      * Dynamic-name allowlist for {@code PayComponentCode}-shaped variables and their
      * {@code _QTY} / {@code _RATE} companions. Uppercase letters + digits + underscores,
      * with optional {@code _QTY} or {@code _RATE} suffix. Matches what
-     * {@code buildCalculationContext} writes for each {@code PayrollInput}.
+     * {@code buildCalculationContext} writes for each {@code PayrollInput}, plus the
+     * {@code YTD_<TaxType>} year-to-date contribution variables (e.g. {@code #YTD_SOCIAL_SECURITY})
+     * it injects from the employee's active {@code TaxWithholding} rows — used to enforce annual
+     * contribution ceilings across consecutive runs.
      */
     private static final Pattern ALLOWED_DYNAMIC_NAME = Pattern.compile("^[A-Z][A-Z0-9_]*(_QTY|_RATE)?$");
 
