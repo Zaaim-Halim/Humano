@@ -1,0 +1,2733 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!--
+        Seed the tenant-scoped country (ISO 3166-1 alpha-2) and currency (ISO 4217) reference
+        tables. Rows were generated from the CountryCode / CurrencyCode enums (the source of truth);
+        regenerate from those enums if they change rather than hand-editing rows.
+
+        The primary key is a pre-generated, deterministic UUID emitted as a 32-char hex string and
+        wrapped per-dialect (binPrefix/binSuffix) into the binary literal each RDBMS accepts for the
+        uuidType column (BINARY(16) / BYTEA / RAW(16)):
+          mysql,mariadb -> UNHEX('hex')         h2     -> X'hex'
+          postgresql    -> decode('hex','hex')  mssql  -> 0xhex
+          oracle        -> HEXTORAW('hex')
+        created_date uses ANSI CURRENT_TIMESTAMP, which every supported dialect accepts.
+
+        Liquibase changelog tracking runs this once per tenant; the unique index on `code` guards
+        against accidental double-seeding. NOTE: adding new enum values later does NOT back-fill
+        existing tenants - author a follow-up changeset for that.
+    -->
+    <property name="binPrefix" value="UNHEX('"     dbms="mysql,mariadb"/>
+    <property name="binSuffix" value="')"          dbms="mysql,mariadb"/>
+    <property name="binPrefix" value="X'"          dbms="h2"/>
+    <property name="binSuffix" value="'"           dbms="h2"/>
+    <property name="binPrefix" value="decode('"    dbms="postgresql"/>
+    <property name="binSuffix" value="','hex')"    dbms="postgresql"/>
+    <property name="binPrefix" value="0x"          dbms="mssql"/>
+    <property name="binSuffix" value=""            dbms="mssql"/>
+    <property name="binPrefix" value="HEXTORAW('"  dbms="oracle"/>
+    <property name="binSuffix" value="')"          dbms="oracle"/>
+
+    <changeSet id="20260623-seed-country" author="halimzaaim">
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}b987ea1b37cd59ec9c92cf6ff7456a9f${binSuffix}"/>
+            <column name="code" value="AF"/>
+            <column name="name" value="Afghanistan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}a70187f7696d52efaa0964551aec6340${binSuffix}"/>
+            <column name="code" value="AL"/>
+            <column name="name" value="Albania"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}337420ae26cb5d74a03c1fd12f4c5d3c${binSuffix}"/>
+            <column name="code" value="DZ"/>
+            <column name="name" value="Algeria"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}8bd9032b5b5f5ce8906f5efe94b03b66${binSuffix}"/>
+            <column name="code" value="AD"/>
+            <column name="name" value="Andorra"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}92ba7183c4a8538bb7c86fd1f5678a0f${binSuffix}"/>
+            <column name="code" value="AO"/>
+            <column name="name" value="Angola"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}ec3c9a08a2d85f4e8f4f76f805c5aad5${binSuffix}"/>
+            <column name="code" value="AG"/>
+            <column name="name" value="Antigua and Barbuda"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}14ba1bbeb436536cbb429af36dc9874c${binSuffix}"/>
+            <column name="code" value="AR"/>
+            <column name="name" value="Argentina"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}7235139e10f0568f8a5504ea7b501192${binSuffix}"/>
+            <column name="code" value="AM"/>
+            <column name="name" value="Armenia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}3d12bcb7ef6750218c9641b0640985c9${binSuffix}"/>
+            <column name="code" value="AU"/>
+            <column name="name" value="Australia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}b875e1a56e7e502c9b53c2da0eb18184${binSuffix}"/>
+            <column name="code" value="AT"/>
+            <column name="name" value="Austria"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}5137c7399d845aad9450cd22f39584bd${binSuffix}"/>
+            <column name="code" value="AZ"/>
+            <column name="name" value="Azerbaijan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}b813e3562fbc5b0ab6dcb18571448869${binSuffix}"/>
+            <column name="code" value="BS"/>
+            <column name="name" value="Bahamas"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}1362dd7f68195621982018b40b4e8d2e${binSuffix}"/>
+            <column name="code" value="BH"/>
+            <column name="name" value="Bahrain"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}f02e003b4f5c559db83fc190412e81f9${binSuffix}"/>
+            <column name="code" value="BD"/>
+            <column name="name" value="Bangladesh"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}2ad50688b3d4550fb6fb3f69ce0122c7${binSuffix}"/>
+            <column name="code" value="BB"/>
+            <column name="name" value="Barbados"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}72c0424dfc7c567eae6a603374d49688${binSuffix}"/>
+            <column name="code" value="BY"/>
+            <column name="name" value="Belarus"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}84042bb994d35a1c963504b61009ce05${binSuffix}"/>
+            <column name="code" value="BE"/>
+            <column name="name" value="Belgium"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}df38ec997092518db1dbffde57662060${binSuffix}"/>
+            <column name="code" value="BZ"/>
+            <column name="name" value="Belize"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}7ff16acf9280571ea160e5604ecfdd5b${binSuffix}"/>
+            <column name="code" value="BJ"/>
+            <column name="name" value="Benin"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}80c45d95fedd5ab1bea4e38a17a5757f${binSuffix}"/>
+            <column name="code" value="BT"/>
+            <column name="name" value="Bhutan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}d3d90921fcb05349802d33ab2869c8c4${binSuffix}"/>
+            <column name="code" value="BO"/>
+            <column name="name" value="Bolivia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}76e63e9fe33c5adaaed6287309dcb9ab${binSuffix}"/>
+            <column name="code" value="BA"/>
+            <column name="name" value="Bosnia and Herzegovina"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}ee0606872f3f598092ea2572b0b68189${binSuffix}"/>
+            <column name="code" value="BW"/>
+            <column name="name" value="Botswana"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}6559999784705c5abe2d393262e6cb52${binSuffix}"/>
+            <column name="code" value="BR"/>
+            <column name="name" value="Brazil"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}9a7ad9f4f6ff58ed894314fcec5d9311${binSuffix}"/>
+            <column name="code" value="BN"/>
+            <column name="name" value="Brunei"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}976f47e76b5a578ca3c5c617b502873a${binSuffix}"/>
+            <column name="code" value="BG"/>
+            <column name="name" value="Bulgaria"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}6fb6010ec51e5f32b15ded45d3a0ad7f${binSuffix}"/>
+            <column name="code" value="BF"/>
+            <column name="name" value="Burkina Faso"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}50a73dea94b251378e4079c1b26eb23e${binSuffix}"/>
+            <column name="code" value="BI"/>
+            <column name="name" value="Burundi"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}700926fbd3e554a2b30194a56f2cb039${binSuffix}"/>
+            <column name="code" value="CV"/>
+            <column name="name" value="Cabo Verde"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}8cf3ca57bfed5650930687f1ac949e9b${binSuffix}"/>
+            <column name="code" value="KH"/>
+            <column name="name" value="Cambodia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}2a14de60d8b15594a799c3f5f93c9ed6${binSuffix}"/>
+            <column name="code" value="CM"/>
+            <column name="name" value="Cameroon"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}88fd95e14f29519586b41f69324a38c9${binSuffix}"/>
+            <column name="code" value="CA"/>
+            <column name="name" value="Canada"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}76dce89076395c5385107aaa762e2dfd${binSuffix}"/>
+            <column name="code" value="CF"/>
+            <column name="name" value="Central African Republic"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}8443f3595b84532eb7752b932e0c5254${binSuffix}"/>
+            <column name="code" value="TD"/>
+            <column name="name" value="Chad"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}48d916dfab725d74857531ef058b3493${binSuffix}"/>
+            <column name="code" value="CL"/>
+            <column name="name" value="Chile"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}8a470e22bb195edf89a52dbd54c24cda${binSuffix}"/>
+            <column name="code" value="CN"/>
+            <column name="name" value="China"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}5d07a5a2dffc5784b0caa5ae00ae284d${binSuffix}"/>
+            <column name="code" value="CO"/>
+            <column name="name" value="Colombia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}ad1af2afac865acf9a8563b234e6092d${binSuffix}"/>
+            <column name="code" value="KM"/>
+            <column name="name" value="Comoros"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}79fd1ad4aea955969f8caee56271a1d4${binSuffix}"/>
+            <column name="code" value="CG"/>
+            <column name="name" value="Congo"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}391fdb02c9d357f6801f41dbe619aee0${binSuffix}"/>
+            <column name="code" value="CD"/>
+            <column name="name" value="Congo Democratic Republic"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}72181475d7c7558c9d84fc120d1f9211${binSuffix}"/>
+            <column name="code" value="CR"/>
+            <column name="name" value="Costa Rica"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}bdaac6ede7ad528b8a22b2ffb2917ae4${binSuffix}"/>
+            <column name="code" value="CI"/>
+            <column name="name" value="Côte d&#x27;Ivoire"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}a2747b32e566539089085d4743fcbf8a${binSuffix}"/>
+            <column name="code" value="HR"/>
+            <column name="name" value="Croatia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}92b372669cce55a6b4f5a3b553ef999d${binSuffix}"/>
+            <column name="code" value="CU"/>
+            <column name="name" value="Cuba"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}c6f430e062385be5b874cc1549daa7ad${binSuffix}"/>
+            <column name="code" value="CY"/>
+            <column name="name" value="Cyprus"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}e49a81404de4553e9a6246e42b466a1f${binSuffix}"/>
+            <column name="code" value="CZ"/>
+            <column name="name" value="Czechia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}453df8ec4d87571ca80a49a72c378bdf${binSuffix}"/>
+            <column name="code" value="DK"/>
+            <column name="name" value="Denmark"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}3a36af8792715931b0f69168d61ba095${binSuffix}"/>
+            <column name="code" value="DJ"/>
+            <column name="name" value="Djibouti"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}e15d64b4da1a59ebae0b08189963d51b${binSuffix}"/>
+            <column name="code" value="DM"/>
+            <column name="name" value="Dominica"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}47ece661577453b7a795cfc82f54c4be${binSuffix}"/>
+            <column name="code" value="DO"/>
+            <column name="name" value="Dominican Republic"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}34bc29e667285479990969e400cd8596${binSuffix}"/>
+            <column name="code" value="EC"/>
+            <column name="name" value="Ecuador"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}fb22215493e355ffa4de1170bfb711dc${binSuffix}"/>
+            <column name="code" value="EG"/>
+            <column name="name" value="Egypt"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}64c7967291805b7280e8a16e1dc2965d${binSuffix}"/>
+            <column name="code" value="SV"/>
+            <column name="name" value="El Salvador"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}2d162447bd125c419803c328b1ae2a57${binSuffix}"/>
+            <column name="code" value="GQ"/>
+            <column name="name" value="Equatorial Guinea"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}f6bad9f8ba2e542cae968dc81cd1172c${binSuffix}"/>
+            <column name="code" value="ER"/>
+            <column name="name" value="Eritrea"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}d5a8181f809758f8af0ca706d406d2dc${binSuffix}"/>
+            <column name="code" value="EE"/>
+            <column name="name" value="Estonia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}dbf3f9d49256509dbb76bc0c2d95f75c${binSuffix}"/>
+            <column name="code" value="SZ"/>
+            <column name="name" value="Eswatini"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}85eb74c8c88a5aba95e41beb3fd9468a${binSuffix}"/>
+            <column name="code" value="ET"/>
+            <column name="name" value="Ethiopia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}18520b16147b57b09bdbf05c1e556062${binSuffix}"/>
+            <column name="code" value="FJ"/>
+            <column name="name" value="Fiji"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}d34e6a5a399950b486c0839b5b4bd62e${binSuffix}"/>
+            <column name="code" value="FI"/>
+            <column name="name" value="Finland"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}292043fe0c965861876245acdb4ba31c${binSuffix}"/>
+            <column name="code" value="FR"/>
+            <column name="name" value="France"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}12e5c281fda855a48cd310de6460aeb3${binSuffix}"/>
+            <column name="code" value="GA"/>
+            <column name="name" value="Gabon"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}6a7e3222be42544aa5eb220fa58b0478${binSuffix}"/>
+            <column name="code" value="GM"/>
+            <column name="name" value="Gambia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}b548e3a9aebe58f0a3bf22b0537a553c${binSuffix}"/>
+            <column name="code" value="GE"/>
+            <column name="name" value="Georgia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}ec15f319ab765e1dbb42f9f6ca9b2beb${binSuffix}"/>
+            <column name="code" value="DE"/>
+            <column name="name" value="Germany"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}5cb371ad0b0f535da94f1926a056c561${binSuffix}"/>
+            <column name="code" value="GH"/>
+            <column name="name" value="Ghana"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}104b9c59efa1523d8c41db2aabce9b6e${binSuffix}"/>
+            <column name="code" value="GR"/>
+            <column name="name" value="Greece"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}56b5861676af537f8255898eb58762b0${binSuffix}"/>
+            <column name="code" value="GD"/>
+            <column name="name" value="Grenada"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}5f14f9713c695ee78c8df0f8bc2f4abc${binSuffix}"/>
+            <column name="code" value="GT"/>
+            <column name="name" value="Guatemala"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}7c2152333d125f8fb48d0dffc34a3a08${binSuffix}"/>
+            <column name="code" value="GN"/>
+            <column name="name" value="Guinea"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}84afaa1bc47c5a9b95c3777b365d4a43${binSuffix}"/>
+            <column name="code" value="GW"/>
+            <column name="name" value="Guinea-Bissau"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}c49e1f056d055fe8bd78925025fd0f58${binSuffix}"/>
+            <column name="code" value="GY"/>
+            <column name="name" value="Guyana"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}8ee610fd1e585720be581be429169674${binSuffix}"/>
+            <column name="code" value="HT"/>
+            <column name="name" value="Haiti"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}06cc6b1db5e75383a45b9698a4288f0d${binSuffix}"/>
+            <column name="code" value="HN"/>
+            <column name="name" value="Honduras"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}0fc2a717e99e56779e1d5d531b223799${binSuffix}"/>
+            <column name="code" value="HU"/>
+            <column name="name" value="Hungary"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}9e578e82f2595cc091d3fab23b5cf188${binSuffix}"/>
+            <column name="code" value="IS"/>
+            <column name="name" value="Iceland"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}85ffa1fe451f558ab5347172b40d16fd${binSuffix}"/>
+            <column name="code" value="IN"/>
+            <column name="name" value="India"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}ce8fb9898d995b698f14b7c1ade19cbd${binSuffix}"/>
+            <column name="code" value="ID"/>
+            <column name="name" value="Indonesia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}ad96bb0422ff5665add35358f1b279f2${binSuffix}"/>
+            <column name="code" value="IR"/>
+            <column name="name" value="Iran"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}4d52e42cf2b15e37b29983ce340fc64a${binSuffix}"/>
+            <column name="code" value="IQ"/>
+            <column name="name" value="Iraq"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}d539c64a88655a738ba016e0801eeabc${binSuffix}"/>
+            <column name="code" value="IE"/>
+            <column name="name" value="Ireland"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}ded136cd85b4575db62c553fb3440016${binSuffix}"/>
+            <column name="code" value="IL"/>
+            <column name="name" value="Israel"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}02767ed9362d5c1b8c2f389671e39f69${binSuffix}"/>
+            <column name="code" value="IT"/>
+            <column name="name" value="Italy"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}a5a99e335ee4591892466d76d95fa49b${binSuffix}"/>
+            <column name="code" value="JM"/>
+            <column name="name" value="Jamaica"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}fb87a14992985a1da8312c7a3fcd7674${binSuffix}"/>
+            <column name="code" value="JP"/>
+            <column name="name" value="Japan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}623e5e186a9353f0abd37b0d34714671${binSuffix}"/>
+            <column name="code" value="JO"/>
+            <column name="name" value="Jordan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}8a83fa8e9fb552158574eb39f64de1ae${binSuffix}"/>
+            <column name="code" value="KZ"/>
+            <column name="name" value="Kazakhstan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}729780bb53cb5e9d881c558612efd771${binSuffix}"/>
+            <column name="code" value="KE"/>
+            <column name="name" value="Kenya"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}fb418f2b630d53fe9b6fc96d0817321c${binSuffix}"/>
+            <column name="code" value="KI"/>
+            <column name="name" value="Kiribati"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}46b8c6417dc257529f2d04a30fb4103a${binSuffix}"/>
+            <column name="code" value="KP"/>
+            <column name="name" value="Korea North"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}2d251b647f355db49742abbeea6a50ef${binSuffix}"/>
+            <column name="code" value="KR"/>
+            <column name="name" value="Korea South"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}6ce7788ea1e15387aeb4a5045b823aa5${binSuffix}"/>
+            <column name="code" value="KW"/>
+            <column name="name" value="Kuwait"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}a8a874d471695c6f9b37d9928bccedd4${binSuffix}"/>
+            <column name="code" value="KG"/>
+            <column name="name" value="Kyrgyzstan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}737d3160410f5615af2452efc8258a1b${binSuffix}"/>
+            <column name="code" value="LA"/>
+            <column name="name" value="Laos"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}832b2224410c5cffb234fa065685ef62${binSuffix}"/>
+            <column name="code" value="LV"/>
+            <column name="name" value="Latvia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}335aaa1e7b645ae4a10697d89c571a4d${binSuffix}"/>
+            <column name="code" value="LB"/>
+            <column name="name" value="Lebanon"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}dbba04ec358a51628429b604c5376f29${binSuffix}"/>
+            <column name="code" value="LS"/>
+            <column name="name" value="Lesotho"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}1fff2182707454808d6d7547a11bf691${binSuffix}"/>
+            <column name="code" value="LR"/>
+            <column name="name" value="Liberia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}7edd351918bb5db3aa09d1905b350b71${binSuffix}"/>
+            <column name="code" value="LY"/>
+            <column name="name" value="Libya"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}d0cbb26cf4ca5c6cb2a26d425f29fb37${binSuffix}"/>
+            <column name="code" value="LI"/>
+            <column name="name" value="Liechtenstein"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}586bdcfeb4b9523f95e1c432bb9315b7${binSuffix}"/>
+            <column name="code" value="LT"/>
+            <column name="name" value="Lithuania"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}fbd3b10270215a68bc78151cb2f3c384${binSuffix}"/>
+            <column name="code" value="LU"/>
+            <column name="name" value="Luxembourg"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}3617577c08435f7d9dd4b5f89aa84304${binSuffix}"/>
+            <column name="code" value="MG"/>
+            <column name="name" value="Madagascar"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}b199def48f565a17b581455c4f8a2fb3${binSuffix}"/>
+            <column name="code" value="MW"/>
+            <column name="name" value="Malawi"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}83e88dad77e550a98eef3d181073f5f5${binSuffix}"/>
+            <column name="code" value="MY"/>
+            <column name="name" value="Malaysia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}4f81e390a4a7540d88f779762db9844e${binSuffix}"/>
+            <column name="code" value="MV"/>
+            <column name="name" value="Maldives"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}0d96c51d30ec5518b686fcba8037e0e6${binSuffix}"/>
+            <column name="code" value="ML"/>
+            <column name="name" value="Mali"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}1b9fd0868408533f9be871d487ce57cf${binSuffix}"/>
+            <column name="code" value="MT"/>
+            <column name="name" value="Malta"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}bef4d0d2f6ad5accafe6e3f5ef2822a6${binSuffix}"/>
+            <column name="code" value="MH"/>
+            <column name="name" value="Marshall Islands"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}53cbdee4de1f5e5b8a8810c4be964b30${binSuffix}"/>
+            <column name="code" value="MR"/>
+            <column name="name" value="Mauritania"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}05aeadefa455531b8e67a3bd502558a2${binSuffix}"/>
+            <column name="code" value="MU"/>
+            <column name="name" value="Mauritius"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}a42c320db09b5791a9587620c04bd803${binSuffix}"/>
+            <column name="code" value="MX"/>
+            <column name="name" value="Mexico"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}b45cf5c0f7145f72a96b52daafe01a6d${binSuffix}"/>
+            <column name="code" value="FM"/>
+            <column name="name" value="Micronesia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}93bd25645ec755be82e0163720407e38${binSuffix}"/>
+            <column name="code" value="MD"/>
+            <column name="name" value="Moldova"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}5d52698f8547591bad455c97f0cdca3c${binSuffix}"/>
+            <column name="code" value="MC"/>
+            <column name="name" value="Monaco"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}79da61d2b644550ea5d1b42d5c409380${binSuffix}"/>
+            <column name="code" value="MN"/>
+            <column name="name" value="Mongolia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}29687d3c8040517cb158abc1fa562062${binSuffix}"/>
+            <column name="code" value="ME"/>
+            <column name="name" value="Montenegro"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}b8e6e9ba1a525cb59c8327bd7fb07f86${binSuffix}"/>
+            <column name="code" value="MA"/>
+            <column name="name" value="Morocco"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}359048e2480d515191ba81cde98b06fc${binSuffix}"/>
+            <column name="code" value="MZ"/>
+            <column name="name" value="Mozambique"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}1032bd5ef0e65a20acc172a559cf9625${binSuffix}"/>
+            <column name="code" value="MM"/>
+            <column name="name" value="Myanmar"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}459d3bba36dd5b84ac6e060cd7cbbb91${binSuffix}"/>
+            <column name="code" value="NA"/>
+            <column name="name" value="Namibia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}1c2b1fc83fee53a8b92b5e281b7395bb${binSuffix}"/>
+            <column name="code" value="NR"/>
+            <column name="name" value="Nauru"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}31c6bb4998fa584b92a7bb71a0d41d0d${binSuffix}"/>
+            <column name="code" value="NP"/>
+            <column name="name" value="Nepal"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}dc92560bf4ea5ee0aff01e883df169b9${binSuffix}"/>
+            <column name="code" value="NL"/>
+            <column name="name" value="Netherlands"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}4f45a4c80b485ff69bac5f69c05c8ae5${binSuffix}"/>
+            <column name="code" value="NZ"/>
+            <column name="name" value="New Zealand"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}b2f6b04bf333567b95def4a73b26b11c${binSuffix}"/>
+            <column name="code" value="NI"/>
+            <column name="name" value="Nicaragua"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}bcfab8bb34785b43a3f9a8c7e40256d7${binSuffix}"/>
+            <column name="code" value="NE"/>
+            <column name="name" value="Niger"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}e1246482902d547aa0a6dde51519cc8e${binSuffix}"/>
+            <column name="code" value="NG"/>
+            <column name="name" value="Nigeria"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}3b58876d1bb25561b9417ed7d7661a39${binSuffix}"/>
+            <column name="code" value="MK"/>
+            <column name="name" value="North Macedonia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}cf30f180ab645b5791ce92359c7925ee${binSuffix}"/>
+            <column name="code" value="NO"/>
+            <column name="name" value="Norway"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}1f1e16ab37fc5acab0ed86b5747f9132${binSuffix}"/>
+            <column name="code" value="OM"/>
+            <column name="name" value="Oman"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}dc4d7f562f015dc0a5137e13bea7824b${binSuffix}"/>
+            <column name="code" value="PK"/>
+            <column name="name" value="Pakistan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}bb5a429c54fe5cdd8c04133216e6b44a${binSuffix}"/>
+            <column name="code" value="PW"/>
+            <column name="name" value="Palau"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}2157e348cea15007851e3993ecee4837${binSuffix}"/>
+            <column name="code" value="PS"/>
+            <column name="name" value="Palestine"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}dab24587c2c4557f89a27a31aa395e57${binSuffix}"/>
+            <column name="code" value="PA"/>
+            <column name="name" value="Panama"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}005e0f5152d45f3589e454195a41407d${binSuffix}"/>
+            <column name="code" value="PG"/>
+            <column name="name" value="Papua New Guinea"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}e7c029ab4aa350cba4e94a53da83f937${binSuffix}"/>
+            <column name="code" value="PY"/>
+            <column name="name" value="Paraguay"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}cc2160a13c505426bd6130c3f829dc7f${binSuffix}"/>
+            <column name="code" value="PE"/>
+            <column name="name" value="Peru"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}1beb3bc916185688916b1ab7b8936967${binSuffix}"/>
+            <column name="code" value="PH"/>
+            <column name="name" value="Philippines"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}e1b368b2de9a50fbb7582a9da55b1573${binSuffix}"/>
+            <column name="code" value="PL"/>
+            <column name="name" value="Poland"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}7a29c3c29754586bb78cac0d1cb4724c${binSuffix}"/>
+            <column name="code" value="PT"/>
+            <column name="name" value="Portugal"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}69c64b0eebf85a2eb652c9745167581f${binSuffix}"/>
+            <column name="code" value="QA"/>
+            <column name="name" value="Qatar"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}836b46a1cec7541481685008a99c6144${binSuffix}"/>
+            <column name="code" value="RO"/>
+            <column name="name" value="Romania"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}6cfc30f24ec05f128cb71b9293577286${binSuffix}"/>
+            <column name="code" value="RU"/>
+            <column name="name" value="Russia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}e5a75d3f792b57f8b58676c351e33523${binSuffix}"/>
+            <column name="code" value="RW"/>
+            <column name="name" value="Rwanda"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}b6b59ab29c4754cab4085c1a08641079${binSuffix}"/>
+            <column name="code" value="KN"/>
+            <column name="name" value="Saint Kitts and Nevis"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}782ceb5009235aaf8e5289ff479055e2${binSuffix}"/>
+            <column name="code" value="LC"/>
+            <column name="name" value="Saint Lucia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}a54f873332675394a32c869b21f52cfb${binSuffix}"/>
+            <column name="code" value="VC"/>
+            <column name="name" value="Saint Vincent and the Grenadines"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}4b6b303d22845ac882868f1a38da1c64${binSuffix}"/>
+            <column name="code" value="WS"/>
+            <column name="name" value="Samoa"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}f8b8e90c40de53ecaaef593379cccc60${binSuffix}"/>
+            <column name="code" value="SM"/>
+            <column name="name" value="San Marino"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}0d96d6fb89095e76a82c2bc4b7672209${binSuffix}"/>
+            <column name="code" value="ST"/>
+            <column name="name" value="Sao Tome and Principe"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}06861378e1ef575bae493e6551d8c502${binSuffix}"/>
+            <column name="code" value="SA"/>
+            <column name="name" value="Saudi Arabia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}d361eb2c44e95d01aebc6813fed6ced9${binSuffix}"/>
+            <column name="code" value="SN"/>
+            <column name="name" value="Senegal"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}90c44f013bba52bcb56e89203ddd2512${binSuffix}"/>
+            <column name="code" value="RS"/>
+            <column name="name" value="Serbia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}e54fc5427e3154258b0a5c537901b0c8${binSuffix}"/>
+            <column name="code" value="SC"/>
+            <column name="name" value="Seychelles"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}d131a6dce1c7565cb194c6cfcde3c765${binSuffix}"/>
+            <column name="code" value="SL"/>
+            <column name="name" value="Sierra Leone"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}e4aabdf845c15b2ab91a43e8220d1c6f${binSuffix}"/>
+            <column name="code" value="SG"/>
+            <column name="name" value="Singapore"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}b29f2d5c910b51cba3f1545e36e130f5${binSuffix}"/>
+            <column name="code" value="SK"/>
+            <column name="name" value="Slovakia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}00ac33c2b0a65c95a2b2e0f0f7508c17${binSuffix}"/>
+            <column name="code" value="SI"/>
+            <column name="name" value="Slovenia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}f4218b4a5dfc5fe69862a1fb8feee573${binSuffix}"/>
+            <column name="code" value="SB"/>
+            <column name="name" value="Solomon Islands"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}462175c971745f68acb9d0d490acaeaa${binSuffix}"/>
+            <column name="code" value="SO"/>
+            <column name="name" value="Somalia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}87d63e55f22652cdb91a30c9a2492db0${binSuffix}"/>
+            <column name="code" value="ZA"/>
+            <column name="name" value="South Africa"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}69b48be331c35afb9d9e9835deb4938d${binSuffix}"/>
+            <column name="code" value="SS"/>
+            <column name="name" value="South Sudan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}ec23b237a039564b8c3f285fcc5e12bb${binSuffix}"/>
+            <column name="code" value="ES"/>
+            <column name="name" value="Spain"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}794c269438ef586b83d4a8c91d52048d${binSuffix}"/>
+            <column name="code" value="LK"/>
+            <column name="name" value="Sri Lanka"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}199dfde3f81352abab2f596b2ec34c64${binSuffix}"/>
+            <column name="code" value="SD"/>
+            <column name="name" value="Sudan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}120c62cb5c5959c69f130b873bc70872${binSuffix}"/>
+            <column name="code" value="SR"/>
+            <column name="name" value="Suriname"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}ec7df3bcaea2540799d529206f9f8a59${binSuffix}"/>
+            <column name="code" value="SE"/>
+            <column name="name" value="Sweden"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}c5e9942f05a557feb7c6f47c66bda7a1${binSuffix}"/>
+            <column name="code" value="CH"/>
+            <column name="name" value="Switzerland"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}9c4d93df045f56518bff05c5fcf1efc1${binSuffix}"/>
+            <column name="code" value="SY"/>
+            <column name="name" value="Syria"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}6d417000027555288479716aaea2b46d${binSuffix}"/>
+            <column name="code" value="TW"/>
+            <column name="name" value="Taiwan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}2b797da9e41051af81da30603663d674${binSuffix}"/>
+            <column name="code" value="TJ"/>
+            <column name="name" value="Tajikistan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}69edc5e1bb5a5ac9a0a5cd14b1a68c07${binSuffix}"/>
+            <column name="code" value="TZ"/>
+            <column name="name" value="Tanzania"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}fa72f5ac8c7e5687861ba7abe939bcd8${binSuffix}"/>
+            <column name="code" value="TH"/>
+            <column name="name" value="Thailand"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}d69458b186765b519962cea6276e2d4b${binSuffix}"/>
+            <column name="code" value="TL"/>
+            <column name="name" value="Timor-Leste"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}ee8de107f2225002b7b7a9a504b9db2d${binSuffix}"/>
+            <column name="code" value="TG"/>
+            <column name="name" value="Togo"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}e69522ed67015d27895025cd81d3be08${binSuffix}"/>
+            <column name="code" value="TO"/>
+            <column name="name" value="Tonga"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}33cb9a2bba4b567c9e60cf7a4e7101e9${binSuffix}"/>
+            <column name="code" value="TT"/>
+            <column name="name" value="Trinidad and Tobago"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}1809e804b7d3513a885454e5e5f1ed6e${binSuffix}"/>
+            <column name="code" value="TN"/>
+            <column name="name" value="Tunisia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}1498960ccb725a6daa50db07b81e7c45${binSuffix}"/>
+            <column name="code" value="TR"/>
+            <column name="name" value="Turkey"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}44d5f8a9673d52cb89e8ee09e3150525${binSuffix}"/>
+            <column name="code" value="TM"/>
+            <column name="name" value="Turkmenistan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}b4b7b1e9c2ce5a26ae4e27dfdd83f68f${binSuffix}"/>
+            <column name="code" value="TV"/>
+            <column name="name" value="Tuvalu"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}68fa21466e165d28a842a20a66459622${binSuffix}"/>
+            <column name="code" value="UG"/>
+            <column name="name" value="Uganda"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}2d17f37fffb15a3580fec5eb33ccab1f${binSuffix}"/>
+            <column name="code" value="UA"/>
+            <column name="name" value="Ukraine"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}5f70b06fa45c579281c75099818e9e1f${binSuffix}"/>
+            <column name="code" value="AE"/>
+            <column name="name" value="United Arab Emirates"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}3d714f750d0f530c8bc6260bff894b5b${binSuffix}"/>
+            <column name="code" value="GB"/>
+            <column name="name" value="United Kingdom"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}d627cc9ace9e56de8db2368672a0736a${binSuffix}"/>
+            <column name="code" value="US"/>
+            <column name="name" value="United States"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}b817ff4b476556baa88ddb86b9435ba2${binSuffix}"/>
+            <column name="code" value="UY"/>
+            <column name="name" value="Uruguay"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}a3653925a2c1573c97fe3a8290d7364b${binSuffix}"/>
+            <column name="code" value="UZ"/>
+            <column name="name" value="Uzbekistan"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}857ef3cb77aa56a48c570163d6640d6a${binSuffix}"/>
+            <column name="code" value="VU"/>
+            <column name="name" value="Vanuatu"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}e22e9628f3785756a668b183de0e0069${binSuffix}"/>
+            <column name="code" value="VA"/>
+            <column name="name" value="Vatican City"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}cb4d9f0469a25fa2977020af1d9d87cf${binSuffix}"/>
+            <column name="code" value="VE"/>
+            <column name="name" value="Venezuela"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}84a7e5a84f755aaab19983e4696ac473${binSuffix}"/>
+            <column name="code" value="VN"/>
+            <column name="name" value="Vietnam"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}c2a5083b5e0a5cf4b1fddc9dcd54688a${binSuffix}"/>
+            <column name="code" value="YE"/>
+            <column name="name" value="Yemen"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}52cf3eecde09521cb0e522279b37cf33${binSuffix}"/>
+            <column name="code" value="ZM"/>
+            <column name="name" value="Zambia"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="country">
+            <column name="id" valueComputed="${binPrefix}334319aa97585ef58c51689645122896${binSuffix}"/>
+            <column name="code" value="ZW"/>
+            <column name="name" value="Zimbabwe"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <rollback>
+            <delete tableName="country"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20260623-seed-currency" author="halimzaaim">
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}4ff0f975a5f0558cb3c16af94d6f8ac9${binSuffix}"/>
+            <column name="code" value="AED"/>
+            <column name="name" value="United Arab Emirates Dirham"/>
+            <column name="symbol" value="د.إ"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}0e86152016d05c9797bae704cca2dd67${binSuffix}"/>
+            <column name="code" value="AFN"/>
+            <column name="name" value="Afghan Afghani"/>
+            <column name="symbol" value="؋"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}0f1be839aa2758819c348b0ddc30d243${binSuffix}"/>
+            <column name="code" value="ALL"/>
+            <column name="name" value="Albanian Lek"/>
+            <column name="symbol" value="L"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}a4fb2b5a81ef55da8a51b1d725ba5141${binSuffix}"/>
+            <column name="code" value="AMD"/>
+            <column name="name" value="Armenian Dram"/>
+            <column name="symbol" value="֏"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}42a1ace91ee45bb89664705bb09bb26b${binSuffix}"/>
+            <column name="code" value="ANG"/>
+            <column name="name" value="Netherlands Antillean Guilder"/>
+            <column name="symbol" value="ƒ"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}fe71d5c87e115e0cbcd04cd3832b44c9${binSuffix}"/>
+            <column name="code" value="AOA"/>
+            <column name="name" value="Angolan Kwanza"/>
+            <column name="symbol" value="Kz"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}ae898f6d50c95d97a854ac18ab9ed0c4${binSuffix}"/>
+            <column name="code" value="ARS"/>
+            <column name="name" value="Argentine Peso"/>
+            <column name="symbol" value="$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}4125d5793bac564dbfb8d45add38ca56${binSuffix}"/>
+            <column name="code" value="AUD"/>
+            <column name="name" value="Australian Dollar"/>
+            <column name="symbol" value="A$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}827e3ff043615a02b37483f4d5284243${binSuffix}"/>
+            <column name="code" value="AWG"/>
+            <column name="name" value="Aruban Florin"/>
+            <column name="symbol" value="ƒ"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}fe5798ada0615c08b4b0129701107483${binSuffix}"/>
+            <column name="code" value="AZN"/>
+            <column name="name" value="Azerbaijani Manat"/>
+            <column name="symbol" value="₼"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}735077a94f0c5f518c4755f9f5b92587${binSuffix}"/>
+            <column name="code" value="BAM"/>
+            <column name="name" value="Bosnia-Herzegovina Convertible Mark"/>
+            <column name="symbol" value="KM"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}d251a0a84dcf5c7abf5c70569e2cf358${binSuffix}"/>
+            <column name="code" value="BBD"/>
+            <column name="name" value="Barbadian Dollar"/>
+            <column name="symbol" value="Bds$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}d084eac5546a55a897959bc33b92f521${binSuffix}"/>
+            <column name="code" value="BDT"/>
+            <column name="name" value="Bangladeshi Taka"/>
+            <column name="symbol" value="৳"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}63e18e415f315f45ab84410c8ee1a155${binSuffix}"/>
+            <column name="code" value="BGN"/>
+            <column name="name" value="Bulgarian Lev"/>
+            <column name="symbol" value="лв"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}22bff9f30d935eeabdc42a41fc695a9d${binSuffix}"/>
+            <column name="code" value="BHD"/>
+            <column name="name" value="Bahraini Dinar"/>
+            <column name="symbol" value=".د.ب"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}b9c390d4fa355881af614fe6033702d1${binSuffix}"/>
+            <column name="code" value="BIF"/>
+            <column name="name" value="Burundian Franc"/>
+            <column name="symbol" value="FBu"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}9c9da92808c15e0c83f8727d0a8def17${binSuffix}"/>
+            <column name="code" value="BMD"/>
+            <column name="name" value="Bermudan Dollar"/>
+            <column name="symbol" value="$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}49c42f096bbf56419caa76bb06da19eb${binSuffix}"/>
+            <column name="code" value="BND"/>
+            <column name="name" value="Brunei Dollar"/>
+            <column name="symbol" value="B$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}f9d2ccc5877b5b31a2290b4e1b394ebe${binSuffix}"/>
+            <column name="code" value="BOB"/>
+            <column name="name" value="Bolivian Boliviano"/>
+            <column name="symbol" value="Bs."/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}24f70182d39e5a25bbe947f6a67c5707${binSuffix}"/>
+            <column name="code" value="BRL"/>
+            <column name="name" value="Brazilian Real"/>
+            <column name="symbol" value="R$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}2d01afbdb6a45d6284f33e9b4698b818${binSuffix}"/>
+            <column name="code" value="BSD"/>
+            <column name="name" value="Bahamian Dollar"/>
+            <column name="symbol" value="B$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}13557a2f520359918fcde1a1bf0e1d1a${binSuffix}"/>
+            <column name="code" value="BTN"/>
+            <column name="name" value="Bhutanese Ngultrum"/>
+            <column name="symbol" value="Nu."/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}7a4f360bc7985a81a27eb2874cfaef10${binSuffix}"/>
+            <column name="code" value="BWP"/>
+            <column name="name" value="Botswanan Pula"/>
+            <column name="symbol" value="P"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}ac75cd2c0ca653729e2ce24529b6b285${binSuffix}"/>
+            <column name="code" value="BYN"/>
+            <column name="name" value="Belarusian Ruble"/>
+            <column name="symbol" value="Br"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}ceccb2972e65554c965385097e02805d${binSuffix}"/>
+            <column name="code" value="BZD"/>
+            <column name="name" value="Belize Dollar"/>
+            <column name="symbol" value="BZ$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}cd258a30344356ffbdb65b9e3b1445fa${binSuffix}"/>
+            <column name="code" value="CAD"/>
+            <column name="name" value="Canadian Dollar"/>
+            <column name="symbol" value="C$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}9d22b6530b0f5c4092f609d16d845ef7${binSuffix}"/>
+            <column name="code" value="CDF"/>
+            <column name="name" value="Congolese Franc"/>
+            <column name="symbol" value="FC"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}f1aa8a0d130d5fa1bc0d38469a49b0c1${binSuffix}"/>
+            <column name="code" value="CHF"/>
+            <column name="name" value="Swiss Franc"/>
+            <column name="symbol" value="CHF"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}3ec094372c1552768689f4f807aeea4e${binSuffix}"/>
+            <column name="code" value="CLP"/>
+            <column name="name" value="Chilean Peso"/>
+            <column name="symbol" value="$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}c75fff92d90057a58eb3dd39b3fbe856${binSuffix}"/>
+            <column name="code" value="CNY"/>
+            <column name="name" value="Chinese Yuan"/>
+            <column name="symbol" value="¥"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}9ca4b83c1976523d91f175bbfc92a414${binSuffix}"/>
+            <column name="code" value="COP"/>
+            <column name="name" value="Colombian Peso"/>
+            <column name="symbol" value="$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}408898149506517390936dd52cafef99${binSuffix}"/>
+            <column name="code" value="CRC"/>
+            <column name="name" value="Costa Rican Colón"/>
+            <column name="symbol" value="₡"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}51f7e13c7dbb5d66a8b14c5bdf657412${binSuffix}"/>
+            <column name="code" value="CUC"/>
+            <column name="name" value="Cuban Convertible Peso"/>
+            <column name="symbol" value="CUC$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}7983bbe81df45cddb3fcdc614bbad648${binSuffix}"/>
+            <column name="code" value="CUP"/>
+            <column name="name" value="Cuban Peso"/>
+            <column name="symbol" value="₱"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}a54d4a7d3c265344bb4c176478b3bd97${binSuffix}"/>
+            <column name="code" value="CVE"/>
+            <column name="name" value="Cape Verdean Escudo"/>
+            <column name="symbol" value="$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}004f82d1d3d75f4f84de437e4b507506${binSuffix}"/>
+            <column name="code" value="CZK"/>
+            <column name="name" value="Czech Koruna"/>
+            <column name="symbol" value="Kč"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}644f590e461c5252b50fc4568509bfea${binSuffix}"/>
+            <column name="code" value="DJF"/>
+            <column name="name" value="Djiboutian Franc"/>
+            <column name="symbol" value="Fdj"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}3c8cfda84a9e55c8b999b275d25eb5c2${binSuffix}"/>
+            <column name="code" value="DKK"/>
+            <column name="name" value="Danish Krone"/>
+            <column name="symbol" value="kr"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}5ad76c30d88c521baa0a837ee1ffe401${binSuffix}"/>
+            <column name="code" value="DOP"/>
+            <column name="name" value="Dominican Peso"/>
+            <column name="symbol" value="RD$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}8f119cc7b8395cfc9ad4f290d8a133d8${binSuffix}"/>
+            <column name="code" value="DZD"/>
+            <column name="name" value="Algerian Dinar"/>
+            <column name="symbol" value="د.ج"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}5dbd8391e92054978ecb50c802594441${binSuffix}"/>
+            <column name="code" value="EGP"/>
+            <column name="name" value="Egyptian Pound"/>
+            <column name="symbol" value="E£"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}85959be1e4585417a94401bba10bbdfc${binSuffix}"/>
+            <column name="code" value="ERN"/>
+            <column name="name" value="Eritrean Nakfa"/>
+            <column name="symbol" value="Nfk"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}57dadb68aa5d5bc49c11d76739dbe1a4${binSuffix}"/>
+            <column name="code" value="ETB"/>
+            <column name="name" value="Ethiopian Birr"/>
+            <column name="symbol" value="Br"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}8e1c2343984d5e33a3838d6b6e08cedf${binSuffix}"/>
+            <column name="code" value="EUR"/>
+            <column name="name" value="Euro"/>
+            <column name="symbol" value="€"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}ec0fe9bad927505f8c675bec1ad605be${binSuffix}"/>
+            <column name="code" value="FJD"/>
+            <column name="name" value="Fijian Dollar"/>
+            <column name="symbol" value="FJ$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}09ab812ff4fd576bb5c6d6550e1ad3d2${binSuffix}"/>
+            <column name="code" value="FKP"/>
+            <column name="name" value="Falkland Islands Pound"/>
+            <column name="symbol" value="£"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}e1bc780841995bada94088286cf5f984${binSuffix}"/>
+            <column name="code" value="GBP"/>
+            <column name="name" value="British Pound Sterling"/>
+            <column name="symbol" value="£"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}915a7940aa195753a5bbaa57d65ac0d7${binSuffix}"/>
+            <column name="code" value="GEL"/>
+            <column name="name" value="Georgian Lari"/>
+            <column name="symbol" value="₾"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}1a49f2496e085c0ab1be7a9a46b172fb${binSuffix}"/>
+            <column name="code" value="GGP"/>
+            <column name="name" value="Guernsey Pound"/>
+            <column name="symbol" value="£"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}7f72e97ecc975a2ab43c4a041c9b7c6a${binSuffix}"/>
+            <column name="code" value="GHS"/>
+            <column name="name" value="Ghanaian Cedi"/>
+            <column name="symbol" value="GH₵"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}40dd0442e73f5526a33db0d5cb84b0bb${binSuffix}"/>
+            <column name="code" value="GIP"/>
+            <column name="name" value="Gibraltar Pound"/>
+            <column name="symbol" value="£"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}f57d14cac8f25115b4073bf236220a8a${binSuffix}"/>
+            <column name="code" value="GMD"/>
+            <column name="name" value="Gambian Dalasi"/>
+            <column name="symbol" value="D"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}44d00103f5205bc29594c63d9bb898ad${binSuffix}"/>
+            <column name="code" value="GNF"/>
+            <column name="name" value="Guinean Franc"/>
+            <column name="symbol" value="FG"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}a37dc9f026f25b44a5da30bebca75445${binSuffix}"/>
+            <column name="code" value="GTQ"/>
+            <column name="name" value="Guatemalan Quetzal"/>
+            <column name="symbol" value="Q"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}0913a8e1127b563ab7d5e7504e6e4d83${binSuffix}"/>
+            <column name="code" value="GYD"/>
+            <column name="name" value="Guyanaese Dollar"/>
+            <column name="symbol" value="G$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}9a7e0928059a5450b9f48decce5193cb${binSuffix}"/>
+            <column name="code" value="HKD"/>
+            <column name="name" value="Hong Kong Dollar"/>
+            <column name="symbol" value="HK$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}501bb1c90c7f58c9b6df8908c126df9e${binSuffix}"/>
+            <column name="code" value="HNL"/>
+            <column name="name" value="Honduran Lempira"/>
+            <column name="symbol" value="L"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}7bd6ca4369ff55ddaa5f464fecc41adb${binSuffix}"/>
+            <column name="code" value="HRK"/>
+            <column name="name" value="Croatian Kuna"/>
+            <column name="symbol" value="kn"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}b2e48e6c88e2533cb99802c128fd7efb${binSuffix}"/>
+            <column name="code" value="HTG"/>
+            <column name="name" value="Haitian Gourde"/>
+            <column name="symbol" value="G"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}c46fd98117e2532283ef342a35b19b6f${binSuffix}"/>
+            <column name="code" value="HUF"/>
+            <column name="name" value="Hungarian Forint"/>
+            <column name="symbol" value="Ft"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}4955ddaa4d48599a8893abf2093646b5${binSuffix}"/>
+            <column name="code" value="IDR"/>
+            <column name="name" value="Indonesian Rupiah"/>
+            <column name="symbol" value="Rp"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}10b43956dd125c5ba429c7e03d2e6726${binSuffix}"/>
+            <column name="code" value="ILS"/>
+            <column name="name" value="Israeli New Shekel"/>
+            <column name="symbol" value="₪"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}0f7210ea494d57febc3520339868ec01${binSuffix}"/>
+            <column name="code" value="IMP"/>
+            <column name="name" value="Isle of Man Pound"/>
+            <column name="symbol" value="£"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}62318f1141b95c6fa2a4490afd3635f4${binSuffix}"/>
+            <column name="code" value="INR"/>
+            <column name="name" value="Indian Rupee"/>
+            <column name="symbol" value="₹"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}7702e8b0d6e35cb3ba9bcab6421c8797${binSuffix}"/>
+            <column name="code" value="IQD"/>
+            <column name="name" value="Iraqi Dinar"/>
+            <column name="symbol" value="ع.د"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}dd13282f17255574aad0484f802cc23d${binSuffix}"/>
+            <column name="code" value="IRR"/>
+            <column name="name" value="Iranian Rial"/>
+            <column name="symbol" value="﷼"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}597abbf7a4fc5fa3a2bd3413dddf5234${binSuffix}"/>
+            <column name="code" value="ISK"/>
+            <column name="name" value="Icelandic Króna"/>
+            <column name="symbol" value="kr"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}3ff9d3d0f69c5b0785ef44863bc9227a${binSuffix}"/>
+            <column name="code" value="JEP"/>
+            <column name="name" value="Jersey Pound"/>
+            <column name="symbol" value="£"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}39fe228920325ac392e8e30ab66d870f${binSuffix}"/>
+            <column name="code" value="JMD"/>
+            <column name="name" value="Jamaican Dollar"/>
+            <column name="symbol" value="J$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}39923144fd155942bd51ff796b0c529b${binSuffix}"/>
+            <column name="code" value="JOD"/>
+            <column name="name" value="Jordanian Dinar"/>
+            <column name="symbol" value="د.ا"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}3f8033dd20e8508f97548f565d5bb8e1${binSuffix}"/>
+            <column name="code" value="JPY"/>
+            <column name="name" value="Japanese Yen"/>
+            <column name="symbol" value="¥"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}94fdb35cd66959a88e027048031cfdee${binSuffix}"/>
+            <column name="code" value="KES"/>
+            <column name="name" value="Kenyan Shilling"/>
+            <column name="symbol" value="KSh"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}968388aa742f59ea88f76593c464cbe4${binSuffix}"/>
+            <column name="code" value="KGS"/>
+            <column name="name" value="Kyrgystani Som"/>
+            <column name="symbol" value="лв"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}f3091861e3dc5b3aa83e108d4348c226${binSuffix}"/>
+            <column name="code" value="KHR"/>
+            <column name="name" value="Cambodian Riel"/>
+            <column name="symbol" value="៛"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}630dca8e1888524fb31ee1817ea39107${binSuffix}"/>
+            <column name="code" value="KID"/>
+            <column name="name" value="Kiribati Dollar"/>
+            <column name="symbol" value="$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}e6e82eea86755b47995b247492113438${binSuffix}"/>
+            <column name="code" value="KMF"/>
+            <column name="name" value="Comorian Franc"/>
+            <column name="symbol" value="CF"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}8a7afa1095ee58a99d3b62e810cfbd75${binSuffix}"/>
+            <column name="code" value="KPW"/>
+            <column name="name" value="North Korean Won"/>
+            <column name="symbol" value="₩"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}1f04ce1a61df56e9b70cad82a5c4417c${binSuffix}"/>
+            <column name="code" value="KRW"/>
+            <column name="name" value="South Korean Won"/>
+            <column name="symbol" value="₩"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}56fa28b39b6252d3b2e56b2da22a846a${binSuffix}"/>
+            <column name="code" value="KWD"/>
+            <column name="name" value="Kuwaiti Dinar"/>
+            <column name="symbol" value="د.ك"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}55b5fa9bdfa55075b31ead89197caa7a${binSuffix}"/>
+            <column name="code" value="KYD"/>
+            <column name="name" value="Cayman Islands Dollar"/>
+            <column name="symbol" value="CI$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}90b9d334739857dc8c2d8c3b493dfad0${binSuffix}"/>
+            <column name="code" value="KZT"/>
+            <column name="name" value="Kazakhstani Tenge"/>
+            <column name="symbol" value="₸"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}a1d194c45e9f5013a23e82ed9289051d${binSuffix}"/>
+            <column name="code" value="LAK"/>
+            <column name="name" value="Laotian Kip"/>
+            <column name="symbol" value="₭"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}5af8d2a0c3ed5421a331f7140e1cfb61${binSuffix}"/>
+            <column name="code" value="LBP"/>
+            <column name="name" value="Lebanese Pound"/>
+            <column name="symbol" value="ل.ل"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}dd50b7bd78d3584fa77bbc0690505983${binSuffix}"/>
+            <column name="code" value="LKR"/>
+            <column name="name" value="Sri Lankan Rupee"/>
+            <column name="symbol" value="Rs"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}3b050b39833c557aafab21e7aa317d18${binSuffix}"/>
+            <column name="code" value="LRD"/>
+            <column name="name" value="Liberian Dollar"/>
+            <column name="symbol" value="L$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}c8e813b1c8dc52afaf5c83400d675cb1${binSuffix}"/>
+            <column name="code" value="LSL"/>
+            <column name="name" value="Lesotho Loti"/>
+            <column name="symbol" value="M"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}cf296c6bdae554d9ac4075940216cd7c${binSuffix}"/>
+            <column name="code" value="LYD"/>
+            <column name="name" value="Libyan Dinar"/>
+            <column name="symbol" value="ل.د"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}3c733214d9d1578987e0462972850aad${binSuffix}"/>
+            <column name="code" value="MAD"/>
+            <column name="name" value="Moroccan Dirham"/>
+            <column name="symbol" value="د.م."/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}2fc685f9daa95c5bbc320de7e3960f0f${binSuffix}"/>
+            <column name="code" value="MDL"/>
+            <column name="name" value="Moldovan Leu"/>
+            <column name="symbol" value="L"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}5b1d88d632175b4da24047b30d1039d7${binSuffix}"/>
+            <column name="code" value="MGA"/>
+            <column name="name" value="Malagasy Ariary"/>
+            <column name="symbol" value="Ar"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}fefe639293ad5ac8bf14cf4d8371b9e1${binSuffix}"/>
+            <column name="code" value="MKD"/>
+            <column name="name" value="Macedonian Denar"/>
+            <column name="symbol" value="ден"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}cf151609fc995725afaa6667e5f9629e${binSuffix}"/>
+            <column name="code" value="MMK"/>
+            <column name="name" value="Myanmar Kyat"/>
+            <column name="symbol" value="K"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}7fd17e483f785216bcfea437eab45c24${binSuffix}"/>
+            <column name="code" value="MNT"/>
+            <column name="name" value="Mongolian Tugrik"/>
+            <column name="symbol" value="₮"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}e2fe07d510b9579c93db872b940373e8${binSuffix}"/>
+            <column name="code" value="MOP"/>
+            <column name="name" value="Macanese Pataca"/>
+            <column name="symbol" value="MOP$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}66d40928fab65a538581029baec7509a${binSuffix}"/>
+            <column name="code" value="MRU"/>
+            <column name="name" value="Mauritanian Ouguiya"/>
+            <column name="symbol" value="UM"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}111ceed8e3e055bb91810e2296a1a5b6${binSuffix}"/>
+            <column name="code" value="MUR"/>
+            <column name="name" value="Mauritian Rupee"/>
+            <column name="symbol" value="Rs"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}91cd123c14955f54b3870a73bf9cc7b6${binSuffix}"/>
+            <column name="code" value="MVR"/>
+            <column name="name" value="Maldivian Rufiyaa"/>
+            <column name="symbol" value="Rf"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}7439a966371059068339f84c8bebab5f${binSuffix}"/>
+            <column name="code" value="MWK"/>
+            <column name="name" value="Malawian Kwacha"/>
+            <column name="symbol" value="MK"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}2893b59224b359c0a2c76749c5030038${binSuffix}"/>
+            <column name="code" value="MXN"/>
+            <column name="name" value="Mexican Peso"/>
+            <column name="symbol" value="Mex$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}bb1a3dc3e8ff548ab9b1904910295cb2${binSuffix}"/>
+            <column name="code" value="MYR"/>
+            <column name="name" value="Malaysian Ringgit"/>
+            <column name="symbol" value="RM"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}5ffd9cddb8f952639862df02153eb4b7${binSuffix}"/>
+            <column name="code" value="MZN"/>
+            <column name="name" value="Mozambican Metical"/>
+            <column name="symbol" value="MT"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}326a4f5155a258fa827936cd625c4e6c${binSuffix}"/>
+            <column name="code" value="NAD"/>
+            <column name="name" value="Namibian Dollar"/>
+            <column name="symbol" value="N$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}d8c73f22094b5ea58686cda80d431c19${binSuffix}"/>
+            <column name="code" value="NGN"/>
+            <column name="name" value="Nigerian Naira"/>
+            <column name="symbol" value="₦"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}f415e3d244ce5393a955bbfe85024c83${binSuffix}"/>
+            <column name="code" value="NIO"/>
+            <column name="name" value="Nicaraguan Córdoba"/>
+            <column name="symbol" value="C$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}4faf5a36d8e25fae89f52aca7c287f4d${binSuffix}"/>
+            <column name="code" value="NOK"/>
+            <column name="name" value="Norwegian Krone"/>
+            <column name="symbol" value="kr"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}2361544949115b3f9ccc0fc6b3ecfc69${binSuffix}"/>
+            <column name="code" value="NPR"/>
+            <column name="name" value="Nepalese Rupee"/>
+            <column name="symbol" value="Rs"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}69999b8480d2559ea8f7ae83b3cf2bc0${binSuffix}"/>
+            <column name="code" value="NZD"/>
+            <column name="name" value="New Zealand Dollar"/>
+            <column name="symbol" value="NZ$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}fa9b638b007c5e0ebfbf1876640ae34a${binSuffix}"/>
+            <column name="code" value="OMR"/>
+            <column name="name" value="Omani Rial"/>
+            <column name="symbol" value="ر.ع."/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}fbf574fcd0ce5e8aae22928360b4b048${binSuffix}"/>
+            <column name="code" value="PAB"/>
+            <column name="name" value="Panamanian Balboa"/>
+            <column name="symbol" value="B/."/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}485db1c1e04355f085b2e4d94c36c7a5${binSuffix}"/>
+            <column name="code" value="PEN"/>
+            <column name="name" value="Peruvian Sol"/>
+            <column name="symbol" value="S/."/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}bf15acdd2d3d5775814454d360fbe121${binSuffix}"/>
+            <column name="code" value="PGK"/>
+            <column name="name" value="Papua New Guinean Kina"/>
+            <column name="symbol" value="K"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}de828d9ee2905fb69a5867e9213151c8${binSuffix}"/>
+            <column name="code" value="PHP"/>
+            <column name="name" value="Philippine Peso"/>
+            <column name="symbol" value="₱"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}a16b2ec70824585aa9ef71a58fee376e${binSuffix}"/>
+            <column name="code" value="PKR"/>
+            <column name="name" value="Pakistani Rupee"/>
+            <column name="symbol" value="Rs"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}7376a046760f5b759c92241753769e4c${binSuffix}"/>
+            <column name="code" value="PLN"/>
+            <column name="name" value="Polish Zloty"/>
+            <column name="symbol" value="zł"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}b10e99c147be55219b6a7262c674b958${binSuffix}"/>
+            <column name="code" value="PYG"/>
+            <column name="name" value="Paraguayan Guarani"/>
+            <column name="symbol" value="₲"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}b3d3d81d089550898aac1b330ac77213${binSuffix}"/>
+            <column name="code" value="QAR"/>
+            <column name="name" value="Qatari Rial"/>
+            <column name="symbol" value="ر.ق"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}ded5de42114455f29ee57f753a425378${binSuffix}"/>
+            <column name="code" value="RON"/>
+            <column name="name" value="Romanian Leu"/>
+            <column name="symbol" value="lei"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}8b84b25195db5efbbb8cf3e91c54fe74${binSuffix}"/>
+            <column name="code" value="RSD"/>
+            <column name="name" value="Serbian Dinar"/>
+            <column name="symbol" value="дин."/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}2386bc1821c65aa0a3f98320ea99a3af${binSuffix}"/>
+            <column name="code" value="RUB"/>
+            <column name="name" value="Russian Ruble"/>
+            <column name="symbol" value="₽"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}126b11e516765385b0c118fe08069a16${binSuffix}"/>
+            <column name="code" value="RWF"/>
+            <column name="name" value="Rwandan Franc"/>
+            <column name="symbol" value="FRw"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}1eccc7e2729e55d8a849c9d673fe555a${binSuffix}"/>
+            <column name="code" value="SAR"/>
+            <column name="name" value="Saudi Riyal"/>
+            <column name="symbol" value="ر.س"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}05499a9c447b552a9c5dcbfd193bf4bb${binSuffix}"/>
+            <column name="code" value="SBD"/>
+            <column name="name" value="Solomon Islands Dollar"/>
+            <column name="symbol" value="SI$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}ae22ee6ca3c15bc4b6e00a5482b1fc80${binSuffix}"/>
+            <column name="code" value="SCR"/>
+            <column name="name" value="Seychellois Rupee"/>
+            <column name="symbol" value="Rs"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}24eff8310e595c6a872c9e96767a2510${binSuffix}"/>
+            <column name="code" value="SDG"/>
+            <column name="name" value="Sudanese Pound"/>
+            <column name="symbol" value="ج.س."/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}76500dc8d45e5ae7917212137ae5c68e${binSuffix}"/>
+            <column name="code" value="SEK"/>
+            <column name="name" value="Swedish Krona"/>
+            <column name="symbol" value="kr"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}fc26fd73c5f65106bfdfa612f6d18ebe${binSuffix}"/>
+            <column name="code" value="SGD"/>
+            <column name="name" value="Singapore Dollar"/>
+            <column name="symbol" value="S$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}ff2bf39ae032542d9442967644dd43e4${binSuffix}"/>
+            <column name="code" value="SHP"/>
+            <column name="name" value="Saint Helena Pound"/>
+            <column name="symbol" value="£"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}21bfb85657c85f2483b8917dd9b5d7d6${binSuffix}"/>
+            <column name="code" value="SLE"/>
+            <column name="name" value="Sierra Leonean Leone"/>
+            <column name="symbol" value="Le"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}fec6c26e64505e66b07675cd6117cd39${binSuffix}"/>
+            <column name="code" value="SLL"/>
+            <column name="name" value="Sierra Leonean Leone (Old)"/>
+            <column name="symbol" value="Le"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}6064d3114da35843baacbd2a5295768e${binSuffix}"/>
+            <column name="code" value="SOS"/>
+            <column name="name" value="Somali Shilling"/>
+            <column name="symbol" value="Sh.So"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}a8b1d98dd24a5588973b3d8ce5ad874d${binSuffix}"/>
+            <column name="code" value="SRD"/>
+            <column name="name" value="Surinamese Dollar"/>
+            <column name="symbol" value="Sr$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}b104bb12522f51d7930fda5126190b59${binSuffix}"/>
+            <column name="code" value="SSP"/>
+            <column name="name" value="South Sudanese Pound"/>
+            <column name="symbol" value="£"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}ec37cc4b1d185e28946eff69bbdea6c1${binSuffix}"/>
+            <column name="code" value="STN"/>
+            <column name="name" value="São Tomé and Príncipe Dobra"/>
+            <column name="symbol" value="Db"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}55ce0857830a5ecb958edaebdb5b95f8${binSuffix}"/>
+            <column name="code" value="SVC"/>
+            <column name="name" value="Salvadoran Colón"/>
+            <column name="symbol" value="₡"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}9f952bd071e85ca7abf278981c834877${binSuffix}"/>
+            <column name="code" value="SYP"/>
+            <column name="name" value="Syrian Pound"/>
+            <column name="symbol" value="LS"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}64ba3b4eae355571a053753ad5e46059${binSuffix}"/>
+            <column name="code" value="SZL"/>
+            <column name="name" value="Swazi Lilangeni"/>
+            <column name="symbol" value="E"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}99b1a69c1eda512ab4cf4c72f126a273${binSuffix}"/>
+            <column name="code" value="THB"/>
+            <column name="name" value="Thai Baht"/>
+            <column name="symbol" value="฿"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}63dfbec8228853fbb9d829dbb6bd6127${binSuffix}"/>
+            <column name="code" value="TJS"/>
+            <column name="name" value="Tajikistani Somoni"/>
+            <column name="symbol" value="SM"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}6298875d536c5efda83bb0a39f206c16${binSuffix}"/>
+            <column name="code" value="TMT"/>
+            <column name="name" value="Turkmenistani Manat"/>
+            <column name="symbol" value="T"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}05ee6a9333925c248a8ec07c41b23961${binSuffix}"/>
+            <column name="code" value="TND"/>
+            <column name="name" value="Tunisian Dinar"/>
+            <column name="symbol" value="د.ت"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}cdea7324c1f55715863c8b4f9dc470fc${binSuffix}"/>
+            <column name="code" value="TOP"/>
+            <column name="name" value="Tongan Paʻanga"/>
+            <column name="symbol" value="T$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}248891a7651f5e5eb095b3f9cb9eeb58${binSuffix}"/>
+            <column name="code" value="TRY"/>
+            <column name="name" value="Turkish Lira"/>
+            <column name="symbol" value="₺"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}f5021d2b4f9a54fdb4a33e8c5f41a205${binSuffix}"/>
+            <column name="code" value="TTD"/>
+            <column name="name" value="Trinidad and Tobago Dollar"/>
+            <column name="symbol" value="TT$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}6efb4285696f5138af101c83ec25ba56${binSuffix}"/>
+            <column name="code" value="TVD"/>
+            <column name="name" value="Tuvaluan Dollar"/>
+            <column name="symbol" value="$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}2c8b32983ae353bf832a6a9bcfba4065${binSuffix}"/>
+            <column name="code" value="TWD"/>
+            <column name="name" value="New Taiwan Dollar"/>
+            <column name="symbol" value="NT$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}2f3b2eadc3ec5e4a9736995080e3005b${binSuffix}"/>
+            <column name="code" value="TZS"/>
+            <column name="name" value="Tanzanian Shilling"/>
+            <column name="symbol" value="TSh"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}34cbe0418b135a6b88b3dc704124662d${binSuffix}"/>
+            <column name="code" value="UAH"/>
+            <column name="name" value="Ukrainian Hryvnia"/>
+            <column name="symbol" value="₴"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}92a1eeeef88754ad8082431d9cd3e896${binSuffix}"/>
+            <column name="code" value="UGX"/>
+            <column name="name" value="Ugandan Shilling"/>
+            <column name="symbol" value="USh"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}b10a058158445adab6433418a343d54e${binSuffix}"/>
+            <column name="code" value="USD"/>
+            <column name="name" value="United States Dollar"/>
+            <column name="symbol" value="$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}c50c21e68e2e58db8e5b65f7a93e9fd9${binSuffix}"/>
+            <column name="code" value="UYU"/>
+            <column name="name" value="Uruguayan Peso"/>
+            <column name="symbol" value="$U"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}214ec066605459649dc5a73ba717a1e0${binSuffix}"/>
+            <column name="code" value="UZS"/>
+            <column name="name" value="Uzbekistan Som"/>
+            <column name="symbol" value="лв"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}9f9a457ea5685795add80f4f31e57e06${binSuffix}"/>
+            <column name="code" value="VES"/>
+            <column name="name" value="Venezuelan Bolívar Soberano"/>
+            <column name="symbol" value="Bs.S"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}1635814d3a7b549ebb95b7ce90f32d41${binSuffix}"/>
+            <column name="code" value="VND"/>
+            <column name="name" value="Vietnamese Dong"/>
+            <column name="symbol" value="₫"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}91d9279be52e5ea58865d01c56a9494f${binSuffix}"/>
+            <column name="code" value="VUV"/>
+            <column name="name" value="Vanuatu Vatu"/>
+            <column name="symbol" value="VT"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}f46963b5f4a65132bc1ae2222cb6b259${binSuffix}"/>
+            <column name="code" value="WST"/>
+            <column name="name" value="Samoan Tala"/>
+            <column name="symbol" value="WS$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}4216d5e1e1ff522493d13faa2c13f147${binSuffix}"/>
+            <column name="code" value="XAF"/>
+            <column name="name" value="Central African CFA Franc"/>
+            <column name="symbol" value="FCFA"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}2fb1868605ac57c1b659c45798d1f7f9${binSuffix}"/>
+            <column name="code" value="XCD"/>
+            <column name="name" value="East Caribbean Dollar"/>
+            <column name="symbol" value="EC$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}cce5d31770c956a09d6c0029aa5ae402${binSuffix}"/>
+            <column name="code" value="XDR"/>
+            <column name="name" value="Special Drawing Rights"/>
+            <column name="symbol" value="SDR"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}bc9cc5a00c5f5a87b4d359b3c35f482d${binSuffix}"/>
+            <column name="code" value="XOF"/>
+            <column name="name" value="West African CFA Franc"/>
+            <column name="symbol" value="CFA"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}d548920c111f561cb8c0c940294dd861${binSuffix}"/>
+            <column name="code" value="XPF"/>
+            <column name="name" value="CFP Franc"/>
+            <column name="symbol" value="₣"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}3359bb03b4065ed19ad7795f5d3277d0${binSuffix}"/>
+            <column name="code" value="YER"/>
+            <column name="name" value="Yemeni Rial"/>
+            <column name="symbol" value="﷼"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}84aa6c0f56a65eab8d8ade1d02bbf6c8${binSuffix}"/>
+            <column name="code" value="ZAR"/>
+            <column name="name" value="South African Rand"/>
+            <column name="symbol" value="R"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}c0f9c3a6a1405fbe8de40df94090043b${binSuffix}"/>
+            <column name="code" value="ZMW"/>
+            <column name="name" value="Zambian Kwacha"/>
+            <column name="symbol" value="ZK"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="currency">
+            <column name="id" valueComputed="${binPrefix}b7084a420f6451cba4fbc84c37487bd2${binSuffix}"/>
+            <column name="code" value="ZWL"/>
+            <column name="name" value="Zimbabwean Dollar"/>
+            <column name="symbol" value="Z$"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <rollback>
+            <delete tableName="currency"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
