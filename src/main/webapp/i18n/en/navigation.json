@@ -482,6 +482,7 @@
       "hours": "Hours",
       "hoursError": "Enter between 0.1 and 24 hours",
       "log": "Log hours",
+      "logged": "Hours logged",
       "recent": "Recent entries",
       "empty": "No timesheet entries yet",
       "project": "Project",
