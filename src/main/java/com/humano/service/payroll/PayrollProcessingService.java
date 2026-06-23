@@ -27,6 +27,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -730,42 +732,48 @@ public class PayrollProcessingService {
         } else if (taxPitComponent == null) {
             log.warn("Step 7 — income tax skipped: no TAX_PIT PayComponent seeded");
         } else {
-            List<TaxBracket> brackets = taxCalculationService.getActiveBracketsForCalculation(
-                employee.getCountry().getId(),
-                TaxCode.PIT,
-                period.getEndDate()
+            // Evaluate every configured income-tax code via the bracket path (national PIT plus any
+            // state/local brackets the country seeded), not just PIT. A PIT-only country — the only
+            // shape with data today — yields exactly the single PIT line as before. Each code's brackets
+            // are applied to the same taxableIncome; per-code taxable-base adjustments (e.g. US state
+            // income computed on a different base than federal) are a separate follow-up coupled to #5.
+            List<IncomeTaxComponent> incomeTaxes = computeIncomeTaxes(
+                taxableIncome,
+                code -> taxCalculationService.getActiveBracketsForCalculation(employee.getCountry().getId(), code, period.getEndDate()),
+                taxCalculationService::calculateProgressiveTax
             );
-            if (brackets.isEmpty()) {
+            if (incomeTaxes.isEmpty()) {
                 log.debug(
-                    "Step 7 — no active PIT brackets for country {} on {}; taxableIncome={}",
+                    "Step 7 — no active income-tax brackets for country {} on {}; taxableIncome={}",
                     employee.getCountry().getCode(),
                     period.getEndDate(),
                     fmt(taxableIncome)
                 );
             } else {
-                BigDecimal incomeTax = taxCalculationService.calculateProgressiveTax(taxableIncome, brackets);
-                if (incomeTax.signum() > 0) {
+                for (IncomeTaxComponent it : incomeTaxes) {
                     String explain =
-                        "Step 7 — Income tax (PIT, country=" +
+                        "Step 7 — Income tax (" +
+                        it.code() +
+                        ", country=" +
                         employee.getCountry().getCode() +
                         ", taxableIncome=" +
                         fmt(taxableIncome) +
                         ", brackets=" +
-                        brackets.size() +
+                        it.bracketCount() +
                         "): " +
-                        fmt(incomeTax);
+                        fmt(it.amount());
                     lines.add(
-                        emitLine(result, taxPitComponent, null, null, incomeTax, seq.next(), explain)
+                        emitLine(result, taxPitComponent, null, null, it.amount(), seq.next(), explain)
                             .lineCategory(PayrollLineCategory.INCOME_TAX)
-                            .taxType(TaxType.INCOME_TAX)
+                            .taxType(it.ledgerType())
                     );
-                    taxWithheld = taxWithheld.add(incomeTax);
-                    // Once we've emitted a bracket-driven tax line, exclude TAX_PIT from the
-                    // step 10 formula loop so a tenant that ALSO seeded a TAX_PIT PayRule
-                    // doesn't get tax counted twice in net pay. (When no bracket line was
-                    // emitted, leave TAX_PIT eligible so a formula-only fallback still works.)
-                    handledComponentIds.add(taxPitComponent.getId());
+                    taxWithheld = taxWithheld.add(it.amount());
                 }
+                // Once a bracket-driven income-tax line lands, exclude TAX_PIT from the step 10 formula
+                // loop so a tenant that ALSO seeded a TAX_PIT PayRule doesn't get tax counted twice in
+                // net pay. (When no bracket line was emitted, leave TAX_PIT eligible so a formula-only
+                // fallback still works.)
+                handledComponentIds.add(taxPitComponent.getId());
             }
         }
 
@@ -1727,6 +1735,54 @@ public class PayrollProcessingService {
                 maxExchangeRateStalenessDays
             );
         }
+    }
+
+    /**
+     * Income-tax {@link TaxCode}s evaluated through the progressive-bracket path in step 7, national
+     * first. PIT is the only one with seeded data today; state/local are evaluated when (and only when)
+     * a country has brackets for them, so PIT-only countries are unaffected.
+     */
+    private static final List<TaxCode> INCOME_TAX_CODES = List.of(TaxCode.PIT, TaxCode.STATE_PIT, TaxCode.LOCAL_PIT);
+
+    /** Maps each income-tax {@link TaxCode} to the {@link TaxType} its payroll line is tagged with. */
+    private static final Map<TaxCode, TaxType> INCOME_TAX_LEDGER_TYPE = Map.of(
+        TaxCode.PIT,
+        TaxType.INCOME_TAX,
+        TaxCode.STATE_PIT,
+        TaxType.STATE_INCOME_TAX,
+        TaxCode.LOCAL_PIT,
+        TaxType.LOCAL_INCOME_TAX
+    );
+
+    /** One computed income-tax charge: the source code, the ledger {@link TaxType}, the amount, and the bracket count (for the explain line). */
+    record IncomeTaxComponent(TaxCode code, TaxType ledgerType, BigDecimal amount, int bracketCount) {}
+
+    /**
+     * Runs the progressive-bracket calc for each {@link #INCOME_TAX_CODES} code that has active brackets,
+     * returning one {@link IncomeTaxComponent} per code that yields a positive charge (in national-first
+     * order). Codes with no brackets, or a zero/negative computed tax, are skipped — so a PIT-only country
+     * returns a single {@code INCOME_TAX} entry identical to the pre-iteration behaviour.
+     *
+     * <p>Pure over its injected {@code bracketLookup} / {@code progressiveTax} functions so it is unit
+     * testable without the payroll/DB stack.
+     */
+    static List<IncomeTaxComponent> computeIncomeTaxes(
+        BigDecimal taxableIncome,
+        Function<TaxCode, List<TaxBracket>> bracketLookup,
+        BiFunction<BigDecimal, List<TaxBracket>, BigDecimal> progressiveTax
+    ) {
+        List<IncomeTaxComponent> result = new ArrayList<>();
+        for (TaxCode code : INCOME_TAX_CODES) {
+            List<TaxBracket> brackets = bracketLookup.apply(code);
+            if (brackets == null || brackets.isEmpty()) {
+                continue;
+            }
+            BigDecimal tax = progressiveTax.apply(taxableIncome, brackets);
+            if (tax != null && tax.signum() > 0) {
+                result.add(new IncomeTaxComponent(code, INCOME_TAX_LEDGER_TYPE.get(code), tax, brackets.size()));
+            }
+        }
+        return result;
     }
 
     /**
