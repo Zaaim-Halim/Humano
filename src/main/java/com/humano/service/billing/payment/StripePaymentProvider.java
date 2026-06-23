@@ -1,5 +1,6 @@
 package com.humano.service.billing.payment;
 
+import com.humano.domain.enumeration.CurrencyCode;
 import com.stripe.exception.ApiException;
 import com.stripe.exception.AuthenticationException;
 import com.stripe.exception.CardException;
@@ -37,10 +38,10 @@ import org.springframework.stereotype.Component;
  * <b>Charge model.</b> Uses the PaymentIntents API with {@code confirm=true} and
  * {@code automatic_payment_methods.enabled=true}, which is Stripe's recommended
  * single-call charge path for already-tokenised cards. {@code amount} is converted
- * from major units (BigDecimal EUR/USD) to Stripe's minor-unit long (cents).
- * Zero-decimal currencies (JPY, KRW, ...) are NOT special-cased — passing them
- * is a configuration error for now (caller should validate currency support
- * before invocation).
+ * from major units (BigDecimal EUR/USD) to Stripe's minor-unit long. The minor-unit
+ * scale is derived from the currency's ISO 4217 decimal places via {@link CurrencyCode},
+ * so zero-decimal (JPY, KRW: ×1), two-decimal (EUR, USD: ×100) and three-decimal
+ * (BHD, KWD: ×1000) currencies are all handled.
  * <p>
  * <b>Idempotency.</b> The caller's {@code idempotencyKey} is passed via
  * {@link RequestOptions#getIdempotencyKey()} so two retries against the same
@@ -51,8 +52,6 @@ import org.springframework.stereotype.Component;
 public class StripePaymentProvider implements PaymentProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(StripePaymentProvider.class);
-
-    private static final BigDecimal MINOR_UNIT_SCALE = new BigDecimal(100);
 
     private final String secretKey;
 
@@ -72,7 +71,7 @@ public class StripePaymentProvider implements PaymentProvider {
         if (amount == null || amount.signum() <= 0) {
             throw new PaymentProviderException(PaymentProviderException.Kind.CONFIGURATION, "Amount must be positive");
         }
-        long amountMinor = amount.setScale(2, RoundingMode.HALF_UP).multiply(MINOR_UNIT_SCALE).longValueExact();
+        long amountMinor = toMinorUnits(amount, currency);
         PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
             .setAmount(amountMinor)
             .setCurrency(currency.toLowerCase(Locale.ROOT))
@@ -95,11 +94,10 @@ public class StripePaymentProvider implements PaymentProvider {
     }
 
     @Override
-    public RefundResult refund(String transactionId, BigDecimal amount) {
+    public RefundResult refund(String transactionId, BigDecimal amount, String currency) {
         RefundCreateParams.Builder builder = RefundCreateParams.builder().setPaymentIntent(transactionId);
         if (amount != null) {
-            long amountMinor = amount.setScale(2, RoundingMode.HALF_UP).multiply(MINOR_UNIT_SCALE).longValueExact();
-            builder.setAmount(amountMinor);
+            builder.setAmount(toMinorUnits(amount, currency));
         }
         RequestOptions opts = RequestOptions.builder().setApiKey(secretKey).build();
         try {
@@ -133,6 +131,20 @@ public class StripePaymentProvider implements PaymentProvider {
         } catch (StripeException e) {
             throw mapException(e, "createSetupIntent failed");
         }
+    }
+
+    /**
+     * Converts a major-unit amount to the provider's integer minor units at the currency's ISO 4217
+     * scale: ×1 for zero-decimal (JPY), ×100 for two-decimal (EUR/USD), ×1000 for three-decimal
+     * (BHD/KWD). At scale 2 this equals the previous {@code setScale(2).multiply(100)} behaviour.
+     */
+    static long toMinorUnits(BigDecimal amount, String currency) {
+        CurrencyCode code = CurrencyCode.fromCode(currency);
+        if (code == null) {
+            throw new PaymentProviderException(PaymentProviderException.Kind.CONFIGURATION, "Unsupported currency: " + currency);
+        }
+        int scale = code.getDecimalPlaces();
+        return amount.setScale(scale, RoundingMode.HALF_UP).movePointRight(scale).longValueExact();
     }
 
     private Map<String, Object> snapshotIntent(PaymentIntent intent) {

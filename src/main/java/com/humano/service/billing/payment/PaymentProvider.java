@@ -39,10 +39,12 @@ public interface PaymentProvider {
      * Refund a previously-completed charge.
      *
      * @param transactionId provider-side charge id returned from {@link #charge}.
-     * @param amount        partial refund amount; null means full refund.
+     * @param amount        partial refund amount in major units; null means full refund.
+     * @param currency      ISO 4217 code of the original charge; needed to convert {@code amount}
+     *                      to the provider's minor units at the currency's correct scale.
      * @return refund outcome — refund id + raw provider response.
      */
-    RefundResult refund(String transactionId, BigDecimal amount);
+    RefundResult refund(String transactionId, BigDecimal amount, String currency);
 
     /**
      * Create a SetupIntent so a tenant can save a card without immediately charging it.

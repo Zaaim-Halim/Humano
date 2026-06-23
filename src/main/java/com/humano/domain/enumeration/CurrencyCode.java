@@ -218,4 +218,21 @@ public enum CurrencyCode {
     public String getCode() {
         return this.name();
     }
+
+    /**
+     * Finds a CurrencyCode by its three-letter code.
+     *
+     * @param code the ISO 4217 alpha-3 code (case-insensitive)
+     * @return the matching CurrencyCode, or null if not found
+     */
+    public static CurrencyCode fromCode(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        try {
+            return CurrencyCode.valueOf(code.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
 }

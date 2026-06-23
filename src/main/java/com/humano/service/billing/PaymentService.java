@@ -240,7 +240,12 @@ public class PaymentService {
                 PaymentProvider provider = paymentProvider.getIfAvailable();
                 if (provider != null && payment.getExternalPaymentId() != null && payment.getExternalPaymentId().startsWith("pi_")) {
                     try {
-                        PaymentProvider.RefundResult result = provider.refund(payment.getExternalPaymentId(), actualRefundAmount);
+                        String refundCurrency = payment.getCurrency() != null ? payment.getCurrency().getCode().name() : "USD";
+                        PaymentProvider.RefundResult result = provider.refund(
+                            payment.getExternalPaymentId(),
+                            actualRefundAmount,
+                            refundCurrency
+                        );
                         mergeMetadata(payment, "refund", result.providerMetadata());
                         log.info("Stripe refund {} succeeded for payment: {}", result.refundId(), id);
                     } catch (PaymentProviderException e) {
