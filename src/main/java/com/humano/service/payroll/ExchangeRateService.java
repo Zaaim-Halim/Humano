@@ -11,6 +11,7 @@ import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 import org.slf4j.Logger;
@@ -87,6 +88,27 @@ public class ExchangeRateService {
         log.info("Created exchange rate {} -> {} = {} on {}", fromCurrency.getCode(), toCurrency.getCode(), rate.getRate(), rate.getDate());
 
         return toResponse(rate);
+    }
+
+    /**
+     * Idempotently upserts a provider-sourced rate for ({@code from}, {@code to}, {@code date}): updates
+     * the existing row for that key or inserts a new one, stamping {@link ExchangeRate#getSource()} and
+     * {@link ExchangeRate#getFetchedAt()} for provenance. Re-running a day's ingestion overwrites in place
+     * rather than duplicating. Used by {@code FxRateIngestionService}; manual CRUD is unaffected, and the
+     * business {@code date} the {@link #getReportingRate} staleness guard reads is preserved.
+     */
+    public void upsertProviderRate(Currency from, Currency to, LocalDate date, BigDecimal rate, String source) {
+        ExchangeRate er = findExactRate(from.getId(), to.getId(), date).orElseGet(() -> {
+            ExchangeRate created = new ExchangeRate();
+            created.setFromCcy(from);
+            created.setToCcy(to);
+            created.setDate(date);
+            return created;
+        });
+        er.setRate(rate.setScale(RATE_SCALE, RoundingMode.HALF_UP));
+        er.setSource(source);
+        er.setFetchedAt(Instant.now());
+        exchangeRateRepository.save(er);
     }
 
     /**

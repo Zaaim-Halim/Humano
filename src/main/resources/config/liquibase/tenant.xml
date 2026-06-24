@@ -71,6 +71,9 @@
     <!-- Seed country (ISO 3166-1) + currency (ISO 4217) reference data from the enums -->
     <include file="config/liquibase/changelog/tenant/20260623-reference-data-changelog.xml" relativeToChangelogFile="false"/>
 
+    <!-- FX automation: provider provenance (source + fetched_at) on exchange_rate -->
+    <include file="config/liquibase/changelog/tenant/20260624-exchange-rate-provenance-changelog.xml" relativeToChangelogFile="false"/>
+
     <!--  will add tenant liquibase changelogs here -->
 
 </databaseChangeLog>

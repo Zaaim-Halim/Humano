@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
@@ -75,6 +76,22 @@ public class ExchangeRate extends AbstractAuditingEntity<UUID> {
     @DecimalMin(value = "0.000001", inclusive = true, message = "Rate must be positive")
     private BigDecimal rate;
 
+    /**
+     * Provenance of the rate: the {@code FxRateProvider.name()} that supplied it, or {@code null} for a
+     * manually entered / imported rate. Together with {@link #fetchedAt} this distinguishes
+     * automatically ingested rows from hand-curated ones.
+     */
+    @Column(name = "source", length = 60)
+    private String source;
+
+    /**
+     * When this rate was last ingested from a provider (UTC). {@code null} for manual entries. This is
+     * provider provenance, distinct from {@link #date} (the rate's business effective date, which the
+     * staleness guard in {@code ExchangeRateService.getReportingRate} keys off).
+     */
+    @Column(name = "fetched_at")
+    private Instant fetchedAt;
+
     @Override
     public UUID getId() {
         return id;
@@ -134,6 +151,22 @@ public class ExchangeRate extends AbstractAuditingEntity<UUID> {
 
     public void setRate(BigDecimal rate) {
         this.rate = rate;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
+    }
+
+    public Instant getFetchedAt() {
+        return fetchedAt;
+    }
+
+    public void setFetchedAt(Instant fetchedAt) {
+        this.fetchedAt = fetchedAt;
     }
 
     @Override

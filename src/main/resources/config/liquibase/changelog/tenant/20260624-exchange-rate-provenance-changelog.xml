@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!--
+        Provider provenance for automatically ingested FX rates. Both columns are nullable so existing
+        manually entered / imported rates (source = null) are untouched; the scheduled FxRateIngestionService
+        sets them when it upserts a rate. `date` remains the business effective date the staleness guard reads.
+    -->
+    <changeSet id="20260624-exchange-rate-provenance" author="halimzaaim">
+        <addColumn tableName="exchange_rate">
+            <column name="source" type="VARCHAR(60)"/>
+            <column name="fetched_at" type="${datetimeType}"/>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="exchange_rate" columnName="source"/>
+            <dropColumn tableName="exchange_rate" columnName="fetched_at"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
