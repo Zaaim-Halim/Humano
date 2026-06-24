@@ -14,10 +14,17 @@
         - organizational_unit_parent_unit_id: direct sub-units lookup and validation.
     -->
 
+    <!--
+        path is VARCHAR(1000); under MySQL/MariaDB utf8mb4 a full-column index is 4000 bytes, over the
+        3072-byte key limit (error 1071). Use a 255-char prefix index there (1020 bytes) — ample for the
+        prefix-LIKE 'root/%' range scans this backs — and a plain index on dialects without that limit.
+    -->
     <changeSet id="tenant-hierarchy-001-employee-path-idx" author="halimzaaim">
-        <createIndex tableName="employee" indexName="idx_employee_path">
-            <column name="path"/>
-        </createIndex>
+        <sql dbms="mysql,mariadb">CREATE INDEX idx_employee_path ON employee(path(255))</sql>
+        <sql dbms="!mysql,!mariadb">CREATE INDEX idx_employee_path ON employee(path)</sql>
+        <rollback>
+            <dropIndex tableName="employee" indexName="idx_employee_path"/>
+        </rollback>
     </changeSet>
 
     <changeSet id="tenant-hierarchy-002-employee-unit-idx" author="halimzaaim">
@@ -26,10 +33,13 @@
         </createIndex>
     </changeSet>
 
+    <!-- Same VARCHAR(1000) utf8mb4 key-length limit as the employee path index above. -->
     <changeSet id="tenant-hierarchy-003-org-unit-path-idx" author="halimzaaim">
-        <createIndex tableName="organizational_unit" indexName="idx_organizational_unit_path">
-            <column name="path"/>
-        </createIndex>
+        <sql dbms="mysql,mariadb">CREATE INDEX idx_organizational_unit_path ON organizational_unit(path(255))</sql>
+        <sql dbms="!mysql,!mariadb">CREATE INDEX idx_organizational_unit_path ON organizational_unit(path)</sql>
+        <rollback>
+            <dropIndex tableName="organizational_unit" indexName="idx_organizational_unit_path"/>
+        </rollback>
     </changeSet>
 
     <changeSet id="tenant-hierarchy-004-org-unit-parent-idx" author="halimzaaim">
