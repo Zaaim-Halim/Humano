@@ -48,7 +48,35 @@ public class TenantDatabaseManager {
         // Create dedicated user for this tenant's database
         createDatabaseUser(jdbcTemplate, dbConfig);
 
+        // The tenant DB user is intentionally non-SUPER, but tenant migrations create triggers
+        // (e.g. the append-only audit_event guards). With binary logging enabled MySQL rejects
+        // CREATE TRIGGER from a non-SUPER user (error 1419) unless this server-global is set, so
+        // enable it here over the privileged admin connection. Best-effort: on a managed MySQL where
+        // even the admin lacks the privilege, the trigger changeset is failOnError=false and the app
+        // falls back to ORM-level @Immutable enforcement.
+        allowNonSuperTriggerCreation(jdbcTemplate);
+
         LOG.info("Successfully created database {} on {}:{}", dbConfig.getDbName(), dbConfig.getDbHost(), dbConfig.getDbPort());
+    }
+
+    /**
+     * Sets {@code log_bin_trust_function_creators=1} server-globally so the non-SUPER tenant user can
+     * create the append-only audit triggers under binary logging. Server-wide and persists until the
+     * MySQL server restarts; for permanent effect set it in the server config. Best-effort — a failure
+     * (admin also lacks the privilege on a managed MySQL) is logged, not thrown, and provisioning
+     * continues with the trigger changeset degrading to ORM-only enforcement.
+     */
+    private void allowNonSuperTriggerCreation(JdbcTemplate jdbcTemplate) {
+        try {
+            jdbcTemplate.execute("SET GLOBAL log_bin_trust_function_creators = 1");
+        } catch (Exception e) {
+            LOG.warn(
+                "Could not set log_bin_trust_function_creators=1 ({}). If the MySQL server has binary " +
+                "logging on and the tenant user lacks SUPER, append-only audit triggers will be skipped; " +
+                "set this variable in the server config to enable them.",
+                e.getMessage()
+            );
+        }
     }
 
     /**
@@ -92,6 +120,14 @@ public class TenantDatabaseManager {
         // Create user
         String createUserSql = String.format("CREATE USER IF NOT EXISTS '%s'@'%%' IDENTIFIED BY '%s'", username, password);
         jdbcTemplate.execute(createUserSql);
+
+        // Re-sync the password. CREATE USER IF NOT EXISTS leaves a pre-existing user's password
+        // untouched, so a user lingering from an earlier provisioning attempt (or after the config
+        // row's password was regenerated) would keep a stale password while the Hikari pool decrypts
+        // the *current* stored credential — yielding "Access denied (using password: YES)" at pool
+        // init. ALTER USER forces the MySQL password to match what this run will actually connect with.
+        String alterUserSql = String.format("ALTER USER '%s'@'%%' IDENTIFIED BY '%s'", username, password);
+        jdbcTemplate.execute(alterUserSql);
 
         // Grant permissions only to this tenant's database
         String grantSql = String.format("GRANT ALL PRIVILEGES ON `%s`.* TO '%s'@'%%'", database, username);

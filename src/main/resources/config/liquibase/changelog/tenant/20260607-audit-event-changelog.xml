@@ -63,8 +63,13 @@
 
     <!-- DB-level append-only enforcement. Scoped to MySQL/MariaDB because H2 has no
          SIGNAL SQLSTATE and would reject the syntax. On H2 (dev/test) the only guard
-         is @Immutable at the ORM layer, which prevents UPDATE but not DELETE. -->
-    <changeSet id="audit-003-audit-event-immutable-trigger" author="halimzaaim" dbms="mysql,mariadb">
+         is @Immutable at the ORM layer, which prevents UPDATE but not DELETE.
+
+         failOnError=false: CREATE TRIGGER needs either SUPER or server-global
+         log_bin_trust_function_creators=1 (TenantDatabaseManager sets the latter best-effort over the
+         privileged admin connection). On a managed MySQL where neither is available, skip the DB-level
+         guard and rely on the ORM @Immutable layer rather than failing the whole tenant provisioning. -->
+    <changeSet id="audit-003-audit-event-immutable-trigger" author="halimzaaim" dbms="mysql,mariadb" failOnError="false">
         <sql endDelimiter="//">
             CREATE TRIGGER audit_event_no_update BEFORE UPDATE ON audit_event
             FOR EACH ROW

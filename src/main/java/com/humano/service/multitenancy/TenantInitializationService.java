@@ -11,6 +11,7 @@ import com.humano.domain.enumeration.payroll.PayComponentCode;
 import com.humano.domain.hr.ApprovalChainConfig;
 import com.humano.domain.payroll.PayComponent;
 import com.humano.domain.payroll.PayrollCalendar;
+import com.humano.domain.shared.AbstractAuditingEntity;
 import com.humano.domain.shared.Authority;
 import com.humano.domain.shared.Permission;
 import com.humano.domain.shared.User;
@@ -351,7 +352,7 @@ public class TenantInitializationService {
                 step.setApproverType(DEFAULT_CHAIN_STEPS.get(i));
                 step.setActive(true);
                 step.setDescription("Seeded default " + type.name() + " step " + (i + 1));
-                approvalChainConfigRepository.save(step);
+                approvalChainConfigRepository.save(stampSystem(step));
             }
             ApprovalChainValidator.validate(
                 type,
@@ -371,7 +372,7 @@ public class TenantInitializationService {
         calendar.setFrequency(Frequency.MONTHLY);
         calendar.setTimezone(tenant.getTimezone() != null ? tenant.getTimezone() : TimeZone.getTimeZone("UTC"));
         calendar.setActive(true);
-        payrollCalendarRepository.save(calendar);
+        payrollCalendarRepository.save(stampSystem(calendar));
         LOG.debug("Seeded default payroll calendar for tenant '{}'", tenant.getSubdomain());
     }
 
@@ -393,6 +394,18 @@ public class TenantInitializationService {
         component.setMeasure(measure);
         component.setTaxable(taxable);
         component.setContributesToSocial(social);
-        payComponentRepository.save(component);
+        payComponentRepository.save(stampSystem(component));
+    }
+
+    /**
+     * Stamps {@code createdBy}/{@code createdDate} for rows seeded during tenant initialization. JPA
+     * auditing does not auto-populate them in this provisioning path (no request/security context), so
+     * seeded tenant rows must set them explicitly — same as {@code seedAdminUser} — or the NOT NULL
+     * {@code created_by} column rejects the insert.
+     */
+    private static <E extends AbstractAuditingEntity<?>> E stampSystem(E entity) {
+        entity.setCreatedBy("system");
+        entity.setCreatedDate(Instant.now());
+        return entity;
     }
 }
