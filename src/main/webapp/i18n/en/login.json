@@ -5,6 +5,8 @@
     "heading": "Sign in to Humano",
     "subtitle": "Enter your details to access your workspace.",
     "form": {
+      "organization": "Organization",
+      "organization.placeholder": "your-organization",
       "email": "Work email",
       "email.placeholder": "you@company.com",
       "password": "Password",

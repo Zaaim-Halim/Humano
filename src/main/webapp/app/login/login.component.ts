@@ -5,6 +5,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 
 import { AlertComponent, ButtonComponent, CheckboxComponent, FormFieldComponent, InputComponent } from 'app/shared/ui';
+import { TenantContextService } from 'app/core/tenant/tenant-context.service';
 
 import { LoginService } from './login.service';
 
@@ -34,18 +35,22 @@ export default class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly loginService = inject(LoginService);
   private readonly router = inject(Router);
+  private readonly tenantContext = inject(TenantContextService);
 
   protected readonly loading = signal(false);
   protected readonly authError = signal(false);
   protected readonly showPassword = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
+    // Organization = the tenant the user belongs to. Interim until production resolves the tenant from
+    // the subdomain; sent as the X-Tenant-ID header so the backend knows which tenant DB to authenticate against.
+    organization: [this.tenantContext.tenantId() ?? '', [Validators.required]],
     username: ['', [Validators.required]],
     password: ['', [Validators.required]],
     rememberMe: [false],
   });
 
-  protected invalid(control: 'username' | 'password'): boolean {
+  protected invalid(control: 'organization' | 'username' | 'password'): boolean {
     const c = this.form.controls[control];
     return c.invalid && (c.dirty || c.touched);
   }
@@ -57,7 +62,10 @@ export default class LoginComponent {
     }
     this.loading.set(true);
     this.authError.set(false);
-    const { username, password, rememberMe } = this.form.getRawValue();
+    const { organization, username, password, rememberMe } = this.form.getRawValue();
+    // Pin the tenant before the request so the interceptor attaches X-Tenant-ID to the login POST and
+    // the follow-up account fetch.
+    this.tenantContext.setTenant(organization);
     this.loginService.login({ username, password, rememberMe }).subscribe({
       next: () => {
         this.loading.set(false);

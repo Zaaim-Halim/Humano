@@ -9,6 +9,15 @@
 }
 
 <form class="hum-auth__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <hum-form-field [label]="'login.form.organization' | translate" controlId="login-organization">
+    <hum-input
+      inputId="login-organization"
+      formControlName="organization"
+      [placeholder]="'login.form.organization.placeholder' | translate"
+      [invalid]="invalid('organization')"
+    />
+  </hum-form-field>
+
   <hum-form-field [label]="'login.form.email' | translate" controlId="login-username">
     <hum-input
       inputId="login-username"
