@@ -46,11 +46,6 @@ const routes: Routes = [
         loadComponent: () => import('./login/login.component'),
       },
       {
-        path: 'register',
-        title: 'register.title',
-        loadComponent: () => import('./login/register.component'),
-      },
-      {
         path: 'activate',
         title: 'activate.title',
         loadComponent: () => import('./login/activate.component'),
@@ -233,13 +228,6 @@ const routes: Routes = [
         loadComponent: () => import('./features/admin/settings/settings.component'),
         canActivate: [UserRouteAccessService],
         data: { permissions: [Permission.CONFIGURE_TENANT_SETTINGS] },
-      },
-      {
-        path: 'admin/users',
-        title: 'humano.nav.users',
-        loadComponent: () => import('./features/admin/user-management/user-management.component'),
-        canActivate: [UserRouteAccessService],
-        data: { permissions: [Permission.READ_USER] },
       },
       {
         path: 'platform/tenants',

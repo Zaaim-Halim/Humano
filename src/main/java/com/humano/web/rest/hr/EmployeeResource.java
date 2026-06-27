@@ -1,7 +1,7 @@
 package com.humano.web.rest.hr;
 
 import com.humano.domain.shared.Employee;
-import com.humano.dto.hr.requests.CreateEmployeeProfileRequest;
+import com.humano.dto.hr.requests.CreateEmployeeRequest;
 import com.humano.dto.hr.requests.EmployeeSearchRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeProfileRequest;
 import com.humano.dto.hr.responses.EmployeeProfileResponse;
@@ -12,6 +12,7 @@ import com.humano.service.hr.EmployeeProfileService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,26 +67,39 @@ public class EmployeeResource {
     }
 
     /**
-     * {@code POST  /employees/{userId}} : Create a new employee profile for an existing user.
+     * {@code POST  /employees} : Provision a new employee in a single step.
+     * <p>
+     * Creates the backing user account (sending an activation/creation email)
+     * and the HR profile together. There is no separate user-management surface
+     * and no self-registration — every employee is created by an authorized user.
      *
-     * @param userId the ID of the user to create employee profile for
-     * @param request the employee profile creation request
+     * @param request the combined account + profile creation request
      * @return the {@link ResponseEntity} with status {@code 201 (Created)} and with body the new employee
      * @throws URISyntaxException if the Location URI syntax is incorrect
      */
-    @PostMapping("/{userId}")
+    @PostMapping
     @RequirePermission(PermissionsConstants.CREATE_EMPLOYEE)
-    public ResponseEntity<EmployeeProfileResponse> createEmployeeProfile(
-        @PathVariable UUID userId,
-        @Valid @RequestBody CreateEmployeeProfileRequest request
-    ) throws URISyntaxException {
-        LOG.debug("REST request to create Employee profile for User ID: {}", userId);
+    public ResponseEntity<EmployeeProfileResponse> createEmployee(@Valid @RequestBody CreateEmployeeRequest request)
+        throws URISyntaxException {
+        LOG.debug("REST request to provision Employee with login: {}", request.login());
 
-        EmployeeProfileResponse result = employeeProfileService.createEmployeeProfile(userId, request);
+        EmployeeProfileResponse result = employeeProfileService.provisionEmployee(request);
 
         return ResponseEntity.created(new URI("/api/hr/employees/" + result.id()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, result.id().toString()))
             .body(result);
+    }
+
+    /**
+     * {@code GET  /employees/assignable-roles} : The role/authority names that can
+     * be granted to an employee on the create/edit form.
+     *
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the role names in body
+     */
+    @GetMapping("/assignable-roles")
+    @RequirePermission(PermissionsConstants.CREATE_EMPLOYEE)
+    public ResponseEntity<List<String>> getAssignableRoles() {
+        return ResponseEntity.ok(employeeProfileService.getAssignableRoles());
     }
 
     /**

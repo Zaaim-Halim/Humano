@@ -9,6 +9,7 @@ import com.humano.domain.shared.Country;
 import com.humano.domain.shared.Employee;
 import com.humano.domain.shared.User;
 import com.humano.dto.hr.requests.CreateEmployeeProfileRequest;
+import com.humano.dto.hr.requests.CreateEmployeeRequest;
 import com.humano.dto.hr.requests.EmployeeSearchRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeProfileRequest;
 import com.humano.dto.hr.responses.EmployeeProfileResponse;
@@ -18,11 +19,18 @@ import com.humano.repository.hr.OrganizationalUnitRepository;
 import com.humano.repository.hr.PositionRepository;
 import com.humano.repository.hr.specification.EmployeeSpecification;
 import com.humano.repository.payroll.CountryRepository;
+import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.repository.shared.UserRepository;
 import com.humano.security.AuthoritiesConstants;
+import com.humano.service.MailService;
+import com.humano.service.admin.UserAccountService;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.web.rest.errors.EmailAlreadyUsedException;
+import com.humano.web.rest.errors.LoginAlreadyUsedException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -54,6 +62,12 @@ public class EmployeeProfileService {
     private final PositionRepository positionRepository;
     private final OrganizationalUnitRepository organizationalUnitRepository;
     private final CountryRepository countryRepository;
+    private final AuthorityRepository authorityRepository;
+    private final UserAccountService userAccountService;
+    private final MailService mailService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public EmployeeProfileService(
         EmployeeRepository employeeRepository,
@@ -61,7 +75,10 @@ public class EmployeeProfileService {
         DepartmentRepository departmentRepository,
         PositionRepository positionRepository,
         OrganizationalUnitRepository organizationalUnitRepository,
-        CountryRepository countryRepository
+        CountryRepository countryRepository,
+        AuthorityRepository authorityRepository,
+        UserAccountService userAccountService,
+        MailService mailService
     ) {
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
@@ -69,40 +86,68 @@ public class EmployeeProfileService {
         this.positionRepository = positionRepository;
         this.organizationalUnitRepository = organizationalUnitRepository;
         this.countryRepository = countryRepository;
+        this.authorityRepository = authorityRepository;
+        this.userAccountService = userAccountService;
+        this.mailService = mailService;
     }
 
     /**
-     * Create an employee profile from an existing user.
+     * Provision a brand-new employee in a single step: create the backing user
+     * account, send the activation/creation email, then attach the HR profile.
+     * <p>
+     * There is no separate "user management" surface — in an HR/Payroll tenant
+     * everyone is an employee, and accounts are always created by an authorized
+     * person (never self-registered). The recipient sets their own password via
+     * the creation email's reset link.
      *
-     * @param userId the ID of the existing user
-     * @param request the employee details
+     * @param request the combined account + profile details
      * @return the created employee profile response
      */
     @Transactional
-    public EmployeeProfileResponse createEmployeeProfile(UUID userId, CreateEmployeeProfileRequest request) {
-        log.debug("Request to create Employee Profile for User ID: {}", userId);
+    public EmployeeProfileResponse provisionEmployee(CreateEmployeeRequest request) {
+        log.debug("Request to provision Employee with login: {}", request.login());
 
-        User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
+        // Reject collisions up-front (mirrors UserAdminResource.createUser).
+        if (userRepository.findOneByLogin(request.login().toLowerCase()).isPresent()) {
+            throw new LoginAlreadyUsedException();
+        }
+        if (request.email() != null && userRepository.findOneByEmailIgnoreCase(request.email()).isPresent()) {
+            throw new EmailAlreadyUsedException();
+        }
 
-        // Check if user is already an employee
-        if (employeeRepository.existsById(userId)) {
+        // Create the auth account (random password + reset key) and notify the recipient.
+        User user = userAccountService.createUser(request.toCreateUserRequest());
+        mailService.sendCreationEmail(user);
+
+        // Employee shares the user's id (JOINED inheritance). Detaching here mirrors
+        // the proven path where the user already exists in a prior persistence
+        // context, so persisting the Employee subclass row can't collide with the
+        // just-created managed User of the same id.
+        entityManager.flush();
+        entityManager.clear();
+
+        User attached = userRepository
+            .findById(user.getId())
+            .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + user.getId()));
+
+        return attachProfile(attached, request.toProfileRequest());
+    }
+
+    /**
+     * Turn an existing user into an employee by inserting the JOINED-inheritance
+     * child row and populating the HR profile.
+     */
+    private EmployeeProfileResponse attachProfile(User user, CreateEmployeeProfileRequest request) {
+        if (employeeRepository.existsById(user.getId())) {
             throw new BadRequestAlertException("User is already an employee", ENTITY_NAME, "useralreadyemployee");
         }
 
-        // Create employee from existing user
         Employee employee = new Employee();
-
-        // Copy base properties from user
         copyUserPropertiesToEmployee(user, employee);
-
-        // Set employee specific properties
         mapRequestToEmployee(request, employee);
         setEmployeeRelationships(employee, request);
-
-        // Add EMPLOYEE authority
         addEmployeeAuthority(employee);
 
-        // Save the employee
         Employee savedEmployee = employeeRepository.save(employee);
         log.debug("Created employee profile with ID: {}", savedEmployee.getId());
 
@@ -127,6 +172,7 @@ public class EmployeeProfileService {
 
                 updateEmployeeFromRequest(existingEmployee, request);
                 updateEmployeeRelationships(existingEmployee, request);
+                updateEmployeeAuthorities(existingEmployee, request.authorities());
 
                 // saveAndFlush so the cursor row's recomputed path is in the DB before we
                 // bulk-rewrite the descendants. The @PreUpdate hook on Employee recomputes
@@ -194,6 +240,16 @@ public class EmployeeProfileService {
                     throw new EntityNotFoundException("Employee not found with ID: " + id);
                 }
             );
+    }
+
+    /**
+     * The role/authority names assignable to an employee on the create/edit form.
+     *
+     * @return all authority names known to the tenant
+     */
+    @Transactional(readOnly = true)
+    public java.util.List<String> getAssignableRoles() {
+        return userAccountService.getAuthorities();
     }
 
     /**
@@ -269,6 +325,28 @@ public class EmployeeProfileService {
         Authority employeeAuthority = new Authority();
         employeeAuthority.setName(AuthoritiesConstants.EMPLOYEE);
         authorities.add(employeeAuthority);
+    }
+
+    /**
+     * Full-replacement of an employee's granted roles. The {@code EMPLOYEE}
+     * authority is always re-added so an employee never loses their base role.
+     * A {@code null} set means "leave roles untouched".
+     *
+     * @param employee the employee to update
+     * @param authorityNames the requested role names, or {@code null} to keep existing
+     */
+    private void updateEmployeeAuthorities(Employee employee, Set<String> authorityNames) {
+        if (authorityNames == null) {
+            return;
+        }
+        Set<Authority> managed = employee.getAuthorities();
+        if (managed == null) {
+            managed = new HashSet<>();
+            employee.setAuthorities(managed);
+        }
+        managed.clear();
+        authorityNames.stream().map(authorityRepository::findById).filter(Optional::isPresent).map(Optional::get).forEach(managed::add);
+        addEmployeeAuthority(employee);
     }
 
     /**
@@ -473,6 +551,11 @@ public class EmployeeProfileService {
             Optional.ofNullable(employee.getManager())
                 .map(manager -> manager.getJobTitle() + " - " + manager.getPosition().getName())
                 .orElse(null),
+            Optional.ofNullable(employee.getAuthorities())
+                .orElseGet(Set::of)
+                .stream()
+                .map(Authority::getName)
+                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new)),
             employee.getCreatedBy(),
             employee.getCreatedDate(),
             employee.getLastModifiedBy(),

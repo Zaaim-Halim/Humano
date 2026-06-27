@@ -47,9 +47,13 @@ public final class DefaultRolePermissions {
         grant(PermissionsConstants.ACCESS_API);
 
         // ---- User management ----
-        grant(PermissionsConstants.CREATE_USER, AuthoritiesConstants.HR_MANAGER);
-        grant(PermissionsConstants.READ_USER, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.HR_SPECIALIST);
-        grant(PermissionsConstants.UPDATE_USER, AuthoritiesConstants.HR_MANAGER);
+        // No tenant role manages raw user accounts: in an HR/Payroll tenant everyone is an
+        // employee, so people are managed through Employee endpoints (CREATE/UPDATE_EMPLOYEE).
+        // The User entity is auth-only; the admin user endpoints remain @RequireAdmin for
+        // platform/superadmin use and are not part of any tenant role.
+        grant(PermissionsConstants.CREATE_USER);
+        grant(PermissionsConstants.READ_USER);
+        grant(PermissionsConstants.UPDATE_USER);
         grant(PermissionsConstants.DELETE_USER);
 
         // ---- HR ----

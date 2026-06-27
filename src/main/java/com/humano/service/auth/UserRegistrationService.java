@@ -1,18 +1,10 @@
 package com.humano.service.auth;
 
-import com.humano.domain.shared.Authority;
 import com.humano.domain.shared.User;
-import com.humano.dto.auth.requests.RegisterUserRequest;
-import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.UserRepository;
-import com.humano.security.AuthoritiesConstants;
-import com.humano.service.errors.EmailAlreadyUsedException;
-import com.humano.service.errors.UsernameAlreadyUsedException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,58 +25,11 @@ public class UserRegistrationService {
     private static final Logger LOG = LoggerFactory.getLogger(UserRegistrationService.class);
 
     private final UserRepository userRepository;
-    private final AuthorityRepository authorityRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserRegistrationService(
-        UserRepository userRepository,
-        AuthorityRepository authorityRepository,
-        PasswordEncoder passwordEncoder
-    ) {
+    public UserRegistrationService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
-        this.authorityRepository = authorityRepository;
         this.passwordEncoder = passwordEncoder;
-    }
-
-    /**
-     * Self-registration. The new user is inactive — they must follow the
-     * activation link emailed to them before they can log in. Re-registering
-     * an existing not-yet-activated login/email silently replaces the prior
-     * registration; an activated collision throws.
-     */
-    public User registerUser(RegisterUserRequest request) {
-        userRepository
-            .findOneByLogin(request.login().toLowerCase())
-            .ifPresent(existingUser -> {
-                if (!removeNonActivatedUser(existingUser)) {
-                    throw new UsernameAlreadyUsedException();
-                }
-            });
-        userRepository
-            .findOneByEmailIgnoreCase(request.email())
-            .ifPresent(existingUser -> {
-                if (!removeNonActivatedUser(existingUser)) {
-                    throw new EmailAlreadyUsedException();
-                }
-            });
-
-        User newUser = new User();
-        newUser.setLogin(request.login().toLowerCase());
-        newUser.setPassword(passwordEncoder.encode(request.password()));
-        newUser.setFirstName(request.firstName());
-        newUser.setLastName(request.lastName());
-        newUser.setEmail(request.email().toLowerCase());
-        newUser.setLangKey(request.langKey());
-        newUser.setActivated(false);
-        newUser.setActivationKey(RandomUtil.generateActivationKey());
-
-        Set<Authority> authorities = new HashSet<>();
-        authorityRepository.findById(AuthoritiesConstants.USER).ifPresent(authorities::add);
-        newUser.setAuthorities(authorities);
-
-        userRepository.save(newUser);
-        LOG.debug("Registered new user (inactive): {}", newUser.getLogin());
-        return newUser;
     }
 
     /**
@@ -134,14 +79,5 @@ public class UserRegistrationService {
                 user.setResetDate(null);
                 return user;
             });
-    }
-
-    private boolean removeNonActivatedUser(User existingUser) {
-        if (existingUser.isActivated()) {
-            return false;
-        }
-        userRepository.delete(existingUser);
-        userRepository.flush();
-        return true;
     }
 }

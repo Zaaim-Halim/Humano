@@ -19,6 +19,7 @@ export type {
   SimpleEmployeeProfile,
   EmployeeProfile,
   CreateEmployeeProfileRequest,
+  CreateEmployeeRequest,
   UpdateEmployeeProfileRequest,
   EmployeeSearchRequest,
 } from './models/employee.model';

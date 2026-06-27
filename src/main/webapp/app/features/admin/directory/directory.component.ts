@@ -210,7 +210,7 @@ export default class DirectoryComponent {
     void this.router.navigate(['/employees', id]);
   }
 
-  /** Start the invite-then-promote flow; the create screen guides to a user when none is set. */
+  /** Open the create form, which provisions the account and HR profile in one step. */
   protected addEmployee(): void {
     void this.router.navigate(['/employees', 'new']);
   }

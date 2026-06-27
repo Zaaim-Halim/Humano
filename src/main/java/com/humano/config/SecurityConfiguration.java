@@ -129,7 +129,6 @@ public class SecurityConfiguration {
                     .requestMatchers(mvc.pattern("/content/**")).permitAll()
                     .requestMatchers(mvc.pattern("/swagger-ui/**")).permitAll()
                     .requestMatchers(mvc.pattern("/api/authenticate")).permitAll()
-                    .requestMatchers(mvc.pattern("/api/register")).permitAll()
                     .requestMatchers(mvc.pattern("/api/activate")).permitAll()
                     .requestMatchers(mvc.pattern("/api/tenant-registration")).permitAll()
                     .requestMatchers(mvc.pattern("/api/billing/webhooks/**")).permitAll()

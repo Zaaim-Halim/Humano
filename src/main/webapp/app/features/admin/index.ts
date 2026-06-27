@@ -1,4 +1,4 @@
-// Admin persona — org structure, payroll, and user administration.
+// Admin persona — org structure and payroll.
 
 // Enums
 export { OrganizationalUnitType } from './models/enums/organizational-unit-type.enum';
@@ -72,8 +72,3 @@ export type {
   CreatePayRuleRequest,
   FormulaValidationResult,
 } from './models/pay-rule.model';
-
-// User administration
-export { AdminUserService } from './services/admin-user.service';
-export type { ManagedUserPage } from './services/admin-user.service';
-export type { ManagedUser, CreateUserRequest, UpdateUserRequest } from './models/managed-user.model';

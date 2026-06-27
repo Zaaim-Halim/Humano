@@ -1,16 +1,5 @@
 {
   "register": {
-    "title": "Registration",
-    "eyebrow": "Start free",
-    "heading": "Create your account",
-    "subtitle": "14-day free trial. No credit card required.",
-    "form": {
-      "firstName": "First name",
-      "lastName": "Last name",
-      "email": "Work email",
-      "password": "Password",
-      "button": "Create account"
-    },
     "strength": {
       "label": "Password strength:",
       "hint": "Use 8+ characters with a mix of letters, numbers & symbols.",
@@ -18,30 +7,6 @@
       "fair": "Fair",
       "good": "Good",
       "strong": "Strong"
-    },
-    "legal": "By creating an account you agree to our <a href=\"#\">Terms</a> and <a href=\"#\">Privacy Policy</a>.",
-    "meta": {
-      "have": "Already have an account?",
-      "signin": "Sign in"
-    },
-    "success": {
-      "heading": "Check your inbox"
-    },
-    "messages": {
-      "validate": {
-        "login": {
-          "required": "Your username is required.",
-          "minlength": "Your username is required to be at least 1 character.",
-          "maxlength": "Your username cannot be longer than 50 characters.",
-          "pattern": "Your username is invalid."
-        }
-      },
-      "success": "<strong>Registration saved!</strong> Please check your email for confirmation.",
-      "error": {
-        "fail": "<strong>Registration failed!</strong> Please try again later.",
-        "userexists": "<strong>Login name already registered!</strong> Please choose another one.",
-        "emailexists": "<strong>Email is already in use!</strong> Please choose another one."
-      }
     }
   }
 }

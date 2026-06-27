@@ -24,7 +24,7 @@
           <hum-button variant="primary" routerLink="/dashboard" trailingIcon="arrow-right">Open app</hum-button>
         } @else {
           <hum-button variant="ghost" routerLink="/login">Sign in</hum-button>
-          <hum-button variant="primary" routerLink="/register">Start free trial</hum-button>
+          <a class="hum-btn hum-btn--primary" href="mailto:sales@humano.app?subject=Request%20access">Request access</a>
         }
       </div>
     </div>
@@ -45,7 +45,7 @@
             country you operate.
           </p>
           <div class="lp-hero__cta">
-            <hum-button variant="primary" size="lg" routerLink="/register">Start free trial</hum-button>
+            <a class="hum-btn hum-btn--primary hum-btn--lg" href="mailto:sales@humano.app?subject=Request%20access">Request access</a>
             <hum-button variant="secondary" size="lg">Book a demo</hum-button>
           </div>
           <p class="lp-trust">
@@ -246,9 +246,14 @@
                   </li>
                 }
               </ul>
-              <hum-button [variant]="tier.featured ? 'primary' : 'secondary'" size="lg" [block]="true" routerLink="/register">
+              <a
+                class="hum-btn hum-btn--lg hum-btn--block"
+                [class.hum-btn--primary]="tier.featured"
+                [class.hum-btn--secondary]="!tier.featured"
+                href="mailto:sales@humano.app?subject=Request%20access"
+              >
                 {{ tier.cta }}
-              </hum-button>
+              </a>
             </article>
           }
         </div>
@@ -285,7 +290,7 @@
           <h2 class="lp-cta__title">Ready to run people ops with confidence?</h2>
           <p class="lp-cta__sub">Start your free trial today — no credit card, no setup project, no risk.</p>
           <div class="lp-cta__actions">
-            <a class="hum-btn hum-btn--lg lp-btn-on-brand" routerLink="/register">Start free trial</a>
+            <a class="hum-btn hum-btn--lg lp-btn-on-brand" href="mailto:sales@humano.app?subject=Request%20access">Request access</a>
             <a class="hum-btn hum-btn--lg lp-btn-ghost-brand" href="#">Book a demo</a>
           </div>
         </div>

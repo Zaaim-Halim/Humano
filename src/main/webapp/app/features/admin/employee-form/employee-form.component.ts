@@ -10,7 +10,7 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable, map } from 'rxjs';
 
@@ -21,6 +21,7 @@ import {
   AutocompleteOption,
   ButtonComponent,
   CardComponent,
+  CheckboxComponent,
   FormFieldComponent,
   InputComponent,
   PageHeaderComponent,
@@ -32,13 +33,17 @@ import {
 
 import { DepartmentService, OrganizationalUnitService, PositionService } from 'app/features/admin';
 import {
-  CreateEmployeeProfileRequest,
   EmployeeAttributeService,
   EmployeeService,
   EmployeeStatus,
   personName,
+  type CreateEmployeeRequest,
   type EmployeeProfile,
+  type UpdateEmployeeProfileRequest,
 } from 'app/features/employee';
+
+/** Client-side username pattern; the backend enforces the full LOGIN_REGEX. */
+const LOGIN_PATTERN = /^[_.@A-Za-z0-9-]+$/;
 
 type AttributeRow = FormGroup<{ key: FormControl<string>; value: FormControl<string> }>;
 
@@ -53,10 +58,9 @@ function dateOrder(group: AbstractControl): ValidationErrors | null {
  * Create / edit an employee profile (HR).
  *
  * - **Edit** (`/employees/:id/edit`) loads the profile and `PUT`s changes.
- * - **Create** (`/employees/new?userId=…`) attaches a profile to an existing
- *   user via `POST /api/hr/employees/{userId}` (invite-then-promote). Without a
- *   `userId` the form explains that a user must be selected first, rather than
- *   POSTing against a missing id.
+ * - **Create** (`/employees/new`) provisions the account and HR profile together
+ *   via `POST /api/hr/employees` (one step). There is no separate user
+ *   management and no self-registration — every employee is added here.
  *
  * Country is intentionally omitted: no country reference endpoint is exposed to
  * the frontend yet, and `countryId` is optional on the API.
@@ -66,10 +70,10 @@ function dateOrder(group: AbstractControl): ValidationErrors | null {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
-    RouterLink,
     TranslatePipe,
     PageHeaderComponent,
     CardComponent,
+    CheckboxComponent,
     FormFieldComponent,
     InputComponent,
     SelectComponent,
@@ -95,9 +99,11 @@ export default class EmployeeFormComponent implements OnInit {
 
   /** Edit target id (null in create mode). */
   protected readonly employeeId = signal<string | null>(null);
-  /** User to promote (create mode only). */
-  protected readonly userId = signal<string | null>(null);
   protected readonly isEdit = computed(() => this.employeeId() !== null);
+
+  /** Roles assignable on the form (from the backend), and the current selection. */
+  protected readonly assignableRoles = signal<string[]>([]);
+  protected readonly selectedRoles = signal<Set<string>>(new Set());
 
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
@@ -124,6 +130,12 @@ export default class EmployeeFormComponent implements OnInit {
 
   protected readonly form = this.fb.nonNullable.group(
     {
+      // Account / identity — create mode only (cleared in edit; the account is fixed).
+      login: ['', [Validators.required, Validators.pattern(LOGIN_PATTERN), Validators.maxLength(50)]],
+      firstName: ['', [Validators.maxLength(50)]],
+      lastName: ['', [Validators.maxLength(50)]],
+      email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
+      // HR profile.
       jobTitle: ['', [Validators.maxLength(100)]],
       phone: ['', [Validators.maxLength(40)]],
       startDate: ['', [Validators.required]],
@@ -150,14 +162,44 @@ export default class EmployeeFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadOptions();
+    this.loadAssignableRoles();
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
+      // Edit: the account (login/email) is fixed and not rendered, so drop its
+      // required validators to keep the form submittable.
       this.employeeId.set(id);
+      for (const name of ['login', 'firstName', 'lastName', 'email']) {
+        const c = this.form.get(name);
+        c?.clearValidators();
+        c?.updateValueAndValidity();
+      }
       this.loadProfile(id);
       this.loadAttributes(id);
-    } else {
-      this.userId.set(this.route.snapshot.queryParamMap.get('userId'));
     }
+  }
+
+  /** Toggle a role in the selection (immutably, so OnPush picks up the change). */
+  protected toggleRole(role: string, checked: boolean): void {
+    this.selectedRoles.update(current => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(role);
+      } else {
+        next.delete(role);
+      }
+      return next;
+    });
+  }
+
+  protected isRoleSelected(role: string): boolean {
+    return this.selectedRoles().has(role);
+  }
+
+  private loadAssignableRoles(): void {
+    this.employeeService
+      .getAssignableRoles()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(roles => this.assignableRoles.set(roles));
   }
 
   protected invalid(control: string): boolean {
@@ -241,18 +283,15 @@ export default class EmployeeFormComponent implements OnInit {
   }
 
   protected save(): void {
-    // Create requires a user to attach to; guard before touching the API.
-    if (!this.isEdit() && !this.userId()) return;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
-    const body = this.buildBody();
     this.saving.set(true);
 
     const id = this.employeeId();
-    const request$ = id ? this.employeeService.update(id, body) : this.employeeService.createForUser(this.userId()!, body);
+    const request$ = id ? this.employeeService.update(id, this.buildUpdateBody()) : this.employeeService.create(this.buildCreateBody());
 
     request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (saved: EmployeeProfile) => {
@@ -267,19 +306,44 @@ export default class EmployeeFormComponent implements OnInit {
     });
   }
 
-  /** Required fields go in flat; optional ones are omitted when blank. */
-  private buildBody(): CreateEmployeeProfileRequest {
+  /** Shared HR-profile fields; required go in flat, optional omitted when blank. */
+  private profileFields(): UpdateEmployeeProfileRequest {
     const v = this.form.getRawValue();
     return {
-      startDate: v.startDate,
-      positionId: v.positionId,
-      unitId: v.unitId,
       ...(v.jobTitle ? { jobTitle: v.jobTitle } : {}),
       ...(v.phone ? { phone: v.phone } : {}),
       ...(v.endDate ? { endDate: v.endDate } : {}),
       ...(v.status ? { status: v.status as EmployeeStatus } : {}),
       ...(v.departmentId ? { departmentId: v.departmentId } : {}),
       ...(v.managerId ? { managerId: v.managerId } : {}),
+    };
+  }
+
+  /** Create body: account identity + roles + required profile fields. */
+  private buildCreateBody(): CreateEmployeeRequest {
+    const v = this.form.getRawValue();
+    return {
+      login: v.login,
+      email: v.email,
+      ...(v.firstName ? { firstName: v.firstName } : {}),
+      ...(v.lastName ? { lastName: v.lastName } : {}),
+      authorities: [...this.selectedRoles()],
+      startDate: v.startDate,
+      positionId: v.positionId,
+      unitId: v.unitId,
+      ...this.profileFields(),
+    };
+  }
+
+  /** Update body: profile fields + full role replacement. */
+  private buildUpdateBody(): UpdateEmployeeProfileRequest {
+    const v = this.form.getRawValue();
+    return {
+      startDate: v.startDate,
+      positionId: v.positionId,
+      unitId: v.unitId,
+      authorities: [...this.selectedRoles()],
+      ...this.profileFields(),
     };
   }
 
@@ -303,6 +367,7 @@ export default class EmployeeFormComponent implements OnInit {
             managerId: p.managerId ?? '',
           });
           this.managerInitial.set(p.managerId ? { value: p.managerId, label: p.managerInfo ?? p.managerId } : null);
+          this.selectedRoles.set(new Set(p.authorities));
           this.loading.set(false);
         },
         error: (err: unknown) => {

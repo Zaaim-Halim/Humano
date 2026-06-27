@@ -4,12 +4,7 @@
     [subtitle]="'humano.employeeForm.subtitle' | translate"
   />
 
-  @if (!isEdit() && !userId()) {
-    <hum-alert tone="info" [title]="'humano.employeeForm.noUserTitle' | translate">
-      <p style="margin: 0 0 var(--space-2)">{{ 'humano.employeeForm.noUserBody' | translate }}</p>
-      <hum-button variant="secondary" size="sm" routerLink="/admin/users">{{ 'humano.employeeForm.goToUsers' | translate }}</hum-button>
-    </hum-alert>
-  } @else if (loading()) {
+  @if (loading()) {
     <hum-card><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></hum-card>
   } @else if (loadError(); as e) {
     <hum-alert tone="danger" [title]="e">
@@ -18,6 +13,46 @@
   } @else {
     <hum-card>
       <form [formGroup]="form" (ngSubmit)="save()" novalidate style="display: grid; gap: var(--space-4)">
+        @if (!isEdit()) {
+          <fieldset style="border: 0; padding: 0; margin: 0; display: grid; gap: var(--space-3)">
+            <legend style="font-weight: 600; padding: 0; margin: 0 0 var(--space-1)">
+              {{ 'humano.employeeForm.accountTitle' | translate }}
+            </legend>
+            <p class="hum-pagehead__sub" style="margin: 0">{{ 'humano.employeeForm.accountHint' | translate }}</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4)">
+              <hum-form-field
+                [label]="'humano.employeeForm.login' | translate"
+                controlId="emp-login"
+                [hint]="'humano.employeeForm.loginHint' | translate"
+                [error]="
+                  invalid('login')
+                    ? ((form.get('login')?.errors?.['pattern'] ? 'humano.employeeForm.loginPattern' : 'humano.employeeForm.loginRequired')
+                      | translate)
+                    : undefined
+                "
+              >
+                <hum-input inputId="emp-login" formControlName="login" [invalid]="invalid('login')" />
+              </hum-form-field>
+
+              <hum-form-field
+                [label]="'humano.employeeForm.email' | translate"
+                controlId="emp-email"
+                [error]="invalid('email') ? ('humano.employeeForm.emailRequired' | translate) : undefined"
+              >
+                <hum-input inputId="emp-email" type="email" formControlName="email" [invalid]="invalid('email')" />
+              </hum-form-field>
+
+              <hum-form-field [label]="'humano.employeeForm.firstName' | translate" controlId="emp-firstName">
+                <hum-input inputId="emp-firstName" formControlName="firstName" />
+              </hum-form-field>
+
+              <hum-form-field [label]="'humano.employeeForm.lastName' | translate" controlId="emp-lastName">
+                <hum-input inputId="emp-lastName" formControlName="lastName" />
+              </hum-form-field>
+            </div>
+          </fieldset>
+        }
+
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4)">
           <hum-form-field [label]="'humano.employeeForm.jobTitle' | translate" controlId="emp-jobTitle">
             <hum-input inputId="emp-jobTitle" formControlName="jobTitle" />
@@ -79,6 +114,20 @@
             />
           </hum-form-field>
         </div>
+
+        <fieldset style="border: 0; padding: 0; margin: 0; display: grid; gap: var(--space-2)">
+          <legend style="font-weight: 600; padding: 0; margin: 0">{{ 'humano.employeeForm.accessTitle' | translate }}</legend>
+          <p class="hum-pagehead__sub" style="margin: 0 0 var(--space-1)">{{ 'humano.employeeForm.accessHint' | translate }}</p>
+          @if (assignableRoles().length === 0) {
+            <p style="color: var(--text-subtle); margin: 0">{{ 'humano.employeeForm.noRoles' | translate }}</p>
+          } @else {
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-2)">
+              @for (role of assignableRoles(); track role) {
+                <hum-checkbox [label]="role" [checked]="isRoleSelected(role)" (checkedChange)="toggleRole(role, $event)" />
+              }
+            </div>
+          }
+        </fieldset>
 
         <div style="display: flex; gap: var(--space-2); justify-content: flex-end">
           <hum-button type="button" variant="secondary" (click)="cancel()">{{ 'humano.action.cancel' | translate }}</hum-button>

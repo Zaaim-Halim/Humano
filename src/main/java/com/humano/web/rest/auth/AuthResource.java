@@ -2,7 +2,6 @@ package com.humano.web.rest.auth;
 
 import com.humano.config.Constants;
 import com.humano.domain.shared.User;
-import com.humano.dto.auth.requests.RegisterUserRequest;
 import com.humano.dto.auth.requests.RequestPasswordResetRequest;
 import com.humano.dto.auth.requests.ResetPasswordRequest;
 import com.humano.security.annotation.PublicEndpoint;
@@ -21,7 +20,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -47,20 +45,6 @@ public class AuthResource {
     public AuthResource(UserRegistrationService registrationService, MailService mailService) {
         this.registrationService = registrationService;
         this.mailService = mailService;
-    }
-
-    /**
-     * Self-register a new user; sends an activation email on success.
-     */
-    @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PublicEndpoint
-    public void registerAccount(@Valid @RequestBody RegisterUserRequest request) {
-        if (isPasswordLengthInvalid(request.password())) {
-            throw new InvalidPasswordException();
-        }
-        User user = registrationService.registerUser(request);
-        mailService.sendActivationEmail(user);
     }
 
     /**

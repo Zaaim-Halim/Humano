@@ -3,6 +3,7 @@ package com.humano.dto.hr.responses;
 import com.humano.domain.enumeration.hr.EmployeeStatus;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -26,6 +27,7 @@ public record EmployeeProfileResponse(
     String unitName,
     UUID managerId,
     String managerInfo,
+    Set<String> authorities,
     String createdBy,
     Instant createdDate,
     String lastModifiedBy,

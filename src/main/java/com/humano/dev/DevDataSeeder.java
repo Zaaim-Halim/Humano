@@ -51,7 +51,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <h3>How to log in</h3>
  * Auth resolves the user inside the tenant context, so requests must target the demo tenant via the
  * {@code X-Tenant-ID: }{@value #SUBDOMAIN} header (or its subdomain). The exact logins are printed to
- * the log on startup; see {@code src/main/java/com/humano/dev/README.md}.
+ * the log on startup; see {@code src/main/java/com/humano/dev/CLAUDE.md}.
  *
  * <h3>Requirements</h3>
  * Provisioning creates a physical MySQL database, so a dev MySQL server must be reachable. With H2 only,

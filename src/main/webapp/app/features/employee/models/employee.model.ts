@@ -38,6 +38,8 @@ export interface EmployeeProfile extends AuditFields {
   unitName: string | null;
   managerId: string | null;
   managerInfo: string | null;
+  /** Granted role/authority names (includes the base EMPLOYEE role). */
+  authorities: string[];
 }
 
 export interface CreateEmployeeProfileRequest {
@@ -56,8 +58,32 @@ export interface CreateEmployeeProfileRequest {
   managerId?: string;
 }
 
-/** Partial update — all fields optional (`PUT /api/hr/employees/{id}`). */
-export type UpdateEmployeeProfileRequest = Partial<CreateEmployeeProfileRequest>;
+/**
+ * One-step employee provisioning — `POST /api/hr/employees`. Creates the backing
+ * user account (identity + roles) together with the HR profile; the recipient
+ * sets their password via the emailed reset link. There is no separate user
+ * management and no self-registration.
+ */
+export interface CreateEmployeeRequest extends CreateEmployeeProfileRequest {
+  /** Required. Login/username for the account. */
+  login: string;
+  firstName?: string;
+  lastName?: string;
+  /** Required. Where the activation/creation email is sent. */
+  email: string;
+  imageUrl?: string;
+  langKey?: string;
+  /** Granted role/authority names (the EMPLOYEE role is always added server-side). */
+  authorities?: string[];
+}
+
+/**
+ * Partial profile update — all fields optional (`PUT /api/hr/employees/{id}`).
+ * When `authorities` is provided it fully replaces the employee's roles.
+ */
+export type UpdateEmployeeProfileRequest = Partial<CreateEmployeeProfileRequest> & {
+  authorities?: string[];
+};
 
 /** Criteria for `POST /api/hr/employees/search` (AND-combined, all optional). */
 export interface EmployeeSearchRequest {

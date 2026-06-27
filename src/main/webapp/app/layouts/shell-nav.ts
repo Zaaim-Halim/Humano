@@ -145,7 +145,7 @@ export const SHELL_NAV: ShellNavGroup[] = [
   },
   {
     headingKey: 'humano.nav.groups.settings',
-    permissions: [Permission.SYSTEM_CONFIGURATION, Permission.READ_USER],
+    permissions: [Permission.SYSTEM_CONFIGURATION],
     items: [
       {
         id: 'settings',
@@ -154,14 +154,6 @@ export const SHELL_NAV: ShellNavGroup[] = [
         link: '/settings',
         keywords: 'configuration preferences admin',
         permissions: [Permission.SYSTEM_CONFIGURATION],
-      },
-      {
-        id: 'users',
-        labelKey: 'humano.nav.users',
-        icon: 'user',
-        link: '/admin/users',
-        keywords: 'users accounts roles admin',
-        permissions: [Permission.READ_USER],
       },
     ],
   },
