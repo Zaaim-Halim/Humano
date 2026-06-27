@@ -321,6 +321,11 @@
   --topbar-h: 3.5rem; /* 56 */
   --container-max: 80rem; /* 1280 */
   --drawer-w: 28rem; /* 448 */
+  --shell-collapse: 1024px; /* sidebar collapses to an off-canvas drawer at/below this width */
+
+  /* z-index — kept below the topbar user-menu (55/60) so menus stack above the mobile drawer */
+  --z-shell-backdrop: 40;
+  --z-shell-drawer: 45;
 
   /* hairline */
   --hairline: 1px;

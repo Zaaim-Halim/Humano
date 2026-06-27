@@ -1,7 +1,9 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, booleanAttribute, input, output } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { ChangeDetectionStrategy, Component, booleanAttribute, inject, input, output, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { filter } from 'rxjs/operators';
 
 import { AvatarComponent } from '../data-display/avatar.component';
 
@@ -49,10 +51,12 @@ export interface ShellTenant {
   imports: [NgTemplateOutlet, RouterLink, RouterLinkActive, LucideAngularModule, AvatarComponent],
   host: {
     class: 'hum-shell',
+    '[class.hum-shell--nav-open]': 'sidebarOpen()',
     '[attr.data-chrome]': 'chrome() === "platform" ? "platform" : null',
+    '(document:keydown.escape)': 'closeNav()',
   },
   template: `
-    <aside class="hum-side">
+    <aside class="hum-side" id="hum-shell-sidebar">
       <div class="hum-side__brand">
         <span class="hum-side__wordmark">{{ brand() }}<span class="hum-side__dot" aria-hidden="true"></span></span>
       </div>
@@ -114,6 +118,16 @@ export interface ShellTenant {
     </aside>
 
     <header class="hum-topbar">
+      <button
+        type="button"
+        class="hum-topbar__menu"
+        [attr.aria-label]="menuLabel()"
+        [attr.aria-expanded]="sidebarOpen()"
+        aria-controls="hum-shell-sidebar"
+        (click)="toggleNav()"
+      >
+        <lucide-icon name="menu" [size]="18" />
+      </button>
       @if (tenant(); as t) {
         <button type="button" class="hum-topbar__tenant" (click)="tenantClick.emit()">
           <hum-avatar [name]="t.name" [src]="t.src ?? null" size="xs" [square]="true" />
@@ -129,6 +143,9 @@ export interface ShellTenant {
     </header>
 
     <main class="hum-shell__main"><ng-content /></main>
+
+    <!-- Scrim behind the mobile drawer; only visible at the collapsed breakpoint when open. -->
+    <button type="button" class="hum-shell__backdrop" tabindex="-1" aria-hidden="true" (click)="closeNav()"></button>
 
     <ng-template #itemInner let-it>
       @if (it.icon; as name) {
@@ -151,9 +168,32 @@ export class AppShellComponent {
   readonly user = input<ShellUser>();
   readonly searchPlaceholder = input('Search');
   readonly navLabel = input('Primary');
+  /** Accessible label for the mobile menu toggle (pass an already-translated string). */
+  readonly menuLabel = input('Menu');
   readonly hasSidebarFooter = input(false, { transform: booleanAttribute });
 
   readonly navigate = output<string>();
   readonly searchClick = output();
   readonly tenantClick = output();
+
+  /** Whether the off-canvas sidebar drawer is open (only meaningful below --shell-collapse). */
+  protected readonly sidebarOpen = signal(false);
+
+  constructor() {
+    // Close the drawer on any navigation — covers nav-item taps, the ⌘K palette, and programmatic nav.
+    inject(Router)
+      .events.pipe(
+        filter(e => e instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.sidebarOpen.set(false));
+  }
+
+  protected toggleNav(): void {
+    this.sidebarOpen.update(open => !open);
+  }
+
+  protected closeNav(): void {
+    this.sidebarOpen.set(false);
+  }
 }

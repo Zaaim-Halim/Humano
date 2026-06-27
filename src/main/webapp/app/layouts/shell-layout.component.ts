@@ -44,6 +44,7 @@ import { SHELL_NAV } from './shell-nav';
       [nav]="nav()"
       [user]="user()"
       [searchPlaceholder]="'humano.shell.search' | translate"
+      [menuLabel]="'humano.shell.menu' | translate"
       (searchClick)="palette.openPalette()"
     >
       <div hum-topbar-actions style="display:flex;align-items:center;gap:var(--space-1)">
