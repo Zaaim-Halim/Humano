@@ -9,6 +9,8 @@ import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
 import { normalizeHttpError } from 'app/core/api';
 import {
+  Address,
+  AddressService,
   EmployeeDocument,
   EmployeeDocumentService,
   EmployeeProfile,
@@ -49,7 +51,7 @@ import {
   SalaryHistory,
 } from '../index';
 
-type TabId = 'overview' | 'compensation' | 'leaves' | 'documents' | 'performance';
+type TabId = 'overview' | 'compensation' | 'leaves' | 'documents' | 'performance' | 'addresses';
 
 /** Generic per-tab async holder. */
 interface TabState<T> {
@@ -102,6 +104,7 @@ export default class EmployeeDetailComponent {
   private readonly leaveService = inject(LeaveRequestService);
   private readonly documentService = inject(EmployeeDocumentService);
   private readonly performanceService = inject(PerformanceReviewService);
+  private readonly addressService = inject(AddressService);
   private readonly router = inject(Router);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
@@ -134,6 +137,7 @@ export default class EmployeeDetailComponent {
   protected readonly leaves = signal<TabState<LeaveRequest[]>>(idle());
   protected readonly documents = signal<TabState<EmployeeDocument[]>>(idle());
   protected readonly performance = signal<TabState<PerformanceReview[]>>(idle());
+  protected readonly addresses = signal<TabState<Address[]>>(idle());
 
   /** Gate the compensation editor on the compensation write permission. */
   protected readonly canManageCompensation = this.account.hasPermission(Permission.MANAGE_COMPENSATION);
@@ -185,6 +189,7 @@ export default class EmployeeDetailComponent {
     { id: 'leaves', label: this.translate.instant('humano.employee360.tabLeaves') },
     { id: 'documents', label: this.translate.instant('humano.employee360.tabDocuments') },
     { id: 'performance', label: this.translate.instant('humano.employee360.tabPerformance') },
+    { id: 'addresses', label: this.translate.instant('humano.employee360.tabAddresses') },
   ]);
 
   constructor() {
@@ -214,6 +219,7 @@ export default class EmployeeDetailComponent {
     this.leaves.set(idle());
     this.documents.set(idle());
     this.performance.set(idle());
+    this.addresses.set(idle());
     this.identity.set({ data: null, loading: true, error: null });
     this.employeeService.find(id).subscribe({
       next: data => this.identity.set({ data, loading: false, error: null }),
@@ -261,6 +267,13 @@ export default class EmployeeDetailComponent {
         this.performanceService.search({ employeeId: id }, { size: 50, sort: ['reviewDate,desc'] }).subscribe({
           next: page => this.performance.set({ data: page.content, loading: false, error: null }),
           error: (err: unknown) => this.performance.set({ data: null, loading: false, error: normalizeHttpError(err) }),
+        });
+        break;
+      case 'addresses':
+        this.addresses.set({ data: null, loading: true, error: null });
+        this.addressService.byEmployee(id).subscribe({
+          next: data => this.addresses.set({ data, loading: false, error: null }),
+          error: (err: unknown) => this.addresses.set({ data: null, loading: false, error: normalizeHttpError(err) }),
         });
         break;
     }
