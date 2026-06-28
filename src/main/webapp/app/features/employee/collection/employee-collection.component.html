@@ -1,0 +1,86 @@
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3)">
+  <h3 style="margin: 0; font-size: var(--text-base); font-weight: 600">{{ heading() }}</h3>
+  @if (canManage()) {
+    <hum-button variant="primary" size="sm" icon="plus" (click)="openCreate()">Add</hum-button>
+  }
+</div>
+
+@if (loading()) {
+  <hum-skeleton-row /><hum-skeleton-row />
+} @else if (error(); as e) {
+  <hum-alert tone="danger" [title]="e"><hum-button variant="outline" size="sm" (click)="load()">Retry</hum-button></hum-alert>
+} @else if (rows().length === 0) {
+  <hum-empty-state icon="inbox" [title]="'Nothing yet'" />
+} @else {
+  <table class="hum-table">
+    <thead>
+      <tr>
+        @for (c of columns(); track c.key) {
+          <th>{{ c.label }}</th>
+        }
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.id) {
+        <tr>
+          @for (c of columns(); track c.key) {
+            <td>{{ cell(row, c.key) }}</td>
+          }
+          <td style="text-align: right; white-space: nowrap">
+            @if (canManage()) {
+              <hum-icon-button icon="pencil" label="Edit" (click)="openEdit(row)" />
+              <hum-icon-button icon="trash-2" variant="ghost" label="Delete" (click)="deleteTarget.set(row)" />
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}
+
+<!-- Add / edit -->
+<hum-drawer [open]="formOpen()" [title]="editing() ? 'Edit ' + heading() : 'Add ' + heading()" hasFooter (closed)="formOpen.set(false)">
+  <form [formGroup]="form" style="display: grid; gap: var(--space-4)">
+    @for (f of fields(); track f.key) {
+      @switch (f.type) {
+        @case ('textarea') {
+          <hum-form-field [label]="f.label" [controlId]="f.key">
+            <hum-textarea [formControlName]="f.key" />
+          </hum-form-field>
+        }
+        @case ('checkbox') {
+          <hum-checkbox [formControlName]="f.key" [label]="f.label" />
+        }
+        @case ('select') {
+          <hum-form-field [label]="f.label" [controlId]="f.key" [error]="invalid(f.key) ? 'Required' : undefined">
+            <hum-select [formControlName]="f.key" [options]="f.options ?? []" [invalid]="invalid(f.key)" />
+          </hum-form-field>
+        }
+        @default {
+          <hum-form-field [label]="f.label" [controlId]="f.key" [error]="invalid(f.key) ? 'Required' : undefined">
+            <hum-input [inputId]="f.key" [type]="f.type ?? 'text'" [formControlName]="f.key" [invalid]="invalid(f.key)" />
+          </hum-form-field>
+        }
+      }
+    }
+  </form>
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="formOpen.set(false)">Cancel</hum-button>
+    <hum-button variant="primary" [loading]="saving()" [disabled]="form.invalid" (click)="save()">Save</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Delete confirm -->
+<hum-dialog
+  [open]="deleteTarget() !== null"
+  [title]="'Delete record'"
+  [description]="'This cannot be undone.'"
+  hasFooter
+  (closed)="deleteTarget.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="deleteTarget.set(null)">Cancel</hum-button>
+    <hum-button variant="destructive" [loading]="deleting()" (click)="confirmDelete()">Delete</hum-button>
+  </div>
+</hum-dialog>

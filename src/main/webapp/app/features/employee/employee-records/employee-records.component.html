@@ -1,0 +1,14 @@
+<div style="display: grid; gap: var(--space-6)">
+  @for (cfg of configs; track cfg.heading) {
+    <section class="hum-card" style="padding: var(--space-4)">
+      <hum-employee-collection
+        [heading]="cfg.heading"
+        [employeeId]="employeeId()"
+        [service]="cfg.service"
+        [columns]="cfg.columns"
+        [fields]="cfg.fields"
+        [canManage]="canManage()"
+      />
+    </section>
+  }
+</div>

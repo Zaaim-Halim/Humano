@@ -232,39 +232,8 @@
             <hum-empty-state icon="check-check" [title]="'humano.employee360.noPerformance' | translate" />
           }
         }
-        @case ('addresses') {
-          @if (addresses().loading) {
-            <hum-skeleton-row /><hum-skeleton-row />
-          } @else if (addresses().error; as e) {
-            <hum-alert tone="danger" [title]="e"
-              ><hum-button variant="outline" size="sm" (click)="retryTab('addresses')">{{
-                'humano.action.retry' | translate
-              }}</hum-button></hum-alert
-            >
-          } @else if (addresses().data?.length) {
-            <table class="hum-table">
-              <thead>
-                <tr>
-                  <th>{{ 'humano.employee360.colType' | translate }}</th>
-                  <th>{{ 'humano.employee360.colAddress' | translate }}</th>
-                  <th>{{ 'humano.employee360.colCity' | translate }}</th>
-                  <th>{{ 'humano.employee360.colPrimary' | translate }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (a of addresses().data; track a.id) {
-                  <tr>
-                    <td>{{ a.type ?? '—' }}</td>
-                    <td>{{ a.street ?? '—' }}</td>
-                    <td>{{ a.city ?? '—' }}</td>
-                    <td>{{ a.primary ? '✓' : '—' }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          } @else {
-            <hum-empty-state icon="map-pin" [title]="'humano.employee360.noAddresses' | translate" />
-          }
+        @case ('records') {
+          <hum-employee-records [employeeId]="id()" [canManage]="canEdit" />
         }
       }
     </div>
