@@ -2,6 +2,8 @@ package com.humano.dto.hr.requests;
 
 import com.humano.config.Constants;
 import com.humano.domain.enumeration.hr.EmployeeStatus;
+import com.humano.dto.hr.responses.CountryRef;
+import com.humano.dto.hr.responses.ReferenceDataRef;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -39,7 +41,15 @@ public record CreateEmployeeRequest(
     UUID departmentId,
     @NotNull(message = "Position is required") UUID positionId,
     @NotNull(message = "Organizational unit is required") UUID unitId,
-    UUID managerId
+    UUID managerId,
+    // --- reference-data relationships (nested; only id is read) ---
+    CountryRef nationality,
+    ReferenceDataRef maritalStatus,
+    ReferenceDataRef employmentType,
+    ReferenceDataRef grade,
+    ReferenceDataRef level,
+    ReferenceDataRef category,
+    ReferenceDataRef terminationReason
 ) {
     /** Project the account/identity fields onto the admin {@code CreateUserRequest}. */
     public com.humano.dto.admin.requests.CreateUserRequest toCreateUserRequest() {
@@ -58,7 +68,14 @@ public record CreateEmployeeRequest(
             departmentId,
             positionId,
             unitId,
-            managerId
+            managerId,
+            nationality,
+            maritalStatus,
+            employmentType,
+            grade,
+            level,
+            category,
+            terminationReason
         );
     }
 }

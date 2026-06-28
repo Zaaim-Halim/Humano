@@ -2,6 +2,21 @@ import { AuditFields } from 'app/core/api';
 
 import { EmployeeStatus } from './enums/employee-status.enum';
 
+/**
+ * Minimal embedded reference to a reference-data / country row. On reads it carries id + code +
+ * name; on writes send just `{ id }` (a `RefInput`).
+ */
+export interface ReferenceDataRef {
+  id: string;
+  code: string | null;
+  name: string | null;
+}
+
+/** Write-side reference: only the id is sent. */
+export interface RefInput {
+  id: string;
+}
+
 /** List-row projection — `GET /api/hr/employees`. */
 export interface SimpleEmployeeProfile {
   id: string;
@@ -40,6 +55,30 @@ export interface EmployeeProfile extends AuditFields {
   managerInfo: string | null;
   /** Granted role/authority names (includes the base EMPLOYEE role). */
   authorities: string[];
+  // Personal / employment details (set via update, not provisioning).
+  employeeNumber: string | null;
+  birthDate: string | null;
+  gender: string | null;
+  placeOfBirth: string | null;
+  workPhone: string | null;
+  workLocation: string | null;
+  fte: number | null;
+  probationEndDate: string | null;
+  confirmationDate: string | null;
+  terminationNotes: string | null;
+  // Government identification (sensitive).
+  nationalId: string | null;
+  passportNumber: string | null;
+  taxNumber: string | null;
+  socialSecurityNumber: string | null;
+  // Reference-data relationships (nested).
+  nationality: ReferenceDataRef | null;
+  maritalStatus: ReferenceDataRef | null;
+  employmentType: ReferenceDataRef | null;
+  grade: ReferenceDataRef | null;
+  level: ReferenceDataRef | null;
+  category: ReferenceDataRef | null;
+  terminationReason: ReferenceDataRef | null;
 }
 
 export interface CreateEmployeeProfileRequest {
@@ -56,6 +95,14 @@ export interface CreateEmployeeProfileRequest {
   /** Required. */
   unitId: string;
   managerId?: string;
+  // Reference-data relationships (nested; send `{ id }`).
+  nationality?: RefInput;
+  maritalStatus?: RefInput;
+  employmentType?: RefInput;
+  grade?: RefInput;
+  level?: RefInput;
+  category?: RefInput;
+  terminationReason?: RefInput;
 }
 
 /**
@@ -79,10 +126,28 @@ export interface CreateEmployeeRequest extends CreateEmployeeProfileRequest {
 
 /**
  * Partial profile update — all fields optional (`PUT /api/hr/employees/{id}`).
+ * Richer than create: provisioning is minimal, the rest of the profile is enriched here.
  * When `authorities` is provided it fully replaces the employee's roles.
  */
 export type UpdateEmployeeProfileRequest = Partial<CreateEmployeeProfileRequest> & {
   authorities?: string[];
+  // Personal / employment details.
+  employeeNumber?: string;
+  birthDate?: string;
+  gender?: string;
+  placeOfBirth?: string;
+  workPhone?: string;
+  workLocation?: string;
+  fte?: number;
+  probationEndDate?: string;
+  confirmationDate?: string;
+  terminationNotes?: string;
+  // Government identification (sensitive).
+  nationalId?: string;
+  passportNumber?: string;
+  taxNumber?: string;
+  socialSecurityNumber?: string;
+  // Reference-data relationships (nested; send `{ id }`) are inherited from CreateEmployeeProfileRequest.
 };
 
 /** Criteria for `POST /api/hr/employees/search` (AND-combined, all optional). */

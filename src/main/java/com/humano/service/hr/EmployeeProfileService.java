@@ -12,11 +12,19 @@ import com.humano.dto.hr.requests.CreateEmployeeProfileRequest;
 import com.humano.dto.hr.requests.CreateEmployeeRequest;
 import com.humano.dto.hr.requests.EmployeeSearchRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeProfileRequest;
+import com.humano.dto.hr.responses.CountryRef;
 import com.humano.dto.hr.responses.EmployeeProfileResponse;
+import com.humano.dto.hr.responses.ReferenceDataRef;
 import com.humano.dto.hr.responses.SimpleEmployeeProfileResponse;
 import com.humano.repository.hr.DepartmentRepository;
+import com.humano.repository.hr.EmployeeCategoryRepository;
+import com.humano.repository.hr.EmploymentTypeRepository;
+import com.humano.repository.hr.JobGradeRepository;
+import com.humano.repository.hr.JobLevelRepository;
+import com.humano.repository.hr.MaritalStatusRepository;
 import com.humano.repository.hr.OrganizationalUnitRepository;
 import com.humano.repository.hr.PositionRepository;
+import com.humano.repository.hr.TerminationReasonRepository;
 import com.humano.repository.hr.specification.EmployeeSpecification;
 import com.humano.repository.payroll.CountryRepository;
 import com.humano.repository.shared.AuthorityRepository;
@@ -40,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,6 +72,12 @@ public class EmployeeProfileService {
     private final OrganizationalUnitRepository organizationalUnitRepository;
     private final CountryRepository countryRepository;
     private final AuthorityRepository authorityRepository;
+    private final MaritalStatusRepository maritalStatusRepository;
+    private final EmploymentTypeRepository employmentTypeRepository;
+    private final JobGradeRepository jobGradeRepository;
+    private final JobLevelRepository jobLevelRepository;
+    private final EmployeeCategoryRepository employeeCategoryRepository;
+    private final TerminationReasonRepository terminationReasonRepository;
     private final UserAccountService userAccountService;
     private final MailService mailService;
 
@@ -77,6 +92,12 @@ public class EmployeeProfileService {
         OrganizationalUnitRepository organizationalUnitRepository,
         CountryRepository countryRepository,
         AuthorityRepository authorityRepository,
+        MaritalStatusRepository maritalStatusRepository,
+        EmploymentTypeRepository employmentTypeRepository,
+        JobGradeRepository jobGradeRepository,
+        JobLevelRepository jobLevelRepository,
+        EmployeeCategoryRepository employeeCategoryRepository,
+        TerminationReasonRepository terminationReasonRepository,
         UserAccountService userAccountService,
         MailService mailService
     ) {
@@ -87,6 +108,12 @@ public class EmployeeProfileService {
         this.organizationalUnitRepository = organizationalUnitRepository;
         this.countryRepository = countryRepository;
         this.authorityRepository = authorityRepository;
+        this.maritalStatusRepository = maritalStatusRepository;
+        this.employmentTypeRepository = employmentTypeRepository;
+        this.jobGradeRepository = jobGradeRepository;
+        this.jobLevelRepository = jobLevelRepository;
+        this.employeeCategoryRepository = employeeCategoryRepository;
+        this.terminationReasonRepository = terminationReasonRepository;
         this.userAccountService = userAccountService;
         this.mailService = mailService;
     }
@@ -400,6 +427,37 @@ public class EmployeeProfileService {
                 .orElseThrow(() -> new EntityNotFoundException("Manager not found with ID: " + request.managerId()));
             employee.setManager(manager);
         }
+
+        // Reference-data relationships (nested refs; only id is read). On create, an omitted ref
+        // leaves the relationship null.
+        employee.setNationality(resolveCountry(request.nationality()));
+        employee.setMaritalStatus(resolveRef(request.maritalStatus(), maritalStatusRepository, "MaritalStatus"));
+        employee.setEmploymentType(resolveRef(request.employmentType(), employmentTypeRepository, "EmploymentType"));
+        employee.setGrade(resolveRef(request.grade(), jobGradeRepository, "JobGrade"));
+        employee.setLevel(resolveRef(request.level(), jobLevelRepository, "JobLevel"));
+        employee.setCategory(resolveRef(request.category(), employeeCategoryRepository, "EmployeeCategory"));
+        employee.setTerminationReason(resolveRef(request.terminationReason(), terminationReasonRepository, "TerminationReason"));
+    }
+
+    /**
+     * Resolves a nested reference-data ref to its entity, or null when the ref (or its id) is
+     * absent. Throws when an id is given but no matching row exists.
+     */
+    private <T> T resolveRef(ReferenceDataRef ref, JpaRepository<T, UUID> repository, String name) {
+        if (ref == null || ref.id() == null) {
+            return null;
+        }
+        return repository.findById(ref.id()).orElseThrow(() -> new EntityNotFoundException(name + " not found with ID: " + ref.id()));
+    }
+
+    /** Resolves a nested country ref to its entity, or null when absent. */
+    private Country resolveCountry(CountryRef ref) {
+        if (ref == null || ref.id() == null) {
+            return null;
+        }
+        return countryRepository
+            .findById(ref.id())
+            .orElseThrow(() -> new EntityNotFoundException("Country not found with ID: " + ref.id()));
     }
 
     /**
@@ -438,6 +496,48 @@ public class EmployeeProfileService {
         }
         if (request.status() != null) {
             employee.setStatus(request.status());
+        }
+        if (request.employeeNumber() != null) {
+            employee.setEmployeeNumber(request.employeeNumber());
+        }
+        if (request.birthDate() != null) {
+            employee.setBirthDate(request.birthDate());
+        }
+        if (request.gender() != null) {
+            employee.setGender(request.gender());
+        }
+        if (request.placeOfBirth() != null) {
+            employee.setPlaceOfBirth(request.placeOfBirth());
+        }
+        if (request.workPhone() != null) {
+            employee.setWorkPhone(request.workPhone());
+        }
+        if (request.workLocation() != null) {
+            employee.setWorkLocation(request.workLocation());
+        }
+        if (request.fte() != null) {
+            employee.setFte(request.fte());
+        }
+        if (request.probationEndDate() != null) {
+            employee.setProbationEndDate(request.probationEndDate());
+        }
+        if (request.confirmationDate() != null) {
+            employee.setConfirmationDate(request.confirmationDate());
+        }
+        if (request.terminationNotes() != null) {
+            employee.setTerminationNotes(request.terminationNotes());
+        }
+        if (request.nationalId() != null) {
+            employee.setNationalId(request.nationalId());
+        }
+        if (request.passportNumber() != null) {
+            employee.setPassportNumber(request.passportNumber());
+        }
+        if (request.taxNumber() != null) {
+            employee.setTaxNumber(request.taxNumber());
+        }
+        if (request.socialSecurityNumber() != null) {
+            employee.setSocialSecurityNumber(request.socialSecurityNumber());
         }
     }
 
@@ -502,6 +602,29 @@ public class EmployeeProfileService {
                 employee.setManager(manager);
             }
         }
+
+        // Update reference-data relationships when a nested ref is provided (omitted = unchanged).
+        if (request.nationality() != null) {
+            employee.setNationality(resolveCountry(request.nationality()));
+        }
+        if (request.maritalStatus() != null) {
+            employee.setMaritalStatus(resolveRef(request.maritalStatus(), maritalStatusRepository, "MaritalStatus"));
+        }
+        if (request.employmentType() != null) {
+            employee.setEmploymentType(resolveRef(request.employmentType(), employmentTypeRepository, "EmploymentType"));
+        }
+        if (request.grade() != null) {
+            employee.setGrade(resolveRef(request.grade(), jobGradeRepository, "JobGrade"));
+        }
+        if (request.level() != null) {
+            employee.setLevel(resolveRef(request.level(), jobLevelRepository, "JobLevel"));
+        }
+        if (request.category() != null) {
+            employee.setCategory(resolveRef(request.category(), employeeCategoryRepository, "EmployeeCategory"));
+        }
+        if (request.terminationReason() != null) {
+            employee.setTerminationReason(resolveRef(request.terminationReason(), terminationReasonRepository, "TerminationReason"));
+        }
     }
 
     /**
@@ -556,6 +679,27 @@ public class EmployeeProfileService {
                 .stream()
                 .map(Authority::getName)
                 .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new)),
+            employee.getEmployeeNumber(),
+            employee.getBirthDate(),
+            employee.getGender(),
+            employee.getPlaceOfBirth(),
+            employee.getWorkPhone(),
+            employee.getWorkLocation(),
+            employee.getFte(),
+            employee.getProbationEndDate(),
+            employee.getConfirmationDate(),
+            employee.getTerminationNotes(),
+            employee.getNationalId(),
+            employee.getPassportNumber(),
+            employee.getTaxNumber(),
+            employee.getSocialSecurityNumber(),
+            CountryRef.of(employee.getNationality()),
+            ReferenceDataRef.of(employee.getMaritalStatus()),
+            ReferenceDataRef.of(employee.getEmploymentType()),
+            ReferenceDataRef.of(employee.getGrade()),
+            ReferenceDataRef.of(employee.getLevel()),
+            ReferenceDataRef.of(employee.getCategory()),
+            ReferenceDataRef.of(employee.getTerminationReason()),
             employee.getCreatedBy(),
             employee.getCreatedDate(),
             employee.getLastModifiedBy(),
