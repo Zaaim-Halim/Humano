@@ -1,11 +1,10 @@
 package com.humano.dto.hr.requests;
 
 import com.humano.domain.enumeration.hr.EmployeeStatus;
-import com.humano.domain.enumeration.hr.Gender;
-import com.humano.domain.enumeration.hr.WorkLocationType;
 import com.humano.dto.hr.responses.CountryRef;
+import com.humano.dto.hr.responses.EmployeePersonalDetails;
+import com.humano.dto.hr.responses.GovernmentIdentification;
 import com.humano.dto.hr.responses.ReferenceDataRef;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Set;
 import java.util.UUID;
@@ -30,22 +29,10 @@ public record UpdateEmployeeProfileRequest(
     UUID unitId,
     UUID managerId,
     Set<String> authorities,
-    // Personal / employment details
-    String employeeNumber,
-    LocalDate birthDate,
-    Gender gender,
-    String placeOfBirth,
-    String workPhone,
-    WorkLocationType workLocation,
-    BigDecimal fte,
-    LocalDate probationEndDate,
-    LocalDate confirmationDate,
-    String terminationNotes,
-    // Government identification (sensitive)
-    String nationalId,
-    String passportNumber,
-    String taxNumber,
-    String socialSecurityNumber,
+    // Personal / employment details (nested)
+    EmployeePersonalDetails personalDetails,
+    // Government identification (nested, sensitive)
+    GovernmentIdentification governmentIds,
     // Reference-data relationships (nested; only id is read)
     CountryRef nationality,
     ReferenceDataRef maritalStatus,

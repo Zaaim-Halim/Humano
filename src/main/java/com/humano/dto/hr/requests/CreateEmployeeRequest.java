@@ -3,6 +3,7 @@ package com.humano.dto.hr.requests;
 import com.humano.config.Constants;
 import com.humano.domain.enumeration.hr.EmployeeStatus;
 import com.humano.dto.hr.responses.CountryRef;
+import com.humano.dto.hr.responses.EmployeePersonalDetails;
 import com.humano.dto.hr.responses.ReferenceDataRef;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -42,6 +43,8 @@ public record CreateEmployeeRequest(
     @NotNull(message = "Position is required") UUID positionId,
     @NotNull(message = "Organizational unit is required") UUID unitId,
     UUID managerId,
+    // --- personal / employment details (nested) ---
+    EmployeePersonalDetails personalDetails,
     // --- reference-data relationships (nested; only id is read) ---
     CountryRef nationality,
     ReferenceDataRef maritalStatus,
@@ -69,6 +72,7 @@ public record CreateEmployeeRequest(
             positionId,
             unitId,
             managerId,
+            personalDetails,
             nationality,
             maritalStatus,
             employmentType,

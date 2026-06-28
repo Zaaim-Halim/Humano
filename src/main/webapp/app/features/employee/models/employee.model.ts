@@ -17,6 +17,28 @@ export interface RefInput {
   id: string;
 }
 
+/** Nested personal / employment details. Used on reads and (partial) writes. */
+export interface EmployeePersonalDetails {
+  employeeNumber?: string | null;
+  birthDate?: string | null;
+  gender?: string | null;
+  placeOfBirth?: string | null;
+  workPhone?: string | null;
+  workLocation?: string | null;
+  fte?: number | null;
+  probationEndDate?: string | null;
+  confirmationDate?: string | null;
+  terminationNotes?: string | null;
+}
+
+/** Nested government identification (sensitive). Update-only on the write side. */
+export interface GovernmentIdentification {
+  nationalId?: string | null;
+  passportNumber?: string | null;
+  taxNumber?: string | null;
+  socialSecurityNumber?: string | null;
+}
+
 /** List-row projection — `GET /api/hr/employees`. */
 export interface SimpleEmployeeProfile {
   id: string;
@@ -55,22 +77,10 @@ export interface EmployeeProfile extends AuditFields {
   managerInfo: string | null;
   /** Granted role/authority names (includes the base EMPLOYEE role). */
   authorities: string[];
-  // Personal / employment details (set via update, not provisioning).
-  employeeNumber: string | null;
-  birthDate: string | null;
-  gender: string | null;
-  placeOfBirth: string | null;
-  workPhone: string | null;
-  workLocation: string | null;
-  fte: number | null;
-  probationEndDate: string | null;
-  confirmationDate: string | null;
-  terminationNotes: string | null;
-  // Government identification (sensitive).
-  nationalId: string | null;
-  passportNumber: string | null;
-  taxNumber: string | null;
-  socialSecurityNumber: string | null;
+  // Personal / employment details (nested).
+  personalDetails: EmployeePersonalDetails;
+  // Government identification (nested, sensitive).
+  governmentIds: GovernmentIdentification;
   // Reference-data relationships (nested).
   nationality: ReferenceDataRef | null;
   maritalStatus: ReferenceDataRef | null;
@@ -95,6 +105,8 @@ export interface CreateEmployeeProfileRequest {
   /** Required. */
   unitId: string;
   managerId?: string;
+  // Personal / employment details (nested).
+  personalDetails?: EmployeePersonalDetails;
   // Reference-data relationships (nested; send `{ id }`).
   nationality?: RefInput;
   maritalStatus?: RefInput;
@@ -131,23 +143,9 @@ export interface CreateEmployeeRequest extends CreateEmployeeProfileRequest {
  */
 export type UpdateEmployeeProfileRequest = Partial<CreateEmployeeProfileRequest> & {
   authorities?: string[];
-  // Personal / employment details.
-  employeeNumber?: string;
-  birthDate?: string;
-  gender?: string;
-  placeOfBirth?: string;
-  workPhone?: string;
-  workLocation?: string;
-  fte?: number;
-  probationEndDate?: string;
-  confirmationDate?: string;
-  terminationNotes?: string;
-  // Government identification (sensitive).
-  nationalId?: string;
-  passportNumber?: string;
-  taxNumber?: string;
-  socialSecurityNumber?: string;
-  // Reference-data relationships (nested; send `{ id }`) are inherited from CreateEmployeeProfileRequest.
+  // Government identification (nested, sensitive) — update-only.
+  governmentIds?: GovernmentIdentification;
+  // personalDetails and the reference-data relationships are inherited from CreateEmployeeProfileRequest.
 };
 
 /** Criteria for `POST /api/hr/employees/search` (AND-combined, all optional). */

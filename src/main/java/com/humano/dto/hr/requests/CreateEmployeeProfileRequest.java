@@ -2,6 +2,7 @@ package com.humano.dto.hr.requests;
 
 import com.humano.domain.enumeration.hr.EmployeeStatus;
 import com.humano.dto.hr.responses.CountryRef;
+import com.humano.dto.hr.responses.EmployeePersonalDetails;
 import com.humano.dto.hr.responses.ReferenceDataRef;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
@@ -26,6 +27,8 @@ public record CreateEmployeeProfileRequest(
     @NotNull(message = "Position is required") UUID positionId,
     @NotNull(message = "Organizational unit is required") UUID unitId,
     UUID managerId,
+    // Personal / employment details (nested)
+    EmployeePersonalDetails personalDetails,
     // Reference-data relationships (nested; only id is read)
     CountryRef nationality,
     ReferenceDataRef maritalStatus,

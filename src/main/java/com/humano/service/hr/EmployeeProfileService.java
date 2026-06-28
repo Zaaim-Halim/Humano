@@ -13,7 +13,9 @@ import com.humano.dto.hr.requests.CreateEmployeeRequest;
 import com.humano.dto.hr.requests.EmployeeSearchRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeProfileRequest;
 import com.humano.dto.hr.responses.CountryRef;
+import com.humano.dto.hr.responses.EmployeePersonalDetails;
 import com.humano.dto.hr.responses.EmployeeProfileResponse;
+import com.humano.dto.hr.responses.GovernmentIdentification;
 import com.humano.dto.hr.responses.ReferenceDataRef;
 import com.humano.dto.hr.responses.SimpleEmployeeProfileResponse;
 import com.humano.repository.hr.DepartmentRepository;
@@ -472,7 +474,67 @@ public class EmployeeProfileService {
         employee.setStartDate(request.startDate());
         employee.setEndDate(request.endDate());
         employee.setStatus(request.status() != null ? request.status() : EmployeeStatus.ACTIVE);
+        applyPersonalDetails(employee, request.personalDetails());
         employee.setPath(""); // Will be updated by @PrePersist
+    }
+
+    /**
+     * Copies the nested personal-details fields onto the employee. Null fields are skipped so this
+     * is safe for both create (from a fresh entity) and partial update.
+     */
+    private void applyPersonalDetails(Employee employee, EmployeePersonalDetails details) {
+        if (details == null) {
+            return;
+        }
+        if (details.employeeNumber() != null) {
+            employee.setEmployeeNumber(details.employeeNumber());
+        }
+        if (details.birthDate() != null) {
+            employee.setBirthDate(details.birthDate());
+        }
+        if (details.gender() != null) {
+            employee.setGender(details.gender());
+        }
+        if (details.placeOfBirth() != null) {
+            employee.setPlaceOfBirth(details.placeOfBirth());
+        }
+        if (details.workPhone() != null) {
+            employee.setWorkPhone(details.workPhone());
+        }
+        if (details.workLocation() != null) {
+            employee.setWorkLocation(details.workLocation());
+        }
+        if (details.fte() != null) {
+            employee.setFte(details.fte());
+        }
+        if (details.probationEndDate() != null) {
+            employee.setProbationEndDate(details.probationEndDate());
+        }
+        if (details.confirmationDate() != null) {
+            employee.setConfirmationDate(details.confirmationDate());
+        }
+        if (details.terminationNotes() != null) {
+            employee.setTerminationNotes(details.terminationNotes());
+        }
+    }
+
+    /** Copies the nested government-identification fields onto the employee (partial-safe). */
+    private void applyGovernmentIds(Employee employee, GovernmentIdentification ids) {
+        if (ids == null) {
+            return;
+        }
+        if (ids.nationalId() != null) {
+            employee.setNationalId(ids.nationalId());
+        }
+        if (ids.passportNumber() != null) {
+            employee.setPassportNumber(ids.passportNumber());
+        }
+        if (ids.taxNumber() != null) {
+            employee.setTaxNumber(ids.taxNumber());
+        }
+        if (ids.socialSecurityNumber() != null) {
+            employee.setSocialSecurityNumber(ids.socialSecurityNumber());
+        }
     }
 
     /**
@@ -497,48 +559,8 @@ public class EmployeeProfileService {
         if (request.status() != null) {
             employee.setStatus(request.status());
         }
-        if (request.employeeNumber() != null) {
-            employee.setEmployeeNumber(request.employeeNumber());
-        }
-        if (request.birthDate() != null) {
-            employee.setBirthDate(request.birthDate());
-        }
-        if (request.gender() != null) {
-            employee.setGender(request.gender());
-        }
-        if (request.placeOfBirth() != null) {
-            employee.setPlaceOfBirth(request.placeOfBirth());
-        }
-        if (request.workPhone() != null) {
-            employee.setWorkPhone(request.workPhone());
-        }
-        if (request.workLocation() != null) {
-            employee.setWorkLocation(request.workLocation());
-        }
-        if (request.fte() != null) {
-            employee.setFte(request.fte());
-        }
-        if (request.probationEndDate() != null) {
-            employee.setProbationEndDate(request.probationEndDate());
-        }
-        if (request.confirmationDate() != null) {
-            employee.setConfirmationDate(request.confirmationDate());
-        }
-        if (request.terminationNotes() != null) {
-            employee.setTerminationNotes(request.terminationNotes());
-        }
-        if (request.nationalId() != null) {
-            employee.setNationalId(request.nationalId());
-        }
-        if (request.passportNumber() != null) {
-            employee.setPassportNumber(request.passportNumber());
-        }
-        if (request.taxNumber() != null) {
-            employee.setTaxNumber(request.taxNumber());
-        }
-        if (request.socialSecurityNumber() != null) {
-            employee.setSocialSecurityNumber(request.socialSecurityNumber());
-        }
+        applyPersonalDetails(employee, request.personalDetails());
+        applyGovernmentIds(employee, request.governmentIds());
     }
 
     /**
@@ -679,20 +701,24 @@ public class EmployeeProfileService {
                 .stream()
                 .map(Authority::getName)
                 .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new)),
-            employee.getEmployeeNumber(),
-            employee.getBirthDate(),
-            employee.getGender(),
-            employee.getPlaceOfBirth(),
-            employee.getWorkPhone(),
-            employee.getWorkLocation(),
-            employee.getFte(),
-            employee.getProbationEndDate(),
-            employee.getConfirmationDate(),
-            employee.getTerminationNotes(),
-            employee.getNationalId(),
-            employee.getPassportNumber(),
-            employee.getTaxNumber(),
-            employee.getSocialSecurityNumber(),
+            new EmployeePersonalDetails(
+                employee.getEmployeeNumber(),
+                employee.getBirthDate(),
+                employee.getGender(),
+                employee.getPlaceOfBirth(),
+                employee.getWorkPhone(),
+                employee.getWorkLocation(),
+                employee.getFte(),
+                employee.getProbationEndDate(),
+                employee.getConfirmationDate(),
+                employee.getTerminationNotes()
+            ),
+            new GovernmentIdentification(
+                employee.getNationalId(),
+                employee.getPassportNumber(),
+                employee.getTaxNumber(),
+                employee.getSocialSecurityNumber()
+            ),
             CountryRef.of(employee.getNationality()),
             ReferenceDataRef.of(employee.getMaritalStatus()),
             ReferenceDataRef.of(employee.getEmploymentType()),
