@@ -1,8 +1,11 @@
 package com.humano.domain.shared;
 
 import com.humano.domain.enumeration.hr.EmployeeStatus;
+import com.humano.domain.enumeration.hr.Gender;
+import com.humano.domain.enumeration.hr.WorkLocationType;
 import com.humano.domain.hr.*;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Objects;
@@ -56,6 +59,141 @@ public class Employee extends User {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "country_id")
     private Country country;
+
+    /**
+     * Human-readable employee identifier (e.g. "EMP-000123"). Distinct from the User login.
+     */
+    @Column(name = "employee_number", unique = true)
+    private String employeeNumber;
+
+    /**
+     * Date of birth.
+     */
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    /**
+     * Gender.
+     */
+    @Column(name = "gender", length = 30)
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+
+    /**
+     * Nationality of the employee.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nationality_id")
+    private Country nationality;
+
+    /**
+     * Place of birth.
+     */
+    @Column(name = "place_of_birth")
+    private String placeOfBirth;
+
+    /**
+     * Work phone number (the inherited {@link #phone} is the personal number).
+     */
+    @Column(name = "work_phone")
+    private String workPhone;
+
+    /**
+     * Work location arrangement (onsite, remote, hybrid).
+     */
+    @Column(name = "work_location", length = 30)
+    @Enumerated(EnumType.STRING)
+    private WorkLocationType workLocation;
+
+    /**
+     * Full-time-equivalent percentage (e.g. 1.00 = full time, 0.50 = half time).
+     */
+    @Column(name = "fte", precision = 5, scale = 2)
+    private BigDecimal fte;
+
+    /**
+     * Date probation ends (null if not on probation).
+     */
+    @Column(name = "probation_end_date")
+    private LocalDate probationEndDate;
+
+    /**
+     * Date the employee was confirmed (probation passed).
+     */
+    @Column(name = "confirmation_date")
+    private LocalDate confirmationDate;
+
+    /**
+     * Free-text notes about the termination.
+     */
+    @Column(name = "termination_notes", length = 2000)
+    private String terminationNotes;
+
+    /**
+     * National identity number. Sensitive PII — encryption-at-rest is deferred (TODO: §6).
+     */
+    @Column(name = "national_id")
+    private String nationalId;
+
+    /**
+     * Passport number. Sensitive PII — encryption-at-rest is deferred (TODO: §6).
+     */
+    @Column(name = "passport_number")
+    private String passportNumber;
+
+    /**
+     * Tax identification number. Sensitive PII — encryption-at-rest is deferred (TODO: §6).
+     */
+    @Column(name = "tax_number")
+    private String taxNumber;
+
+    /**
+     * Social security number (country-dependent). Sensitive PII — encryption-at-rest is deferred (TODO: §6).
+     */
+    @Column(name = "social_security_number")
+    private String socialSecurityNumber;
+
+    /**
+     * Marital status (tenant-configurable reference data).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "marital_status_id")
+    private MaritalStatus maritalStatus;
+
+    /**
+     * Employment type (tenant-configurable reference data).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employment_type_id")
+    private EmploymentType employmentType;
+
+    /**
+     * Job grade / pay band (tenant-configurable reference data).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "grade_id")
+    private JobGrade grade;
+
+    /**
+     * Job level / seniority (tenant-configurable reference data).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "level_id")
+    private JobLevel level;
+
+    /**
+     * Employment category (tenant-configurable reference data).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private EmployeeCategory category;
+
+    /**
+     * Reason for termination (tenant-configurable reference data).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "termination_reason_id")
+    private TerminationReason terminationReason;
 
     /**
      * Department the employee belongs to.
@@ -211,6 +349,279 @@ public class Employee extends User {
 
     public void setCountry(Country country) {
         this.country = country;
+    }
+
+    public String getEmployeeNumber() {
+        return employeeNumber;
+    }
+
+    public Employee employeeNumber(String employeeNumber) {
+        this.employeeNumber = employeeNumber;
+        return this;
+    }
+
+    public void setEmployeeNumber(String employeeNumber) {
+        this.employeeNumber = employeeNumber;
+    }
+
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
+
+    public Employee birthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+        return this;
+    }
+
+    public void setBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    public Gender getGender() {
+        return gender;
+    }
+
+    public Employee gender(Gender gender) {
+        this.gender = gender;
+        return this;
+    }
+
+    public void setGender(Gender gender) {
+        this.gender = gender;
+    }
+
+    public Country getNationality() {
+        return nationality;
+    }
+
+    public Employee nationality(Country nationality) {
+        this.nationality = nationality;
+        return this;
+    }
+
+    public void setNationality(Country nationality) {
+        this.nationality = nationality;
+    }
+
+    public String getPlaceOfBirth() {
+        return placeOfBirth;
+    }
+
+    public Employee placeOfBirth(String placeOfBirth) {
+        this.placeOfBirth = placeOfBirth;
+        return this;
+    }
+
+    public void setPlaceOfBirth(String placeOfBirth) {
+        this.placeOfBirth = placeOfBirth;
+    }
+
+    public String getWorkPhone() {
+        return workPhone;
+    }
+
+    public Employee workPhone(String workPhone) {
+        this.workPhone = workPhone;
+        return this;
+    }
+
+    public void setWorkPhone(String workPhone) {
+        this.workPhone = workPhone;
+    }
+
+    public WorkLocationType getWorkLocation() {
+        return workLocation;
+    }
+
+    public Employee workLocation(WorkLocationType workLocation) {
+        this.workLocation = workLocation;
+        return this;
+    }
+
+    public void setWorkLocation(WorkLocationType workLocation) {
+        this.workLocation = workLocation;
+    }
+
+    public BigDecimal getFte() {
+        return fte;
+    }
+
+    public Employee fte(BigDecimal fte) {
+        this.fte = fte;
+        return this;
+    }
+
+    public void setFte(BigDecimal fte) {
+        this.fte = fte;
+    }
+
+    public LocalDate getProbationEndDate() {
+        return probationEndDate;
+    }
+
+    public Employee probationEndDate(LocalDate probationEndDate) {
+        this.probationEndDate = probationEndDate;
+        return this;
+    }
+
+    public void setProbationEndDate(LocalDate probationEndDate) {
+        this.probationEndDate = probationEndDate;
+    }
+
+    public LocalDate getConfirmationDate() {
+        return confirmationDate;
+    }
+
+    public Employee confirmationDate(LocalDate confirmationDate) {
+        this.confirmationDate = confirmationDate;
+        return this;
+    }
+
+    public void setConfirmationDate(LocalDate confirmationDate) {
+        this.confirmationDate = confirmationDate;
+    }
+
+    public String getTerminationNotes() {
+        return terminationNotes;
+    }
+
+    public Employee terminationNotes(String terminationNotes) {
+        this.terminationNotes = terminationNotes;
+        return this;
+    }
+
+    public void setTerminationNotes(String terminationNotes) {
+        this.terminationNotes = terminationNotes;
+    }
+
+    public String getNationalId() {
+        return nationalId;
+    }
+
+    public Employee nationalId(String nationalId) {
+        this.nationalId = nationalId;
+        return this;
+    }
+
+    public void setNationalId(String nationalId) {
+        this.nationalId = nationalId;
+    }
+
+    public String getPassportNumber() {
+        return passportNumber;
+    }
+
+    public Employee passportNumber(String passportNumber) {
+        this.passportNumber = passportNumber;
+        return this;
+    }
+
+    public void setPassportNumber(String passportNumber) {
+        this.passportNumber = passportNumber;
+    }
+
+    public String getTaxNumber() {
+        return taxNumber;
+    }
+
+    public Employee taxNumber(String taxNumber) {
+        this.taxNumber = taxNumber;
+        return this;
+    }
+
+    public void setTaxNumber(String taxNumber) {
+        this.taxNumber = taxNumber;
+    }
+
+    public String getSocialSecurityNumber() {
+        return socialSecurityNumber;
+    }
+
+    public Employee socialSecurityNumber(String socialSecurityNumber) {
+        this.socialSecurityNumber = socialSecurityNumber;
+        return this;
+    }
+
+    public void setSocialSecurityNumber(String socialSecurityNumber) {
+        this.socialSecurityNumber = socialSecurityNumber;
+    }
+
+    public MaritalStatus getMaritalStatus() {
+        return maritalStatus;
+    }
+
+    public Employee maritalStatus(MaritalStatus maritalStatus) {
+        this.maritalStatus = maritalStatus;
+        return this;
+    }
+
+    public void setMaritalStatus(MaritalStatus maritalStatus) {
+        this.maritalStatus = maritalStatus;
+    }
+
+    public EmploymentType getEmploymentType() {
+        return employmentType;
+    }
+
+    public Employee employmentType(EmploymentType employmentType) {
+        this.employmentType = employmentType;
+        return this;
+    }
+
+    public void setEmploymentType(EmploymentType employmentType) {
+        this.employmentType = employmentType;
+    }
+
+    public JobGrade getGrade() {
+        return grade;
+    }
+
+    public Employee grade(JobGrade grade) {
+        this.grade = grade;
+        return this;
+    }
+
+    public void setGrade(JobGrade grade) {
+        this.grade = grade;
+    }
+
+    public JobLevel getLevel() {
+        return level;
+    }
+
+    public Employee level(JobLevel level) {
+        this.level = level;
+        return this;
+    }
+
+    public void setLevel(JobLevel level) {
+        this.level = level;
+    }
+
+    public EmployeeCategory getCategory() {
+        return category;
+    }
+
+    public Employee category(EmployeeCategory category) {
+        this.category = category;
+        return this;
+    }
+
+    public void setCategory(EmployeeCategory category) {
+        this.category = category;
+    }
+
+    public TerminationReason getTerminationReason() {
+        return terminationReason;
+    }
+
+    public Employee terminationReason(TerminationReason terminationReason) {
+        this.terminationReason = terminationReason;
+        return this;
+    }
+
+    public void setTerminationReason(TerminationReason terminationReason) {
+        this.terminationReason = terminationReason;
     }
 
     public Department getDepartment() {
@@ -470,6 +881,9 @@ public class Employee extends User {
             "Employee{" +
             "id=" +
             getId() +
+            ", employeeNumber='" +
+            employeeNumber +
+            '\'' +
             ", jobTitle='" +
             jobTitle +
             '\'' +

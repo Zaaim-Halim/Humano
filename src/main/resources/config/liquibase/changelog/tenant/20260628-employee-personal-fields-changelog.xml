@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Phase 1 of the Employee model additions (see docs/employee-model-additions.md):
+         self-contained personal/employment fields on the employee table. All columns are
+         nullable so existing rows, the demo seeder and one-step provisioning keep working.
+         Reference-entity fields (employment_type, grade, level, category, marital_status,
+         termination_reason) and the sensitive government-id fields are intentionally NOT here. -->
+    <changeSet id="tenant-employee-personal-001" author="halimzaaim">
+        <addColumn tableName="employee">
+            <column name="employee_number" type="VARCHAR(255)"/>
+            <column name="birth_date" type="DATE"/>
+            <column name="gender" type="VARCHAR(30)"/>
+            <column name="nationality_id" type="${uuidType}"/>
+            <column name="place_of_birth" type="VARCHAR(255)"/>
+            <column name="work_phone" type="VARCHAR(255)"/>
+            <column name="work_location" type="VARCHAR(30)"/>
+            <column name="fte" type="decimal(5,2)"/>
+            <column name="probation_end_date" type="DATE"/>
+            <column name="confirmation_date" type="DATE"/>
+            <column name="termination_notes" type="VARCHAR(2000)"/>
+        </addColumn>
+        <addUniqueConstraint tableName="employee" columnNames="employee_number"
+                             constraintName="UX_EMPLOYEE_EMPLOYEE_NUMBER"/>
+        <addForeignKeyConstraint baseColumnNames="nationality_id" baseTableName="employee"
+                                 constraintName="FK_EMPLOYEE_ON_NATIONALITY" referencedColumnNames="id"
+                                 referencedTableName="country"/>
+    </changeSet>
+
+    <!-- Government identification numbers. Sensitive PII: stored as plain columns for now;
+         encryption-at-rest / field-level access control is deferred (see docs §6). -->
+    <changeSet id="tenant-employee-personal-002" author="halimzaaim">
+        <addColumn tableName="employee">
+            <column name="national_id" type="VARCHAR(255)"/>
+            <column name="passport_number" type="VARCHAR(255)"/>
+            <column name="tax_number" type="VARCHAR(255)"/>
+            <column name="social_security_number" type="VARCHAR(255)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

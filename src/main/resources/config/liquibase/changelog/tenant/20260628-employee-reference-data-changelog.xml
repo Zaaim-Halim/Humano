@@ -1,0 +1,480 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Phase 2 of the Employee model additions (see docs/employee-model-additions.md):
+         tenant-configurable reference tables (code + name + active) with seeded defaults, plus
+         the matching nullable FK columns on employee. See AbstractReferenceData and the
+         EmploymentType/JobGrade/JobLevel/EmployeeCategory/MaritalStatus/TerminationReason
+         entities. Adding new default values later does NOT back-fill existing tenants —
+         author a follow-up changeset for that. -->
+
+    <property name="binPrefix" value="UNHEX('" dbms="mysql,mariadb"/>
+    <property name="binSuffix" value="')" dbms="mysql,mariadb"/>
+    <property name="binPrefix" value="X'" dbms="h2"/>
+    <property name="binSuffix" value="'" dbms="h2"/>
+    <property name="binPrefix" value="decode('" dbms="postgresql"/>
+    <property name="binSuffix" value="','hex')" dbms="postgresql"/>
+    <property name="binPrefix" value="0x" dbms="mssql"/>
+    <property name="binSuffix" value="" dbms="mssql"/>
+    <property name="binPrefix" value="HEXTORAW('" dbms="oracle"/>
+    <property name="binSuffix" value="')" dbms="oracle"/>
+
+    <changeSet id="tenant-refdata-employment_type" author="halimzaaim">
+        <createTable tableName="employment_type">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employment_type"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uc_employment_type_code"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="${booleanType}" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="VARCHAR(2000)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <insert tableName="employment_type">
+            <column name="id" valueComputed="${binPrefix}1fc9d9b2d452476dbfb70c71e002a1d2${binSuffix}"/>
+            <column name="code" value="FULL_TIME"/>
+            <column name="name" value="Full time"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="employment_type">
+            <column name="id" valueComputed="${binPrefix}44b41c6e9e654790a97b33271f4a9b9b${binSuffix}"/>
+            <column name="code" value="PART_TIME"/>
+            <column name="name" value="Part time"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="employment_type">
+            <column name="id" valueComputed="${binPrefix}57812c727bad446ea8d5d78af79cd0b6${binSuffix}"/>
+            <column name="code" value="CONTRACTOR"/>
+            <column name="name" value="Contractor"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="employment_type">
+            <column name="id" valueComputed="${binPrefix}7336a3cf5f554e1fb4850d10c5a514a0${binSuffix}"/>
+            <column name="code" value="TEMPORARY"/>
+            <column name="name" value="Temporary"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="employment_type">
+            <column name="id" valueComputed="${binPrefix}e61f06d1be1e47b9a1f5ab0ace24088f${binSuffix}"/>
+            <column name="code" value="INTERN"/>
+            <column name="name" value="Intern"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="employment_type">
+            <column name="id" valueComputed="${binPrefix}3723ccc627424bae8da5e12f8cb3be59${binSuffix}"/>
+            <column name="code" value="FREELANCER"/>
+            <column name="name" value="Freelancer"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="employment_type">
+            <column name="id" valueComputed="${binPrefix}d7d8d5ee4e754fd5b8c6ecd693c227e4${binSuffix}"/>
+            <column name="code" value="CONSULTANT"/>
+            <column name="name" value="Consultant"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="tenant-refdata-job_grade" author="halimzaaim">
+        <createTable tableName="job_grade">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_job_grade"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uc_job_grade_code"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="${booleanType}" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="VARCHAR(2000)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <insert tableName="job_grade">
+            <column name="id" valueComputed="${binPrefix}cf5b3d840d4440f6a03c4105455bcae9${binSuffix}"/>
+            <column name="code" value="G1"/>
+            <column name="name" value="G1"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="job_grade">
+            <column name="id" valueComputed="${binPrefix}297fa5f4603840f19a8d458f61661d85${binSuffix}"/>
+            <column name="code" value="G2"/>
+            <column name="name" value="G2"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="job_grade">
+            <column name="id" valueComputed="${binPrefix}5c55d574ceb941c4bc47f32264eba2c1${binSuffix}"/>
+            <column name="code" value="G3"/>
+            <column name="name" value="G3"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="job_grade">
+            <column name="id" valueComputed="${binPrefix}8eb6ff07071e48998fe63ccb28283218${binSuffix}"/>
+            <column name="code" value="G4"/>
+            <column name="name" value="G4"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="tenant-refdata-job_level" author="halimzaaim">
+        <createTable tableName="job_level">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_job_level"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uc_job_level_code"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="${booleanType}" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="VARCHAR(2000)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <insert tableName="job_level">
+            <column name="id" valueComputed="${binPrefix}2db69146004c43da9aa148fb0c5321ec${binSuffix}"/>
+            <column name="code" value="INTERN"/>
+            <column name="name" value="Intern"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="job_level">
+            <column name="id" valueComputed="${binPrefix}e4ee7eea2c154e6b90a82408c963d14b${binSuffix}"/>
+            <column name="code" value="JUNIOR"/>
+            <column name="name" value="Junior"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="job_level">
+            <column name="id" valueComputed="${binPrefix}f9054c93fedd417d936ff4d9379db5f4${binSuffix}"/>
+            <column name="code" value="MID"/>
+            <column name="name" value="Mid"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="job_level">
+            <column name="id" valueComputed="${binPrefix}c0e2a12f34c143a8890766d25c4cbde4${binSuffix}"/>
+            <column name="code" value="SENIOR"/>
+            <column name="name" value="Senior"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="job_level">
+            <column name="id" valueComputed="${binPrefix}86565c64c2eb4114ae708fa8acb6b793${binSuffix}"/>
+            <column name="code" value="LEAD"/>
+            <column name="name" value="Lead"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="job_level">
+            <column name="id" valueComputed="${binPrefix}6d03c125f2024612b59610bc9f7dc539${binSuffix}"/>
+            <column name="code" value="PRINCIPAL"/>
+            <column name="name" value="Principal"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="job_level">
+            <column name="id" valueComputed="${binPrefix}7514c722aaba435fb030d47298719d6e${binSuffix}"/>
+            <column name="code" value="ARCHITECT"/>
+            <column name="name" value="Architect"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="tenant-refdata-employee_category" author="halimzaaim">
+        <createTable tableName="employee_category">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_category"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uc_employee_category_code"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="${booleanType}" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="VARCHAR(2000)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <insert tableName="employee_category">
+            <column name="id" valueComputed="${binPrefix}02b5ea979cbc43fbb541d84bee7fb0e4${binSuffix}"/>
+            <column name="code" value="STAFF"/>
+            <column name="name" value="Staff"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="employee_category">
+            <column name="id" valueComputed="${binPrefix}6dec5ef30c1f4928818c9cc21e6580de${binSuffix}"/>
+            <column name="code" value="SUPERVISOR"/>
+            <column name="name" value="Supervisor"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="employee_category">
+            <column name="id" valueComputed="${binPrefix}43c952aa79f048948244a3eb4077f6f3${binSuffix}"/>
+            <column name="code" value="MANAGER"/>
+            <column name="name" value="Manager"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="employee_category">
+            <column name="id" valueComputed="${binPrefix}6e69dedcf047492499fc2481106ed90e${binSuffix}"/>
+            <column name="code" value="DIRECTOR"/>
+            <column name="name" value="Director"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="employee_category">
+            <column name="id" valueComputed="${binPrefix}50776d41119b4d7bb34ba69e87369883${binSuffix}"/>
+            <column name="code" value="VICE_PRESIDENT"/>
+            <column name="name" value="Vice president"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="employee_category">
+            <column name="id" valueComputed="${binPrefix}e4081563ecec472990f35851575e4837${binSuffix}"/>
+            <column name="code" value="EXECUTIVE"/>
+            <column name="name" value="Executive"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="tenant-refdata-marital_status" author="halimzaaim">
+        <createTable tableName="marital_status">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_marital_status"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uc_marital_status_code"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="${booleanType}" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="VARCHAR(2000)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <insert tableName="marital_status">
+            <column name="id" valueComputed="${binPrefix}31812854e67745af8abb20cbc75896e0${binSuffix}"/>
+            <column name="code" value="SINGLE"/>
+            <column name="name" value="Single"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="marital_status">
+            <column name="id" valueComputed="${binPrefix}d36a6e2cda3f4247ba27feef1ce041be${binSuffix}"/>
+            <column name="code" value="MARRIED"/>
+            <column name="name" value="Married"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="marital_status">
+            <column name="id" valueComputed="${binPrefix}ef4071f34e42486f931e46601c45d59a${binSuffix}"/>
+            <column name="code" value="DIVORCED"/>
+            <column name="name" value="Divorced"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="marital_status">
+            <column name="id" valueComputed="${binPrefix}a01a27e0d2d144fbb34d395512ffc471${binSuffix}"/>
+            <column name="code" value="WIDOWED"/>
+            <column name="name" value="Widowed"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="tenant-refdata-termination_reason" author="halimzaaim">
+        <createTable tableName="termination_reason">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_termination_reason"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uc_termination_reason_code"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="${booleanType}" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="VARCHAR(2000)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <insert tableName="termination_reason">
+            <column name="id" valueComputed="${binPrefix}d331627d9bc8480f9d3a57341a8198ed${binSuffix}"/>
+            <column name="code" value="VOLUNTARY_RESIGNATION"/>
+            <column name="name" value="Voluntary resignation"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="termination_reason">
+            <column name="id" valueComputed="${binPrefix}0eb00226c804419681bf3078607a4664${binSuffix}"/>
+            <column name="code" value="INVOLUNTARY_TERMINATION"/>
+            <column name="name" value="Involuntary termination"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="termination_reason">
+            <column name="id" valueComputed="${binPrefix}b0780bcd8e3345648d0faefb486309ec${binSuffix}"/>
+            <column name="code" value="END_OF_CONTRACT"/>
+            <column name="name" value="End of contract"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="termination_reason">
+            <column name="id" valueComputed="${binPrefix}185124f698cd445b8107b6fa2379807c${binSuffix}"/>
+            <column name="code" value="RETIREMENT"/>
+            <column name="name" value="Retirement"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="termination_reason">
+            <column name="id" valueComputed="${binPrefix}4385738e9ec14434aa4f4779ede0a6f5${binSuffix}"/>
+            <column name="code" value="REDUNDANCY"/>
+            <column name="name" value="Redundancy"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="termination_reason">
+            <column name="id" valueComputed="${binPrefix}e420d9453aa04054a1bfa503a0f778a1${binSuffix}"/>
+            <column name="code" value="MUTUAL_AGREEMENT"/>
+            <column name="name" value="Mutual agreement"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+        <insert tableName="termination_reason">
+            <column name="id" valueComputed="${binPrefix}c9941037291e40edab01f81a496b5556${binSuffix}"/>
+            <column name="code" value="OTHER"/>
+            <column name="name" value="Other"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+            <column name="created_date" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="tenant-employee-refdata-fks" author="halimzaaim">
+        <addColumn tableName="employee">
+            <column name="employment_type_id" type="${uuidType}"/>
+            <column name="grade_id" type="${uuidType}"/>
+            <column name="level_id" type="${uuidType}"/>
+            <column name="category_id" type="${uuidType}"/>
+            <column name="marital_status_id" type="${uuidType}"/>
+            <column name="termination_reason_id" type="${uuidType}"/>
+        </addColumn>
+        <addForeignKeyConstraint baseColumnNames="employment_type_id" baseTableName="employee"
+                                 constraintName="FK_EMPLOYEE_ON_EMPLOYMENT_TYPE" referencedColumnNames="id"
+                                 referencedTableName="employment_type"/>
+        <addForeignKeyConstraint baseColumnNames="grade_id" baseTableName="employee"
+                                 constraintName="FK_EMPLOYEE_ON_GRADE" referencedColumnNames="id"
+                                 referencedTableName="job_grade"/>
+        <addForeignKeyConstraint baseColumnNames="level_id" baseTableName="employee"
+                                 constraintName="FK_EMPLOYEE_ON_LEVEL" referencedColumnNames="id"
+                                 referencedTableName="job_level"/>
+        <addForeignKeyConstraint baseColumnNames="category_id" baseTableName="employee"
+                                 constraintName="FK_EMPLOYEE_ON_CATEGORY" referencedColumnNames="id"
+                                 referencedTableName="employee_category"/>
+        <addForeignKeyConstraint baseColumnNames="marital_status_id" baseTableName="employee"
+                                 constraintName="FK_EMPLOYEE_ON_MARITAL_STATUS" referencedColumnNames="id"
+                                 referencedTableName="marital_status"/>
+        <addForeignKeyConstraint baseColumnNames="termination_reason_id" baseTableName="employee"
+                                 constraintName="FK_EMPLOYEE_ON_TERMINATION_REASON" referencedColumnNames="id"
+                                 referencedTableName="termination_reason"/>
+    </changeSet>
+
+</databaseChangeLog>

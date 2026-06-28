@@ -1,0 +1,361 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Phase 3 of the Employee model additions (see docs/employee-model-additions.md):
+         supporting entities owned by an employee (one employee -> many rows, except the
+         medical profile and signature which are one-per-employee). All share the
+         AbstractEmployeeOwnedEntity shape: id + employee_id FK + audit columns. document_file_id /
+         signature_file_id are soft references to stored_file.id (no hard FK), matching the
+         existing file-storage pattern. -->
+
+    <changeSet id="tenant-address" author="halimzaaim">
+        <createTable tableName="address">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_address"/>
+            </column>
+            <column name="type" type="VARCHAR(255)"/>
+            <column name="street" type="VARCHAR(255)"/>
+            <column name="building" type="VARCHAR(255)"/>
+            <column name="apartment" type="VARCHAR(255)"/>
+            <column name="city" type="VARCHAR(255)"/>
+            <column name="state" type="VARCHAR(255)"/>
+            <column name="postal_code" type="VARCHAR(255)"/>
+            <column name="country_id" type="${uuidType}"/>
+            <column name="is_primary" type="${booleanType}" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="address"
+                                 constraintName="FK_ADDRESS_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+        <addForeignKeyConstraint baseColumnNames="country_id" baseTableName="address"
+                                 constraintName="FK_ADDRESS_ON_COUNTRY" referencedColumnNames="id"
+                                 referencedTableName="country"/>
+    </changeSet>
+
+    <changeSet id="tenant-emergency_contact" author="halimzaaim">
+        <createTable tableName="emergency_contact">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_emergency_contact"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="relationship" type="VARCHAR(255)"/>
+            <column name="phone" type="VARCHAR(255)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="emergency_contact"
+                                 constraintName="FK_EMERGENCY_CONTACT_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-employee_bank_account" author="halimzaaim">
+        <createTable tableName="employee_bank_account">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_bank_account"/>
+            </column>
+            <column name="bank_name" type="VARCHAR(255)"/>
+            <column name="iban" type="VARCHAR(255)"/>
+            <column name="swift" type="VARCHAR(255)"/>
+            <column name="account_holder" type="VARCHAR(255)"/>
+            <column name="currency" type="VARCHAR(3)"/>
+            <column name="is_primary" type="${booleanType}" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_bank_account"
+                                 constraintName="FK_EMPLOYEE_BANK_ACCOUNT_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-employment_contract" author="halimzaaim">
+        <createTable tableName="employment_contract">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employment_contract"/>
+            </column>
+            <column name="contract_number" type="VARCHAR(255)"/>
+            <column name="start_date" type="DATE"/>
+            <column name="end_date" type="DATE"/>
+            <column name="contract_type" type="VARCHAR(255)"/>
+            <column name="position_id" type="${uuidType}"/>
+            <column name="department_id" type="${uuidType}"/>
+            <column name="working_hours" type="decimal(5,2)"/>
+            <column name="signed_date" type="DATE"/>
+            <column name="status" type="VARCHAR(255)"/>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employment_contract"
+                                 constraintName="FK_EMPLOYMENT_CONTRACT_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+        <addForeignKeyConstraint baseColumnNames="position_id" baseTableName="employment_contract"
+                                 constraintName="FK_EMPLOYMENT_CONTRACT_ON_POSITION" referencedColumnNames="id"
+                                 referencedTableName="position"/>
+        <addForeignKeyConstraint baseColumnNames="department_id" baseTableName="employment_contract"
+                                 constraintName="FK_EMPLOYMENT_CONTRACT_ON_DEPARTMENT" referencedColumnNames="id"
+                                 referencedTableName="department"/>
+    </changeSet>
+
+    <changeSet id="tenant-work_permit" author="halimzaaim">
+        <createTable tableName="work_permit">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_work_permit"/>
+            </column>
+            <column name="visa_type" type="VARCHAR(255)"/>
+            <column name="permit_number" type="VARCHAR(255)"/>
+            <column name="issue_date" type="DATE"/>
+            <column name="expiry_date" type="DATE"/>
+            <column name="sponsor" type="VARCHAR(255)"/>
+            <column name="document_file_id" type="${uuidType}"/>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="work_permit"
+                                 constraintName="FK_WORK_PERMIT_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-employee_certification" author="halimzaaim">
+        <createTable tableName="employee_certification">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_certification"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="issuer" type="VARCHAR(255)"/>
+            <column name="issue_date" type="DATE"/>
+            <column name="expiry_date" type="DATE"/>
+            <column name="verified" type="${booleanType}" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="document_file_id" type="${uuidType}"/>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_certification"
+                                 constraintName="FK_EMPLOYEE_CERTIFICATION_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-employee_license" author="halimzaaim">
+        <createTable tableName="employee_license">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_license"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="issuer" type="VARCHAR(255)"/>
+            <column name="issue_date" type="DATE"/>
+            <column name="expiry_date" type="DATE"/>
+            <column name="verified" type="${booleanType}" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="document_file_id" type="${uuidType}"/>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_license"
+                                 constraintName="FK_EMPLOYEE_LICENSE_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-employee_education" author="halimzaaim">
+        <createTable tableName="employee_education">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_education"/>
+            </column>
+            <column name="institution" type="VARCHAR(255)"/>
+            <column name="degree" type="VARCHAR(255)"/>
+            <column name="field_of_study" type="VARCHAR(255)"/>
+            <column name="graduation_date" type="DATE"/>
+            <column name="document_file_id" type="${uuidType}"/>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_education"
+                                 constraintName="FK_EMPLOYEE_EDUCATION_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-employee_experience" author="halimzaaim">
+        <createTable tableName="employee_experience">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_experience"/>
+            </column>
+            <column name="company" type="VARCHAR(255)"/>
+            <column name="position" type="VARCHAR(255)"/>
+            <column name="start_date" type="DATE"/>
+            <column name="end_date" type="DATE"/>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_experience"
+                                 constraintName="FK_EMPLOYEE_EXPERIENCE_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-employee_language" author="halimzaaim">
+        <createTable tableName="employee_language">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_language"/>
+            </column>
+            <column name="language" type="VARCHAR(255)"/>
+            <column name="reading" type="VARCHAR(255)"/>
+            <column name="writing" type="VARCHAR(255)"/>
+            <column name="speaking" type="VARCHAR(255)"/>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_language"
+                                 constraintName="FK_EMPLOYEE_LANGUAGE_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-employee_asset" author="halimzaaim">
+        <createTable tableName="employee_asset">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_asset"/>
+            </column>
+            <column name="type" type="VARCHAR(255)"/>
+            <column name="identifier" type="VARCHAR(255)"/>
+            <column name="assigned_date" type="DATE"/>
+            <column name="returned_date" type="DATE"/>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_asset"
+                                 constraintName="FK_EMPLOYEE_ASSET_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-employee_medical_profile" author="halimzaaim">
+        <createTable tableName="employee_medical_profile">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_medical_profile"/>
+            </column>
+            <column name="blood_type" type="VARCHAR(255)"/>
+            <column name="allergies" type="VARCHAR(2000)"/>
+            <column name="emergency_notes" type="VARCHAR(2000)"/>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uc_employee_medical_profile_employee"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_medical_profile"
+                                 constraintName="FK_EMPLOYEE_MEDICAL_PROFILE_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+    <changeSet id="tenant-employee_signature" author="halimzaaim">
+        <createTable tableName="employee_signature">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_signature"/>
+            </column>
+            <column name="signature_file_id" type="${uuidType}"/>
+            <column name="certificate" type="VARCHAR(4000)"/>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uc_employee_signature_employee"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="employee_id" baseTableName="employee_signature"
+                                 constraintName="FK_EMPLOYEE_SIGNATURE_ON_EMPLOYEE" referencedColumnNames="id"
+                                 referencedTableName="employee"/>
+    </changeSet>
+
+</databaseChangeLog>

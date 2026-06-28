@@ -1,0 +1,117 @@
+package com.humano.domain.hr;
+
+import com.humano.domain.shared.AbstractEmployeeOwnedEntity;
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.util.UUID;
+
+/**
+ * License held by an employee (e.g. driving license, professional license). {@link #documentFileId}
+ * is a soft reference to a {@code stored_file} row holding the scanned license.
+ */
+@Entity
+@Table(name = "employee_license")
+public class EmployeeLicense extends AbstractEmployeeOwnedEntity {
+
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "issuer")
+    private String issuer;
+
+    @Column(name = "issue_date")
+    private LocalDate issueDate;
+
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
+
+    @Column(name = "verified", nullable = false)
+    private Boolean verified = false;
+
+    /** Soft reference to the backing {@code stored_file.id}. */
+    @Column(name = "document_file_id")
+    private UUID documentFileId;
+
+    public String getName() {
+        return name;
+    }
+
+    public EmployeeLicense name(String name) {
+        this.name = name;
+        return this;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getIssuer() {
+        return issuer;
+    }
+
+    public EmployeeLicense issuer(String issuer) {
+        this.issuer = issuer;
+        return this;
+    }
+
+    public void setIssuer(String issuer) {
+        this.issuer = issuer;
+    }
+
+    public LocalDate getIssueDate() {
+        return issueDate;
+    }
+
+    public EmployeeLicense issueDate(LocalDate issueDate) {
+        this.issueDate = issueDate;
+        return this;
+    }
+
+    public void setIssueDate(LocalDate issueDate) {
+        this.issueDate = issueDate;
+    }
+
+    public LocalDate getExpiryDate() {
+        return expiryDate;
+    }
+
+    public EmployeeLicense expiryDate(LocalDate expiryDate) {
+        this.expiryDate = expiryDate;
+        return this;
+    }
+
+    public void setExpiryDate(LocalDate expiryDate) {
+        this.expiryDate = expiryDate;
+    }
+
+    public Boolean getVerified() {
+        return verified;
+    }
+
+    public EmployeeLicense verified(Boolean verified) {
+        this.verified = verified;
+        return this;
+    }
+
+    public void setVerified(Boolean verified) {
+        this.verified = verified;
+    }
+
+    public UUID getDocumentFileId() {
+        return documentFileId;
+    }
+
+    public EmployeeLicense documentFileId(UUID documentFileId) {
+        this.documentFileId = documentFileId;
+        return this;
+    }
+
+    public void setDocumentFileId(UUID documentFileId) {
+        this.documentFileId = documentFileId;
+    }
+
+    @Override
+    public String toString() {
+        return "EmployeeLicense{id=" + getId() + ", name='" + name + "', verified=" + verified + '}';
+    }
+}
