@@ -1,0 +1,21 @@
+{
+  "humano": {
+    "portal": {
+      "greeting": "Hi, {{ name }} 👋",
+      "subtitle": "Here's your space at a glance",
+      "latestPayslip": "Latest payslip",
+      "payslipUnavailableTitle": "No payslip to show",
+      "payslipUnavailableBody": "Viewing your own payslips isn't available yet.",
+      "leaveBalance": "Leave balance",
+      "leaveBalanceUnavailableTitle": "Balance unavailable",
+      "leaveBalanceUnavailableBody": "Your leave balance isn't available yet.",
+      "tasks": "Your tasks",
+      "tasksUnavailableTitle": "Nothing to do",
+      "tasksUnavailableBody": "Onboarding tasks aren't available yet.",
+      "actionLeave": "Request leave",
+      "actionTimesheet": "Log timesheet",
+      "actionAccount": "My account",
+      "actionDocuments": "My documents"
+    }
+  }
+}

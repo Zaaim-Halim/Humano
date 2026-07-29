@@ -1,0 +1,16 @@
+{
+  "humano": {
+    "peopleTree": {
+      "title": "People tree",
+      "subtitle": "Browse the reporting hierarchy by manager",
+      "statTotal": "People",
+      "statLevels": "Levels",
+      "reportsTo": "Reports to",
+      "subordinatesHidden": "{{ count }} hidden",
+      "noRootTitle": "Pick someone to start",
+      "noRootBody": "Open an employee from the directory to explore their reporting line.",
+      "goToDirectory": "Go to directory",
+      "errorTitle": "Couldn't load the people tree"
+    }
+  }
+}

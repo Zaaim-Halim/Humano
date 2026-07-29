@@ -1,0 +1,11 @@
+{
+  "humano": {
+    "myDocuments": {
+      "title": "My documents",
+      "subtitle": "Files HR has shared on your profile",
+      "noProfileTitle": "Documents not available yet",
+      "noProfileBody": "Your account isn't linked to an employee profile yet, so your documents can't be shown here.",
+      "empty": "No documents on your profile yet"
+    }
+  }
+}

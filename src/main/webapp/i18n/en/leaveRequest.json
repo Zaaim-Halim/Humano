@@ -1,0 +1,24 @@
+{
+  "humano": {
+    "leaveRequest": {
+      "title": "Request leave",
+      "subtitle": "Tell us the dates and reason for your time off",
+      "details": "Details",
+      "leaveType": "Leave type",
+      "selectType": "Select a leave type…",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "dateOrderError": "End date can't be before the start date.",
+      "reason": "Reason",
+      "reasonHint": "20–1000 characters",
+      "reasonError": "Please give a reason (20–1000 characters).",
+      "balanceImpact": "Balance impact",
+      "requestedDays": "Working days requested",
+      "balanceTodo": "Your remaining balance isn't available yet.",
+      "noProfileTitle": "Submission not available yet",
+      "noProfileBody": "Your account isn't linked to an employee profile yet, so leave requests can't be submitted from here.",
+      "submit": "Submit request",
+      "submitted": "Leave request submitted"
+    }
+  }
+}

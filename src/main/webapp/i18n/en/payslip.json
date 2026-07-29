@@ -1,0 +1,30 @@
+{
+  "humano": {
+    "payslip": {
+      "title": "Payslip",
+      "notFound": "Payslip not found",
+      "employee": "Employee",
+      "employeeCode": "Employee code",
+      "department": "Department",
+      "position": "Position",
+      "period": "Pay period",
+      "paymentDate": "Payment date",
+      "payslipNo": "Payslip no.",
+      "earnings": "Earnings",
+      "deductions": "Deductions",
+      "employerContributions": "Employer contributions",
+      "component": "Component",
+      "quantity": "Qty",
+      "rate": "Rate",
+      "amount": "Amount",
+      "grossPay": "Gross pay",
+      "totalDeductions": "Total deductions",
+      "netPay": "Net pay",
+      "employerCost": "Total employer cost",
+      "ytd": "Year to date",
+      "print": "Print",
+      "downloadPdf": "Download PDF",
+      "noLines": "No line items"
+    }
+  }
+}

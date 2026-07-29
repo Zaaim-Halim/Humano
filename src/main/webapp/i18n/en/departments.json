@@ -1,0 +1,20 @@
+{
+  "humano": {
+    "departments": {
+      "title": "Departments",
+      "subtitle": "Functional groupings and their heads",
+      "create": "New department",
+      "editTitle": "Edit department",
+      "colName": "Name",
+      "colDescription": "Description",
+      "colHead": "Head",
+      "colPeople": "People",
+      "emptyTitle": "No departments",
+      "emptyBody": "Create the first department to organize your people.",
+      "created": "Department created",
+      "updated": "Department updated",
+      "deleted": "Department deleted",
+      "deleteQuestion": "Delete {{ name }}? Departments with members can't be removed."
+    }
+  }
+}

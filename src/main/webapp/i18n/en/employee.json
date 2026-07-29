@@ -1,0 +1,17 @@
+{
+  "humano": {
+    "employee": {
+      "drawerTitle": "Employee preview",
+      "jobTitle": "Job title",
+      "department": "Department",
+      "position": "Position",
+      "unit": "Org unit",
+      "manager": "Manager",
+      "country": "Country",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "status": "Status",
+      "openProfile": "Open full profile"
+    }
+  }
+}

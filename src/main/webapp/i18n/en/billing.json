@@ -1,0 +1,29 @@
+{
+  "humano": {
+    "billing": {
+      "title": "Billing",
+      "subtitle": "Subscription, usage and invoices",
+      "currentPlan": "Current plan",
+      "noPlan": "No plan",
+      "noSubscription": "No active subscription",
+      "status": "Status",
+      "seatsUsed": "Seats used",
+      "seatsTodo": "Seat usage is not yet available.",
+      "nextInvoice": "Next invoice",
+      "paymentMethod": "Payment method",
+      "noPaymentMethod": "No payment method on file",
+      "paymentMethodTodo": "Managing payment methods is not yet available.",
+      "invoices": "Invoices",
+      "all": "All",
+      "colInvoice": "Invoice",
+      "colDate": "Date",
+      "colStatus": "Status",
+      "colAmount": "Amount",
+      "pdf": "PDF",
+      "emptyTitle": "No invoices",
+      "emptyDescription": "Invoices will appear here once billing activity begins.",
+      "noMatchTitle": "No matching invoices",
+      "noMatchDescription": "No invoices match the current filter."
+    }
+  }
+}

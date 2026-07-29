@@ -1,0 +1,42 @@
+{
+  "humano": {
+    "payrollRun": {
+      "title": "Payroll run",
+      "notFound": "Payroll run not found",
+      "stepDraft": "Draft",
+      "stepCalculated": "Calculated",
+      "stepApproved": "Approved",
+      "stepPosted": "Posted",
+      "statusNote": "Lifecycle reflects actions taken this session (no run-state endpoint).",
+      "employees": "Employees",
+      "processed": "Processed",
+      "errors": "Errors",
+      "gross": "Gross",
+      "deductions": "Deductions",
+      "net": "Net",
+      "employerCost": "Employer cost",
+      "variance": "Vs previous period",
+      "grossChange": "Gross change",
+      "netChange": "Net change",
+      "byDepartment": "By department",
+      "topEarners": "Top earners",
+      "colDepartment": "Department",
+      "colEmployees": "Employees",
+      "colEmployee": "Employee",
+      "results": "Per-employee results",
+      "validationTitle": "Validation issues",
+      "calculate": "Calculate",
+      "recalculate": "Recalculate",
+      "approve": "Approve",
+      "post": "Post",
+      "generatePayslips": "Generate payslips",
+      "approveConfirm": "Approve this payroll run? Approved runs can then be posted to finance.",
+      "postConfirm": "Post this payroll run? This commits the run and cannot be undone.",
+      "calculated": "Run calculated",
+      "approved": "Run approved",
+      "posted": "Run posted",
+      "recalculated": "Run recalculated",
+      "payslipsGenerated": "Payslips generated"
+    }
+  }
+}

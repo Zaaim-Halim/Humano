@@ -1,0 +1,22 @@
+{
+  "humano": {
+    "page": {
+      "placeholder": {
+        "subtitle": "This surface is being built.",
+        "title": "Coming soon",
+        "description": "The {{ title }} surface is under construction."
+      }
+    },
+    "action": {
+      "retry": "Retry",
+      "cancel": "Cancel",
+      "save": "Save",
+      "delete": "Delete",
+      "create": "Create",
+      "clearFilters": "Clear filters",
+      "expand": "Expand",
+      "collapse": "Collapse",
+      "clear": "Clear"
+    }
+  }
+}

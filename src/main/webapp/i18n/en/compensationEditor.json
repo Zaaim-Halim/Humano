@@ -1,0 +1,22 @@
+{
+  "humano": {
+    "compensationEditor": {
+      "createTitle": "Set compensation",
+      "adjustTitle": "Adjust salary",
+      "createCta": "Set compensation",
+      "adjustCta": "Adjust salary",
+      "position": "Position",
+      "selectPosition": "Select a position",
+      "currency": "Currency",
+      "selectCurrency": "Select a currency",
+      "baseAmount": "Base amount",
+      "newAmount": "New amount",
+      "basis": "Pay basis",
+      "keepBasis": "Keep current basis",
+      "effectiveFrom": "Effective from",
+      "effectiveTo": "Effective to",
+      "reason": "Reason",
+      "saved": "Compensation saved"
+    }
+  }
+}

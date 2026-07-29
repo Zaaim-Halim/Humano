@@ -1,0 +1,38 @@
+{
+  "humano": {
+    "tenants": {
+      "title": "Tenants",
+      "subtitle": "{{ total }} tenants",
+      "kpiTotal": "Total tenants",
+      "kpiActive": "Active",
+      "filterStatus": "Status",
+      "all": "All",
+      "colName": "Name",
+      "colPlan": "Plan",
+      "colStatus": "Status",
+      "colOrgs": "Organizations",
+      "emptyTitle": "No tenants",
+      "emptyDescription": "No tenants match the current filter.",
+      "drawerTitle": "Tenant details",
+      "region": "Region",
+      "subdomain": "Subdomain",
+      "plan": "Plan",
+      "orgs": "Organizations",
+      "poolStats": "Connection pool",
+      "suspend": "Suspend",
+      "activate": "Activate",
+      "deprovision": "Deprovision",
+      "deprovisionConfirm": "Deprovision tenant {{ name }}? This permanently removes their database and cannot be undone.",
+      "suspended": "Tenant suspended",
+      "activated": "Tenant activated",
+      "deprovisioned": "Tenant deprovisioned",
+      "billing": "Billing",
+      "billingEmpty": "No subscription or invoices for this tenant.",
+      "renews": "Renews",
+      "ends": "Ends",
+      "invoice": "Invoice",
+      "payments": "Payments",
+      "amount": "Amount"
+    }
+  }
+}

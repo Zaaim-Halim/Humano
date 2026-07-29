@@ -1,0 +1,17 @@
+{
+  "humano": {
+    "organizationTree": {
+      "title": "Organization tree",
+      "subtitle": "Browse units, sub-units and their leadership",
+      "statUnits": "Units",
+      "statLevels": "Levels",
+      "statRoots": "Top-level",
+      "manager": "Manager",
+      "headcount": "{{ count }} people",
+      "subUnitsHidden": "{{ count }} hidden",
+      "errorTitle": "Couldn't load the organization tree",
+      "emptyTitle": "No organizational units",
+      "emptyBody": "No organizational units are available yet."
+    }
+  }
+}
