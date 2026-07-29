@@ -1655,9 +1655,20 @@
   /* let wide content (tables, code) scroll WITHIN main instead of stretching the whole layout */
   min-width: 0;
 }
+/* Unified page widths — two tiers, left-anchored so the content's left edge
+   stays fixed on every page (no horizontal shift when navigating between a
+   wide page and a form; only the right edge moves). Default (95%) =
+   standard/data pages incl. the dashboard; `--narrow` (85%) = focused forms &
+   settings. The max-width caps only engage on very wide screens so content
+   doesn't sprawl on ultrawide monitors. */
 .hum-page {
+  width: 95%;
+  max-width: 108rem; /* ~1728 — cap for ultrawide only */
   padding: var(--space-6) var(--space-8) var(--space-12);
-  max-width: var(--container-max);
+}
+.hum-page--narrow {
+  width: 85%;
+  max-width: 80rem; /* ~1280 — keeps forms from getting too wide */
 }
 
 /* sidebar */
@@ -1874,8 +1885,10 @@
   }
 }
 
-@media (max-width: 560px) {
-  .hum-page {
+@media (max-width: 640px) {
+  .hum-page,
+  .hum-page--narrow {
+    width: 100%;
     padding: var(--space-4) var(--space-4) var(--space-10);
   }
 }
