@@ -561,6 +561,9 @@
 .hum-card__body {
   padding: var(--space-5);
 }
+.hum-card__body--flush {
+  padding: 0;
+}
 .hum-card__footer {
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--border-subtle);

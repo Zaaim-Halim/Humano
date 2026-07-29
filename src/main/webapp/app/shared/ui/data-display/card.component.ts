@@ -25,11 +25,7 @@ import { ChangeDetectionStrategy, Component, booleanAttribute, input } from '@an
         <div style="display:flex;gap:var(--space-2)"><ng-content select="[hum-card-actions]" /></div>
       </div>
     }
-    @if (padded()) {
-      <div class="hum-card__body"><ng-content /></div>
-    } @else {
-      <ng-content />
-    }
+    <div class="hum-card__body" [class.hum-card__body--flush]="!padded()"><ng-content /></div>
     @if (hasFooter()) {
       <div class="hum-card__footer"><ng-content select="[hum-card-footer]" /></div>
     }
