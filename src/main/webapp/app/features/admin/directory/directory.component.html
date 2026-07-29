@@ -8,11 +8,9 @@
     [subtitle]="'humano.directory.count' | translate: { total: list.total() }"
     [hasActions]="canCreateEmployee"
   >
-    @if (canCreateEmployee) {
-      <hum-button hum-page-actions variant="primary" icon="plus" (click)="addEmployee()">{{
-        'humano.directory.addEmployee' | translate
-      }}</hum-button>
-    }
+    <hum-button hum-page-actions variant="primary" icon="plus" (click)="addEmployee()">{{
+      'humano.directory.addEmployee' | translate
+    }}</hum-button>
   </hum-page-header>
 
   <form [formGroup]="filters" style="display: flex; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4)">

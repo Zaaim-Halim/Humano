@@ -4,11 +4,9 @@
     [subtitle]="'humano.orgUnits.subtitle' | translate"
     [hasActions]="canManage"
   >
-    @if (canManage) {
-      <hum-button hum-page-actions variant="primary" icon="plus" (click)="openCreate()">{{
-        'humano.orgUnits.create' | translate
-      }}</hum-button>
-    }
+    <hum-button hum-page-actions variant="primary" icon="plus" (click)="openCreate()">{{
+      'humano.orgUnits.create' | translate
+    }}</hum-button>
   </hum-page-header>
 
   @if (loading()) {
@@ -24,11 +22,9 @@
       [description]="'humano.orgUnits.emptyBody' | translate"
       [hasAction]="canManage"
     >
-      @if (canManage) {
-        <hum-button hum-empty-action variant="primary" icon="plus" (click)="openCreate()">{{
-          'humano.orgUnits.create' | translate
-        }}</hum-button>
-      }
+      <hum-button hum-empty-action variant="primary" icon="plus" (click)="openCreate()">{{
+        'humano.orgUnits.create' | translate
+      }}</hum-button>
     </hum-empty-state>
   } @else {
     <table class="hum-table">

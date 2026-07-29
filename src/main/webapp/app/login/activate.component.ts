@@ -11,6 +11,7 @@ import { AuthPublicService } from './auth-public.service';
 @Component({
   selector: 'hum-activate',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'hum-auth-screen' },
   imports: [RouterLink, TranslatePipe, LucideAngularModule, AlertComponent],
   templateUrl: './activate.component.html',
 })

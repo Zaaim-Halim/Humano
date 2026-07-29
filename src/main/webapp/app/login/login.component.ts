@@ -18,6 +18,7 @@ import { LoginService } from './login.service';
 @Component({
   selector: 'hum-login',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'hum-auth-screen' },
   imports: [
     ReactiveFormsModule,
     RouterLink,

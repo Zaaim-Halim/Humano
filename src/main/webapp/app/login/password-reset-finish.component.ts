@@ -18,6 +18,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'hum-password-reset-finish',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'hum-auth-screen' },
   imports: [
     ReactiveFormsModule,
     RouterLink,

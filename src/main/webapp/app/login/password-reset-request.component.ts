@@ -12,6 +12,7 @@ import { AuthPublicService } from './auth-public.service';
 @Component({
   selector: 'hum-password-reset-request',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'hum-auth-screen' },
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe, LucideAngularModule, ButtonComponent, InputComponent, FormFieldComponent],
   templateUrl: './password-reset-request.component.html',
 })
