@@ -16,7 +16,6 @@ import com.humano.repository.tenant.TenantRepository;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.service.multitenancy.TenantProvisioningService;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -229,8 +228,6 @@ public class DevDataSeeder implements ApplicationRunner {
         user.setPassword(passwordEncoder.encode(PASSWORD));
         user.setActivated(true);
         user.setLangKey("en");
-        user.setCreatedBy("dev-seed");
-        user.setCreatedDate(Instant.now());
         Set<Authority> grants = new LinkedHashSet<>();
         grants.add(authority);
         authorityRepository.findById(AuthoritiesConstants.USER).ifPresent(grants::add);

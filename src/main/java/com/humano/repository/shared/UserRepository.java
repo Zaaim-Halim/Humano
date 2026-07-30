@@ -20,7 +20,7 @@ import org.springframework.stereotype.Repository;
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findOneByActivationKey(String activationKey);
 
-    @Query("SELECT u FROM User u WHERE u.activated = false AND u.activationKey IS NOT NULL AND u.audit.createdDate < :dateTime")
+    @Query("SELECT u FROM User u WHERE u.activated = false AND u.activationKey IS NOT NULL AND u.createdDate < :dateTime")
     List<User> findAllByActivatedIsFalseAndActivationKeyIsNotNullAndCreatedDateBefore(@Param("dateTime") Instant dateTime);
 
     Optional<User> findOneByResetKey(String resetKey);
@@ -44,8 +44,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * admin during onboarding" (P1.5). Returns {@code Optional.empty()} for
      * tenants where no admin row exists (provisioning crashed mid-flow, etc.).
      */
-    @Query(
-        "SELECT u FROM User u JOIN u.authorities a WHERE a.name = :authority " + "AND u.activated = true ORDER BY u.audit.createdDate ASC"
-    )
+    @Query("SELECT u FROM User u JOIN u.authorities a WHERE a.name = :authority " + "AND u.activated = true ORDER BY u.createdDate ASC")
     List<User> findActivatedByAuthority(@Param("authority") String authority);
 }

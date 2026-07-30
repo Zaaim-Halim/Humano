@@ -48,76 +48,172 @@
         </div>
       </hum-card>
 
-      <!-- Formula -->
+      <!-- Formula editor + reference -->
       <hum-card [title]="'humano.payRules.formulaTitle' | translate">
-        <hum-form-field
-          [label]="'humano.payRules.formula' | translate"
-          controlId="pr-formula"
-          required
-          [hint]="'humano.payRules.charsRemaining' | translate: { count: remaining() }"
-          [error]="invalid('formula') ? ('humano.payRules.formulaRequired' | translate) : undefined"
-        >
-          <hum-textarea
-            formControlName="formula"
-            [rows]="4"
-            [invalid]="invalid('formula')"
-            [placeholder]="'humano.payRules.formulaPlaceholder' | translate"
-          />
-        </hum-form-field>
+        <div class="hum-formula-layout">
+          <!-- Editor -->
+          <div class="hum-formula-main">
+            <hum-form-field
+              [label]="'humano.payRules.formula' | translate"
+              controlId="pr-formula"
+              required
+              [hint]="'humano.payRules.charsRemaining' | translate: { count: remaining() }"
+              [error]="invalid('formula') ? ('humano.payRules.formulaRequired' | translate) : undefined"
+            >
+              <textarea
+                #formulaField
+                id="pr-formula"
+                class="hum-textarea hum-formula-input"
+                formControlName="formula"
+                rows="6"
+                spellcheck="false"
+                autocomplete="off"
+                (blur)="rememberSelection()"
+                (keyup)="rememberSelection()"
+                (mouseup)="rememberSelection()"
+                [attr.aria-invalid]="invalid('formula') ? 'true' : null"
+                [placeholder]="'humano.payRules.formulaPlaceholder' | translate"
+              ></textarea>
+            </hum-form-field>
 
-        <div style="display: flex; gap: var(--space-2); align-items: center; margin-top: var(--space-3)">
-          <hum-button variant="outline" size="sm" icon="check-check" [loading]="validating()" (click)="validate()">{{
-            'humano.payRules.validate' | translate
-          }}</hum-button>
+            <p class="hum-formula-syntax">
+              <lucide-icon name="info" [size]="13" aria-hidden="true" />
+              <span [innerHTML]="'humano.payRules.syntaxHelp' | translate"></span>
+            </p>
 
-          @if (validation(); as v) {
-            @if (v.valid) {
-              <hum-badge tone="success" [label]="'humano.payRules.validResult' | translate: { value: v.testResult }" />
-            } @else {
-              <hum-badge tone="danger" [label]="'humano.payRules.invalid' | translate" />
+            <div style="display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap">
+              <hum-button variant="outline" size="sm" icon="check-circle-2" [loading]="validating()" (click)="validate()">{{
+                'humano.payRules.validate' | translate
+              }}</hum-button>
+              <hum-button variant="ghost" size="sm" icon="x" (click)="clearFormula()">{{ 'humano.action.clear' | translate }}</hum-button>
+            </div>
+
+            @if (validation(); as v) {
+              @if (v.valid) {
+                <div class="hum-formula-result hum-formula-result--ok" role="status">
+                  <lucide-icon name="check-circle-2" [size]="16" aria-hidden="true" />
+                  <div>
+                    <div>
+                      <strong>{{ 'humano.payRules.validShort' | translate }}</strong>
+                      <span class="hum-formula-result__value">{{ v.testResult }}</span>
+                      @if (v.resultType) {
+                        <span class="hum-formula-result__type">{{ 'humano.payRules.resultType' | translate: { type: v.resultType } }}</span>
+                      }
+                    </div>
+                    <div class="hum-formula-result__note">{{ 'humano.payRules.testedWith' | translate }}</div>
+                  </div>
+                </div>
+              } @else {
+                <hum-alert tone="danger" [title]="'humano.payRules.invalid' | translate" style="display: block; margin-top: var(--space-3)">
+                  <span style="font-family: var(--font-mono); font-size: var(--text-sm)">{{ v.error }}</span>
+                </hum-alert>
+              }
             }
-          }
-        </div>
-
-        @if (validation(); as v) {
-          @if (!v.valid && v.error) {
-            <hum-alert tone="danger" [title]="v.error" style="display: block; margin-top: var(--space-3)" />
-          }
-        }
-
-        <!-- Palette: functions / variables / constants from the live engine contract -->
-        @if (metadata(); as meta) {
-          <div style="margin-top: var(--space-4); display: grid; gap: var(--space-3)">
-            <div>
-              <p class="hum-label">{{ 'humano.payRules.functions' | translate }}</p>
-              <div style="display: flex; flex-wrap: wrap; gap: var(--space-2)">
-                @for (fn of meta.functions; track fn.name) {
-                  <hum-button variant="ghost" size="sm" [title]="signature(fn)" (click)="insert(fn.name, 'function')">{{
-                    fn.name
-                  }}</hum-button>
-                }
-              </div>
-            </div>
-
-            <div>
-              <p class="hum-label">{{ 'humano.payRules.variables' | translate }}</p>
-              <div style="display: flex; flex-wrap: wrap; gap: var(--space-2)">
-                @for (v of meta.variables; track v) {
-                  <hum-button variant="ghost" size="sm" (click)="insert(v, 'variable')">{{ v }}</hum-button>
-                }
-              </div>
-            </div>
-
-            <div>
-              <p class="hum-label">{{ 'humano.payRules.constants' | translate }}</p>
-              <div style="display: flex; flex-wrap: wrap; gap: var(--space-2)">
-                @for (c of meta.constants; track c) {
-                  <hum-button variant="ghost" size="sm" (click)="insert(c, 'constant')">{{ c }}</hum-button>
-                }
-              </div>
-            </div>
           </div>
-        }
+
+          <!-- Reference -->
+          <aside class="hum-formula-ref" aria-label="Formula reference">
+            <div class="hum-formula-ref__head">
+              <div class="hum-formula-ref__title">
+                <lucide-icon name="file-text" [size]="15" aria-hidden="true" />
+                {{ 'humano.payRules.reference' | translate }}
+              </div>
+              <p class="hum-formula-ref__hint">{{ 'humano.payRules.insertHint' | translate }}</p>
+              <hum-input
+                icon="search"
+                [ngModel]="search()"
+                (ngModelChange)="search.set($event)"
+                [ngModelOptions]="{ standalone: true }"
+                [placeholder]="'humano.payRules.searchRef' | translate"
+              />
+              <hum-tabs [items]="tabs()" [value]="activeTab()" (valueChange)="activeTab.set($any($event))" />
+            </div>
+
+            <div class="hum-formula-list">
+              <!-- Functions -->
+              @if (activeTab() === 'functions') {
+                @for (group of functionGroups(); track group.id) {
+                  <div class="hum-formula-group">
+                    <div class="hum-formula-group__label">
+                      <lucide-icon [name]="group.icon" [size]="12" aria-hidden="true" />
+                      {{ group.label }}
+                    </div>
+                    @for (fn of group.items; track fn.name) {
+                      <button type="button" class="hum-formula-item" (click)="insertFunction(fn.name)">
+                        <span class="hum-formula-item__sig">{{ fn.signature }}</span>
+                        @if (fn.description) {
+                          <span class="hum-formula-item__desc">{{ fn.description }}</span>
+                        }
+                        @if (fn.example) {
+                          <span class="hum-formula-item__ex">{{ fn.example }}</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                } @empty {
+                  <p class="hum-formula-empty">{{ 'humano.payRules.noRefResults' | translate }}</p>
+                }
+              }
+
+              <!-- Variables -->
+              @if (activeTab() === 'variables') {
+                @for (group of variableGroups(); track group.label) {
+                  <div class="hum-formula-group">
+                    <div class="hum-formula-group__label">{{ group.label }}</div>
+                    @for (item of group.items; track item.name) {
+                      <button type="button" class="hum-formula-item" (click)="insertVariable(item.name)">
+                        <span class="hum-formula-item__sig">#{{ item.name }}</span>
+                        @if (item.description) {
+                          <span class="hum-formula-item__desc">{{ item.description }}</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                } @empty {
+                  <p class="hum-formula-empty">{{ 'humano.payRules.noRefResults' | translate }}</p>
+                }
+                @if (dynamicHint()) {
+                  <p class="hum-formula-note">{{ 'humano.payRules.dynamicHint' | translate }}</p>
+                }
+              }
+
+              <!-- Operators -->
+              @if (activeTab() === 'operators') {
+                @for (group of operatorGroups(); track group.label) {
+                  <div class="hum-formula-group">
+                    <div class="hum-formula-group__label">{{ group.label }}</div>
+                    @for (op of group.items; track op.symbol) {
+                      <button type="button" class="hum-formula-item" (click)="insertOperator(op)">
+                        <span class="hum-formula-item__sig">{{ op.symbol }}</span>
+                        <span class="hum-formula-item__desc">{{ op.description }}</span>
+                      </button>
+                    }
+                  </div>
+                } @empty {
+                  <p class="hum-formula-empty">{{ 'humano.payRules.noRefResults' | translate }}</p>
+                }
+              }
+
+              <!-- Examples -->
+              @if (activeTab() === 'examples') {
+                @for (r of filteredRecipes(); track r.title) {
+                  <div class="hum-formula-recipe">
+                    <div class="hum-formula-recipe__head">
+                      <span class="hum-formula-recipe__title">{{ r.title }}</span>
+                      <hum-button type="button" variant="outline" size="sm" icon="plus" (click)="useRecipe(r.formula)">{{
+                        'humano.payRules.useRecipe' | translate
+                      }}</hum-button>
+                    </div>
+                    <p class="hum-formula-recipe__desc">{{ r.description }}</p>
+                    <code class="hum-formula-recipe__code">{{ r.formula }}</code>
+                  </div>
+                } @empty {
+                  <p class="hum-formula-empty">{{ 'humano.payRules.noRefResults' | translate }}</p>
+                }
+              }
+            </div>
+          </aside>
+        </div>
       </hum-card>
 
       <!-- Existing rules on the selected component -->

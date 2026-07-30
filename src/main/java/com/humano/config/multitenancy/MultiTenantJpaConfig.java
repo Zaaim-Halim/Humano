@@ -3,7 +3,9 @@ package com.humano.config.multitenancy;
 import java.util.HashMap;
 import java.util.Map;
 import javax.sql.DataSource;
+import org.hibernate.cfg.AvailableSettings;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateProperties;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateSettings;
 import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties;
@@ -11,6 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.orm.hibernate5.SpringBeanContainer;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
@@ -27,10 +30,16 @@ public class MultiTenantJpaConfig {
 
     private final JpaProperties jpaProperties;
     private final HibernateProperties hibernateProperties;
+    private final ConfigurableListableBeanFactory beanFactory;
 
-    public MultiTenantJpaConfig(JpaProperties jpaProperties, HibernateProperties hibernateProperties) {
+    public MultiTenantJpaConfig(
+        JpaProperties jpaProperties,
+        HibernateProperties hibernateProperties,
+        ConfigurableListableBeanFactory beanFactory
+    ) {
         this.jpaProperties = jpaProperties;
         this.hibernateProperties = hibernateProperties;
+        this.beanFactory = beanFactory;
     }
 
     /**
@@ -120,6 +129,13 @@ public class MultiTenantJpaConfig {
             new HibernateSettings()
         );
         props.putAll(hibernateProps);
+
+        // Register Spring as Hibernate's managed-bean container so JPA entity listeners are
+        // Spring-wired. Without this, Hibernate reflectively instantiates AuditingEntityListener
+        // with no AuditingHandler, so @CreatedBy/@CreatedDate never populate and NOT NULL
+        // created_by/last_modified_by inserts fail. Spring Boot does this for its auto-configured
+        // EMF; these EMFs are built by hand, so it must be wired explicitly (applies to both).
+        props.put(AvailableSettings.BEAN_CONTAINER, new SpringBeanContainer(beanFactory));
 
         return props;
     }

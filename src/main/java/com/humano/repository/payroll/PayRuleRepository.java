@@ -21,6 +21,6 @@ public interface PayRuleRepository extends JpaRepository<PayRule, UUID>, JpaSpec
      * modification anywhere in the rule set advances the version, invalidating the
      * idempotency of any prior run.
      */
-    @Query("SELECT MAX(p.audit.lastModifiedDate) FROM PayRule p")
+    @Query("SELECT MAX(p.lastModifiedDate) FROM PayRule p")
     Optional<Instant> findMaxLastModifiedDate();
 }

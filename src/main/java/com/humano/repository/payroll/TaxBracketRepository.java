@@ -19,6 +19,6 @@ public interface TaxBracketRepository extends JpaRepository<TaxBracket, UUID>, J
      * row, or {@link Optional#empty()} if the table is empty. Used to derive the
      * {@code taxBracketVersion} input to the payroll-run idempotency hash.
      */
-    @Query("SELECT MAX(t.audit.lastModifiedDate) FROM TaxBracket t")
+    @Query("SELECT MAX(t.lastModifiedDate) FROM TaxBracket t")
     Optional<Instant> findMaxLastModifiedDate();
 }

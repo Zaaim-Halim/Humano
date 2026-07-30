@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { LucideAngularModule } from 'lucide-angular';
 
 import { normalizeHttpError } from 'app/core/api';
 import {
@@ -15,47 +16,87 @@ import {
   SelectOption,
   SkeletonRowComponent,
   SwitchComponent,
-  TextareaComponent,
+  TabItem,
+  TabsComponent,
   ToastService,
 } from 'app/shared/ui';
 
 import { PayRuleService } from '../services/pay-rule.service';
+import { CreatePayRuleRequest, FormulaMetadata, FormulaValidationResult, PayComponent, PayRuleSummary } from '../models/pay-rule.model';
 import {
-  CreatePayRuleRequest,
-  FormulaMetadata,
-  FormulaValidationResult,
-  FunctionMeta,
-  PayComponent,
-  PayRuleSummary,
-} from '../models/pay-rule.model';
+  CONSTANT_DOCS,
+  FUNCTION_CATEGORY_ICON,
+  FUNCTION_CATEGORY_LABEL,
+  FUNCTION_CATEGORY_ORDER,
+  FUNCTION_DOCS,
+  FunctionCategory,
+  OPERATOR_GROUP_ORDER,
+  OPERATORS,
+  OperatorItem,
+  RECIPES,
+  Recipe,
+  VARIABLE_DOCS,
+  VARIABLE_GROUP_ORDER,
+} from './formula-catalog';
+
+/** An engine function, enriched with catalog docs for display + insertion. */
+interface FnItem {
+  name: string;
+  signature: string;
+  description: string;
+  example?: string;
+  returns?: string;
+}
+interface FnCategory {
+  id: FunctionCategory;
+  label: string;
+  icon: string;
+  items: FnItem[];
+}
+interface NamedItem {
+  name: string;
+  description: string;
+}
+interface VarGroup {
+  label: string;
+  items: NamedItem[];
+}
+interface OpGroup {
+  label: string;
+  items: OperatorItem[];
+}
+type RefTab = 'functions' | 'variables' | 'operators' | 'examples';
 
 /**
  * Pay-rule formula editor (HR/admin) — the `/payroll/pay-rules` screen.
  *
- * <p>Lets a non-engineer compose a {@code PayRule} SpEL formula with a palette of
- * engine-supported functions/variables (loaded from
- * `GET /api/payroll/pay-rules/formula-metadata`), validate it live
- * (`POST /validate-formula`), and save it onto a pay component
- * (`POST /api/payroll/pay-rules`). The palette is driven by the real engine so it
- * can never offer a function/variable the backend would reject.
+ * <p>Lets a non-engineer compose a {@code PayRule} SpEL formula with a guided,
+ * searchable reference of the engine's functions/variables/constants (loaded
+ * from `GET /api/payroll/pay-rules/formula-metadata` and enriched by
+ * `formula-catalog`), insert tokens at the cursor, validate live against sample
+ * values (`POST /validate-formula`), and save the rule onto a pay component
+ * (`POST /api/payroll/pay-rules`). The reference is driven by the real engine
+ * contract, so it can never offer a function/variable the backend would reject.
  */
 @Component({
   selector: 'hum-pay-rule-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
+    FormsModule,
     TranslatePipe,
+    LucideAngularModule,
     PageHeaderComponent,
     CardComponent,
     FormFieldComponent,
     InputComponent,
-    TextareaComponent,
     SelectComponent,
     ButtonComponent,
     AlertComponent,
     BadgeComponent,
     SkeletonRowComponent,
     SwitchComponent,
+    TabsComponent,
   ],
   templateUrl: './pay-rule-editor.component.html',
 })
@@ -73,6 +114,17 @@ export default class PayRuleEditorComponent {
   protected readonly metadata = signal<FormulaMetadata | null>(null);
   protected readonly validation = signal<FormulaValidationResult | null>(null);
   protected readonly activeRules = signal<PayRuleSummary[]>([]);
+
+  /** Reference panel state. */
+  protected readonly activeTab = signal<RefTab>('functions');
+  protected readonly search = signal('');
+  protected readonly recipes: Recipe[] = RECIPES;
+
+  private readonly formulaField = viewChild<ElementRef<HTMLTextAreaElement>>('formulaField');
+  // Caret remembered from the textarea. Palette buttons blur it before their click
+  // fires, so we snapshot the selection on blur/keyup/mouseup and insert there.
+  private lastSelStart: number | null = null;
+  private lastSelEnd: number | null = null;
 
   private readonly formulaLen = signal(0);
   private readonly components = signal<PayComponent[]>([]);
@@ -96,6 +148,96 @@ export default class PayRuleEditorComponent {
     const max = this.metadata()?.maxFormulaLength ?? 2000;
     return max - this.formulaLen();
   });
+
+  private readonly normalizedSearch = computed(() => this.search().trim().toLowerCase());
+
+  /** Functions grouped by category, enriched with docs, filtered by search. */
+  protected readonly functionGroups = computed<FnCategory[]>(() => {
+    const meta = this.metadata();
+    if (!meta) return [];
+    const q = this.normalizedSearch();
+    const byCategory = new Map<FunctionCategory, FnItem[]>();
+
+    for (const fn of meta.functions) {
+      const doc = FUNCTION_DOCS[fn.name];
+      const params = doc?.params ?? fn.parameterTypes;
+      const item: FnItem = {
+        name: fn.name,
+        signature: `${fn.name}(${params.join(', ')})`,
+        description: doc?.description ?? '',
+        example: doc?.example,
+        returns: doc?.returns,
+      };
+      if (q && !(item.name.toLowerCase().includes(q) || item.description.toLowerCase().includes(q))) continue;
+      const cat = doc?.category ?? 'math';
+      (byCategory.get(cat) ?? byCategory.set(cat, []).get(cat)!).push(item);
+    }
+
+    return FUNCTION_CATEGORY_ORDER.filter(c => byCategory.has(c)).map(c => ({
+      id: c,
+      label: FUNCTION_CATEGORY_LABEL[c],
+      icon: FUNCTION_CATEGORY_ICON[c],
+      items: byCategory.get(c)!,
+    }));
+  });
+
+  /** Variables grouped, enriched, filtered by search. */
+  protected readonly variableGroups = computed<VarGroup[]>(() => {
+    const meta = this.metadata();
+    if (!meta) return [];
+    const q = this.normalizedSearch();
+    const byGroup = new Map<string, NamedItem[]>();
+
+    for (const name of meta.variables) {
+      const doc = VARIABLE_DOCS[name];
+      const item: NamedItem = { name, description: doc?.description ?? '' };
+      if (q && !(name.toLowerCase().includes(q) || item.description.toLowerCase().includes(q))) continue;
+      const group = doc?.group ?? 'other';
+      (byGroup.get(group) ?? byGroup.set(group, []).get(group)!).push(item);
+    }
+
+    const groups: VarGroup[] = VARIABLE_GROUP_ORDER.filter(g => byGroup.has(g.id)).map(g => ({
+      label: g.label,
+      items: byGroup.get(g.id)!,
+    }));
+
+    // Constants are just named `#NAME` references, so they live with variables.
+    const constants = meta.constants
+      .map(name => ({ name, description: CONSTANT_DOCS[name] ?? '' }))
+      .filter(i => !q || i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q));
+    if (constants.length) {
+      groups.push({ label: this.translate.instant('humano.payRules.constants'), items: constants });
+    }
+    return groups;
+  });
+
+  protected readonly operatorGroups = computed<OpGroup[]>(() => {
+    const q = this.normalizedSearch();
+    return OPERATOR_GROUP_ORDER.map(g => ({
+      label: g.label,
+      items: OPERATORS.filter(
+        op => op.group === g.id && (!q || op.symbol.toLowerCase().includes(q) || op.description.toLowerCase().includes(q)),
+      ),
+    })).filter(g => g.items.length > 0);
+  });
+
+  protected readonly filteredRecipes = computed<Recipe[]>(() => {
+    const q = this.normalizedSearch();
+    if (!q) return this.recipes;
+    return this.recipes.filter(
+      r => r.title.toLowerCase().includes(q) || r.description.toLowerCase().includes(q) || r.formula.toLowerCase().includes(q),
+    );
+  });
+
+  /** Pattern hint for component-code variables the engine also accepts. */
+  protected readonly dynamicHint = computed(() => this.metadata()?.dynamicVariablePattern ?? '');
+
+  protected readonly tabs = computed<TabItem[]>(() => [
+    { id: 'functions', label: this.translate.instant('humano.payRules.functions') },
+    { id: 'variables', label: this.translate.instant('humano.payRules.variables') },
+    { id: 'operators', label: this.translate.instant('humano.payRules.operators') },
+    { id: 'examples', label: this.translate.instant('humano.payRules.tabExamples') },
+  ]);
 
   constructor() {
     this.load();
@@ -141,17 +283,77 @@ export default class PayRuleEditorComponent {
     });
   }
 
-  /** Append a palette token to the formula (functions get `()`, variables/constants get `#`). */
-  protected insert(token: string, kind: 'function' | 'variable' | 'constant'): void {
-    const snippet = kind === 'function' ? `${token}()` : `#${token}`;
-    const current = this.form.controls.formula.value;
-    const sep = current.length && !/\s$/.test(current) ? ' ' : '';
-    this.form.controls.formula.setValue(`${current}${sep}${snippet}`);
-    this.form.controls.formula.markAsDirty();
+  /** Insert a function call (`#name()`, cursor between the parens) at the caret. */
+  protected insertFunction(name: string): void {
+    this.insertAtCursor(`#${name}()`, 1);
   }
 
-  protected signature(fn: FunctionMeta): string {
-    return `${fn.name}(${fn.parameterTypes.join(', ')})`;
+  /** Insert a variable/constant reference (`#name`) at the caret. */
+  protected insertVariable(name: string): void {
+    this.insertAtCursor(`#${name}`, 0);
+  }
+
+  /** Insert an operator at the caret (raw text, no `#` prefix). */
+  protected insertOperator(op: OperatorItem): void {
+    this.insertAtCursor(op.insert, op.caretBack);
+  }
+
+  /** Snapshot the caret while the textarea is focused (before a palette click steals focus). */
+  protected rememberSelection(): void {
+    const el = this.formulaField()?.nativeElement;
+    if (el) {
+      this.lastSelStart = el.selectionStart;
+      this.lastSelEnd = el.selectionEnd;
+    }
+  }
+
+  /** Load a worked example, replacing the current draft (recipes are complete formulas). */
+  protected useRecipe(formula: string): void {
+    this.setFormula(formula);
+  }
+
+  /**
+   * Insert `snippet` at the last-known caret (replacing any selection), leaving the
+   * cursor `caretBack` chars from its end. Adds a leading space when it would butt up
+   * against an existing token so the formula stays legible.
+   */
+  private insertAtCursor(snippet: string, caretBack: number): void {
+    const value = this.form.controls.formula.value;
+    const start = Math.min(this.lastSelStart ?? value.length, value.length);
+    const end = Math.min(this.lastSelEnd ?? value.length, value.length);
+    const before = value.slice(0, start);
+    const after = value.slice(end);
+    const needsSpace = /[\w)#]$/.test(before);
+    const insert = (needsSpace ? ' ' : '') + snippet;
+    const next = before + insert + after;
+    const caret = before.length + insert.length - caretBack;
+    this.form.controls.formula.setValue(next);
+    this.form.controls.formula.markAsDirty();
+    this.lastSelStart = this.lastSelEnd = caret;
+    this.focusCaret(caret);
+  }
+
+  protected clearFormula(): void {
+    this.setFormula('');
+    this.validation.set(null);
+  }
+
+  private setFormula(text: string): void {
+    this.form.controls.formula.setValue(text);
+    this.form.controls.formula.markAsDirty();
+    this.lastSelStart = this.lastSelEnd = text.length;
+    this.focusCaret(text.length);
+  }
+
+  /** Focus the textarea and place the caret, after Angular writes the new value back. */
+  private focusCaret(caret: number): void {
+    setTimeout(() => {
+      const node = this.formulaField()?.nativeElement;
+      if (node) {
+        node.focus();
+        node.setSelectionRange(caret, caret);
+      }
+    });
   }
 
   protected validate(): void {
@@ -198,6 +400,7 @@ export default class PayRuleEditorComponent {
         this.saving.set(false);
         this.validation.set(null);
         this.form.controls.formula.reset('');
+        this.lastSelStart = this.lastSelEnd = null;
         this.loadActiveRules(raw.payComponentId);
       },
       error: (err: unknown) => {
