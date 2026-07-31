@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
  * affect payroll calculations.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class LeaveTypeRuleService {
 
     private static final Logger log = LoggerFactory.getLogger(LeaveTypeRuleService.class);
@@ -105,7 +105,7 @@ public class LeaveTypeRuleService {
     /**
      * Gets all leave type rules for a country.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<LeaveTypeRuleResponse> getRulesForCountry(UUID countryId) {
         return ruleRepository
             .findAll(
@@ -122,7 +122,7 @@ public class LeaveTypeRuleService {
     /**
      * Gets a specific leave type rule for a country and leave type.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Optional<LeaveTypeRuleResponse> getRule(UUID countryId, LeaveType leaveType) {
         return ruleRepository
             .findAll(
@@ -137,7 +137,7 @@ public class LeaveTypeRuleService {
     /**
      * Calculates leave deduction for payroll.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> calculateLeaveDeduction(UUID countryId, LeaveType leaveType, BigDecimal dailySalary, int leaveDays) {
         LeaveTypeRule rule = ruleRepository
             .findAll(
@@ -170,7 +170,7 @@ public class LeaveTypeRuleService {
     /**
      * Gets all leave type rules across all countries.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<LeaveTypeRuleResponse> getAllRules() {
         return ruleRepository.findAll().stream().map(this::toResponse).toList();
     }

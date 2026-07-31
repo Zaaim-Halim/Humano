@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Supports multiple countries and tax codes with date-effective brackets.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class TaxCalculationService {
 
     private static final Logger log = LoggerFactory.getLogger(TaxCalculationService.class);
@@ -72,7 +72,7 @@ public class TaxCalculationService {
      * Looks up the active brackets, delegates the math to {@link #calculateProgressiveTax},
      * and assembles the per-bracket breakdown DTO.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public TaxCalculationResponse calculateTax(
         UUID countryId,
         TaxCode taxCode,
@@ -184,7 +184,7 @@ public class TaxCalculationService {
     /**
      * Gets all active tax brackets for a country and tax code.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<TaxBracketResponse> getActiveBrackets(UUID countryId, TaxCode taxCode, LocalDate asOfDate) {
         return getActiveBracketsForCalculation(countryId, taxCode, asOfDate).stream().map(this::toResponse).collect(Collectors.toList());
     }
@@ -194,7 +194,7 @@ public class TaxCalculationService {
      * {@code asOfDate} (defaults to today if null). Public so {@link PayrollProcessingService}
      * step 7 can call it without duplicating the spec query.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<TaxBracket> getActiveBracketsForCalculation(UUID countryId, TaxCode taxCode, LocalDate asOfDate) {
         LocalDate effectiveDate = asOfDate != null ? asOfDate : LocalDate.now();
 
@@ -304,7 +304,7 @@ public class TaxCalculationService {
     /**
      * Gets tax brackets summary for all countries and tax codes.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> getTaxBracketsSummary(LocalDate asOfDate) {
         LocalDate effectiveDate = asOfDate != null ? asOfDate : LocalDate.now();
 

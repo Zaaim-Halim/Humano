@@ -73,7 +73,7 @@ public class HrHierarchyService {
      * @param maxDepth maximum levels of subordinates to include below the root
      *                 (null = no limit; 0 = root only)
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmployeeHierarchyResponse getEmployeeSubtree(UUID rootEmployeeId, Integer maxDepth) {
         log.debug("Building employee subtree for {} (maxDepth={})", rootEmployeeId, maxDepth);
 
@@ -96,7 +96,7 @@ public class HrHierarchyService {
      * Returns the ancestor chain of an employee (root manager → ... → the employee
      * itself), in two queries: one to load the leaf's path, one IN-list lookup.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public HierarchyAncestorsResponse getEmployeeAncestors(UUID employeeId) {
         log.debug("Resolving employee ancestor chain for {}", employeeId);
 
@@ -131,7 +131,7 @@ public class HrHierarchyService {
      * @param includeHeadcount when true, attaches a per-unit employee headcount
      *                         (one extra GROUP BY query)
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public OrganizationalUnitHierarchyResponse getOrganizationalUnitSubtree(UUID rootUnitId, Integer maxDepth, boolean includeHeadcount) {
         log.debug("Building org-unit subtree for {} (maxDepth={}, includeHeadcount={})", rootUnitId, maxDepth, includeHeadcount);
 
@@ -157,7 +157,7 @@ public class HrHierarchyService {
      * When {@code includeHeadcount} is true, attaches each root's direct employee
      * count via one extra GROUP BY query — never one per root.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public OrganizationalUnitHierarchyResponse getOrganizationalUnitRoots(boolean includeHeadcount) {
         log.debug("Loading all root org units (includeHeadcount={})", includeHeadcount);
 
@@ -177,7 +177,7 @@ public class HrHierarchyService {
      * Two queries total: one to fetch the leaf's path, one prefix-match query that
      * returns every ancestor row. No lazy-fetch walk through {@code parentUnit}.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public HierarchyAncestorsResponse getOrganizationalUnitAncestors(UUID unitId) {
         log.debug("Resolving org-unit ancestor chain for {}", unitId);
 
@@ -198,7 +198,7 @@ public class HrHierarchyService {
      * Returns every employee whose unit lies in the subtree rooted at {@code rootUnitId}.
      * Single JOIN query — bounded by the size of the requested subtree.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<EmployeeTreeNode> getEmployeesInUnitSubtree(UUID rootUnitId) {
         log.debug("Listing employees under org-unit subtree {}", rootUnitId);
 

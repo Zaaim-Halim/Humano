@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
  * cost tracking, and benefit analytics.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class EmployeeBenefitService {
 
     private static final Logger log = LoggerFactory.getLogger(EmployeeBenefitService.class);
@@ -139,7 +139,7 @@ public class EmployeeBenefitService {
     /**
      * Gets a comprehensive benefits summary for an employee.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public BenefitsSummaryResponse getBenefitsSummary(UUID employeeId) {
         Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new EntityNotFoundException("Employee", employeeId));
 
@@ -205,7 +205,7 @@ public class EmployeeBenefitService {
     /**
      * Gets all active benefits by type across the organization.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<EmployeeBenefitResponse> getActiveBenefitsByType(BenefitType type, Pageable pageable) {
         LocalDate today = LocalDate.now();
 
@@ -226,7 +226,7 @@ public class EmployeeBenefitService {
     /**
      * Calculates total benefit costs for a department or organization.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> calculateBenefitCosts(UUID departmentId, LocalDate asOfDate) {
         LocalDate effectiveDate = asOfDate != null ? asOfDate : LocalDate.now();
 
@@ -330,7 +330,7 @@ public class EmployeeBenefitService {
     /**
      * Gets benefits expiring within a specified period for renewal notifications.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<EmployeeBenefitResponse> getBenefitsExpiringSoon(int daysAhead) {
         LocalDate today = LocalDate.now();
         LocalDate expirationThreshold = today.plusDays(daysAhead);

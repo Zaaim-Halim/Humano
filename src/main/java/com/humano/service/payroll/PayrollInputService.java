@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
  * deductions, and other variable payroll data.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class PayrollInputService {
 
     private static final Logger log = LoggerFactory.getLogger(PayrollInputService.class);
@@ -204,7 +204,7 @@ public class PayrollInputService {
     /**
      * Gets all inputs for an employee in a specific period.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<PayrollInputResponse> getEmployeeInputs(UUID employeeId, UUID periodId) {
         return inputRepository
             .findAll(
@@ -219,7 +219,7 @@ public class PayrollInputService {
     /**
      * Gets all inputs for a payroll period.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PayrollInputResponse> getPeriodInputs(UUID periodId, Pageable pageable) {
         return inputRepository
             .findAll((Specification<PayrollInput>) (root, query, cb) -> cb.equal(root.get("period").get("id"), periodId), pageable)
@@ -229,7 +229,7 @@ public class PayrollInputService {
     /**
      * Gets inputs by component type for a period.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<PayrollInputResponse> getInputsByComponent(UUID periodId, UUID componentId) {
         return inputRepository
             .findAll(
@@ -244,7 +244,7 @@ public class PayrollInputService {
     /**
      * Gets summary of inputs for a period grouped by component.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> getPeriodInputSummary(UUID periodId) {
         List<PayrollInput> inputs = inputRepository.findAll(
             (Specification<PayrollInput>) (root, query, cb) -> cb.equal(root.get("period").get("id"), periodId)
@@ -332,7 +332,7 @@ public class PayrollInputService {
     /**
      * Validates all inputs for a period before payroll processing.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> validatePeriodInputs(UUID periodId) {
         List<PayrollInput> inputs = inputRepository.findAll(
             (Specification<PayrollInput>) (root, query, cb) -> cb.equal(root.get("period").get("id"), periodId)

@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Provides centralized workflow state persistence and management.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class WorkflowStateManager {
 
     private static final Logger log = LoggerFactory.getLogger(WorkflowStateManager.class);
@@ -251,7 +251,7 @@ public class WorkflowStateManager {
     /**
      * Get workflow by ID.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public WorkflowInstance getWorkflow(UUID workflowId) {
         return workflowInstanceRepository
             .findById(workflowId)
@@ -261,7 +261,7 @@ public class WorkflowStateManager {
     /**
      * Get workflow response by ID.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public WorkflowResponse getWorkflowResponse(UUID workflowId) {
         WorkflowInstance workflow = getWorkflow(workflowId);
         return mapToResponse(workflow);
@@ -270,7 +270,7 @@ public class WorkflowStateManager {
     /**
      * Find workflows by entity ID.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<WorkflowInstance> findByEntityId(UUID entityId) {
         return workflowInstanceRepository.findByEntityId(entityId);
     }
@@ -278,7 +278,7 @@ public class WorkflowStateManager {
     /**
      * Find active workflow for entity.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<WorkflowInstance> findActiveWorkflowsByEntityId(UUID entityId) {
         return workflowInstanceRepository.findActiveWorkflowsByEntityId(entityId);
     }
@@ -286,7 +286,7 @@ public class WorkflowStateManager {
     /**
      * Find workflows by type and status.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<WorkflowInstance> findByTypeAndStatus(WorkflowType type, WorkflowStatus status, Pageable pageable) {
         return workflowInstanceRepository.findByWorkflowTypeAndStatus(type, status, pageable);
     }
@@ -294,7 +294,7 @@ public class WorkflowStateManager {
     /**
      * Find workflows assigned to an employee.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<WorkflowInstance> findByAssignee(UUID assigneeId, Pageable pageable) {
         return workflowInstanceRepository.findByCurrentAssigneeId(assigneeId, pageable);
     }
@@ -302,7 +302,7 @@ public class WorkflowStateManager {
     /**
      * Find overdue workflows.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<WorkflowInstance> findOverdueWorkflows() {
         return workflowInstanceRepository.findOverdueWorkflows(Instant.now());
     }
@@ -310,7 +310,7 @@ public class WorkflowStateManager {
     /**
      * Check if workflow is active.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public boolean isWorkflowActive(UUID workflowId) {
         WorkflowInstance workflow = getWorkflow(workflowId);
         return (
@@ -323,7 +323,7 @@ public class WorkflowStateManager {
     /**
      * Get workflow history.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<WorkflowStateTransition> getWorkflowHistory(UUID workflowId) {
         return transitionRepository.findByWorkflowInstanceIdOrderByTransitionedAtAsc(workflowId);
     }

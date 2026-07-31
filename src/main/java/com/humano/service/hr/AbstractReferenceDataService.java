@@ -29,7 +29,7 @@ public abstract class AbstractReferenceDataService<T extends AbstractReferenceDa
         this.entityName = entityName;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public ReferenceDataResponse create(CreateReferenceDataRequest request) {
         T entity = factory.get();
         entity.setCode(request.code());
@@ -39,7 +39,7 @@ public abstract class AbstractReferenceDataService<T extends AbstractReferenceDa
         return mapToResponse(repository.save(entity));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public ReferenceDataResponse update(UUID id, UpdateReferenceDataRequest request) {
         return repository
             .findById(id)
@@ -61,17 +61,17 @@ public abstract class AbstractReferenceDataService<T extends AbstractReferenceDa
             .orElseThrow(() -> EntityNotFoundException.create(entityName, id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public ReferenceDataResponse getById(UUID id) {
         return repository.findById(id).map(this::mapToResponse).orElseThrow(() -> EntityNotFoundException.create(entityName, id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<ReferenceDataResponse> getAll(Pageable pageable) {
         return repository.findAll(pageable).map(this::mapToResponse);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw EntityNotFoundException.create(entityName, id);

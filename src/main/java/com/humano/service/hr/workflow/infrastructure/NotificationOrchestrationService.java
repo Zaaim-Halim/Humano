@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Push notifications are deferred until the mobile client lands.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class NotificationOrchestrationService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationOrchestrationService.class);

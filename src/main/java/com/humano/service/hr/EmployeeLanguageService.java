@@ -31,7 +31,7 @@ public class EmployeeLanguageService {
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeLanguageResponse create(CreateEmployeeLanguageRequest request) {
         log.debug("Request to create EmployeeLanguage: {}", request);
         Employee employee = employeeRepository
@@ -46,7 +46,7 @@ public class EmployeeLanguageService {
         return mapToResponse(repository.save(entity));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeLanguageResponse update(UUID id, UpdateEmployeeLanguageRequest request) {
         log.debug("Request to update EmployeeLanguage: {}", id);
         return repository
@@ -69,17 +69,17 @@ public class EmployeeLanguageService {
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeLanguage", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmployeeLanguageResponse getById(UUID id) {
         return repository.findById(id).map(this::mapToResponse).orElseThrow(() -> EntityNotFoundException.create("EmployeeLanguage", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<EmployeeLanguageResponse> getByEmployeeId(UUID employeeId) {
         return repository.findByEmployeeId(employeeId).stream().map(this::mapToResponse).toList();
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw EntityNotFoundException.create("EmployeeLanguage", id);

@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Supports multi-currency payroll calculations and financial reporting.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class ExchangeRateService {
 
     private static final Logger log = LoggerFactory.getLogger(ExchangeRateService.class);
@@ -151,7 +151,7 @@ public class ExchangeRateService {
      * Gets the exchange rate for a currency pair on a specific date.
      * Falls back to the most recent available rate if no exact match.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public ExchangeRateResponse getRate(UUID fromCurrencyId, UUID toCurrencyId, LocalDate date) {
         LocalDate effectiveDate = date != null ? date : LocalDate.now();
 
@@ -192,7 +192,7 @@ public class ExchangeRateService {
     /**
      * Converts an amount from one currency to another.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public CurrencyConversionResponse convert(BigDecimal amount, UUID fromCurrencyId, UUID toCurrencyId, LocalDate date) {
         if (fromCurrencyId.equals(toCurrencyId)) {
             Currency currency = currencyRepository
@@ -226,7 +226,7 @@ public class ExchangeRateService {
     /**
      * Converts amounts to a base currency for reporting.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, BigDecimal> convertToBaseCurrency(Map<UUID, BigDecimal> amounts, UUID baseCurrencyId, LocalDate date) {
         Map<String, BigDecimal> result = new LinkedHashMap<>();
         BigDecimal total = BigDecimal.ZERO;
@@ -251,7 +251,7 @@ public class ExchangeRateService {
     /**
      * Gets historical exchange rates for a currency pair.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<ExchangeRateResponse> getHistoricalRates(UUID fromCurrencyId, UUID toCurrencyId, LocalDate startDate, LocalDate endDate) {
         return exchangeRateRepository
             .findAll(
@@ -276,7 +276,7 @@ public class ExchangeRateService {
     /**
      * Gets all exchange rates for a specific date.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<ExchangeRateResponse> getRatesForDate(LocalDate date) {
         return exchangeRateRepository
             .findAll((Specification<ExchangeRate>) (root, query, cb) -> cb.equal(root.get("date"), date))
@@ -288,7 +288,7 @@ public class ExchangeRateService {
     /**
      * Gets the latest exchange rates for all currency pairs.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<ExchangeRateResponse> getLatestRates() {
         // Get all unique currency pairs and their latest rates
         List<ExchangeRate> allRates = exchangeRateRepository.findAll(
@@ -315,7 +315,7 @@ public class ExchangeRateService {
     /**
      * Gets exchange rates with pagination.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<ExchangeRateResponse> getRates(
         UUID fromCurrencyId,
         UUID toCurrencyId,
@@ -363,7 +363,7 @@ public class ExchangeRateService {
     /**
      * Gets exchange rate statistics for a currency pair.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> getRateStatistics(UUID fromCurrencyId, UUID toCurrencyId, LocalDate startDate, LocalDate endDate) {
         List<ExchangeRate> rates = exchangeRateRepository.findAll(
             (Specification<ExchangeRate>) (root, query, cb) ->
@@ -451,7 +451,7 @@ public class ExchangeRateService {
      * Reverse-rate inversion (used by {@link #getRate}) is intentionally NOT applied here:
      * payroll consolidation should not silently invert a stale reverse rate.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public ReportingRate getReportingRate(UUID fromCurrencyId, UUID toCurrencyId, LocalDate asOfDate, int maxStalenessDays) {
         LocalDate effectiveDate = asOfDate != null ? asOfDate : LocalDate.now();
         if (fromCurrencyId.equals(toCurrencyId)) {

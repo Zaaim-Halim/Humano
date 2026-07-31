@@ -31,7 +31,7 @@ public class EmployeeEducationService {
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeEducationResponse create(CreateEmployeeEducationRequest request) {
         log.debug("Request to create EmployeeEducation: {}", request);
         Employee employee = employeeRepository
@@ -47,7 +47,7 @@ public class EmployeeEducationService {
         return mapToResponse(repository.save(entity));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeEducationResponse update(UUID id, UpdateEmployeeEducationRequest request) {
         log.debug("Request to update EmployeeEducation: {}", id);
         return repository
@@ -73,17 +73,17 @@ public class EmployeeEducationService {
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeEducation", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmployeeEducationResponse getById(UUID id) {
         return repository.findById(id).map(this::mapToResponse).orElseThrow(() -> EntityNotFoundException.create("EmployeeEducation", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<EmployeeEducationResponse> getByEmployeeId(UUID employeeId) {
         return repository.findByEmployeeId(employeeId).stream().map(this::mapToResponse).toList();
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw EntityNotFoundException.create("EmployeeEducation", id);

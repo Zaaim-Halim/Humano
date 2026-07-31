@@ -86,7 +86,7 @@ import org.springframework.transaction.annotation.Transactional;
  * </ul>
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class PerformanceReviewCycleService {
 
     private static final Logger log = LoggerFactory.getLogger(PerformanceReviewCycleService.class);
@@ -212,7 +212,7 @@ public class PerformanceReviewCycleService {
     /**
      * Get review cycle status.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public ReviewCycleResponse getCycleStatus(UUID cycleId) {
         log.info("Getting review cycle status: {}", cycleId);
 
@@ -226,7 +226,7 @@ public class PerformanceReviewCycleService {
     /**
      * Get active review cycles.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<ReviewCycleResponse> getActiveCycles() {
         log.info("Getting active review cycles");
 
@@ -236,7 +236,7 @@ public class PerformanceReviewCycleService {
     /**
      * Get cycles by phase.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<ReviewCycleResponse> getCyclesByPhase(ReviewCyclePhase phase) {
         log.info("Getting review cycles by phase: {}", phase);
 
@@ -752,7 +752,7 @@ public class PerformanceReviewCycleService {
     /**
      * Get cycle progress.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public ReviewCycleResponse.CycleProgress getCycleProgress(UUID cycleId) {
         log.info("Getting cycle progress for: {}", cycleId);
 
@@ -795,7 +795,7 @@ public class PerformanceReviewCycleService {
     /**
      * Get review cycle by ID.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public ReviewCycleResponse getReviewCycle(UUID cycleId) {
         ReviewCycle cycle = reviewCycleRepository
             .findById(cycleId)
@@ -806,7 +806,7 @@ public class PerformanceReviewCycleService {
     /**
      * Get all review cycles.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<ReviewCycleResponse> getAllReviewCycles(Pageable pageable) {
         return reviewCycleRepository.findAll(pageable).map(this::mapToResponse);
     }
@@ -814,7 +814,7 @@ public class PerformanceReviewCycleService {
     /**
      * Get current active cycle for a date.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Optional<ReviewCycleResponse> getCurrentCycle(LocalDate date) {
         return reviewCycleRepository.findCurrentActiveCycle(date).map(this::mapToResponse);
     }
@@ -822,7 +822,7 @@ public class PerformanceReviewCycleService {
     /**
      * Get cycles by department.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<ReviewCycleResponse> getCyclesByDepartment(UUID departmentId) {
         return reviewCycleRepository.findByDepartmentId(departmentId).stream().map(this::mapToResponse).collect(Collectors.toList());
     }
@@ -830,7 +830,7 @@ public class PerformanceReviewCycleService {
     /**
      * Get cycles with approaching deadlines.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<ReviewCycleResponse> getCyclesWithApproachingDeadlines(int daysAhead) {
         LocalDate deadline = LocalDate.now().plusDays(daysAhead);
         return reviewCycleRepository

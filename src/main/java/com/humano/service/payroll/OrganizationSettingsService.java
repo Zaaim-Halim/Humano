@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
  * (never persists); {@link #update} upserts the single row.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class OrganizationSettingsService {
 
     private final OrganizationSettingsRepository repository;
@@ -37,7 +37,7 @@ public class OrganizationSettingsService {
      * Current settings, or transient defaults (entity field initializers) when
      * none has been saved yet. Read-only — does not persist a row.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public OrganizationSettingsResponse get() {
         return repository.findAll().stream().findFirst().map(this::toResponse).orElseGet(() -> toResponse(new OrganizationSettings()));
     }

@@ -104,7 +104,7 @@ import org.springframework.transaction.annotation.Transactional;
  * </ul>
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class ApprovalWorkflowOrchestratorService {
 
     private static final Logger log = LoggerFactory.getLogger(ApprovalWorkflowOrchestratorService.class);
@@ -314,7 +314,7 @@ public class ApprovalWorkflowOrchestratorService {
     /**
      * Get approval status.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public ApprovalWorkflowResponse getApprovalStatus(UUID approvalRequestId) {
         ApprovalRequest approvalRequest = approvalRequestRepository
             .findById(approvalRequestId)
@@ -326,7 +326,7 @@ public class ApprovalWorkflowOrchestratorService {
     /**
      * Get pending approvals for an approver.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<PendingApprovalSummary> getPendingApprovalsForApprover(UUID approverId) {
         List<ApprovalRequest> pendingApprovals = approvalRequestRepository.findByApproverIdAndStatus(
             approverId,
@@ -339,7 +339,7 @@ public class ApprovalWorkflowOrchestratorService {
     /**
      * Get pending approvals for an approver with pagination.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PendingApprovalSummary> getPendingApprovalsForApprover(UUID approverId, Pageable pageable) {
         return approvalRequestRepository
             .findByApproverIdAndStatus(approverId, WorkflowStatus.PENDING_APPROVAL, pageable)
@@ -349,7 +349,7 @@ public class ApprovalWorkflowOrchestratorService {
     /**
      * Get approvals by requestor.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<ApprovalWorkflowResponse> getApprovalsByRequestor(UUID requestorId, Pageable pageable) {
         return approvalRequestRepository.findByRequestorId(requestorId, pageable).map(this::mapToApprovalResponse);
     }
@@ -357,7 +357,7 @@ public class ApprovalWorkflowOrchestratorService {
     /**
      * Count pending approvals for an approver.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public long countPendingApprovals(UUID approverId) {
         return approvalRequestRepository.countByApproverIdAndStatus(approverId, WorkflowStatus.PENDING_APPROVAL);
     }

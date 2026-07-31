@@ -50,7 +50,7 @@ public class SurveyService {
      * @param request the survey creation request
      * @return the created survey response DTO
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public com.humano.dto.hr.responses.SurveyResponse createSurvey(CreateSurveyRequest request) {
         log.debug("Request to create Survey: {}", request);
 
@@ -73,7 +73,7 @@ public class SurveyService {
      * @param request the survey update request
      * @return the updated survey response DTO
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public com.humano.dto.hr.responses.SurveyResponse updateSurvey(UUID id, UpdateSurveyRequest request) {
         log.debug("Request to update Survey: {}", id);
 
@@ -103,7 +103,7 @@ public class SurveyService {
      * @param id the ID of the survey
      * @return the survey response DTO
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public com.humano.dto.hr.responses.SurveyResponse getSurveyById(UUID id) {
         log.debug("Request to get Survey by ID: {}", id);
 
@@ -116,7 +116,7 @@ public class SurveyService {
      * @param pageable pagination information
      * @return page of survey response DTOs
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<com.humano.dto.hr.responses.SurveyResponse> getAllSurveys(Pageable pageable) {
         log.debug("Request to get all Surveys");
 
@@ -129,7 +129,7 @@ public class SurveyService {
      * @param pageable pagination information
      * @return page of survey response DTOs
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<com.humano.dto.hr.responses.SurveyResponse> getActiveSurveys(Pageable pageable) {
         log.debug("Request to get active Surveys");
         LocalDate today = LocalDate.now();
@@ -144,7 +144,7 @@ public class SurveyService {
      *
      * @param id the ID of the survey to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteSurvey(UUID id) {
         log.debug("Request to delete Survey: {}", id);
 
@@ -161,7 +161,7 @@ public class SurveyService {
      * @param request the survey response submission request
      * @return the survey response response DTO
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public SurveyResponseResponse submitSurveyResponse(SubmitSurveyResponseRequest request) {
         log.debug("Request to submit SurveyResponse: {}", request);
 
@@ -192,7 +192,7 @@ public class SurveyService {
      * @param pageable pagination information
      * @return page of survey response response DTOs
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<SurveyResponseResponse> getSurveyResponsesBySurvey(UUID surveyId, Pageable pageable) {
         log.debug("Request to get SurveyResponses by Survey: {}", surveyId);
 
@@ -204,7 +204,7 @@ public class SurveyService {
      *
      * @param id the ID of the survey response to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteSurveyResponse(UUID id) {
         log.debug("Request to delete SurveyResponse: {}", id);
 

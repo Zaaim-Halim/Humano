@@ -30,7 +30,7 @@ public class OrganizationalUnitService {
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public OrganizationalUnitResponse createOrganizationalUnit(CreateOrganizationalUnitRequest request) {
         log.debug("Request to create OrganizationalUnit: {}", request);
 
@@ -58,7 +58,7 @@ public class OrganizationalUnitService {
         return mapToResponse(savedUnit);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public OrganizationalUnitResponse updateOrganizationalUnit(UUID id, UpdateOrganizationalUnitRequest request) {
         log.debug("Request to update OrganizationalUnit: {}", id);
 
@@ -118,7 +118,7 @@ public class OrganizationalUnitService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public OrganizationalUnitResponse getOrganizationalUnitById(UUID id) {
         log.debug("Request to get OrganizationalUnit by ID: {}", id);
 
@@ -128,28 +128,28 @@ public class OrganizationalUnitService {
             .orElseThrow(() -> EntityNotFoundException.create("OrganizationalUnit", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<OrganizationalUnitResponse> getAllOrganizationalUnits(Pageable pageable) {
         log.debug("Request to get all OrganizationalUnits");
 
         return organizationalUnitRepository.findAll(pageable).map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<OrganizationalUnitResponse> getRootOrganizationalUnits(Pageable pageable) {
         log.debug("Request to get root OrganizationalUnits");
 
         return organizationalUnitRepository.findByParentUnitIsNull(pageable).map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<OrganizationalUnitResponse> getSubUnits(UUID parentId, Pageable pageable) {
         log.debug("Request to get sub-units of OrganizationalUnit: {}", parentId);
 
         return organizationalUnitRepository.findByParentUnitId(parentId, pageable).map(this::mapToResponse);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteOrganizationalUnit(UUID id) {
         log.debug("Request to delete OrganizationalUnit: {}", id);
 

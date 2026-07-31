@@ -63,7 +63,7 @@ public class EmployeeDocumentService {
      * @return the created employee document response
      * @throws IOException if file handling fails
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeDocumentResponse uploadDocument(UUID employeeId, CreateEmployeeDocumentRequest request, MultipartFile file)
         throws IOException {
         log.debug("Request to upload document for Employee ID: {}", employeeId);
@@ -101,7 +101,7 @@ public class EmployeeDocumentService {
      * @param request the updated document metadata
      * @return the updated employee document response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeDocumentResponse updateDocument(UUID id, UpdateEmployeeDocumentRequest request) {
         log.debug("Request to update document with ID: {}", id);
 
@@ -126,7 +126,7 @@ public class EmployeeDocumentService {
      * @return the updated employee document response
      * @throws IOException if file handling fails
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeDocumentResponse replaceDocumentFile(UUID id, MultipartFile file) throws IOException {
         log.debug("Request to replace file for document with ID: {}", id);
 
@@ -170,7 +170,7 @@ public class EmployeeDocumentService {
      * @param id the ID of the document to retrieve
      * @return the employee document response
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmployeeDocumentResponse getDocument(UUID id) {
         log.debug("Request to get document with ID: {}", id);
 
@@ -187,7 +187,7 @@ public class EmployeeDocumentService {
      * @return input stream of the document content
      * @throws IOException if an I/O error occurs
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public InputStream getDocumentContent(UUID id) throws IOException {
         log.debug("Request to get document content for ID: {}", id);
 
@@ -206,7 +206,7 @@ public class EmployeeDocumentService {
      * @param employeeId the ID of the employee
      * @return list of employee document responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<EmployeeDocumentResponse> getDocumentsByEmployee(UUID employeeId) {
         log.debug("Request to get all documents for Employee ID: {}", employeeId);
 
@@ -229,7 +229,7 @@ public class EmployeeDocumentService {
      * @param pageable pagination information
      * @return page of employee document responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<EmployeeDocumentResponse> getAllDocuments(Pageable pageable) {
         log.debug("Request to get all documents with pagination");
 
@@ -241,7 +241,7 @@ public class EmployeeDocumentService {
      *
      * @param id the ID of the document to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteDocument(UUID id) {
         log.debug("Request to delete document with ID: {}", id);
 

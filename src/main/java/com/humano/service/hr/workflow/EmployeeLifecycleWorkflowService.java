@@ -60,7 +60,7 @@ import org.springframework.transaction.annotation.Transactional;
  * an already-completed task is a no-op.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class EmployeeLifecycleWorkflowService {
 
     private static final Logger log = LoggerFactory.getLogger(EmployeeLifecycleWorkflowService.class);
@@ -204,7 +204,7 @@ public class EmployeeLifecycleWorkflowService {
     /**
      * Get onboarding process status.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public OnboardingProcessResponse getOnboardingStatus(UUID processId) {
         EmployeeProcess process = processRepository
             .findById(processId)
@@ -405,7 +405,7 @@ public class EmployeeLifecycleWorkflowService {
     /**
      * Get offboarding process status.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public OffboardingProcessResponse getOffboardingStatus(UUID processId) {
         EmployeeProcess process = processRepository
             .findById(processId)
@@ -458,7 +458,7 @@ public class EmployeeLifecycleWorkflowService {
     /**
      * Calculate final settlement for an employee.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public OffboardingProcessResponse.FinalSettlementSummary calculateFinalSettlement(UUID employeeId) {
         log.debug("Calculating final settlement for employee {}", employeeId);
 
@@ -504,7 +504,7 @@ public class EmployeeLifecycleWorkflowService {
     /**
      * Get all active processes with pagination.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<EmployeeProcess> getActiveProcesses(EmployeeProcessType type, Pageable pageable) {
         if (type != null) {
             return processRepository.findByProcessTypeAndStatusNot(type, EmployeeProcessStatus.COMPLETED, pageable);

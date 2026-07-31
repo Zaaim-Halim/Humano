@@ -35,7 +35,7 @@ public class AddressService {
         this.countryRepository = countryRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public AddressResponse create(CreateAddressRequest request) {
         log.debug("Request to create Address: {}", request);
         Employee employee = employeeRepository
@@ -61,7 +61,7 @@ public class AddressService {
         return mapToResponse(repository.save(entity));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public AddressResponse update(UUID id, UpdateAddressRequest request) {
         log.debug("Request to update Address: {}", id);
         return repository
@@ -103,17 +103,17 @@ public class AddressService {
             .orElseThrow(() -> EntityNotFoundException.create("Address", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public AddressResponse getById(UUID id) {
         return repository.findById(id).map(this::mapToResponse).orElseThrow(() -> EntityNotFoundException.create("Address", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<AddressResponse> getByEmployeeId(UUID employeeId) {
         return repository.findByEmployeeId(employeeId).stream().map(this::mapToResponse).toList();
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw EntityNotFoundException.create("Address", id);

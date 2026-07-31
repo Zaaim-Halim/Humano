@@ -31,7 +31,7 @@ public class WorkPermitService {
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public WorkPermitResponse create(CreateWorkPermitRequest request) {
         log.debug("Request to create WorkPermit: {}", request);
         Employee employee = employeeRepository
@@ -48,7 +48,7 @@ public class WorkPermitService {
         return mapToResponse(repository.save(entity));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public WorkPermitResponse update(UUID id, UpdateWorkPermitRequest request) {
         log.debug("Request to update WorkPermit: {}", id);
         return repository
@@ -77,17 +77,17 @@ public class WorkPermitService {
             .orElseThrow(() -> EntityNotFoundException.create("WorkPermit", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public WorkPermitResponse getById(UUID id) {
         return repository.findById(id).map(this::mapToResponse).orElseThrow(() -> EntityNotFoundException.create("WorkPermit", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<WorkPermitResponse> getByEmployeeId(UUID employeeId) {
         return repository.findByEmployeeId(employeeId).stream().map(this::mapToResponse).toList();
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw EntityNotFoundException.create("WorkPermit", id);

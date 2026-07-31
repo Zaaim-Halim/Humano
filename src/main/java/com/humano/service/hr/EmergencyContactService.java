@@ -31,7 +31,7 @@ public class EmergencyContactService {
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmergencyContactResponse create(CreateEmergencyContactRequest request) {
         log.debug("Request to create EmergencyContact: {}", request);
         Employee employee = employeeRepository
@@ -46,7 +46,7 @@ public class EmergencyContactService {
         return mapToResponse(repository.save(entity));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmergencyContactResponse update(UUID id, UpdateEmergencyContactRequest request) {
         log.debug("Request to update EmergencyContact: {}", id);
         return repository
@@ -69,17 +69,17 @@ public class EmergencyContactService {
             .orElseThrow(() -> EntityNotFoundException.create("EmergencyContact", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmergencyContactResponse getById(UUID id) {
         return repository.findById(id).map(this::mapToResponse).orElseThrow(() -> EntityNotFoundException.create("EmergencyContact", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<EmergencyContactResponse> getByEmployeeId(UUID employeeId) {
         return repository.findByEmployeeId(employeeId).stream().map(this::mapToResponse).toList();
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw EntityNotFoundException.create("EmergencyContact", id);

@@ -132,7 +132,7 @@ public class EmployeeProfileService {
      * @param request the combined account + profile details
      * @return the created employee profile response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeProfileResponse provisionEmployee(CreateEmployeeRequest request) {
         log.debug("Request to provision Employee with login: {}", request.login());
 
@@ -190,7 +190,7 @@ public class EmployeeProfileService {
      * @param request the employee details to update
      * @return the updated employee profile response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeProfileResponse updateEmployeeProfile(UUID id, UpdateEmployeeProfileRequest request) {
         log.debug("Request to update Employee Profile: {}", request);
 
@@ -224,7 +224,7 @@ public class EmployeeProfileService {
      * @param id the ID of the employee to retrieve
      * @return the employee profile response
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmployeeProfileResponse getEmployeeProfileById(UUID id) {
         log.debug("Request to get Employee Profile by ID: {}", id);
 
@@ -240,7 +240,7 @@ public class EmployeeProfileService {
      * @param pageable pagination information
      * @return page of employee profile responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<SimpleEmployeeProfileResponse> getAllEmployeeProfiles(Pageable pageable) {
         log.debug("Request to get all Employee Profiles");
 
@@ -253,7 +253,7 @@ public class EmployeeProfileService {
      *
      * @param id the ID of the employee to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteEmployeeProfile(UUID id) {
         log.debug("Request to delete Employee Profile: {}", id);
 
@@ -276,7 +276,7 @@ public class EmployeeProfileService {
      *
      * @return all authority names known to the tenant
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public java.util.List<String> getAssignableRoles() {
         return userAccountService.getAuthorities();
     }
@@ -288,7 +288,7 @@ public class EmployeeProfileService {
      * @param pageable pagination information
      * @return page of employee profile responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<SimpleEmployeeProfileResponse> searchEmployees(EmployeeSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search Employees with criteria: {}", searchRequest);
 

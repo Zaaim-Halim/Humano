@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Runs scheduled tasks to check for approaching and overdue deadlines.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class DeadlineMonitorService {
 
     private static final Logger log = LoggerFactory.getLogger(DeadlineMonitorService.class);
@@ -155,7 +155,7 @@ public class DeadlineMonitorService {
     /**
      * Get deadlines for a workflow.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<WorkflowDeadline> getDeadlinesByWorkflow(UUID workflowId) {
         return deadlineRepository.findByWorkflowInstanceId(workflowId);
     }
@@ -163,7 +163,7 @@ public class DeadlineMonitorService {
     /**
      * Get incomplete deadlines for a workflow.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<WorkflowDeadline> getIncompleteDeadlines(UUID workflowId) {
         return deadlineRepository.findByWorkflowInstanceIdAndCompletedFalse(workflowId);
     }
@@ -171,7 +171,7 @@ public class DeadlineMonitorService {
     /**
      * Get deadlines assigned to an employee.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<WorkflowDeadline> getDeadlinesByAssignee(UUID assigneeId) {
         return deadlineRepository.findByAssigneeIdAndCompletedFalse(assigneeId);
     }
@@ -277,7 +277,7 @@ public class DeadlineMonitorService {
     /**
      * Get overdue deadlines count for a workflow.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public long countOverdueDeadlines(UUID workflowId) {
         return deadlineRepository.countOverdueByWorkflowId(workflowId, Instant.now());
     }

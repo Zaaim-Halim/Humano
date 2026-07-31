@@ -58,7 +58,7 @@ public class AttendanceService {
      * @param request the attendance creation request
      * @return the created attendance response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public AttendanceResponse createAttendance(CreateAttendanceRequest request) {
         log.debug("Request to create Attendance: {}", request);
 
@@ -86,7 +86,7 @@ public class AttendanceService {
      * @param request the attendance update request
      * @return the updated attendance response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public AttendanceResponse updateAttendance(UUID id, UpdateAttendanceRequest request) {
         log.debug("Request to update Attendance: {}", id);
 
@@ -113,7 +113,7 @@ public class AttendanceService {
      * @param id the ID of the attendance
      * @return the attendance response
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public AttendanceResponse getAttendanceById(UUID id) {
         log.debug("Request to get Attendance by ID: {}", id);
 
@@ -129,7 +129,7 @@ public class AttendanceService {
      * @param pageable pagination information
      * @return page of attendance responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<AttendanceResponse> getAllAttendance(Pageable pageable) {
         log.debug("Request to get all Attendance records");
 
@@ -143,7 +143,7 @@ public class AttendanceService {
      * @param pageable pagination information
      * @return page of attendance responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<AttendanceResponse> getAttendanceByEmployee(UUID employeeId, Pageable pageable) {
         log.debug("Request to get Attendance by Employee: {}", employeeId);
 
@@ -159,7 +159,7 @@ public class AttendanceService {
      * @param pageable pagination information
      * @return page of attendance responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<AttendanceResponse> getAttendanceByEmployeeAndDateRange(
         UUID employeeId,
         LocalDate startDate,
@@ -177,7 +177,7 @@ public class AttendanceService {
      * @param request the attendance event creation request
      * @return the updated attendance response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public AttendanceResponse addAttendanceEvent(CreateAttendanceEventRequest request) {
         log.debug("Request to add AttendanceEvent: {}", request);
 
@@ -203,7 +203,7 @@ public class AttendanceService {
      *
      * @param id the ID of the attendance to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteAttendance(UUID id) {
         log.debug("Request to delete Attendance: {}", id);
 
@@ -221,7 +221,7 @@ public class AttendanceService {
      * @param pageable pagination information
      * @return page of attendance responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<AttendanceResponse> searchAttendance(AttendanceSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search Attendance with criteria: {}", searchRequest);
 
@@ -251,7 +251,7 @@ public class AttendanceService {
      * @param pageable pagination information
      * @return page of attendance responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<AttendanceResponse> searchAttendanceByEmployee(UUID employeeId, AttendanceSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search Attendance for Employee: {} with criteria: {}", employeeId, searchRequest);
 
@@ -281,7 +281,7 @@ public class AttendanceService {
      * @param pageable pagination information
      * @return page of attendance event responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<AttendanceEventResponse> searchAttendanceEvents(AttendanceEventSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search AttendanceEvents with criteria: {}", searchRequest);
 
@@ -310,7 +310,7 @@ public class AttendanceService {
      * @param pageable pagination information
      * @return page of attendance event responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<AttendanceEventResponse> searchAttendanceEventsByEmployee(
         UUID employeeId,
         AttendanceEventSearchRequest searchRequest,

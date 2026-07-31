@@ -40,7 +40,7 @@ public class EmployeeAttributeService {
     }
 
     /** All attributes for an employee. 404s when the employee does not exist. */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<EmployeeAttributeResponse> getAttributes(UUID employeeId) {
         log.debug("REST request to get attributes for Employee: {}", employeeId);
         if (!employeeRepository.existsById(employeeId)) {
@@ -57,7 +57,7 @@ public class EmployeeAttributeService {
      * Replace an employee's attributes with the supplied set. Keys must be unique
      * within the request.
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public List<EmployeeAttributeResponse> replaceAttributes(UUID employeeId, UpdateEmployeeAttributesRequest request) {
         log.debug("REST request to replace {} attribute(s) for Employee: {}", request.attributes().size(), employeeId);
 

@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
  * that include all forms of compensation: salary, bonuses, benefits, etc.
  */
 @Service
-@Transactional(readOnly = true)
+@Transactional(value = "tenantTransactionManager", readOnly = true)
 public class TotalCompensationService {
 
     private static final Logger log = LoggerFactory.getLogger(TotalCompensationService.class);

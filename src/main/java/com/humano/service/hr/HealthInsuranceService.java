@@ -42,7 +42,7 @@ public class HealthInsuranceService {
      * @param request the health insurance creation request
      * @return the created health insurance response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public HealthInsuranceResponse createHealthInsurance(CreateHealthInsuranceRequest request) {
         log.debug("Request to create HealthInsurance: {}", request);
 
@@ -77,7 +77,7 @@ public class HealthInsuranceService {
      * @param request the health insurance update request
      * @return the updated health insurance response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public HealthInsuranceResponse updateHealthInsurance(UUID id, UpdateHealthInsuranceRequest request) {
         log.debug("Request to update HealthInsurance: {}", id);
 
@@ -113,7 +113,7 @@ public class HealthInsuranceService {
      * @param id the ID of the health insurance
      * @return the health insurance response
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public HealthInsuranceResponse getHealthInsuranceById(UUID id) {
         log.debug("Request to get HealthInsurance by ID: {}", id);
 
@@ -129,7 +129,7 @@ public class HealthInsuranceService {
      * @param pageable pagination information
      * @return page of health insurance responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<HealthInsuranceResponse> getAllHealthInsurance(Pageable pageable) {
         log.debug("Request to get all HealthInsurance records");
 
@@ -143,7 +143,7 @@ public class HealthInsuranceService {
      * @param pageable pagination information
      * @return page of health insurance responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<HealthInsuranceResponse> getHealthInsuranceByEmployee(UUID employeeId, Pageable pageable) {
         log.debug("Request to get HealthInsurance by Employee: {}", employeeId);
 
@@ -157,7 +157,7 @@ public class HealthInsuranceService {
      * @param pageable pagination information
      * @return page of health insurance responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<HealthInsuranceResponse> getHealthInsuranceByStatus(HealthInsuranceStatus status, Pageable pageable) {
         log.debug("Request to get HealthInsurance by Status: {}", status);
 
@@ -170,7 +170,7 @@ public class HealthInsuranceService {
      * @param pageable pagination information
      * @return page of health insurance responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<HealthInsuranceResponse> getActiveHealthInsurance(Pageable pageable) {
         return getHealthInsuranceByStatus(HealthInsuranceStatus.ACTIVE, pageable);
     }
@@ -180,7 +180,7 @@ public class HealthInsuranceService {
      *
      * @param id the ID of the health insurance to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteHealthInsurance(UUID id) {
         log.debug("Request to delete HealthInsurance: {}", id);
 

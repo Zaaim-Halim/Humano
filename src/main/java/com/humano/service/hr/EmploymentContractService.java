@@ -44,7 +44,7 @@ public class EmploymentContractService {
         this.departmentRepository = departmentRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmploymentContractResponse create(CreateEmploymentContractRequest request) {
         log.debug("Request to create EmploymentContract: {}", request);
         Employee employee = employeeRepository
@@ -76,7 +76,7 @@ public class EmploymentContractService {
         return mapToResponse(repository.save(entity));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmploymentContractResponse update(UUID id, UpdateEmploymentContractRequest request) {
         log.debug("Request to update EmploymentContract: {}", id);
         return repository
@@ -122,17 +122,17 @@ public class EmploymentContractService {
             .orElseThrow(() -> EntityNotFoundException.create("EmploymentContract", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmploymentContractResponse getById(UUID id) {
         return repository.findById(id).map(this::mapToResponse).orElseThrow(() -> EntityNotFoundException.create("EmploymentContract", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<EmploymentContractResponse> getByEmployeeId(UUID employeeId) {
         return repository.findByEmployeeId(employeeId).stream().map(this::mapToResponse).toList();
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw EntityNotFoundException.create("EmploymentContract", id);

@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code com.humano.service.admin.UserAccountService}.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class MeService {
 
     private static final Logger LOG = LoggerFactory.getLogger(MeService.class);
@@ -38,7 +38,7 @@ public class MeService {
      * Load the current authenticated user with their authority set eagerly
      * fetched.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Optional<User> getCurrentUser() {
         return SecurityUtils.getCurrentUserLogin().flatMap(userRepository::findOneWithAuthoritiesByLogin);
     }

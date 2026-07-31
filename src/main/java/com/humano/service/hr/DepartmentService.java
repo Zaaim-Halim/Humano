@@ -29,7 +29,7 @@ public class DepartmentService {
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public DepartmentResponse createDepartment(CreateDepartmentRequest request) {
         log.debug("Request to create Department: {}", request);
 
@@ -50,7 +50,7 @@ public class DepartmentService {
         return mapToResponse(savedDepartment);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public DepartmentResponse updateDepartment(UUID id, UpdateDepartmentRequest request) {
         log.debug("Request to update Department: {}", id);
 
@@ -74,7 +74,7 @@ public class DepartmentService {
             .orElseThrow(() -> EntityNotFoundException.create("Department", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public DepartmentResponse getDepartmentById(UUID id) {
         log.debug("Request to get Department by ID: {}", id);
 
@@ -84,14 +84,14 @@ public class DepartmentService {
             .orElseThrow(() -> EntityNotFoundException.create("Department", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<DepartmentResponse> getAllDepartments(Pageable pageable) {
         log.debug("Request to get all Departments");
 
         return departmentRepository.findAll(pageable).map(this::mapToResponse);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteDepartment(UUID id) {
         log.debug("Request to delete Department: {}", id);
 
@@ -102,7 +102,7 @@ public class DepartmentService {
         log.info("Deleted department with ID: {}", id);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public boolean existsByName(String name) {
         return departmentRepository.existsByName(name);
     }
@@ -114,7 +114,7 @@ public class DepartmentService {
      * @param headId the employee ID to assign as head
      * @return the updated department response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public DepartmentResponse assignHead(UUID departmentId, UUID headId) {
         log.debug("Request to assign head {} to Department {}", headId, departmentId);
 
@@ -137,7 +137,7 @@ public class DepartmentService {
      * @param departmentId the department ID
      * @return the updated department response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public DepartmentResponse removeHead(UUID departmentId) {
         log.debug("Request to remove head from Department {}", departmentId);
 

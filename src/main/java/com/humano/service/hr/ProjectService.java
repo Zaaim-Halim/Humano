@@ -35,7 +35,7 @@ public class ProjectService {
      * @param request the project creation request
      * @return the created project response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public ProjectResponse createProject(CreateProjectRequest request) {
         log.debug("Request to create Project: {}", request);
 
@@ -58,7 +58,7 @@ public class ProjectService {
      * @param request the project update request
      * @return the updated project response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public ProjectResponse updateProject(UUID id, UpdateProjectRequest request) {
         log.debug("Request to update Project: {}", id);
 
@@ -88,7 +88,7 @@ public class ProjectService {
      * @param id the ID of the project
      * @return the project response
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public ProjectResponse getProjectById(UUID id) {
         log.debug("Request to get Project by ID: {}", id);
 
@@ -101,7 +101,7 @@ public class ProjectService {
      * @param pageable pagination information
      * @return page of project responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<ProjectResponse> getAllProjects(Pageable pageable) {
         log.debug("Request to get all Projects");
 
@@ -113,7 +113,7 @@ public class ProjectService {
      *
      * @param id the ID of the project to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteProject(UUID id) {
         log.debug("Request to delete Project: {}", id);
 

@@ -81,7 +81,7 @@ import org.springframework.transaction.annotation.Transactional;
  * bumps with no receiving manager).
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class TransferWorkflowService {
 
     private static final Logger log = LoggerFactory.getLogger(TransferWorkflowService.class);
@@ -260,7 +260,7 @@ public class TransferWorkflowService {
     /**
      * Get transfer workflow status.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public TransferWorkflowResponse getTransferStatus(UUID workflowId) {
         WorkflowInstance workflow = workflowStateManager.getWorkflow(workflowId);
 
@@ -570,7 +570,7 @@ public class TransferWorkflowService {
     /**
      * Get employee's position history.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<EmployeePositionHistory> getEmployeePositionHistory(UUID employeeId, Pageable pageable) {
         return positionHistoryRepository.findByEmployeeIdOrderByEffectiveDateDesc(employeeId, pageable);
     }

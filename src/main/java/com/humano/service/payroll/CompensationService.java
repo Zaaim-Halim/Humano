@@ -37,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
  * salary history tracking, and compensation analytics.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class CompensationService {
 
     private static final Logger log = LoggerFactory.getLogger(CompensationService.class);
@@ -169,7 +169,7 @@ public class CompensationService {
     /**
      * Retrieves the complete salary history for an employee with trend analysis.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public SalaryHistoryResponse getSalaryHistory(UUID employeeId) {
         log.debug("Fetching salary history for employee: {}", employeeId);
 
@@ -288,7 +288,7 @@ public class CompensationService {
     /**
      * Finds the active compensation for an employee on a specific date.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Optional<Compensation> findActiveCompensation(UUID employeeId, LocalDate asOfDate) {
         return compensationRepository
             .findAll(
@@ -310,7 +310,7 @@ public class CompensationService {
     /**
      * Gets all compensations for employees in a specific department.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<CompensationResponse> getCompensationsByDepartment(UUID departmentId, Pageable pageable) {
         return compensationRepository
             .findAll(
@@ -327,7 +327,7 @@ public class CompensationService {
     /**
      * Calculates the compensation cost for a department or organization.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, BigDecimal> calculateCompensationCost(UUID departmentId, LocalDate asOfDate) {
         List<Compensation> activeCompensations = compensationRepository.findAll(
             (Specification<Compensation>) (root, query, cb) -> {
@@ -371,7 +371,7 @@ public class CompensationService {
      * @param pageable pagination information
      * @return page of compensation responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<CompensationResponse> searchCompensations(CompensationSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search Compensations with criteria: {}", searchRequest);
 
@@ -401,7 +401,7 @@ public class CompensationService {
      * @param pageable pagination information
      * @return page of compensation responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<CompensationResponse> searchCompensationsByEmployee(
         UUID employeeId,
         CompensationSearchRequest searchRequest,

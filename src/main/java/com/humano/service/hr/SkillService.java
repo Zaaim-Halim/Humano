@@ -35,7 +35,7 @@ public class SkillService {
      * @param request the skill creation request
      * @return the created skill response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public SkillResponse createSkill(CreateSkillRequest request) {
         log.debug("Request to create Skill: {}", request);
 
@@ -58,7 +58,7 @@ public class SkillService {
      * @param request the skill update request
      * @return the updated skill response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public SkillResponse updateSkill(UUID id, UpdateSkillRequest request) {
         log.debug("Request to update Skill: {}", id);
 
@@ -88,7 +88,7 @@ public class SkillService {
      * @param id the ID of the skill
      * @return the skill response
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public SkillResponse getSkillById(UUID id) {
         log.debug("Request to get Skill by ID: {}", id);
 
@@ -101,7 +101,7 @@ public class SkillService {
      * @param pageable pagination information
      * @return page of skill responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<SkillResponse> getAllSkills(Pageable pageable) {
         log.debug("Request to get all Skills");
 
@@ -115,7 +115,7 @@ public class SkillService {
      * @param pageable pagination information
      * @return page of skill responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<SkillResponse> getSkillsByCategory(String category, Pageable pageable) {
         log.debug("Request to get Skills by Category: {}", category);
 
@@ -127,7 +127,7 @@ public class SkillService {
      *
      * @param id the ID of the skill to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteSkill(UUID id) {
         log.debug("Request to delete Skill: {}", id);
 

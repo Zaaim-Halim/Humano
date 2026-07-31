@@ -42,7 +42,7 @@ public class TimesheetService {
         this.projectRepository = projectRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public TimesheetResponse createTimesheet(CreateTimesheetRequest request) {
         log.debug("Request to create Timesheet: {}", request);
 
@@ -68,7 +68,7 @@ public class TimesheetService {
         return mapToResponse(savedTimesheet);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public TimesheetResponse updateTimesheet(UUID id, UpdateTimesheetRequest request) {
         log.debug("Request to update Timesheet: {}", id);
 
@@ -92,35 +92,35 @@ public class TimesheetService {
             .orElseThrow(() -> EntityNotFoundException.create("Timesheet", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public TimesheetResponse getTimesheetById(UUID id) {
         log.debug("Request to get Timesheet by ID: {}", id);
 
         return timesheetRepository.findById(id).map(this::mapToResponse).orElseThrow(() -> EntityNotFoundException.create("Timesheet", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<TimesheetResponse> getAllTimesheets(Pageable pageable) {
         log.debug("Request to get all Timesheets");
 
         return timesheetRepository.findAll(pageable).map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<TimesheetResponse> getTimesheetsByEmployee(UUID employeeId, Pageable pageable) {
         log.debug("Request to get Timesheets by Employee: {}", employeeId);
 
         return timesheetRepository.findByEmployeeId(employeeId, pageable).map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<TimesheetResponse> getTimesheetsByProject(UUID projectId, Pageable pageable) {
         log.debug("Request to get Timesheets by Project: {}", projectId);
 
         return timesheetRepository.findByProjectId(projectId, pageable).map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<TimesheetResponse> getTimesheetsByEmployeeAndDateRange(
         UUID employeeId,
         LocalDate startDate,
@@ -132,14 +132,14 @@ public class TimesheetService {
         return timesheetRepository.findByEmployeeIdAndDateBetween(employeeId, startDate, endDate, pageable).map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public BigDecimal getTotalHoursWorked(UUID employeeId, LocalDate startDate, LocalDate endDate) {
         log.debug("Request to get total hours worked by Employee: {} in date range: {} - {}", employeeId, startDate, endDate);
 
         return timesheetRepository.sumHoursWorkedByEmployeeIdAndDateBetween(employeeId, startDate, endDate);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteTimesheet(UUID id) {
         log.debug("Request to delete Timesheet: {}", id);
 
@@ -157,7 +157,7 @@ public class TimesheetService {
      * @param pageable pagination information
      * @return page of timesheet responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<TimesheetResponse> searchTimesheets(TimesheetSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search Timesheets with criteria: {}", searchRequest);
 
@@ -184,7 +184,7 @@ public class TimesheetService {
      * @param pageable pagination information
      * @return page of timesheet responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<TimesheetResponse> searchTimesheetsByEmployee(UUID employeeId, TimesheetSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search Timesheets for Employee: {} with criteria: {}", employeeId, searchRequest);
 

@@ -31,7 +31,7 @@ public class EmployeeAssetService {
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeAssetResponse create(CreateEmployeeAssetRequest request) {
         log.debug("Request to create EmployeeAsset: {}", request);
         Employee employee = employeeRepository
@@ -46,7 +46,7 @@ public class EmployeeAssetService {
         return mapToResponse(repository.save(entity));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeAssetResponse update(UUID id, UpdateEmployeeAssetRequest request) {
         log.debug("Request to update EmployeeAsset: {}", id);
         return repository
@@ -69,17 +69,17 @@ public class EmployeeAssetService {
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeAsset", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmployeeAssetResponse getById(UUID id) {
         return repository.findById(id).map(this::mapToResponse).orElseThrow(() -> EntityNotFoundException.create("EmployeeAsset", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<EmployeeAssetResponse> getByEmployeeId(UUID employeeId) {
         return repository.findByEmployeeId(employeeId).stream().map(this::mapToResponse).toList();
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw EntityNotFoundException.create("EmployeeAsset", id);

@@ -36,7 +36,7 @@ public class LeaveRequestService {
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public LeaveRequestResponse createLeaveRequest(CreateLeaveRequest request) {
         log.debug("Request to create LeaveRequest: {}", request);
 
@@ -65,7 +65,7 @@ public class LeaveRequestService {
         return mapToResponse(savedRequest);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public LeaveRequestResponse processLeaveRequest(UUID id, ProcessLeaveRequest request) {
         log.debug("Request to process LeaveRequest: {} with status: {}", id, request.status());
 
@@ -89,7 +89,7 @@ public class LeaveRequestService {
             .orElseThrow(() -> EntityNotFoundException.create("LeaveRequest", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public LeaveRequestResponse getLeaveRequestById(UUID id) {
         log.debug("Request to get LeaveRequest by ID: {}", id);
 
@@ -99,33 +99,33 @@ public class LeaveRequestService {
             .orElseThrow(() -> EntityNotFoundException.create("LeaveRequest", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<LeaveRequestResponse> getAllLeaveRequests(Pageable pageable) {
         log.debug("Request to get all LeaveRequests");
 
         return leaveRequestRepository.findAll(pageable).map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<LeaveRequestResponse> getLeaveRequestsByEmployee(UUID employeeId, Pageable pageable) {
         log.debug("Request to get LeaveRequests by Employee: {}", employeeId);
 
         return leaveRequestRepository.findByEmployeeId(employeeId, pageable).map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<LeaveRequestResponse> getLeaveRequestsByStatus(LeaveStatus status, Pageable pageable) {
         log.debug("Request to get LeaveRequests by Status: {}", status);
 
         return leaveRequestRepository.findByStatus(status, pageable).map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<LeaveRequestResponse> getPendingLeaveRequests(Pageable pageable) {
         return getLeaveRequestsByStatus(LeaveStatus.PENDING, pageable);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public LeaveRequestResponse cancelLeaveRequest(UUID id) {
         log.debug("Request to cancel LeaveRequest: {}", id);
 
@@ -142,7 +142,7 @@ public class LeaveRequestService {
             .orElseThrow(() -> EntityNotFoundException.create("LeaveRequest", id));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteLeaveRequest(UUID id) {
         log.debug("Request to delete LeaveRequest: {}", id);
 
@@ -160,7 +160,7 @@ public class LeaveRequestService {
      * @param pageable pagination information
      * @return page of leave request responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<LeaveRequestResponse> searchLeaveRequests(LeaveRequestSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search LeaveRequests with criteria: {}", searchRequest);
 
@@ -192,7 +192,7 @@ public class LeaveRequestService {
      * @param pageable pagination information
      * @return page of leave request responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<LeaveRequestResponse> searchLeaveRequestsByEmployee(
         UUID employeeId,
         LeaveRequestSearchRequest searchRequest,

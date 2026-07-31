@@ -30,7 +30,7 @@ public class EmployeeSignatureService {
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeSignatureResponse create(CreateEmployeeSignatureRequest request) {
         log.debug("Request to create EmployeeSignature: {}", request);
         Employee employee = employeeRepository
@@ -43,7 +43,7 @@ public class EmployeeSignatureService {
         return mapToResponse(repository.save(entity));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeSignatureResponse update(UUID id, UpdateEmployeeSignatureRequest request) {
         log.debug("Request to update EmployeeSignature: {}", id);
         return repository
@@ -60,12 +60,12 @@ public class EmployeeSignatureService {
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeSignature", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmployeeSignatureResponse getById(UUID id) {
         return repository.findById(id).map(this::mapToResponse).orElseThrow(() -> EntityNotFoundException.create("EmployeeSignature", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmployeeSignatureResponse getByEmployeeId(UUID employeeId) {
         return repository
             .findByEmployeeId(employeeId)
@@ -73,7 +73,7 @@ public class EmployeeSignatureService {
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeSignature", employeeId));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw EntityNotFoundException.create("EmployeeSignature", id);

@@ -36,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
  * PDF creation, and payslip analytics.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class PayslipService {
 
     private static final Logger log = LoggerFactory.getLogger(PayslipService.class);
@@ -159,7 +159,7 @@ public class PayslipService {
     /**
      * Gets a payslip by its ID.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public PayslipResponse getPayslip(UUID payslipId) {
         Payslip payslip = payslipRepository.findById(payslipId).orElseThrow(() -> new EntityNotFoundException("Payslip", payslipId));
         return toResponse(payslip);
@@ -168,7 +168,7 @@ public class PayslipService {
     /**
      * Gets a payslip by its number.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public PayslipResponse getPayslipByNumber(String number) {
         Payslip payslip = payslipRepository
             .findAll((Specification<Payslip>) (root, query, cb) -> cb.equal(root.get("number"), number))
@@ -181,7 +181,7 @@ public class PayslipService {
     /**
      * Gets all payslips for an employee.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PayslipResponse> getEmployeePayslips(UUID employeeId, Pageable pageable) {
         Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new EntityNotFoundException("Employee", employeeId));
 
@@ -201,7 +201,7 @@ public class PayslipService {
     /**
      * Gets payslips for a specific payroll period.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PayslipResponse> getPayslipsForPeriod(UUID periodId, Pageable pageable) {
         return payslipRepository
             .findAll(
@@ -214,7 +214,7 @@ public class PayslipService {
     /**
      * Gets the latest payslip for an employee.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public PayslipResponse getLatestPayslip(UUID employeeId) {
         List<Payslip> payslips = payslipRepository.findAll(
             (Specification<Payslip>) (root, query, cb) -> {
@@ -236,7 +236,7 @@ public class PayslipService {
      * Finds the payslip belonging to a given run + employee. Used by the
      * {@code GET /api/payroll/runs/{id}/payslips/{employeeId}} endpoint.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Optional<PayslipResponse> findByRunAndEmployee(UUID runId, UUID employeeId) {
         return payslipRepository
             .findAll(
@@ -256,7 +256,7 @@ public class PayslipService {
      * line breakdown. Exposes the internal {@code buildResultDetails} mapper for the
      * {@code /api/payroll/results/{id}} endpoint.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public PayrollResultResponse getResultDetails(UUID resultId) {
         PayrollResult result = resultRepository
             .findById(resultId)
@@ -278,7 +278,7 @@ public class PayslipService {
      * Lists all payroll results for a given run. Used by
      * {@code GET /api/payroll/runs/{id}/results} endpoint.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<PayrollResultResponse> getResultsForRun(UUID runId) {
         return resultRepository
             .findAll((Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), runId))
@@ -354,7 +354,7 @@ public class PayslipService {
      * application/pdf} and the {@code Content-Disposition} header — this method returns
      * the suggested filename via the {@link PdfDownload} record.
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public PdfDownload downloadPdf(UUID payslipId) {
         Payslip initial = payslipRepository.findById(payslipId).orElseThrow(() -> new EntityNotFoundException("Payslip", payslipId));
         FileStorageService storage = storageFactory.getStorageService();
@@ -447,7 +447,7 @@ public class PayslipService {
     /**
      * Gets year-to-date earnings summary for an employee.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> getYearToDateSummary(UUID employeeId, int year) {
         LocalDate yearStart = LocalDate.of(year, 1, 1);
         LocalDate yearEnd = LocalDate.of(year, 12, 31);
@@ -494,7 +494,7 @@ public class PayslipService {
     /**
      * Searches payslips with various criteria.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PayslipResponse> searchPayslips(
         UUID employeeId,
         UUID departmentId,
@@ -540,7 +540,7 @@ public class PayslipService {
     /**
      * Gets payslip statistics for a department.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> getDepartmentPayslipStats(UUID departmentId, UUID periodId) {
         List<Payslip> payslips = payslipRepository.findAll(
             (Specification<Payslip>) (root, query, cb) ->
@@ -585,7 +585,7 @@ public class PayslipService {
      * @param pageable pagination information
      * @return page of payslip responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PayslipResponse> searchPayslipsAdvanced(PayslipSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search Payslips with criteria: {}", searchRequest);
 
@@ -617,7 +617,7 @@ public class PayslipService {
      * @param pageable pagination information
      * @return page of payslip responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PayslipResponse> searchPayslipsByEmployee(UUID employeeId, PayslipSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search Payslips for Employee: {} with criteria: {}", employeeId, searchRequest);
 

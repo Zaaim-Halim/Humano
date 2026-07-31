@@ -46,7 +46,7 @@ public class OvertimeRecordService {
      * @param request the overtime record creation request
      * @return the created overtime record response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public OvertimeRecordResponse createOvertimeRecord(CreateOvertimeRecordRequest request) {
         log.debug("Request to create OvertimeRecord: {}", request);
 
@@ -75,7 +75,7 @@ public class OvertimeRecordService {
      * @param request the processing request
      * @return the processed overtime record response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public OvertimeRecordResponse processOvertimeRecord(UUID id, ProcessOvertimeRecordRequest request) {
         log.debug("Request to process OvertimeRecord: {} with status: {}", id, request.approvalStatus());
 
@@ -107,7 +107,7 @@ public class OvertimeRecordService {
      * @param id the ID of the overtime record
      * @return the overtime record response
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public OvertimeRecordResponse getOvertimeRecordById(UUID id) {
         log.debug("Request to get OvertimeRecord by ID: {}", id);
 
@@ -123,7 +123,7 @@ public class OvertimeRecordService {
      * @param pageable pagination information
      * @return page of overtime record responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<OvertimeRecordResponse> getAllOvertimeRecords(Pageable pageable) {
         log.debug("Request to get all OvertimeRecords");
 
@@ -137,7 +137,7 @@ public class OvertimeRecordService {
      * @param pageable pagination information
      * @return page of overtime record responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<OvertimeRecordResponse> getOvertimeRecordsByEmployee(UUID employeeId, Pageable pageable) {
         log.debug("Request to get OvertimeRecords by Employee: {}", employeeId);
 
@@ -151,7 +151,7 @@ public class OvertimeRecordService {
      * @param pageable pagination information
      * @return page of overtime record responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<OvertimeRecordResponse> getOvertimeRecordsByStatus(OvertimeApprovalStatus status, Pageable pageable) {
         log.debug("Request to get OvertimeRecords by Status: {}", status);
 
@@ -164,7 +164,7 @@ public class OvertimeRecordService {
      * @param pageable pagination information
      * @return page of overtime record responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<OvertimeRecordResponse> getPendingOvertimeRecords(Pageable pageable) {
         return getOvertimeRecordsByStatus(OvertimeApprovalStatus.PENDING, pageable);
     }
@@ -178,7 +178,7 @@ public class OvertimeRecordService {
      * @param pageable pagination information
      * @return page of overtime record responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<OvertimeRecordResponse> getOvertimeRecordsByEmployeeAndDateRange(
         UUID employeeId,
         LocalDate startDate,
@@ -195,7 +195,7 @@ public class OvertimeRecordService {
      *
      * @param id the ID of the overtime record to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteOvertimeRecord(UUID id) {
         log.debug("Request to delete OvertimeRecord: {}", id);
 
@@ -213,7 +213,7 @@ public class OvertimeRecordService {
      * @param pageable pagination information
      * @return page of overtime record responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<OvertimeRecordResponse> searchOvertimeRecords(OvertimeRecordSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search OvertimeRecords with criteria: {}", searchRequest);
 
@@ -243,7 +243,7 @@ public class OvertimeRecordService {
      * @param pageable pagination information
      * @return page of overtime record responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<OvertimeRecordResponse> searchOvertimeRecordsByEmployee(
         UUID employeeId,
         OvertimeRecordSearchRequest searchRequest,

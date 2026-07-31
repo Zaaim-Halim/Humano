@@ -32,7 +32,7 @@ public class PerformanceReviewService {
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public PerformanceReviewResponse createPerformanceReview(CreatePerformanceReviewRequest request) {
         log.debug("Request to create PerformanceReview: {}", request);
 
@@ -57,7 +57,7 @@ public class PerformanceReviewService {
         return mapToResponse(savedReview);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public PerformanceReviewResponse updatePerformanceReview(UUID id, UpdatePerformanceReviewRequest request) {
         log.debug("Request to update PerformanceReview: {}", id);
 
@@ -78,7 +78,7 @@ public class PerformanceReviewService {
             .orElseThrow(() -> EntityNotFoundException.create("PerformanceReview", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public PerformanceReviewResponse getPerformanceReviewById(UUID id) {
         log.debug("Request to get PerformanceReview by ID: {}", id);
 
@@ -88,28 +88,28 @@ public class PerformanceReviewService {
             .orElseThrow(() -> EntityNotFoundException.create("PerformanceReview", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PerformanceReviewResponse> getAllPerformanceReviews(Pageable pageable) {
         log.debug("Request to get all PerformanceReviews");
 
         return performanceReviewRepository.findAll(pageable).map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PerformanceReviewResponse> getPerformanceReviewsByEmployee(UUID employeeId, Pageable pageable) {
         log.debug("Request to get PerformanceReviews by Employee: {}", employeeId);
 
         return performanceReviewRepository.findByEmployeeId(employeeId, pageable).map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PerformanceReviewResponse> getPerformanceReviewsByReviewer(UUID reviewerId, Pageable pageable) {
         log.debug("Request to get PerformanceReviews by Reviewer: {}", reviewerId);
 
         return performanceReviewRepository.findByReviewerId(reviewerId, pageable).map(this::mapToResponse);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deletePerformanceReview(UUID id) {
         log.debug("Request to delete PerformanceReview: {}", id);
 
@@ -127,7 +127,7 @@ public class PerformanceReviewService {
      * @param pageable pagination information
      * @return page of performance review responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PerformanceReviewResponse> searchPerformanceReviews(PerformanceReviewSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search PerformanceReviews with criteria: {}", searchRequest);
 

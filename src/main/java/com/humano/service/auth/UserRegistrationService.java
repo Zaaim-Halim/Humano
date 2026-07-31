@@ -19,7 +19,7 @@ import tech.jhipster.security.RandomUtil;
  * admin-only paths keeps the security review surface small.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class UserRegistrationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(UserRegistrationService.class);

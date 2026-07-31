@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
  * and calculation of deduction amounts.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class DeductionService {
 
     private static final Logger log = LoggerFactory.getLogger(DeductionService.class);
@@ -111,7 +111,7 @@ public class DeductionService {
     /**
      * Gets all active deductions for an employee on a specific date.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<DeductionResponse> getActiveDeductions(UUID employeeId, LocalDate asOfDate) {
         LocalDate effectiveDate = asOfDate != null ? asOfDate : LocalDate.now();
 
@@ -130,7 +130,7 @@ public class DeductionService {
     /**
      * Calculates total deduction amount for an employee based on gross pay.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, BigDecimal> calculateDeductions(UUID employeeId, BigDecimal grossPay, LocalDate asOfDate) {
         List<Deduction> activeDeductions = deductionRepository.findAll(
             (Specification<Deduction>) (root, query, cb) ->
@@ -166,7 +166,7 @@ public class DeductionService {
     /**
      * Gets all deductions by type across the organization.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<DeductionResponse> getDeductionsByType(DeductionType type, Pageable pageable) {
         return deductionRepository
             .findAll(
@@ -209,7 +209,7 @@ public class DeductionService {
     /**
      * Gets deduction summary statistics for reporting.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> getDeductionStatistics(UUID departmentId, LocalDate asOfDate) {
         Specification<Deduction> spec = (root, query, cb) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
@@ -256,7 +256,7 @@ public class DeductionService {
      * @param pageable pagination information
      * @return page of deduction responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<DeductionResponse> searchDeductions(DeductionSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search Deductions with criteria: {}", searchRequest);
 
@@ -289,7 +289,7 @@ public class DeductionService {
      * @param pageable pagination information
      * @return page of deduction responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<DeductionResponse> searchDeductionsByEmployee(UUID employeeId, DeductionSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search Deductions for Employee: {} with criteria: {}", employeeId, searchRequest);
 

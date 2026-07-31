@@ -112,7 +112,7 @@ import org.springframework.transaction.annotation.Transactional;
  * without careful consideration. Don't widen here.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class PayrollProcessingService {
 
     private static final Logger log = LoggerFactory.getLogger(PayrollProcessingService.class);
@@ -1180,7 +1180,7 @@ public class PayrollProcessingService {
     /**
      * Gets a summary of a payroll run with aggregated statistics.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public PayrollRunSummaryResponse getPayrollRunSummary(UUID runId) {
         PayrollRun run = payrollRunRepository.findById(runId).orElseThrow(() -> new EntityNotFoundException("PayrollRun", runId));
 

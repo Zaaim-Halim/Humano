@@ -46,7 +46,7 @@ public class ExpenseClaimService {
      * @param request the expense claim creation request
      * @return the created expense claim response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public ExpenseClaimResponse createExpenseClaim(CreateExpenseClaimRequest request) {
         log.debug("Request to create ExpenseClaim: {}", request);
 
@@ -74,7 +74,7 @@ public class ExpenseClaimService {
      * @param request the processing request
      * @return the processed expense claim response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public ExpenseClaimResponse processExpenseClaim(UUID id, ProcessExpenseClaimRequest request) {
         log.debug("Request to process ExpenseClaim: {} with status: {}", id, request.status());
 
@@ -97,7 +97,7 @@ public class ExpenseClaimService {
      * @param id the ID of the expense claim
      * @return the expense claim response
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public ExpenseClaimResponse getExpenseClaimById(UUID id) {
         log.debug("Request to get ExpenseClaim by ID: {}", id);
 
@@ -113,7 +113,7 @@ public class ExpenseClaimService {
      * @param pageable pagination information
      * @return page of expense claim responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<ExpenseClaimResponse> getAllExpenseClaims(Pageable pageable) {
         log.debug("Request to get all ExpenseClaims");
 
@@ -127,7 +127,7 @@ public class ExpenseClaimService {
      * @param pageable pagination information
      * @return page of expense claim responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<ExpenseClaimResponse> getExpenseClaimsByEmployee(UUID employeeId, Pageable pageable) {
         log.debug("Request to get ExpenseClaims by Employee: {}", employeeId);
 
@@ -141,7 +141,7 @@ public class ExpenseClaimService {
      * @param pageable pagination information
      * @return page of expense claim responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<ExpenseClaimResponse> getExpenseClaimsByStatus(ExpenseClaimStatus status, Pageable pageable) {
         log.debug("Request to get ExpenseClaims by Status: {}", status);
 
@@ -154,7 +154,7 @@ public class ExpenseClaimService {
      * @param pageable pagination information
      * @return page of expense claim responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<ExpenseClaimResponse> getPendingExpenseClaims(Pageable pageable) {
         return getExpenseClaimsByStatus(ExpenseClaimStatus.PENDING, pageable);
     }
@@ -168,7 +168,7 @@ public class ExpenseClaimService {
      * @param pageable pagination information
      * @return page of expense claim responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<ExpenseClaimResponse> getExpenseClaimsByEmployeeAndDateRange(
         UUID employeeId,
         LocalDate startDate,
@@ -187,7 +187,7 @@ public class ExpenseClaimService {
      *
      * @param id the ID of the expense claim to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteExpenseClaim(UUID id) {
         log.debug("Request to delete ExpenseClaim: {}", id);
 
@@ -205,7 +205,7 @@ public class ExpenseClaimService {
      * @param pageable pagination information
      * @return page of expense claim responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<ExpenseClaimResponse> searchExpenseClaims(ExpenseClaimSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search ExpenseClaims with criteria: {}", searchRequest);
 
@@ -234,7 +234,7 @@ public class ExpenseClaimService {
      * @param pageable pagination information
      * @return page of expense claim responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<ExpenseClaimResponse> searchExpenseClaimsByEmployee(
         UUID employeeId,
         ExpenseClaimSearchRequest searchRequest,

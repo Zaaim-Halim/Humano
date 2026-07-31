@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
  * and year-to-date tracking.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class TaxWithholdingService {
 
     private static final Logger log = LoggerFactory.getLogger(TaxWithholdingService.class);
@@ -110,7 +110,7 @@ public class TaxWithholdingService {
     /**
      * Gets all active tax withholdings for an employee.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<TaxWithholdingResponse> getActiveWithholdings(UUID employeeId, LocalDate asOfDate) {
         LocalDate effectiveDate = asOfDate != null ? asOfDate : LocalDate.now();
 
@@ -171,7 +171,7 @@ public class TaxWithholdingService {
     /**
      * Gets withholdings by tax type across the organization.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<TaxWithholdingResponse> getWithholdingsByType(TaxType type, Pageable pageable) {
         LocalDate today = LocalDate.now();
 
@@ -191,7 +191,7 @@ public class TaxWithholdingService {
     /**
      * Calculates total tax liability for an employee.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, BigDecimal> calculateTaxLiability(UUID employeeId, BigDecimal grossPay, LocalDate asOfDate) {
         List<TaxWithholding> withholdings = withholdingRepository.findAll(
             (Specification<TaxWithholding>) (root, query, cb) ->
@@ -219,7 +219,7 @@ public class TaxWithholdingService {
     /**
      * Gets tax withholding statistics.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> getWithholdingStatistics(UUID departmentId) {
         LocalDate today = LocalDate.now();
 

@@ -54,7 +54,7 @@ public class TrainingService {
      * @param request the training creation request
      * @return the created training response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public TrainingResponse createTraining(CreateTrainingRequest request) {
         log.debug("Request to create Training: {}", request);
 
@@ -80,7 +80,7 @@ public class TrainingService {
      * @param request the training update request
      * @return the updated training response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public TrainingResponse updateTraining(UUID id, UpdateTrainingRequest request) {
         log.debug("Request to update Training: {}", id);
 
@@ -119,7 +119,7 @@ public class TrainingService {
      * @param id the ID of the training
      * @return the training response
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public TrainingResponse getTrainingById(UUID id) {
         log.debug("Request to get Training by ID: {}", id);
 
@@ -135,7 +135,7 @@ public class TrainingService {
      * @param pageable pagination information
      * @return page of training responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<TrainingResponse> getAllTrainings(Pageable pageable) {
         log.debug("Request to get all Trainings");
 
@@ -147,7 +147,7 @@ public class TrainingService {
      *
      * @param id the ID of the training to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteTraining(UUID id) {
         log.debug("Request to delete Training: {}", id);
 
@@ -164,7 +164,7 @@ public class TrainingService {
      * @param request the employee training enrollment request
      * @return the employee training response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeTrainingResponse enrollEmployee(EnrollEmployeeTrainingRequest request) {
         log.debug("Request to enroll Employee in Training: {}", request);
 
@@ -195,7 +195,7 @@ public class TrainingService {
      * @param request the update request
      * @return the updated employee training response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeTrainingResponse updateEmployeeTraining(UUID id, UpdateEmployeeTrainingRequest request) {
         log.debug("Request to update EmployeeTraining: {}", id);
 
@@ -225,7 +225,7 @@ public class TrainingService {
      * @param id the ID of the employee training record
      * @return the employee training response
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmployeeTrainingResponse getEmployeeTrainingById(UUID id) {
         log.debug("Request to get EmployeeTraining: {}", id);
 
@@ -242,7 +242,7 @@ public class TrainingService {
      * @param pageable pagination information
      * @return page of employee training responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<EmployeeTrainingResponse> getEmployeeTrainingsByEmployee(UUID employeeId, Pageable pageable) {
         log.debug("Request to get EmployeeTrainings by Employee: {}", employeeId);
 
@@ -256,7 +256,7 @@ public class TrainingService {
      * @param pageable pagination information
      * @return page of employee training responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<EmployeeTrainingResponse> getEmployeeTrainingsByTraining(UUID trainingId, Pageable pageable) {
         log.debug("Request to get EmployeeTrainings by Training: {}", trainingId);
 
@@ -268,7 +268,7 @@ public class TrainingService {
      *
      * @param id the ID of the employee training record to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void removeEmployeeFromTraining(UUID id) {
         log.debug("Request to remove EmployeeTraining: {}", id);
 
@@ -286,7 +286,7 @@ public class TrainingService {
      * @param pageable pagination information
      * @return page of employee training responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<EmployeeTrainingResponse> searchEmployeeTrainings(EmployeeTrainingSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search EmployeeTrainings with criteria: {}", searchRequest);
 

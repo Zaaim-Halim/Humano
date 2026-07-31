@@ -35,7 +35,7 @@ public class BenefitService {
      * @param request the benefit creation request
      * @return the created benefit response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public BenefitResponse createBenefit(CreateBenefitRequest request) {
         log.debug("Request to create Benefit: {}", request);
 
@@ -57,7 +57,7 @@ public class BenefitService {
      * @param request the benefit update request
      * @return the updated benefit response
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public BenefitResponse updateBenefit(UUID id, UpdateBenefitRequest request) {
         log.debug("Request to update Benefit: {}", id);
 
@@ -84,7 +84,7 @@ public class BenefitService {
      * @param id the ID of the benefit
      * @return the benefit response
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public BenefitResponse getBenefitById(UUID id) {
         log.debug("Request to get Benefit by ID: {}", id);
 
@@ -97,7 +97,7 @@ public class BenefitService {
      * @param pageable pagination information
      * @return page of benefit responses
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<BenefitResponse> getAllBenefits(Pageable pageable) {
         log.debug("Request to get all Benefits");
 
@@ -109,7 +109,7 @@ public class BenefitService {
      *
      * @param id the ID of the benefit to delete
      */
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deleteBenefit(UUID id) {
         log.debug("Request to delete Benefit: {}", id);
 

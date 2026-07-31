@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Supports multiple frequencies and automatic period generation.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class PayrollCalendarService {
 
     private static final Logger log = LoggerFactory.getLogger(PayrollCalendarService.class);
@@ -133,7 +133,7 @@ public class PayrollCalendarService {
     /**
      * Gets all active payroll calendars.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<PayrollCalendarResponse> getActiveCalendars() {
         return calendarRepository
             .findAll((Specification<PayrollCalendar>) (root, query, cb) -> cb.isTrue(root.get("active")))
@@ -145,7 +145,7 @@ public class PayrollCalendarService {
     /**
      * Gets periods for a calendar with pagination.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PayrollPeriodResponse> getPeriods(UUID calendarId, Pageable pageable) {
         return periodRepository
             .findAll(
@@ -163,7 +163,7 @@ public class PayrollCalendarService {
     /**
      * Gets open (not closed) periods ready for payroll processing.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<PayrollPeriodResponse> getOpenPeriods(UUID calendarId) {
         LocalDate today = LocalDate.now();
 
@@ -266,7 +266,7 @@ public class PayrollCalendarService {
     /**
      * Gets upcoming periods for all active calendars.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, List<PayrollPeriodResponse>> getUpcomingPeriodsByCalendar(int daysAhead) {
         LocalDate today = LocalDate.now();
         LocalDate endDate = today.plusDays(daysAhead);

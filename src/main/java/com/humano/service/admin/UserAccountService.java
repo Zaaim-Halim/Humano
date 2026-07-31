@@ -43,7 +43,7 @@ import tech.jhipster.security.RandomUtil;
  * {@code com.humano.service.auth.UserRegistrationService}.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class UserAccountService {
 
     private static final Logger LOG = LoggerFactory.getLogger(UserAccountService.class);
@@ -150,22 +150,22 @@ public class UserAccountService {
             });
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<User> getAllManagedUsers(Pageable pageable) {
         return userRepository.findAll(pageable);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<User> getPublicDirectory(Pageable pageable) {
         return userRepository.findAllByIdNotNullAndActivatedIsTrue(pageable);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Optional<User> getUserWithAuthoritiesByLogin(String login) {
         return userRepository.findOneWithAuthoritiesByLogin(login);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<String> getAuthorities() {
         return authorityRepository.findAll().stream().map(Authority::getName).toList();
     }

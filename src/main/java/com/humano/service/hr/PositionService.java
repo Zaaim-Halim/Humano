@@ -29,7 +29,7 @@ public class PositionService {
         this.organizationalUnitRepository = organizationalUnitRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public PositionResponse createPosition(CreatePositionRequest request) {
         log.debug("Request to create Position: {}", request);
 
@@ -58,7 +58,7 @@ public class PositionService {
         return mapToResponse(savedPosition);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public PositionResponse updatePosition(UUID id, UpdatePositionRequest request) {
         log.debug("Request to update Position: {}", id);
 
@@ -91,28 +91,28 @@ public class PositionService {
             .orElseThrow(() -> EntityNotFoundException.create("Position", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public PositionResponse getPositionById(UUID id) {
         log.debug("Request to get Position by ID: {}", id);
 
         return positionRepository.findById(id).map(this::mapToResponse).orElseThrow(() -> EntityNotFoundException.create("Position", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PositionResponse> getAllPositions(Pageable pageable) {
         log.debug("Request to get all Positions");
 
         return positionRepository.findAll(pageable).map(this::mapToResponse);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PositionResponse> getPositionsByUnit(UUID unitId, Pageable pageable) {
         log.debug("Request to get Positions by Unit: {}", unitId);
 
         return positionRepository.findByUnitId(unitId, pageable).map(this::mapToResponse);
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void deletePosition(UUID id) {
         log.debug("Request to delete Position: {}", id);
 

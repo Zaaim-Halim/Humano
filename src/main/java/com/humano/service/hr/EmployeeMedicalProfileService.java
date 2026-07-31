@@ -30,7 +30,7 @@ public class EmployeeMedicalProfileService {
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeMedicalProfileResponse create(CreateEmployeeMedicalProfileRequest request) {
         log.debug("Request to create EmployeeMedicalProfile: {}", request);
         Employee employee = employeeRepository
@@ -44,7 +44,7 @@ public class EmployeeMedicalProfileService {
         return mapToResponse(repository.save(entity));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeMedicalProfileResponse update(UUID id, UpdateEmployeeMedicalProfileRequest request) {
         log.debug("Request to update EmployeeMedicalProfile: {}", id);
         return repository
@@ -64,7 +64,7 @@ public class EmployeeMedicalProfileService {
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeMedicalProfile", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmployeeMedicalProfileResponse getById(UUID id) {
         return repository
             .findById(id)
@@ -72,7 +72,7 @@ public class EmployeeMedicalProfileService {
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeMedicalProfile", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmployeeMedicalProfileResponse getByEmployeeId(UUID employeeId) {
         return repository
             .findByEmployeeId(employeeId)
@@ -80,7 +80,7 @@ public class EmployeeMedicalProfileService {
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeMedicalProfile", employeeId));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw EntityNotFoundException.create("EmployeeMedicalProfile", id);

@@ -31,7 +31,7 @@ public class EmployeeBankAccountService {
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeBankAccountResponse create(CreateEmployeeBankAccountRequest request) {
         log.debug("Request to create EmployeeBankAccount: {}", request);
         Employee employee = employeeRepository
@@ -48,7 +48,7 @@ public class EmployeeBankAccountService {
         return mapToResponse(repository.save(entity));
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public EmployeeBankAccountResponse update(UUID id, UpdateEmployeeBankAccountRequest request) {
         log.debug("Request to update EmployeeBankAccount: {}", id);
         return repository
@@ -77,7 +77,7 @@ public class EmployeeBankAccountService {
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeBankAccount", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public EmployeeBankAccountResponse getById(UUID id) {
         return repository
             .findById(id)
@@ -85,12 +85,12 @@ public class EmployeeBankAccountService {
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeBankAccount", id));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<EmployeeBankAccountResponse> getByEmployeeId(UUID employeeId) {
         return repository.findByEmployeeId(employeeId).stream().map(this::mapToResponse).toList();
     }
 
-    @Transactional
+    @Transactional("tenantTransactionManager")
     public void delete(UUID id) {
         if (!repository.existsById(id)) {
             throw EntityNotFoundException.create("EmployeeBankAccount", id);

@@ -33,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
  * bulk operations, and analytics.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class BonusService {
 
     private static final Logger log = LoggerFactory.getLogger(BonusService.class);
@@ -167,7 +167,7 @@ public class BonusService {
     /**
      * Retrieves a comprehensive bonus summary for an employee.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public BonusSummaryResponse getBonusSummary(UUID employeeId) {
         Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new EntityNotFoundException("Employee", employeeId));
 
@@ -225,7 +225,7 @@ public class BonusService {
     /**
      * Gets all pending (unpaid) bonuses for payment processing.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<BonusResponse> getPendingBonuses(LocalDate paymentDateBefore, Pageable pageable) {
         return bonusRepository
             .findAll(
@@ -245,7 +245,7 @@ public class BonusService {
     /**
      * Gets bonus analytics for a department.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> getDepartmentBonusAnalytics(UUID departmentId, int year) {
         LocalDate startDate = LocalDate.of(year, 1, 1);
         LocalDate endDate = LocalDate.of(year, 12, 31);
@@ -312,7 +312,7 @@ public class BonusService {
      * @param pageable pagination information
      * @return page of bonus responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<BonusResponse> searchBonuses(BonusSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search Bonuses with criteria: {}", searchRequest);
 
@@ -345,7 +345,7 @@ public class BonusService {
      * @param pageable pagination information
      * @return page of bonus responses matching the criteria
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<BonusResponse> searchBonusesByEmployee(UUID employeeId, BonusSearchRequest searchRequest, Pageable pageable) {
         log.debug("Request to search Bonuses for Employee: {} with criteria: {}", employeeId, searchRequest);
 
