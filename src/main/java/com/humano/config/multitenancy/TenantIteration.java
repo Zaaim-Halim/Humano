@@ -60,7 +60,7 @@ public class TenantIteration {
     public TenantIteration(
         TenantRepository tenantRepository,
         @Qualifier("taskExecutor") AsyncTaskExecutor taskExecutor,
-        PlatformTransactionManager transactionManager
+        @Qualifier("tenantTransactionManager") PlatformTransactionManager transactionManager
     ) {
         this.tenantRepository = tenantRepository;
         this.taskExecutor = taskExecutor;
@@ -68,6 +68,9 @@ public class TenantIteration {
         // because connections to the routing datasource are bound to the tenant
         // that was current when the tx started — sharing a tx across tenants
         // would write everything to the first tenant's DB.
+        // The manager must be the tenant one: the work always targets a tenant DB, and
+        // masterTransactionManager (the @Primary bean an unqualified injection would pick)
+        // opens a transaction on the master datasource that tenant repositories never join.
         TransactionTemplate tx = new TransactionTemplate(transactionManager);
         tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.perTenantTx = tx;

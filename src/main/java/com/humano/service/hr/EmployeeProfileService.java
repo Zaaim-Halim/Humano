@@ -83,9 +83,6 @@ public class EmployeeProfileService {
     private final UserAccountService userAccountService;
     private final MailService mailService;
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
     public EmployeeProfileService(
         EmployeeRepository employeeRepository,
         UserRepository userRepository,
@@ -144,41 +141,21 @@ public class EmployeeProfileService {
             throw new EmailAlreadyUsedException();
         }
 
-        // Create the auth account (random password + reset key) and notify the recipient.
-        User user = userAccountService.createUser(request.toCreateUserRequest());
-        mailService.sendCreationEmail(user);
-
-        // Employee shares the user's id (JOINED inheritance). Detaching here mirrors
-        // the proven path where the user already exists in a prior persistence
-        // context, so persisting the Employee subclass row can't collide with the
-        // just-created managed User of the same id.
-        entityManager.flush();
-        entityManager.clear();
-
-        User attached = userRepository
-            .findById(user.getId())
-            .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + user.getId()));
-
-        return attachProfile(attached, request.toProfileRequest());
-    }
-
-    /**
-     * Turn an existing user into an employee by inserting the JOINED-inheritance
-     * child row and populating the HR profile.
-     */
-    private EmployeeProfileResponse attachProfile(User user, CreateEmployeeProfileRequest request) {
-        if (employeeRepository.existsById(user.getId())) {
-            throw new BadRequestAlertException("User is already an employee", ENTITY_NAME, "useralreadyemployee");
-        }
-
-        Employee employee = new Employee();
-        copyUserPropertiesToEmployee(user, employee);
-        mapRequestToEmployee(request, employee);
-        setEmployeeRelationships(employee, request);
+        // Build the Employee itself — account fields and HR profile together — so the
+        // JOINED-inheritance user + employee rows are written by a single insert. Creating
+        // the User first and grafting the child row on afterwards cannot work: with the id
+        // already assigned, save() issues a merge, which fails because no employee row exists.
+        CreateEmployeeProfileRequest profile = request.toProfileRequest();
+        Employee employee = userAccountService.prepareNewUser(new Employee(), request.toCreateUserRequest());
+        mapRequestToEmployee(profile, employee);
+        setEmployeeRelationships(employee, profile);
         addEmployeeAuthority(employee);
 
         Employee savedEmployee = employeeRepository.save(employee);
         log.debug("Created employee profile with ID: {}", savedEmployee.getId());
+
+        // Sent after the insert so the reset link can never point at a row that was rolled back.
+        mailService.sendCreationEmail(savedEmployee);
 
         return mapToEmployeeProfileResponse(savedEmployee);
     }
@@ -314,29 +291,6 @@ public class EmployeeProfileService {
         }
 
         return employeeRepository.findAll(specification, pageable).map(this::mapToSimpleEmployeeProfileResponse);
-    }
-
-    /**
-     * Copy user properties to employee.
-     * This method copies only the necessary properties from User to Employee.
-     *
-     * @param user the source user
-     * @param employee the target employee
-     */
-    private void copyUserPropertiesToEmployee(User user, Employee employee) {
-        employee.setId(user.getId());
-        employee.setLogin(user.getLogin());
-        employee.setPassword(user.getPassword());
-        employee.setFirstName(user.getFirstName());
-        employee.setLastName(user.getLastName());
-        employee.setEmail(user.getEmail());
-        employee.setActivated(user.isActivated());
-        employee.setLangKey(user.getLangKey());
-        employee.setImageUrl(user.getImageUrl());
-        employee.setActivationKey(user.getActivationKey());
-        employee.setResetKey(user.getResetKey());
-        employee.setResetDate(user.getResetDate());
-        employee.setAuthorities(user.getAuthorities());
     }
 
     /**

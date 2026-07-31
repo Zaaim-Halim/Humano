@@ -77,7 +77,32 @@ public class UserAccountService {
      * so the recipient can set their own password.
      */
     public User createUser(CreateUserRequest request) {
-        User user = new User();
+        User user = prepareNewUser(new User(), request);
+        userRepository.save(user);
+        LOG.debug("Created user: {}", user.getLogin());
+        return user;
+    }
+
+    /**
+     * Populate an unsaved user &mdash; or a {@link User} subclass such as {@code Employee} &mdash;
+     * with the same admin-supplied attributes and generated credentials as {@link #createUser},
+     * without persisting it.
+     * <p>
+     * Lets a caller insert the subclass in a single {@code persist}. Creating the {@code User}
+     * row first and grafting the JOINED-inheritance child row on afterwards does not work: with
+     * the id already assigned, {@code save()} issues a {@code merge}, which fails because no
+     * child row exists yet.
+     *
+     * @param target  the unsaved instance to populate; its id must still be {@code null}
+     * @param request the admin-supplied attributes
+     * @return {@code target}, populated
+     */
+    public <T extends User> T prepareNewUser(T target, CreateUserRequest request) {
+        applyNewUserDefaults(target, request);
+        return target;
+    }
+
+    private void applyNewUserDefaults(User user, CreateUserRequest request) {
         user.setLogin(request.login().toLowerCase());
         user.setFirstName(request.firstName());
         user.setLastName(request.lastName());
@@ -100,9 +125,6 @@ public class UserAccountService {
                 .collect(Collectors.toSet());
             user.setAuthorities(authorities);
         }
-        userRepository.save(user);
-        LOG.debug("Created user: {}", user.getLogin());
-        return user;
     }
 
     /**
