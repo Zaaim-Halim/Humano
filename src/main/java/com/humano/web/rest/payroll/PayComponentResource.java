@@ -68,6 +68,12 @@ public class PayComponentResource {
         );
     }
 
+    /** Every rule on the component, enabled or not &mdash; what the admin editor lists. */
+    @GetMapping("/{id}/rules")
+    public ResponseEntity<List<PayComponentResponse.PayRuleSummary>> rules(@PathVariable UUID id) {
+        return ResponseEntity.ok(payComponentService.getRules(id));
+    }
+
     @GetMapping("/{id}/active-rules")
     public ResponseEntity<List<PayComponentResponse.PayRuleSummary>> activeRules(
         @PathVariable UUID id,

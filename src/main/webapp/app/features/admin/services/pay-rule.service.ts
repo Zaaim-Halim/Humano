@@ -31,7 +31,12 @@ export class PayRuleService {
       .pipe(map(p => p.content));
   }
 
-  /** `GET /api/payroll/pay-components/{id}/active-rules` — rules currently on a component. */
+  /** `GET /api/payroll/pay-components/{id}/rules` — every rule on a component, enabled or not. */
+  rules(componentId: string): Observable<PayRuleSummary[]> {
+    return this.http.get<PayRuleSummary[]>(`${this.componentsUrl}/${componentId}/rules`);
+  }
+
+  /** `GET /api/payroll/pay-components/{id}/active-rules` — rules payroll would apply today. */
   activeRules(componentId: string): Observable<PayRuleSummary[]> {
     return this.http.get<PayRuleSummary[]>(`${this.componentsUrl}/${componentId}/active-rules`);
   }

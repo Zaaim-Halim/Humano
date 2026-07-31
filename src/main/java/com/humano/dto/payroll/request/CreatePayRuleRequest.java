@@ -13,6 +13,8 @@ public record CreatePayRuleRequest(
 
     @NotNull(message = "Formula is required") String formula,
 
+    @Size(max = 500, message = "Description cannot exceed 500 characters") String description,
+
     LocalDate effectiveFrom,
 
     LocalDate effectiveTo,

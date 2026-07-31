@@ -27,9 +27,16 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Service for managing pay components and pay rules.
  * Handles the configuration of payroll calculation components and their formulas.
+ * <p>
+ * Every transaction here must name {@code tenantTransactionManager}: pay components and rules
+ * live in the tenant database, but {@code masterTransactionManager} is {@code @Primary}, so a
+ * bare {@code @Transactional} would open a transaction the payroll repositories never join.
+ * Each repository call would then run in its own short-lived EntityManager, and any lazy
+ * association read afterwards (e.g. {@code rule.getPayComponent()}) fails with
+ * {@code LazyInitializationException}.
  */
 @Service
-@Transactional
+@Transactional("tenantTransactionManager")
 public class PayComponentService {
 
     private static final Logger log = LoggerFactory.getLogger(PayComponentService.class);
@@ -95,6 +102,7 @@ public class PayComponentService {
         PayRule rule = new PayRule();
         rule.setPayComponent(component);
         rule.setFormula(request.formula());
+        rule.setDescription(request.description());
         rule.setEffectiveFrom(request.effectiveFrom());
         rule.setEffectiveTo(request.effectiveTo());
         rule.setPriority(request.priority());
@@ -110,7 +118,7 @@ public class PayComponentService {
     /**
      * Gets all pay components with pagination.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PayComponentResponse> getAllComponents(Pageable pageable) {
         return componentRepository.findAll(pageable).map(this::toResponse);
     }
@@ -118,7 +126,7 @@ public class PayComponentService {
     /**
      * Gets pay components by kind (EARNING, DEDUCTION, EMPLOYER_CHARGE).
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<PayComponentResponse> getComponentsByKind(Kind kind) {
         return componentRepository
             .findAll(
@@ -135,7 +143,7 @@ public class PayComponentService {
     /**
      * Gets a pay component by its code.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public PayComponentResponse getComponentByCode(PayComponentCode code) {
         PayComponent component = componentRepository
             .findAll((Specification<PayComponent>) (root, query, cb) -> cb.equal(root.get("code"), code))
@@ -202,7 +210,7 @@ public class PayComponentService {
     /**
      * Gets active rules for a component on a specific date.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<PayComponentResponse.PayRuleSummary> getActiveRules(UUID componentId, LocalDate asOfDate) {
         LocalDate effectiveDate = asOfDate != null ? asOfDate : LocalDate.now();
 
@@ -219,14 +227,33 @@ public class PayComponentService {
                 }
             )
             .stream()
-            .map(r -> new PayComponentResponse.PayRuleSummary(r.getId(), r.getFormula(), r.getPriority(), r.getActive()))
+            .map(this::toRuleSummary)
+            .toList();
+    }
+
+    /**
+     * Gets every rule attached to a component &mdash; active and inactive, regardless of the
+     * effective window. Backs the admin screen where rules are reviewed and enabled/disabled;
+     * use {@link #getActiveRules(UUID, LocalDate)} for what payroll would actually apply.
+     */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public List<PayComponentResponse.PayRuleSummary> getRules(UUID componentId) {
+        return ruleRepository
+            .findAll(
+                (Specification<PayRule>) (root, query, cb) -> {
+                    query.orderBy(cb.desc(root.get("active")), cb.desc(root.get("priority")));
+                    return cb.equal(root.get("payComponent").get("id"), componentId);
+                }
+            )
+            .stream()
+            .map(this::toRuleSummary)
             .toList();
     }
 
     /**
      * Gets the calculation order for all components.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<PayComponentResponse> getCalculationOrder() {
         return componentRepository
             .findAll(
@@ -244,7 +271,7 @@ public class PayComponentService {
      * Returns the formula-engine contract (functions, variables, constants, limits) so a
      * UI can build a guided pay-rule editor driven by the real engine. Read-only.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public FormulaMetadataResponse getFormulaMetadata() {
         List<FormulaMetadataResponse.FunctionMeta> functions = formulaEngine
             .functionSignatures()
@@ -261,8 +288,10 @@ public class PayComponentService {
     }
 
     /**
-     * Validates a formula without actually executing it.
+     * Validates a formula without actually executing it. Touches no data, so it does not need
+     * the class-level write transaction when called straight from the editor's validate action.
      */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> validateFormula(String formula) {
         Map<String, Object> result = new HashMap<>();
         result.put("formula", formula);
@@ -310,6 +339,7 @@ public class PayComponentService {
             PayRule newRule = new PayRule();
             newRule.setPayComponent(target);
             newRule.setFormula(sourceRule.getFormula());
+            newRule.setDescription(sourceRule.getDescription());
             newRule.setEffectiveFrom(sourceRule.getEffectiveFrom());
             newRule.setEffectiveTo(sourceRule.getEffectiveTo());
             newRule.setPriority(sourceRule.getPriority());
@@ -325,7 +355,7 @@ public class PayComponentService {
     /**
      * Gets component usage statistics.
      */
-    @Transactional(readOnly = true)
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, Object> getComponentStatistics() {
         List<PayComponent> components = componentRepository.findAll();
 
@@ -361,10 +391,19 @@ public class PayComponentService {
             component.getPercentage(),
             component.getCalcPhase(),
             activeRules.size(),
-            activeRules
-                .stream()
-                .map(r -> new PayComponentResponse.PayRuleSummary(r.getId(), r.getFormula(), r.getPriority(), r.getActive()))
-                .toList()
+            activeRules.stream().map(this::toRuleSummary).toList()
+        );
+    }
+
+    private PayComponentResponse.PayRuleSummary toRuleSummary(PayRule rule) {
+        return new PayComponentResponse.PayRuleSummary(
+            rule.getId(),
+            rule.getFormula(),
+            rule.getDescription(),
+            rule.getPriority(),
+            rule.getActive(),
+            rule.getEffectiveFrom(),
+            rule.getEffectiveTo()
         );
     }
 }

@@ -113,7 +113,14 @@ export default class PayRuleEditorComponent {
 
   protected readonly metadata = signal<FormulaMetadata | null>(null);
   protected readonly validation = signal<FormulaValidationResult | null>(null);
-  protected readonly activeRules = signal<PayRuleSummary[]>([]);
+  /** Every rule on the selected component — inactive ones included, so they can be re-enabled. */
+  protected readonly rules = signal<PayRuleSummary[]>([]);
+  /** Rule id whose activate/deactivate call is in flight, to block double toggles. */
+  protected readonly togglingId = signal<string | null>(null);
+  /** Failure of the rules fetch — kept apart from `error` so the page itself stays usable. */
+  protected readonly rulesError = signal<string | null>(null);
+  /** Mirrors the component control so the rules card reacts under OnPush. */
+  protected readonly selectedComponentId = signal('');
 
   /** Reference panel state. */
   protected readonly activeTab = signal<RefTab>('functions');
@@ -136,6 +143,7 @@ export default class PayRuleEditorComponent {
   protected readonly form = this.fb.nonNullable.group({
     payComponentId: ['', Validators.required],
     formula: ['', [Validators.required, Validators.maxLength(2000)]],
+    description: ['', Validators.maxLength(500)],
     priority: [''],
     effectiveFrom: [''],
     effectiveTo: [''],
@@ -246,7 +254,10 @@ export default class PayRuleEditorComponent {
       this.validation.set(null);
       this.formulaLen.set(v.length);
     });
-    this.form.controls.payComponentId.valueChanges.subscribe(id => this.loadActiveRules(id));
+    this.form.controls.payComponentId.valueChanges.subscribe(id => {
+      this.selectedComponentId.set(id);
+      this.loadRules(id);
+    });
   }
 
   protected load(): void {
@@ -272,15 +283,47 @@ export default class PayRuleEditorComponent {
     });
   }
 
-  private loadActiveRules(componentId: string): void {
+  /** Reload the rules of the selected component. Also the retry action for a failed fetch. */
+  protected loadRules(componentId = this.selectedComponentId()): void {
+    this.rulesError.set(null);
     if (!componentId) {
-      this.activeRules.set([]);
+      this.rules.set([]);
       return;
     }
-    this.service.activeRules(componentId).subscribe({
-      next: r => this.activeRules.set(r),
-      error: () => this.activeRules.set([]),
+    this.service.rules(componentId).subscribe({
+      next: r => this.rules.set(r),
+      error: (err: unknown) => {
+        // Don't fall through to the "no rules yet" empty state — that would claim the
+        // component has none when we simply failed to read them.
+        this.rules.set([]);
+        this.rulesError.set(normalizeHttpError(err));
+      },
     });
+  }
+
+  /**
+   * Enable/disable a rule. Applied optimistically: the response body is the parent
+   * component, whose `activeRules` drops anything just disabled, so it can't be used
+   * to refresh this list. On failure the local flag is put back and the row reverts.
+   */
+  protected toggleActive(rule: PayRuleSummary, active: boolean): void {
+    this.togglingId.set(rule.id);
+    this.setLocalActive(rule.id, active);
+    this.service.setActive(rule.id, active).subscribe({
+      next: () => {
+        this.togglingId.set(null);
+        this.toast.success(this.translate.instant(active ? 'humano.payRules.enabled' : 'humano.payRules.disabled'));
+      },
+      error: (err: unknown) => {
+        this.setLocalActive(rule.id, !active);
+        this.togglingId.set(null);
+        this.toast.danger(normalizeHttpError(err));
+      },
+    });
+  }
+
+  private setLocalActive(ruleId: string, active: boolean): void {
+    this.rules.update(list => list.map(r => (r.id === ruleId ? { ...r, active } : r)));
   }
 
   /** Insert a function call (`#name()`, cursor between the parens) at the caret. */
@@ -387,6 +430,7 @@ export default class PayRuleEditorComponent {
       payComponentId: raw.payComponentId,
       formula: raw.formula.trim(),
       active: raw.active,
+      ...(raw.description.trim() ? { description: raw.description.trim() } : {}),
       ...(raw.priority ? { priority: Number(raw.priority) } : {}),
       ...(raw.effectiveFrom ? { effectiveFrom: raw.effectiveFrom } : {}),
       ...(raw.effectiveTo ? { effectiveTo: raw.effectiveTo } : {}),
@@ -400,8 +444,9 @@ export default class PayRuleEditorComponent {
         this.saving.set(false);
         this.validation.set(null);
         this.form.controls.formula.reset('');
+        this.form.controls.description.reset('');
         this.lastSelStart = this.lastSelEnd = null;
-        this.loadActiveRules(raw.payComponentId);
+        this.loadRules(raw.payComponentId);
       },
       error: (err: unknown) => {
         this.toast.danger(normalizeHttpError(err));

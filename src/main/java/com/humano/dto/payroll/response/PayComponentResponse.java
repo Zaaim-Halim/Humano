@@ -3,6 +3,7 @@ package com.humano.dto.payroll.response;
 import com.humano.domain.enumeration.payroll.Kind;
 import com.humano.domain.enumeration.payroll.Measurement;
 import com.humano.domain.enumeration.payroll.PayComponentCode;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,5 +23,13 @@ public record PayComponentResponse(
     int ruleCount,
     List<PayRuleSummary> activeRules
 ) {
-    public record PayRuleSummary(UUID id, String formula, Integer priority, boolean active) {}
+    public record PayRuleSummary(
+        UUID id,
+        String formula,
+        String description,
+        Integer priority,
+        boolean active,
+        LocalDate effectiveFrom,
+        LocalDate effectiveTo
+    ) {}
 }

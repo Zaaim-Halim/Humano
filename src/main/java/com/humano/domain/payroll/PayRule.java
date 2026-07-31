@@ -50,6 +50,17 @@ public class PayRule extends AbstractAuditingEntity<UUID> {
     private String formula;
 
     /**
+     * Human-readable explanation of what this rule does.
+     * <p>
+     * Optional note shown alongside the formula so payroll administrators can tell
+     * rules apart without reading the expression, e.g. "Employee social security
+     * contribution capped at the yearly ceiling".
+     */
+    @Column(name = "description", length = 500)
+    @Size(max = 500, message = "Description cannot exceed 500 characters")
+    private String description;
+
+    /**
      * The date from which this rule becomes effective.
      * <p>
      * Used to track when a calculation rule should start being applied.
@@ -124,6 +135,19 @@ public class PayRule extends AbstractAuditingEntity<UUID> {
 
     public void setFormula(String formula) {
         this.formula = formula;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public PayRule description(String description) {
+        this.description = description;
+        return this;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public LocalDate getEffectiveFrom() {

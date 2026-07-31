@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Optional human-readable note on a pay rule, so administrators can tell rules apart
+         in the pay-rule editor without reading the formula. Nullable: existing rules keep working. -->
+    <changeSet id="tenant-pay-rule-description-001" author="halimzaaim">
+        <addColumn tableName="pay_rule">
+            <column name="description" type="VARCHAR(500)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

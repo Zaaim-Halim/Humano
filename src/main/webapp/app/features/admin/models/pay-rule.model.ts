@@ -22,8 +22,11 @@ export interface FormulaMetadata {
 export interface PayRuleSummary {
   id: string;
   formula: string;
+  description: string | null;
   priority: number | null;
   active: boolean;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
 }
 
 /** A pay component and its active rules (`GET /api/payroll/pay-components`). */
@@ -45,6 +48,7 @@ export interface PayComponent {
 export interface CreatePayRuleRequest {
   payComponentId: string;
   formula: string;
+  description?: string;
   effectiveFrom?: string;
   effectiveTo?: string;
   priority?: number;
