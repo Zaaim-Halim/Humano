@@ -87,6 +87,11 @@ const routes: Routes = [
       { path: 'dashboard', title: 'humano.nav.dashboard', loadComponent: () => import('./features/admin/dashboard/dashboard.component') },
       { path: 'me', title: 'humano.nav.portal', loadComponent: () => import('./features/employee/portal/portal.component') },
       {
+        path: 'my-profile',
+        title: 'humano.nav.myProfile',
+        loadComponent: () => import('./features/employee/my-profile/my-profile.component'),
+      },
+      {
         path: 'leave',
         title: 'humano.nav.leave',
         loadComponent: () => import('./features/employee/leave-request/leave-request.component'),

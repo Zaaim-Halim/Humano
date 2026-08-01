@@ -36,6 +36,8 @@
             "assets": [
               "src/main/webapp/content",
               "src/main/webapp/favicon.ico",
+              "src/main/webapp/favicon.svg",
+              "src/main/webapp/apple-touch-icon.png",
               "src/main/webapp/manifest.webapp",
               "src/main/webapp/robots.txt",
               {

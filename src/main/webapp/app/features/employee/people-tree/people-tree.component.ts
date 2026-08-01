@@ -23,9 +23,9 @@ import { EmployeeTreeNodeComponent } from './employee-tree-node/employee-tree-no
  * People Tree — browse the reporting hierarchy rooted at an employee.
  *
  * Routed at `/people-tree/:employeeId`; the no-param `/people-tree` route resolves
- * the signed-in user's own employee id via {@link CurrentEmployeeService} (today a
- * known-null seam — no backend endpoint), so it degrades to a "pick someone from
- * the directory" empty state rather than erroring. Also embeddable via the
+ * the signed-in user's own employee id via {@link CurrentEmployeeService}; an account
+ * with no employee record still resolves to null, so it degrades to a "pick someone
+ * from the directory" empty state rather than erroring. Also embeddable via the
  * `rootEmployeeId` input.
  */
 @Component({

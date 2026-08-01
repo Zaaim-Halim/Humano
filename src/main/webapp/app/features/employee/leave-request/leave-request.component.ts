@@ -33,9 +33,9 @@ function dateOrder(group: AbstractControl): ValidationErrors | null {
  * `POST /api/hr/leave-requests` (`@RequireHrStaffOrEmployee`). The working-days
  * estimate and balance-impact preview are computed client-side.
  *
- * Submission depends on the signed-in user's `employeeId`, which the request
- * body requires but which no self-service endpoint exposes yet (see
- * {@link CurrentEmployeeService}) — so when it is unresolved the form validates
+ * Submission depends on the signed-in user's `employeeId`, resolved from
+ * {@link CurrentEmployeeService} — an account with no employee record leaves it
+ * null, and while it is unresolved the form validates
  * and previews normally but submit is disabled with an explanatory notice
  * rather than POSTing a fabricated id. It enables automatically once the seam
  * resolves.

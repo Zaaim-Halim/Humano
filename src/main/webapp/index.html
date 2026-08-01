@@ -7,7 +7,7 @@
     <meta name="description" content="Description for humano" />
     <meta name="google" content="notranslate" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#4338ca" />
     <base href="/" />
     <script>
       // Apply the persisted theme before first paint to avoid a flash of the
@@ -20,7 +20,10 @@
         /* storage unavailable — fall back to default light theme */
       }
     </script>
-    <link rel="icon" href="favicon.ico" />
+    <!-- SVG first (crisp at any size, modern browsers); .ico carries 16/32/48 for the rest. -->
+    <link rel="icon" href="favicon.ico" sizes="48x48" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" sizes="any" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="manifest" href="manifest.webapp" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,19 +42,10 @@
       </p>
     <![endif]-->
     <hum-app>
-      <div class="app-loading">
-        <div class="lds-pacman">
-          <div>
-            <div></div>
-            <div></div>
-            <div></div>
-          </div>
-          <div>
-            <div></div>
-            <div></div>
-            <div></div>
-          </div>
-        </div>
+      <div class="app-loading app-loading--splash" role="status" aria-live="polite">
+        <div class="app-loading__mark">humano<span class="app-loading__dot" aria-hidden="true"></span></div>
+        <div class="app-loading__bar" aria-hidden="true"><span></span></div>
+        <p class="app-loading__text">Loading your workspace…</p>
       </div>
       <div class="app-loading">
         <div id="jhipster-error" style="display: none">

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="humano">
+  <!-- Brand tile: --indigo-700, the light-theme --brand token. Solid so the mark
+       stays legible against both light and dark browser chrome. -->
+  <rect width="32" height="32" rx="7" fill="#4338ca" />
+  <!-- Lowercase "h" built from geometry rather than text, so the icon never depends
+       on a font being available. Stem, shoulder and leg share one grid: the shoulder
+       is a half-annulus centred (16,16), outer r=9 (x 7→25), inner r=4.5 (x 11.5→20.5),
+       which is also the 4.5-unit stroke width. Sized to stay readable at 16px. -->
+  <g fill="#ffffff">
+    <rect x="7" y="5" width="4.5" height="22" rx="1.2" />
+    <rect x="20.5" y="15" width="4.5" height="12" rx="1.2" />
+    <path d="M7 16A9 9 0 0 1 25 16L20.5 16A4.5 4.5 0 0 0 11.5 16Z" />
+  </g>
+</svg>

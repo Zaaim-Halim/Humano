@@ -4,6 +4,7 @@ import com.humano.config.Constants;
 import com.humano.domain.shared.Authority;
 import com.humano.domain.shared.PersistentToken;
 import com.humano.domain.shared.User;
+import com.humano.dto.hr.responses.EmployeeProfileResponse;
 import com.humano.dto.me.requests.ChangePasswordRequest;
 import com.humano.dto.me.requests.UpdateMeRequest;
 import com.humano.dto.me.responses.MeResponse;
@@ -12,6 +13,7 @@ import com.humano.repository.shared.UserRepository;
 import com.humano.security.AuthorityPermissionService;
 import com.humano.security.SecurityUtils;
 import com.humano.security.annotation.RequireAuthenticated;
+import com.humano.service.hr.EmployeeProfileService;
 import com.humano.service.me.MeService;
 import com.humano.web.rest.errors.EmailAlreadyUsedException;
 import com.humano.web.rest.errors.InvalidPasswordException;
@@ -53,17 +55,20 @@ public class MeResource {
     private final UserRepository userRepository;
     private final PersistentTokenRepository persistentTokenRepository;
     private final AuthorityPermissionService authorityPermissionService;
+    private final EmployeeProfileService employeeProfileService;
 
     public MeResource(
         MeService meService,
         UserRepository userRepository,
         PersistentTokenRepository persistentTokenRepository,
-        AuthorityPermissionService authorityPermissionService
+        AuthorityPermissionService authorityPermissionService,
+        EmployeeProfileService employeeProfileService
     ) {
         this.meService = meService;
         this.userRepository = userRepository;
         this.persistentTokenRepository = persistentTokenRepository;
         this.authorityPermissionService = authorityPermissionService;
+        this.employeeProfileService = employeeProfileService;
     }
 
     /**
@@ -85,6 +90,22 @@ public class MeResource {
                 return MeResponse.fromUser(user, permissions);
             })
             .orElseThrow(() -> new MeResourceException("Current user could not be found"));
+    }
+
+    /**
+     * The caller's own employee profile &mdash; the self-service counterpart to the
+     * HR-gated {@code /api/hr/employees/{id}}.
+     * <p>
+     * The id comes from the security context and never from the request, so this can only
+     * ever return the signed-in user's own record: {@code Employee} extends {@code User} with
+     * JOINED inheritance, so the account id <em>is</em> the employee id. Responds 404 when the
+     * account has no employee row (e.g. an admin created outside employee provisioning).
+     */
+    @GetMapping("/me/employee")
+    @RequireAuthenticated
+    public EmployeeProfileResponse getCurrentEmployee() {
+        User user = meService.getCurrentUser().orElseThrow(() -> new MeResourceException("Current user could not be found"));
+        return employeeProfileService.getEmployeeProfileById(user.getId());
     }
 
     /**

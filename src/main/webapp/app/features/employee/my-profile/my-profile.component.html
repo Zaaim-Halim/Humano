@@ -1,0 +1,89 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.myProfile.title' | translate" [subtitle]="'humano.myProfile.subtitle' | translate" />
+
+  @if (!resolved()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (profile(); as p) {
+    <!-- Identity -->
+    <header style="display: flex; align-items: center; gap: var(--space-4); margin: var(--space-3) 0 var(--space-5)">
+      <hum-avatar [name]="fullName()" [src]="account()?.imageUrl ?? null" size="xl" />
+      <div style="flex: 1; min-width: 0">
+        <h1 class="hum-pagehead__title">{{ fullName() }}</h1>
+        <div class="hum-pagehead__sub">{{ p.jobTitle ?? p.positionName ?? '—' }}</div>
+        <div style="margin-top: var(--space-2)"><hum-badge [status]="p.status" /></div>
+      </div>
+    </header>
+
+    <div style="display: grid; gap: var(--space-4)">
+      <hum-card [title]="'humano.myProfile.employmentTitle' | translate">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4)">
+          @for (f of employment(); track f.labelKey) {
+            <div>
+              <div class="hum-field__label">{{ f.labelKey | translate }}</div>
+              <div class="tabular-nums">{{ f.value ?? '—' }}</div>
+            </div>
+          }
+        </div>
+      </hum-card>
+
+      <hum-card [title]="'humano.myProfile.personalTitle' | translate">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4)">
+          @for (f of personal(); track f.labelKey) {
+            <div>
+              <div class="hum-field__label">{{ f.labelKey | translate }}</div>
+              <div style="overflow-wrap: anywhere">{{ f.value ?? '—' }}</div>
+            </div>
+          }
+        </div>
+      </hum-card>
+
+      @if (hasGovernmentIds()) {
+        <hum-card [title]="'humano.myProfile.governmentIdsTitle' | translate">
+          <div
+            style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3)"
+          >
+            <p style="margin: 0; font-size: var(--text-sm); color: var(--text-muted)">
+              {{ 'humano.myProfile.governmentIdsHint' | translate }}
+            </p>
+            <hum-button variant="outline" size="sm" [icon]="revealIds() ? 'eye-off' : 'eye'" (click)="revealIds.set(!revealIds())">
+              {{ (revealIds() ? 'humano.myProfile.hideIds' : 'humano.myProfile.showIds') | translate }}
+            </hum-button>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4)">
+            @for (f of governmentIds(); track f.labelKey) {
+              <div>
+                <div class="hum-field__label">{{ f.labelKey | translate }}</div>
+                <div class="tabular-nums">{{ f.value ?? '—' }}</div>
+              </div>
+            }
+          </div>
+        </hum-card>
+      }
+
+      <p style="margin: 0; font-size: var(--text-sm); color: var(--text-muted)">{{ 'humano.myProfile.readOnlyNote' | translate }}</p>
+
+      <!-- Self-maintained collections — these write to /api/me/**, not the HR endpoints. -->
+      @for (c of editable; track c.headingKey) {
+        <section class="hum-card" style="padding: var(--space-4)">
+          <hum-employee-collection
+            [heading]="c.headingKey | translate"
+            [employeeId]="p.id"
+            [service]="c.service"
+            [columns]="c.columns"
+            [fields]="c.fields"
+          />
+        </section>
+      }
+    </div>
+  } @else {
+    <!-- Signed in, but this account has no employee record (404 from /api/me/employee). -->
+    <hum-empty-state
+      icon="user"
+      [title]="'humano.myProfile.noProfileTitle' | translate"
+      [description]="'humano.myProfile.noProfileBody' | translate"
+    />
+    <div style="display: flex; justify-content: center; margin-top: var(--space-3)">
+      <hum-button variant="outline" size="sm" icon="arrow-right" (click)="retry()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </div>
+  }
+</div>

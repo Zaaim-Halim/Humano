@@ -42,6 +42,13 @@ export const SHELL_NAV: ShellNavGroup[] = [
     items: [
       { id: 'dashboard', labelKey: 'humano.nav.dashboard', icon: 'layout-grid', link: '/dashboard', keywords: 'home overview kpis' },
       { id: 'portal', labelKey: 'humano.nav.portal', icon: 'user', link: '/me', keywords: 'me self service portal home my space' },
+      {
+        id: 'my-profile',
+        labelKey: 'humano.nav.myProfile',
+        icon: 'id-card',
+        link: '/my-profile',
+        keywords: 'my profile details employment personal record',
+      },
     ],
   },
   {

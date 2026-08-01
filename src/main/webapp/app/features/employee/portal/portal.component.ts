@@ -23,10 +23,10 @@ interface QuickAction {
  *
  * TODO: backend endpoints missing — the spec's `/api/me/dashboard`,
  * `/api/me/leaves` (balance), `/api/me/payslips` and `/api/me/onboarding` are
- * not implemented, and a plain `ROLE_EMPLOYEE` cannot resolve their own
- * `employeeId` (see {@link CurrentEmployeeService}); payslips are additionally
- * `@RequirePayrollOrHrManager`. The data cards below light up automatically once
- * that resolution seam returns an id and the endpoints exist.
+ * not implemented, and payslips are additionally `@RequirePayrollOrHrManager`.
+ * The caller's own `employeeId` does resolve now (`GET /api/me/employee`, see
+ * {@link CurrentEmployeeService}), so the data cards below light up as soon as
+ * those endpoints exist.
  */
 @Component({
   selector: 'hum-portal',
@@ -48,6 +48,7 @@ export default class PortalComponent {
   protected readonly employeeId = this.currentEmployee.currentEmployeeId;
 
   protected readonly quickActions: QuickAction[] = [
+    { icon: 'id-card', labelKey: 'humano.portal.actionProfile', link: '/my-profile' },
     { icon: 'palmtree', labelKey: 'humano.portal.actionLeave', link: '/leave' },
     { icon: 'clock', labelKey: 'humano.portal.actionTimesheet', link: '/timesheets' },
     { icon: 'file-text', labelKey: 'humano.portal.actionDocuments', link: '/my-documents' },
@@ -55,8 +56,7 @@ export default class PortalComponent {
   ];
 
   constructor() {
-    // Establish the self-service resolution seam (no-op until the backend ships
-    // a current-employee endpoint — see CurrentEmployeeService).
+    // Resolve the caller's own employee id; a no-op once any screen has already done it.
     this.currentEmployee.resolve();
   }
 }
