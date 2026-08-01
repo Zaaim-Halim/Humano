@@ -41,8 +41,14 @@
 
 <!-- Add / edit -->
 <hum-drawer [open]="formOpen()" [title]="editing() ? 'Edit ' + heading() : 'Add ' + heading()" hasFooter (closed)="formOpen.set(false)">
+  <!--
+    Only bind the controls once the drawer is open, i.e. once `buildForm` has created them.
+    Projected content is instantiated with this component's view even though the drawer keeps
+    its `<ng-content>` behind an `@if (open())`, so rendering these unconditionally would run
+    every `formControlName` against the still-empty initial FormGroup.
+  -->
   <form [formGroup]="form" style="display: grid; gap: var(--space-4)">
-    @for (f of fields(); track f.key) {
+    @for (f of formOpen() ? fields() : []; track f.key) {
       @switch (f.type) {
         @case ('textarea') {
           <hum-form-field [label]="f.label" [controlId]="f.key">

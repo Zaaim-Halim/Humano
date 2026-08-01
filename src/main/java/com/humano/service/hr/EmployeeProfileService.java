@@ -7,7 +7,6 @@ import com.humano.domain.hr.Position;
 import com.humano.domain.shared.Authority;
 import com.humano.domain.shared.Country;
 import com.humano.domain.shared.Employee;
-import com.humano.domain.shared.User;
 import com.humano.dto.hr.requests.CreateEmployeeProfileRequest;
 import com.humano.dto.hr.requests.CreateEmployeeRequest;
 import com.humano.dto.hr.requests.EmployeeSearchRequest;
@@ -39,8 +38,6 @@ import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import com.humano.web.rest.errors.EmailAlreadyUsedException;
 import com.humano.web.rest.errors.LoginAlreadyUsedException;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -57,7 +54,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Service for managing employee profiles.
  * This service handles all operations related to employee profiles, excluding document management.
- * It assumes that User entities are created separately upfront.
+ * Employee is the only people concept here: provisioning creates the account and the HR
+ * profile as one Employee row set, so there is no separate user-then-employee step.
  *
  * @author halimzaaim
  */
