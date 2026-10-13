@@ -19,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -71,7 +72,8 @@ public class LeaveRequestResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the updated leave request
      */
     @PutMapping("/{id}/process")
-    @RequirePermission(PermissionsConstants.VIEW_LEAVE_REQUESTS)
+    // Deciding needs approve rights (approvers) or manage rights (HR admins) — viewing is not enough.
+    @PreAuthorize("@securityExpressions.hasAnyPermission('APPROVE_LEAVE', 'MANAGE_LEAVE_REQUESTS')")
     public ResponseEntity<LeaveRequestResponse> processLeaveRequest(
         @PathVariable UUID id,
         @Valid @RequestBody ProcessLeaveRequest request

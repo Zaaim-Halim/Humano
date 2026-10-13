@@ -10,7 +10,12 @@
   </hum-page-header>
 
   @if (loading()) {
-    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+    <div class="hum-dir-stats hum-dir-stats--even">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="hum-dir-stat"><hum-skeleton [height]="56" /></div>
+      }
+    </div>
+    <hum-skeleton [height]="320" />
   } @else if (error(); as e) {
     <hum-alert tone="danger" [title]="e">
       <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
@@ -20,55 +25,235 @@
       icon="briefcase"
       [title]="'humano.positions.emptyTitle' | translate"
       [description]="'humano.positions.emptyBody' | translate"
-      [hasAction]="canManage"
     >
-      <hum-button hum-empty-action variant="primary" icon="plus" (click)="openCreate()">{{
-        'humano.positions.create' | translate
-      }}</hum-button>
+      @if (canManage) {
+        <hum-button hum-empty-action variant="primary" icon="plus" (click)="openCreate()">{{
+          'humano.positions.create' | translate
+        }}</hum-button>
+      }
     </hum-empty-state>
   } @else {
-    <table class="hum-table">
-      <thead>
-        <tr>
-          <th>{{ 'humano.positions.colName' | translate }}</th>
-          <th>{{ 'humano.positions.colLevel' | translate }}</th>
-          <th>{{ 'humano.positions.colUnit' | translate }}</th>
-          <th class="tabular-nums">{{ 'humano.positions.colPeople' | translate }}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (p of positions(); track p.id) {
-          <tr>
-            <td>{{ p.name }}</td>
-            <td>{{ p.level }}</td>
-            <td>{{ p.unitName ?? '—' }}</td>
-            <td class="tabular-nums">{{ p.employeeCount }}</td>
-            <td style="text-align: right; white-space: nowrap">
-              @if (canManage) {
-                <hum-icon-button icon="pencil" [label]="'entity.action.edit' | translate" (click)="openEdit(p)" />
-                <hum-icon-button
-                  icon="trash-2"
-                  variant="ghost"
-                  [label]="'entity.action.delete' | translate"
-                  (click)="deleteTarget.set(p)"
-                />
-              }
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
+    <section class="hum-dir-stats hum-dir-stats--even">
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.positions.title' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().count }}</div>
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.positions.filled' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().filled }}</div>
+        <div class="hum-meter" [style.--hum-accent]="'var(--success-solid)'">
+          <span [style.width.%]="stats().count ? (stats().filled / stats().count) * 100 : 0"></span>
+        </div>
+      </div>
+      <div class="hum-dir-stat" [class.hum-dir-stat--warn]="stats().vacant > 0">
+        <div class="hum-dir-stat__label">{{ 'humano.positions.vacant' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().vacant }}</div>
+        <div class="hum-dir-stat__sub">{{ 'humano.positions.vacantHint' | translate }}</div>
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.positions.levels' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().levels }}</div>
+      </div>
+    </section>
 
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-3)">
-      <span style="color: var(--text-muted); font-size: var(--text-sm)">{{ total() }}</span>
-      <div style="display: flex; gap: var(--space-2)">
-        <hum-button variant="outline" size="sm" [disabled]="page() === 0" (click)="goto(page() - 1)">‹</hum-button>
-        <hum-button variant="outline" size="sm" [disabled]="(page() + 1) * size >= total()" (click)="goto(page() + 1)">›</hum-button>
+    <div class="hum-dir-toolbar">
+      <div class="hum-dir-toolbar__search">
+        <hum-input
+          icon="search"
+          type="search"
+          [placeholder]="'humano.positions.search' | translate"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+        />
+      </div>
+      <label class="hum-dir-toolbar__field">
+        <span>{{ 'humano.positions.colUnit' | translate }}</span>
+        <hum-select [options]="unitFilterOptions()" [ngModel]="unitFilter()" (ngModelChange)="unitFilter.set($event)" />
+      </label>
+      <div class="hum-segmented" role="group" [attr.aria-label]="'humano.directory.view' | translate">
+        <hum-icon-button
+          icon="columns-3"
+          [label]="'humano.positions.viewLadder' | translate"
+          size="sm"
+          [variant]="view() === 'ladder' ? 'secondary' : 'ghost'"
+          (click)="view.set('ladder')"
+        />
+        <hum-icon-button
+          icon="network"
+          [label]="'humano.positions.viewChart' | translate"
+          size="sm"
+          [variant]="view() === 'chart' ? 'secondary' : 'ghost'"
+          (click)="view.set('chart')"
+        />
       </div>
     </div>
+
+    @if (!filtered().length) {
+      <hum-empty-state
+        icon="search"
+        [title]="'humano.positions.noMatch' | translate"
+        [description]="'humano.positions.noMatchBody' | translate"
+      >
+        <hum-button hum-empty-action variant="secondary" (click)="query.set(''); unitFilter.set('')">{{
+          'humano.action.clearFilters' | translate
+        }}</hum-button>
+      </hum-empty-state>
+    } @else if (view() === 'ladder') {
+      <div class="hum-board">
+        @for (col of ladder(); track col.level) {
+          <section class="hum-board__col">
+            <header class="hum-board__head">
+              <span class="hum-board__title">{{ col.label }}</span>
+              <span class="hum-board__count tabular-nums"
+                >{{ col.items.length }} · {{ 'humano.positions.peopleShort' | plural: col.people | translate: { count: col.people } }}</span
+              >
+            </header>
+            @for (p of col.items; track p.id) {
+              <button type="button" class="hum-board__card" [class.is-vacant]="p.employeeCount === 0" (click)="openDetail(p)">
+                <span class="hum-board__card-title">{{ p.name }}</span>
+                <span class="hum-board__card-meta">
+                  @if (p.unitName) {
+                    <span><lucide-icon name="network" [size]="12" />{{ p.unitName }}</span>
+                  }
+                  @if (p.employeeCount) {
+                    <span class="tabular-nums"><lucide-icon name="users" [size]="12" />{{ p.employeeCount }}</span>
+                  } @else {
+                    <span class="hum-board__vacant">{{ 'humano.positions.vacantOne' | translate }}</span>
+                  }
+                </span>
+              </button>
+            }
+          </section>
+        }
+      </div>
+    } @else {
+      @if (chartRoots().length) {
+        <hum-org-chart
+          [label]="'humano.positions.viewChart' | translate"
+          [searchable]="false"
+          [roots]="chartRoots()"
+          [expandDepth]="99"
+          [toggleLabel]="childCountLabel"
+        >
+          <ng-template humOrgChartNode let-node>
+            <hum-badge tone="neutral" [label]="levelLabel(node.level)" [dot]="false" />
+            <button type="button" class="hum-orgnode__name hum-orgnode__name--button" (click)="openDetail(node)">{{ node.name }}</button>
+            @if (node.unitName) {
+              <div class="hum-orgnode__meta"><lucide-icon name="network" [size]="12" />{{ node.unitName }}</div>
+            }
+            <div class="hum-orgnode__meta">
+              <lucide-icon name="users" [size]="12" />{{
+                'humano.positions.holders' | plural: node.employeeCount | translate: { count: node.employeeCount }
+              }}
+            </div>
+          </ng-template>
+          <ng-template humOrgChartMember let-node>
+            <button
+              type="button"
+              class="hum-orgchart__member"
+              style="width: 100%; border: none; background: none; cursor: pointer"
+              (click)="openDetail(node)"
+            >
+              <span class="hum-orgchart__member-text">
+                <span class="hum-orgnode__name">{{ node.name }}</span>
+                <span class="hum-orgnode__title"
+                  >{{ levelLabel(node.level) }} ·
+                  {{ 'humano.positions.holders' | plural: node.employeeCount | translate: { count: node.employeeCount } }}</span
+                >
+              </span>
+            </button>
+          </ng-template>
+        </hum-org-chart>
+      } @else {
+        <hum-empty-state
+          icon="network"
+          [title]="'humano.positions.noHierarchy' | translate"
+          [description]="'humano.positions.noHierarchyBody' | translate"
+        />
+      }
+      @if (standalone().length) {
+        <p style="margin: var(--space-3) 0 0; font-size: var(--text-sm); color: var(--text-muted)">
+          {{ 'humano.positions.standalone' | translate: { count: standalone().length } }}
+        </p>
+      }
+    }
   }
 </div>
+
+<!-- Position panel -->
+<hum-drawer [open]="selected() !== null" [title]="selected()?.name ?? ''" width="440px" hasFooter (closed)="selected.set(null)">
+  @if (selected(); as p) {
+    <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4)">
+      <hum-badge tone="brand" [label]="levelLabel(p.level)" [dot]="false" />
+      @if (p.employeeCount === 0) {
+        <hum-badge tone="warning" [label]="'humano.positions.vacantOne' | translate" [dot]="false" />
+      }
+    </div>
+    @if (p.description) {
+      <p style="margin: 0 0 var(--space-4); color: var(--text-muted)">{{ p.description }}</p>
+    }
+    <dl class="hum-dl hum-profile-section">
+      <dt>{{ 'humano.positions.colUnit' | translate }}</dt>
+      <dd>{{ p.unitName ?? '—' }}</dd>
+      <dt>{{ 'humano.positions.reportsInto' | translate }}</dt>
+      <dd>
+        @if (p.parentPositionId) {
+          <a href="javascript:void(0)" (click)="openDetailById(p.parentPositionId)">{{ p.parentPositionName }}</a>
+        } @else {
+          —
+        }
+      </dd>
+    </dl>
+
+    @if (subPositions().length) {
+      <section class="hum-profile-section">
+        <h3 class="hum-section-title">{{ 'humano.positions.subPositionsTitle' | translate }}</h3>
+        @for (c of subPositions(); track c.id) {
+          <button
+            type="button"
+            class="hum-orgchart__member"
+            style="width: 100%; border: none; background: none; cursor: pointer"
+            (click)="openDetail(c)"
+          >
+            <span class="hum-orgnode__name" style="flex: 1">{{ c.name }}</span>
+            <span class="hum-orgnode__title tabular-nums">{{
+              'humano.positions.holders' | plural: c.employeeCount | translate: { count: c.employeeCount }
+            }}</span>
+          </button>
+        }
+      </section>
+    }
+
+    <section class="hum-profile-section">
+      <h3 class="hum-section-title">{{ 'humano.positions.heldBy' | translate }}</h3>
+      @if (holdersError(); as err) {
+        <hum-alert tone="danger" [title]="err" />
+      } @else if (holders() === null) {
+        <hum-skeleton-row /><hum-skeleton-row />
+      } @else if (!holders()!.length) {
+        <p style="margin: 0; color: var(--text-muted); font-size: var(--text-sm)">{{ 'humano.positions.noHolders' | translate }}</p>
+      } @else {
+        @for (m of holders(); track m.id) {
+          <a class="hum-orgchart__member" [routerLink]="['/employees', m.id]">
+            <hum-avatar [name]="name(m)" [src]="m.imageUrl" size="sm" />
+            <span class="hum-orgchart__member-text">
+              <span class="hum-orgnode__name">{{ name(m) }}</span>
+              <span class="hum-orgnode__title">{{ m.departmentName ?? '—' }}</span>
+            </span>
+          </a>
+        }
+      }
+    </section>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    @if (selected(); as p) {
+      @if (canManage) {
+        <hum-button variant="ghost" icon="trash-2" (click)="deleteTarget.set(p)">{{ 'entity.action.delete' | translate }}</hum-button>
+        <hum-button variant="primary" icon="pencil" (click)="openEdit(p)">{{ 'entity.action.edit' | translate }}</hum-button>
+      }
+    }
+  </div>
+</hum-drawer>
 
 <!-- Create / edit -->
 <hum-drawer
@@ -91,16 +276,19 @@
       controlId="pos-level"
       [error]="invalid('level') ? ('humano.employeeForm.required' | translate) : undefined"
     >
-      <hum-input
-        inputId="pos-level"
-        formControlName="level"
-        [invalid]="invalid('level')"
-        [placeholder]="'humano.positions.levelHint' | translate"
-      />
+      <hum-select formControlName="level" [options]="levelOptions()" [invalid]="invalid('level')" />
     </hum-form-field>
 
     <hum-form-field [label]="'humano.positions.colUnit' | translate" controlId="pos-unit">
       <hum-select formControlName="unitId" [options]="unitOptions()" />
+    </hum-form-field>
+
+    <hum-form-field
+      [label]="'humano.positions.reportsInto' | translate"
+      controlId="pos-parent"
+      [hint]="'humano.positions.reportsIntoHint' | translate"
+    >
+      <hum-select formControlName="parentPositionId" [options]="parentOptions()" />
     </hum-form-field>
 
     <hum-form-field [label]="'humano.positions.colDescription' | translate" controlId="pos-desc">

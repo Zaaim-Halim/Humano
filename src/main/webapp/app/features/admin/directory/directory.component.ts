@@ -55,7 +55,12 @@ const SEGMENT_COLORS = [
   'var(--slate-400)',
 ];
 
-const SORTS = ['firstName,asc', 'startDate,desc', 'startDate,asc', 'jobTitle,asc'] as const;
+const SORTS: readonly string[] = ['firstName,asc', 'startDate,desc', 'startDate,asc', 'jobTitle,asc'];
+
+/** Empty filter values are dropped from the URL. */
+function orNull(value: string | undefined): string | null {
+  return value === undefined || value === '' ? null : value;
+}
 
 /**
  * Employee Directory (HR/Admin) — the people list.
@@ -110,7 +115,7 @@ export default class DirectoryComponent {
   private readonly queryParams = toSignal(this.route.queryParamMap, { requireSync: true });
 
   // Filters reflect the URL; the URL drives the query (single source of truth).
-  protected readonly filters = this.fb.nonNullable.group({ q: '', dept: '', loc: '', sort: SORTS[0] as string });
+  protected readonly filters = this.fb.nonNullable.group({ q: '', dept: '', loc: '', sort: SORTS[0] });
   protected readonly departments = signal<{ value: string; label: string }[]>([]);
 
   protected readonly view = computed<ViewMode>(() => (this.queryParams().get('view') === 'table' ? 'table' : 'grid'));
@@ -138,7 +143,7 @@ export default class DirectoryComponent {
     return [
       { value: '', label: this.translate.instant('humano.directory.all'), count: s?.total ?? null },
       ...Object.values(EmployeeStatus).map(v => ({
-        value: v as string,
+        value: v,
         label: this.translate.instant(`humano.directory.status.${v}`),
         count: s?.byStatus[v] ?? 0,
       })),
@@ -198,10 +203,10 @@ export default class DirectoryComponent {
   ]);
   protected readonly locationOptions = computed(() => [
     { value: '', label: this.translate.instant('humano.directory.allLocations') },
-    ...Object.values(WorkLocationType).map(v => ({ value: v as string, label: this.translate.instant(`humano.directory.location.${v}`) })),
+    ...Object.values(WorkLocationType).map(v => ({ value: v, label: this.label(`humano.directory.location.${v}`) })),
   ]);
   protected readonly sortOptions = computed(() =>
-    SORTS.map(v => ({ value: v as string, label: this.translate.instant(`humano.directory.sort.${v.replace(',', '_')}`) })),
+    SORTS.map(v => ({ value: v, label: this.label(`humano.directory.sort.${v.replace(',', '_')}`) })),
   );
 
   constructor() {
@@ -231,9 +236,9 @@ export default class DirectoryComponent {
     // Filter changes → URL (debounced so typing doesn't spam navigations); reset to page 0.
     this.filters.valueChanges.pipe(debounceTime(250), takeUntilDestroyed()).subscribe(v => {
       this.patchQuery({
-        q: v.q || null,
-        dept: v.dept || null,
-        loc: v.loc || null,
+        q: orNull(v.q),
+        dept: orNull(v.dept),
+        loc: orNull(v.loc),
         sort: !v.sort || v.sort === SORTS[0] ? null : v.sort,
         page: 0,
       });
@@ -271,7 +276,7 @@ export default class DirectoryComponent {
   protected rangeLabel(): string {
     const start = this.page() * this.pageSize + 1;
     const end = Math.min(start + this.list.items().length - 1, this.list.total());
-    return this.translate.instant('humano.directory.range', { start, end, total: this.list.total() });
+    return this.label('humano.directory.range', { start, end, total: this.list.total() });
   }
 
   /** "2 yrs 3 mos" style tenure from an ISO start date. */
@@ -281,10 +286,10 @@ export default class DirectoryComponent {
     const now = new Date();
     let months = (now.getFullYear() - from.getFullYear()) * 12 + now.getMonth() - from.getMonth();
     if (now.getDate() < from.getDate()) months--;
-    if (months < 1) return this.translate.instant('humano.directory.tenureNew');
+    if (months < 1) return this.label('humano.directory.tenureNew');
     const years = Math.floor(months / 12);
     const rest = months % 12;
-    return this.translate.instant(years ? 'humano.directory.tenureYears' : 'humano.directory.tenureMonths', { years, months: rest });
+    return this.label(years ? 'humano.directory.tenureYears' : 'humano.directory.tenureMonths', { years, months: rest });
   }
 
   protected openDetail(employee: SimpleEmployeeProfile): void {
@@ -328,6 +333,10 @@ export default class DirectoryComponent {
         this.detailLoading.set(false);
       },
     });
+  }
+
+  private label(key: string, params?: Record<string, unknown>): string {
+    return String(this.translate.instant(key, params));
   }
 
   private patchQuery(patch: Record<string, string | number | null>): void {

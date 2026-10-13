@@ -78,3 +78,19 @@ export class HumanizePipe implements PipeTransform {
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 }
+
+/**
+ * Picks the singular/plural variant of a translation key: `pluralKey('x.people', 1)` →
+ * `x.people.one`, otherwise `x.people.other`. The JSON holds `{ "one": …, "other": … }`.
+ */
+export function pluralKey(key: string, count: number | null | undefined): string {
+  return `${key}.${count === 1 ? 'one' : 'other'}`;
+}
+
+/** Template form of {@link pluralKey}: `('x.people' | plural: n) | translate: { count: n }`. */
+@Pipe({ name: 'plural' })
+export class PluralPipe implements PipeTransform {
+  transform(key: string, count: number | null | undefined): string {
+    return pluralKey(key, count);
+  }
+}

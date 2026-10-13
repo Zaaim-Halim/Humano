@@ -10,7 +10,16 @@
   </hum-page-header>
 
   @if (loading()) {
-    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+    <div class="hum-dir-stats">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="hum-dir-stat"><hum-skeleton [height]="56" /></div>
+      }
+    </div>
+    <div class="hum-card-grid">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="hum-entity-card"><hum-skeleton [height]="120" /></div>
+      }
+    </div>
   } @else if (error(); as e) {
     <hum-alert tone="danger" [title]="e">
       <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
@@ -20,55 +29,177 @@
       icon="layers"
       [title]="'humano.departments.emptyTitle' | translate"
       [description]="'humano.departments.emptyBody' | translate"
-      [hasAction]="canManage"
     >
-      <hum-button hum-empty-action variant="primary" icon="plus" (click)="openCreate()">{{
-        'humano.departments.create' | translate
-      }}</hum-button>
+      @if (canManage) {
+        <hum-button hum-empty-action variant="primary" icon="plus" (click)="openCreate()">{{
+          'humano.departments.create' | translate
+        }}</hum-button>
+      }
     </hum-empty-state>
   } @else {
-    <table class="hum-table">
-      <thead>
-        <tr>
-          <th>{{ 'humano.departments.colName' | translate }}</th>
-          <th>{{ 'humano.departments.colDescription' | translate }}</th>
-          <th>{{ 'humano.departments.colHead' | translate }}</th>
-          <th class="tabular-nums">{{ 'humano.departments.colPeople' | translate }}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (d of departments(); track d.id) {
-          <tr>
-            <td>{{ d.name }}</td>
-            <td>{{ d.description ?? '—' }}</td>
-            <td>{{ d.headName ?? '—' }}</td>
-            <td class="tabular-nums">{{ d.employeeCount }}</td>
-            <td style="text-align: right; white-space: nowrap">
-              @if (canManage) {
-                <hum-icon-button icon="pencil" [label]="'entity.action.edit' | translate" (click)="openEdit(d)" />
-                <hum-icon-button
-                  icon="trash-2"
-                  variant="ghost"
-                  [label]="'entity.action.delete' | translate"
-                  (click)="deleteTarget.set(d)"
-                />
-              }
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-3)">
-      <span style="color: var(--text-muted); font-size: var(--text-sm)">{{ total() }}</span>
-      <div style="display: flex; gap: var(--space-2)">
-        <hum-button variant="outline" size="sm" [disabled]="page() === 0" (click)="goto(page() - 1)">‹</hum-button>
-        <hum-button variant="outline" size="sm" [disabled]="(page() + 1) * size >= total()" (click)="goto(page() + 1)">›</hum-button>
+    <section class="hum-dir-stats hum-dir-stats--even">
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.departments.title' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().count }}</div>
       </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.departments.colPeople' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().people }}</div>
+        <div class="hum-dir-stat__sub">
+          {{ 'humano.departments.avgSize' | translate: { avg: stats().count ? (stats().people / stats().count).toFixed(1) : 0 } }}
+        </div>
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.departments.largest' | translate }}</div>
+        @if (stats().largest; as l) {
+          <div class="hum-dir-stat__value hum-dir-stat__value--text">{{ l.name }}</div>
+          <div class="hum-dir-stat__sub">
+            {{ 'humano.departments.peopleCount' | plural: l.employeeCount | translate: { count: l.employeeCount } }}
+          </div>
+        }
+      </div>
+      <div class="hum-dir-stat" [class.hum-dir-stat--warn]="stats().withoutHead > 0">
+        <div class="hum-dir-stat__label">{{ 'humano.departments.withoutHead' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().withoutHead }}</div>
+        <div class="hum-dir-stat__sub">
+          {{ (stats().withoutHead ? 'humano.departments.assignHeads' : 'humano.departments.allHaveHeads') | translate }}
+        </div>
+      </div>
+    </section>
+
+    <div class="hum-dir-toolbar">
+      <div class="hum-dir-toolbar__search">
+        <hum-input
+          icon="search"
+          type="search"
+          [placeholder]="'humano.departments.search' | translate"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+        />
+      </div>
+      <label class="hum-dir-toolbar__field">
+        <span>{{ 'humano.directory.sortBy' | translate }}</span>
+        <hum-select [options]="sortOptions()" [ngModel]="sortBy()" (ngModelChange)="sortBy.set($event)" />
+      </label>
     </div>
+
+    @if (cards().length) {
+      <div class="hum-card-grid">
+        @for (d of cards(); track d.id) {
+          <article class="hum-entity-card" [style.--hum-accent]="d.accent">
+            <button type="button" class="hum-entity-card__main" (click)="openDetail(d)">
+              <span class="hum-entity-card__title">{{ d.name }}</span>
+              <span class="hum-entity-card__desc">{{ d.description ?? ('humano.departments.noDescription' | translate) }}</span>
+            </button>
+            <div class="hum-entity-card__head">
+              @if (d.headId) {
+                <hum-avatar [name]="d.headName ?? ''" size="xs" />
+                <span>{{ d.headName }}</span>
+                <span class="hum-entity-card__role">{{ 'humano.departments.colHead' | translate }}</span>
+              } @else {
+                <span class="hum-entity-card__warn"
+                  ><lucide-icon name="circle-alert" [size]="14" />{{ 'humano.departments.noHead' | translate }}</span
+                >
+              }
+            </div>
+            <div class="hum-entity-card__metric">
+              <div class="hum-entity-card__metric-row">
+                <span class="tabular-nums"
+                  ><strong>{{ d.employeeCount }}</strong> {{ 'humano.departments.people' | translate }}</span
+                >
+                <span class="tabular-nums">{{ share(d).toFixed(0) }}%</span>
+              </div>
+              <div class="hum-meter"><span [style.width.%]="share(d)"></span></div>
+            </div>
+            @if (canManage) {
+              <div class="hum-entity-card__actions">
+                <hum-icon-button icon="pencil" size="sm" [label]="'entity.action.edit' | translate" (click)="openEdit(d)" />
+                <hum-icon-button icon="trash-2" size="sm" [label]="'entity.action.delete' | translate" (click)="deleteTarget.set(d)" />
+              </div>
+            }
+          </article>
+        }
+      </div>
+    } @else {
+      <hum-empty-state
+        icon="search"
+        [title]="'humano.departments.noMatch' | translate"
+        [description]="'humano.departments.noMatchBody' | translate"
+      >
+        <hum-button hum-empty-action variant="secondary" (click)="query.set('')">{{ 'humano.action.clearFilters' | translate }}</hum-button>
+      </hum-empty-state>
+    }
   }
 </div>
+
+<!-- Department panel -->
+<hum-drawer [open]="selected() !== null" [title]="selected()?.name ?? ''" width="440px" hasFooter (closed)="selected.set(null)">
+  @if (selected(); as d) {
+    <p style="margin: 0 0 var(--space-4); color: var(--text-muted)">
+      {{ d.description ?? ('humano.departments.noDescription' | translate) }}
+    </p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-bottom: var(--space-5)">
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.departments.colPeople' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ d.employeeCount }}</div>
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.departments.shareOfCompany' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ share(d).toFixed(0) }}%</div>
+      </div>
+    </div>
+    <section class="hum-profile-section">
+      <h3 class="hum-section-title">{{ 'humano.departments.colHead' | translate }}</h3>
+      @if (d.headId) {
+        <a class="hum-orgchart__member" [routerLink]="['/employees', d.headId]">
+          <hum-avatar [name]="d.headName ?? ''" />
+          <span class="hum-orgchart__member-text"
+            ><span class="hum-orgnode__name">{{ d.headName }}</span></span
+          >
+        </a>
+      } @else {
+        <span class="hum-entity-card__warn"
+          ><lucide-icon name="circle-alert" [size]="14" />{{ 'humano.departments.noHead' | translate }}</span
+        >
+      }
+    </section>
+    <section class="hum-profile-section">
+      <h3 class="hum-section-title">{{ 'humano.departments.members' | translate }}</h3>
+      @if (membersError(); as err) {
+        <hum-alert tone="danger" [title]="err" />
+      } @else if (members() === null) {
+        <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+      } @else if (!members()!.length) {
+        <p style="margin: 0; color: var(--text-muted); font-size: var(--text-sm)">{{ 'humano.departments.noMembers' | translate }}</p>
+      } @else {
+        @for (m of members(); track m.id) {
+          <a class="hum-orgchart__member" [routerLink]="['/employees', m.id]">
+            <hum-avatar [name]="name(m)" [src]="m.imageUrl" size="sm" />
+            <span class="hum-orgchart__member-text">
+              <span class="hum-orgnode__name">{{ name(m) }}</span>
+              <span class="hum-orgnode__title">{{ m.jobTitle ?? '—' }}</span>
+            </span>
+          </a>
+        }
+        @if (membersTotal() > members()!.length) {
+          <p style="margin: var(--space-2) 0 0; font-size: var(--text-sm); color: var(--text-muted)">
+            {{ 'humano.departments.andMore' | translate: { count: membersTotal() - members()!.length } }}
+          </p>
+        }
+      }
+    </section>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    @if (selected(); as d) {
+      @if (canManage) {
+        <hum-button variant="ghost" icon="pencil" (click)="openEdit(d)">{{ 'entity.action.edit' | translate }}</hum-button>
+      }
+      <hum-button variant="primary" trailingIcon="arrow-right" [routerLink]="['/employees']" [queryParams]="{ dept: d.id }">{{
+        'humano.departments.viewInDirectory' | translate
+      }}</hum-button>
+    }
+  </div>
+</hum-drawer>
 
 <!-- Create / edit -->
 <hum-drawer

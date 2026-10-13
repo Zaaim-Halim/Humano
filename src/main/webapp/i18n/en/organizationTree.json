@@ -8,8 +8,14 @@
       "statPeople": "People",
       "manager": "Manager",
       "noManager": "No manager assigned",
-      "headcount": "{{ count }} people",
-      "subUnits": "{{ count }} sub-units",
+      "headcount": {
+        "one": "{{ count }} person",
+        "other": "{{ count }} people"
+      },
+      "subUnits": {
+        "one": "{{ count }} sub-unit",
+        "other": "{{ count }} sub-units"
+      },
       "expandTop": "Top level",
       "expandAll": "Everything",
       "wholeOrganization": "Whole organization",

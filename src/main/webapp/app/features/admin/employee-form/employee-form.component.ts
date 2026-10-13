@@ -155,10 +155,7 @@ export default class EmployeeFormComponent implements OnInit {
    * first name, last name, and job title; the option labels on the person's name
    * (falling back to job title) with the job title as sublabel.
    */
-  protected readonly searchManagers = (term: string): Observable<AutocompleteOption[]> =>
-    this.employeeService
-      .search({ query: term }, { page: 0, size: 10 })
-      .pipe(map(res => res.content.map(e => ({ value: e.id, label: personName(e), sublabel: e.jobTitle ?? e.departmentName }))));
+  protected readonly searchManagers = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
 
   ngOnInit(): void {
     this.loadOptions();

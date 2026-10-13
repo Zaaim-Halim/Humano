@@ -1,8 +1,10 @@
 package com.humano.repository.hr;
 
 import com.humano.domain.hr.Timesheet;
+import com.humano.repository.hr.projection.EmployeeCountRow;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,4 +33,12 @@ public interface TimesheetRepository extends JpaRepository<Timesheet, UUID>, Jpa
         @Param("startDate") LocalDate startDate,
         @Param("endDate") LocalDate endDate
     );
+
+    /** Entries per project in one GROUP BY (project id → count). */
+    @Query(
+        "SELECT new com.humano.repository.hr.projection.EmployeeCountRow(t.project.id, null, COUNT(t)) FROM Timesheet t WHERE t.project IS NOT NULL GROUP BY t.project.id"
+    )
+    List<EmployeeCountRow> countByProject();
+
+    long countByProjectId(UUID projectId);
 }

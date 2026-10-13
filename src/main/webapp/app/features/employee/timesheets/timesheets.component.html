@@ -1,72 +1,207 @@
 <div class="hum-page">
   <hum-page-header [title]="'humano.timesheets.title' | translate" [subtitle]="'humano.timesheets.subtitle' | translate" />
 
-  <form [formGroup]="form" (ngSubmit)="submit()" style="display: grid; gap: var(--space-4)">
-    <hum-card [title]="'humano.timesheets.logTitle' | translate">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-4)">
-        <hum-form-field
-          [label]="'humano.timesheets.date' | translate"
-          controlId="ts-date"
-          required
-          [error]="invalid('date') ? ('humano.employeeForm.required' | translate) : undefined"
-        >
-          <hum-input inputId="ts-date" type="date" formControlName="date" [invalid]="invalid('date')" />
-        </hum-form-field>
+  @if (tabs().length > 1) {
+    <hum-tabs [items]="tabs()" [value]="tab()" (valueChange)="setTab($event)" />
+  }
 
-        <hum-form-field
-          [label]="'humano.timesheets.hours' | translate"
-          controlId="ts-hours"
-          required
-          [error]="invalid('hoursWorked') ? ('humano.timesheets.hoursError' | translate) : undefined"
-        >
-          <hum-input inputId="ts-hours" type="number" formControlName="hoursWorked" [invalid]="invalid('hoursWorked')" />
-        </hum-form-field>
-      </div>
-    </hum-card>
-
-    @if (resolved() && !employeeId()) {
-      <hum-alert tone="info" [title]="'humano.timesheets.noProfileTitle' | translate">
-        {{ 'humano.timesheets.noProfileBody' | translate }}
-      </hum-alert>
-    }
-
-    <div style="display: flex; justify-content: flex-end">
-      <hum-button type="submit" variant="primary" icon="plus" [loading]="submitting()" [disabled]="form.invalid || !employeeId()">{{
-        'humano.timesheets.log' | translate
-      }}</hum-button>
+  <div class="hum-dir-toolbar" style="margin-top: var(--space-4)">
+    <div class="hum-segmented">
+      <hum-icon-button icon="chevron-left" size="sm" [label]="'humano.timesheets.prevWeek' | translate" (click)="shiftWeek(-1)" />
+      <hum-icon-button icon="chevron-right" size="sm" [label]="'humano.timesheets.nextWeek' | translate" (click)="shiftWeek(1)" />
     </div>
-  </form>
+    <h2 class="hum-cal-title tabular-nums">{{ weekLabel() }}</h2>
+    @if (!isCurrentWeek()) {
+      <hum-button variant="ghost" size="sm" (click)="thisWeek()">{{ 'humano.timesheets.thisWeek' | translate }}</hum-button>
+    }
+  </div>
 
-  <h2 class="hum-field__label" style="margin: var(--space-5) 0 var(--space-3)">{{ 'humano.timesheets.recent' | translate }}</h2>
+  @if (tab() === 'mine') {
+    @if (resolved() && !employeeId()) {
+      <hum-alert tone="info" [title]="'humano.timesheets.noProfileTitle' | translate">{{
+        'humano.timesheets.noProfileBody' | translate
+      }}</hum-alert>
+    } @else {
+      <div class="hum-ts-layout">
+        <!-- Week chart + days -->
+        <section class="hum-ts-card">
+          <div class="hum-ts-summary">
+            <div>
+              <div class="hum-dir-stat__label">{{ 'humano.timesheets.weekTotal' | translate }}</div>
+              <div class="hum-dir-stat__value tabular-nums">
+                {{ myTotal() | number: '1.0-2' }}<span class="hum-ts-unit">/ {{ weeklyTarget }}h</span>
+              </div>
+            </div>
+            <div
+              class="hum-meter"
+              style="flex: 1"
+              [style.--hum-accent]="myTotal() >= weeklyTarget ? 'var(--success-solid)' : 'var(--brand)'"
+            >
+              <span [style.width.%]="(myTotal() / weeklyTarget) * 100 > 100 ? 100 : (myTotal() / weeklyTarget) * 100"></span>
+            </div>
+          </div>
 
-  @if (!resolved() || loading()) {
-    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
-  } @else if (!employeeId()) {
-    <hum-empty-state icon="clock" [title]="'humano.timesheets.recentUnavailable' | translate" />
-  } @else if (error(); as e) {
-    <hum-alert tone="danger" [title]="e">
-      <hum-button variant="outline" size="sm" (click)="retry()">{{ 'humano.action.retry' | translate }}</hum-button>
-    </hum-alert>
-  } @else if (entries()?.length) {
-    <table class="hum-table">
-      <thead>
-        <tr>
-          <th>{{ 'humano.timesheets.date' | translate }}</th>
-          <th class="hum-table__num">{{ 'humano.timesheets.hours' | translate }}</th>
-          <th>{{ 'humano.timesheets.project' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (t of entries(); track t.id) {
-          <tr>
-            <td class="tabular-nums">{{ t.date }}</td>
-            <td class="hum-table__num tabular-nums">{{ t.hoursWorked }}</td>
-            <td>{{ t.projectName ?? '—' }}</td>
-          </tr>
-        }
-      </tbody>
-    </table>
+          @if (mineError(); as e) {
+            <hum-alert tone="danger" [title]="e" />
+          } @else if (mine() === null) {
+            <hum-skeleton [height]="220" />
+          } @else {
+            <div class="hum-ts-bars" role="img" [attr.aria-label]="'humano.timesheets.chartLabel' | translate">
+              <div class="hum-ts-bars__plot" aria-hidden="true">
+                <div class="hum-ts-bars__target" [style.bottom.%]="(dailyTarget / myScale()) * 100">
+                  <span>{{ dailyTarget }}h</span>
+                </div>
+              </div>
+              @for (d of myDays(); track d.iso) {
+                <button
+                  type="button"
+                  class="hum-ts-bars__col"
+                  [class.is-weekend]="d.weekend"
+                  [class.is-today]="d.iso === today"
+                  (click)="logFor(d.iso)"
+                  [title]="'humano.timesheets.logForDay' | translate"
+                >
+                  <span class="hum-ts-bars__value tabular-nums">{{ d.hours ? (d.hours | number: '1.0-2') : '' }}</span>
+                  <span class="hum-ts-bars__area">
+                    <span class="hum-ts-bars__stack" [style.height.%]="(d.hours / myScale()) * 100">
+                      @for (e of d.entries; track e.id) {
+                        <span [style.flex-grow]="e.hoursWorked" [style.background]="colorOf(e.projectId)"></span>
+                      }
+                    </span>
+                  </span>
+                  <span class="hum-ts-bars__label"
+                    >{{ d.date | date: 'EEE' }}<br /><span class="tabular-nums">{{ d.date | date: 'd' }}</span></span
+                  >
+                </button>
+              }
+            </div>
+
+            @if (myProjects().length) {
+              <div class="hum-segbar hum-segbar--thin" style="margin-top: var(--space-4)">
+                @for (p of myProjects(); track p.name) {
+                  <span class="hum-segbar__seg" [style.width.%]="p.pct" [style.background]="p.color" [title]="p.name"></span>
+                }
+              </div>
+              <div class="hum-legend" style="margin-top: var(--space-2)">
+                @for (p of myProjects(); track p.name) {
+                  <span class="hum-legend__item"
+                    ><span class="hum-legend__dot" [style.background]="p.color"></span>{{ p.name }}
+                    <span class="hum-legend__count tabular-nums">{{ p.hours | number: '1.0-2' }}h</span></span
+                  >
+                }
+              </div>
+            } @else {
+              <p class="hum-ts-empty">{{ 'humano.timesheets.emptyWeek' | translate }}</p>
+            }
+          }
+        </section>
+
+        <!-- Log form -->
+        <section class="hum-ts-card">
+          <h3 class="hum-section-title">{{ 'humano.timesheets.logTitle' | translate }}</h3>
+          <form [formGroup]="form" (ngSubmit)="submit()" style="display: grid; gap: var(--space-3)">
+            <hum-form-field [label]="'humano.timesheets.date' | translate" controlId="ts-date" required>
+              <hum-input inputId="ts-date" type="date" formControlName="date" [invalid]="invalid('date')" />
+            </hum-form-field>
+            <hum-form-field
+              [label]="'humano.timesheets.hours' | translate"
+              controlId="ts-hours"
+              required
+              [error]="invalid('hoursWorked') ? ('humano.timesheets.hoursError' | translate) : undefined"
+            >
+              <hum-input
+                inputId="ts-hours"
+                type="number"
+                formControlName="hoursWorked"
+                [invalid]="invalid('hoursWorked')"
+                placeholder="8"
+              />
+            </hum-form-field>
+            <hum-form-field [label]="'humano.timesheets.project' | translate" controlId="ts-project">
+              <hum-select formControlName="projectId" [options]="projectOptions()" />
+            </hum-form-field>
+            <hum-button type="submit" variant="primary" icon="plus" [loading]="submitting()" [disabled]="form.invalid || !employeeId()">{{
+              'humano.timesheets.log' | translate
+            }}</hum-button>
+          </form>
+
+          <h3 class="hum-section-title" style="margin-top: var(--space-5)">{{ 'humano.timesheets.entries' | translate }}</h3>
+          @for (d of myDays(); track d.iso) {
+            @if (d.entries.length) {
+              <div class="hum-ts-day">
+                <div class="hum-ts-day__head">
+                  <span>{{ d.date | date: 'EEEE, MMM d' }}</span>
+                  <span class="tabular-nums">{{ d.hours | number: '1.0-2' }}h</span>
+                </div>
+                @for (e of d.entries; track e.id) {
+                  <div class="hum-ts-day__entry">
+                    <span class="hum-legend__dot" [style.background]="colorOf(e.projectId)"></span>
+                    <span style="flex: 1">{{ e.projectName ?? ('humano.timesheets.noProject' | translate) }}</span>
+                    <span class="tabular-nums">{{ e.hoursWorked | number: '1.0-2' }}h</span>
+                  </div>
+                }
+              </div>
+            }
+          }
+        </section>
+      </div>
+    }
   } @else {
-    <hum-empty-state icon="clock" [title]="'humano.timesheets.empty' | translate" />
+    <!-- Team week -->
+    <section class="hum-dir-stats hum-dir-stats--even">
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.timesheets.teamLogged' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ teamStats().total | number: '1.0-0' }}h</div>
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.timesheets.teamPeople' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ teamStats().people }}</div>
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.timesheets.teamAverage' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ teamStats().average | number: '1.0-1' }}h</div>
+        <div class="hum-dir-stat__sub">{{ 'humano.timesheets.perPerson' | translate: { target: weeklyTarget } }}</div>
+      </div>
+      <div class="hum-dir-stat" [class.hum-dir-stat--warn]="teamStats().under > 0">
+        <div class="hum-dir-stat__label">{{ 'humano.timesheets.teamUnder' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ teamStats().under }}</div>
+        <div class="hum-dir-stat__sub">{{ 'humano.timesheets.underHint' | translate }}</div>
+      </div>
+    </section>
+
+    @if (teamError(); as e) {
+      <hum-alert tone="danger" [title]="e" />
+    } @else if (team() === null) {
+      <hum-skeleton [height]="320" />
+    } @else if (!teamRows().length) {
+      <hum-empty-state
+        icon="clock"
+        [title]="'humano.timesheets.teamEmptyTitle' | translate"
+        [description]="'humano.timesheets.teamEmptyBody' | translate"
+      />
+    } @else {
+      <div class="hum-heatmap">
+        <div class="hum-heatmap__row hum-heatmap__row--head">
+          <span></span>
+          @for (d of days(); track d.iso) {
+            <span class="hum-heatmap__day" [class.is-today]="d.iso === today">{{ d.date | date: 'EEE d' }}</span>
+          }
+          <span class="hum-heatmap__day">{{ 'humano.timesheets.total' | translate }}</span>
+        </div>
+        @for (r of teamRows(); track r.id) {
+          <div class="hum-heatmap__row">
+            <a class="hum-heatmap__name" [routerLink]="['/employees', r.id]"><hum-avatar [name]="r.name" size="xs" />{{ r.name }}</a>
+            @for (d of days(); track d.iso) {
+              <span class="hum-heatmap__cell tabular-nums" [class.is-weekend]="d.weekend" [style.--hum-heat]="heat(r.hours[d.iso])">
+                {{ r.hours[d.iso] ? (r.hours[d.iso] | number: '1.0-1') : '' }}
+              </span>
+            }
+            <span class="hum-heatmap__total tabular-nums" [class.is-under]="r.total < weeklyTarget * 0.9"
+              >{{ r.total | number: '1.0-1' }}h</span
+            >
+          </div>
+        }
+      </div>
+    }
   }
 </div>

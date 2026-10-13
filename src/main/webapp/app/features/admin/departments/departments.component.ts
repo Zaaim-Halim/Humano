@@ -1,15 +1,18 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { LucideAngularModule } from 'lucide-angular';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable, map } from 'rxjs';
 
 import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
-import { DEFAULT_PAGE_SIZE, normalizeHttpError } from 'app/core/api';
+import { normalizeHttpError } from 'app/core/api';
 import {
   AlertComponent,
   AutocompleteComponent,
   AutocompleteOption,
+  AvatarComponent,
   ButtonComponent,
   DialogComponent,
   DrawerComponent,
@@ -18,25 +21,49 @@ import {
   IconButtonComponent,
   InputComponent,
   PageHeaderComponent,
+  SelectComponent,
+  SkeletonComponent,
   SkeletonRowComponent,
   TextareaComponent,
   ToastService,
 } from 'app/shared/ui';
 
 import { CreateDepartmentRequest, Department, DepartmentService } from '../index';
-import { EmployeeService } from 'app/features/employee';
+import { EmployeeService, personName, type SimpleEmployeeProfile } from 'app/features/employee';
+import { PluralPipe } from 'app/shared/util/format.pipes';
+
+/** Accent colours cycled across department cards (same order as the directory's department bar). */
+const ACCENTS = [
+  'var(--brand)',
+  'var(--info-solid)',
+  'var(--success-solid)',
+  'var(--warning-solid)',
+  'var(--violet-500)',
+  'var(--danger-solid)',
+  'var(--indigo-300)',
+  'var(--slate-400)',
+];
 
 /**
- * Departments management (HR/admin) — paged list with a create/edit drawer and
- * delete confirm. The department head is an employee, picked via the
- * backend-search autocomplete. Manage actions are gated on `MANAGE_DEPARTMENTS`.
+ * Departments (HR/admin) — every department as a card with its head and its share of the
+ * company's headcount, plus an overview strip (departments, people, largest, missing heads).
+ * Search and sort are client-side (departments are a small, fully loaded set). Selecting a card
+ * opens a panel with the department's people; create/edit is a drawer and delete a confirm
+ * dialog, both gated on `MANAGE_DEPARTMENTS`.
  */
 @Component({
   selector: 'hum-departments',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
+    FormsModule,
+    RouterLink,
+    LucideAngularModule,
     TranslatePipe,
+    PluralPipe,
+    AvatarComponent,
+    SelectComponent,
+    SkeletonComponent,
     PageHeaderComponent,
     ButtonComponent,
     IconButtonComponent,
@@ -62,11 +89,38 @@ export default class DepartmentsComponent {
 
   protected readonly canManage = this.account.hasPermission(Permission.MANAGE_DEPARTMENTS);
 
-  protected readonly size = DEFAULT_PAGE_SIZE;
   protected readonly departments = signal<Department[]>([]);
-  protected readonly total = signal(0);
-  protected readonly page = signal(0);
   protected readonly loading = signal(false);
+  protected readonly query = signal('');
+  protected readonly sortBy = signal<'size' | 'name'>('size');
+  protected readonly sortOptions = computed(() => [
+    { value: 'size', label: this.label('humano.departments.sortSize') },
+    { value: 'name', label: this.label('humano.departments.sortName') },
+  ]);
+
+  /** Departments in display order, each with its accent colour (stable per department). */
+  protected readonly cards = computed(() => {
+    const bySize = [...this.departments()].sort((a, b) => b.employeeCount - a.employeeCount || a.name.localeCompare(b.name));
+    const accent = new Map(bySize.map((d, i) => [d.id, ACCENTS[i % ACCENTS.length]]));
+    const q = this.query().trim().toLowerCase();
+    const list = (this.sortBy() === 'size' ? bySize : [...bySize].sort((a, b) => a.name.localeCompare(b.name))).filter(
+      d => !q || d.name.toLowerCase().includes(q) || (d.headName ?? '').toLowerCase().includes(q),
+    );
+    return list.map(d => ({ ...d, accent: accent.get(d.id) ?? ACCENTS[0] }));
+  });
+  protected readonly stats = computed(() => {
+    const list = this.departments();
+    const people = list.reduce((sum, d) => sum + d.employeeCount, 0);
+    const largest = list.reduce<Department | null>((max, d) => (!max || d.employeeCount > max.employeeCount ? d : max), null);
+    return { count: list.length, people, largest, withoutHead: list.filter(d => !d.headId).length };
+  });
+
+  // Detail panel: the selected department and its people.
+  protected readonly selected = signal<(Department & { accent: string }) | null>(null);
+  protected readonly members = signal<SimpleEmployeeProfile[] | null>(null);
+  protected readonly membersTotal = signal(0);
+  protected readonly membersError = signal<string | null>(null);
+  protected readonly name = personName;
   protected readonly error = signal<string | null>(null);
 
   protected readonly formOpen = signal(false);
@@ -83,10 +137,7 @@ export default class DepartmentsComponent {
   });
 
   /** Head picker — employees are unbounded, so search the backend per keystroke. */
-  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> =>
-    this.employeeService
-      .search({ jobTitle: term }, { page: 0, size: 10 })
-      .pipe(map(res => res.content.map(e => ({ value: e.id, label: e.jobTitle ?? e.id, sublabel: e.departmentName }))));
+  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
 
   constructor() {
     this.load();
@@ -97,9 +148,22 @@ export default class DepartmentsComponent {
     return !!c && c.invalid && (c.dirty || c.touched);
   }
 
-  protected goto(page: number): void {
-    this.page.set(page);
-    this.load();
+  protected share(d: Department): number {
+    const people = this.stats().people;
+    return people ? (d.employeeCount / people) * 100 : 0;
+  }
+
+  protected openDetail(d: Department & { accent: string }): void {
+    this.selected.set(d);
+    this.members.set(null);
+    this.membersError.set(null);
+    this.employeeService.search({ departmentId: d.id }, { page: 0, size: 50, sort: ['firstName,asc'] }).subscribe({
+      next: page => {
+        this.members.set(page.content);
+        this.membersTotal.set(page.totalElements);
+      },
+      error: (err: unknown) => this.membersError.set(normalizeHttpError(err)),
+    });
   }
 
   protected openCreate(): void {
@@ -110,6 +174,7 @@ export default class DepartmentsComponent {
   }
 
   protected openEdit(department: Department): void {
+    this.selected.set(null);
     this.editing.set(department);
     this.headInitial.set(department.headId ? { value: department.headId, label: department.headName ?? department.headId } : null);
     this.form.reset({
@@ -158,6 +223,7 @@ export default class DepartmentsComponent {
         this.toast.success(this.translate.instant('humano.departments.deleted'));
         this.deleting.set(false);
         this.deleteTarget.set(null);
+        this.selected.set(null);
         this.load();
       },
       error: (err: unknown) => {
@@ -167,13 +233,17 @@ export default class DepartmentsComponent {
     });
   }
 
+  private label(key: string, params?: Record<string, unknown>): string {
+    return String(this.translate.instant(key, params));
+  }
+
   protected load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.departmentService.query({ page: this.page(), size: this.size, sort: ['name,asc'] }).subscribe({
+    // Departments are a small set: load them all and search/sort on the client.
+    this.departmentService.query({ page: 0, size: 500, sort: ['name,asc'] }).subscribe({
       next: res => {
         this.departments.set(res.content);
-        this.total.set(res.totalElements);
         this.loading.set(false);
       },
       error: (err: unknown) => {

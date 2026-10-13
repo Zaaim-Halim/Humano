@@ -21,6 +21,8 @@ import {
   StatTileComponent,
 } from 'app/shared/ui';
 
+import { PluralPipe, pluralKey } from 'app/shared/util/format.pipes';
+
 import { HrHierarchyService } from '../services/hr-hierarchy.service';
 import { EmployeeTreeNode, OrganizationalUnitTreeNode } from '../models/hierarchy.model';
 
@@ -59,6 +61,7 @@ function walk(node: OrganizationalUnitTreeNode, visit: (n: OrganizationalUnitTre
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TranslatePipe,
+    PluralPipe,
     LucideAngularModule,
     RouterLink,
     PageHeaderComponent,
@@ -113,7 +116,11 @@ export class OrganizationTreeComponent implements OnInit {
   protected readonly tone = (node: OrganizationalUnitTreeNode): BadgeTone => TYPE_TONE[node.type] ?? 'neutral';
   protected readonly typeLabel = (type: string): string => type.charAt(0) + type.slice(1).toLowerCase();
   protected readonly subUnitsLabel = (node: OrganizationalUnitTreeNode): string =>
-    this.translate.instant('humano.organizationTree.subUnits', { count: node.childCount ?? node.children?.length ?? 0 });
+    this.subUnitsText(node.childCount ?? node.children?.length ?? 0);
+
+  private subUnitsText(count: number): string {
+    return String(this.translate.instant(pluralKey('humano.organizationTree.subUnits', count), { count }));
+  }
 
   private readonly hierarchy = inject(HrHierarchyService);
   private readonly translate = inject(TranslateService);

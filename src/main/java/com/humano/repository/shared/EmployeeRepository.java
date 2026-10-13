@@ -44,7 +44,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
         SELECT new com.humano.repository.hr.projection.EmployeeCountRow(d.id, d.name, COUNT(e))
         FROM Employee e LEFT JOIN e.department d
         GROUP BY d.id, d.name
-        ORDER BY COUNT(e) DESC
+        ORDER BY COUNT(e) DESC, d.name ASC
         """
     )
     List<EmployeeCountRow> countByDepartment();
@@ -55,6 +55,15 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
     List<EmployeeCountRow> countByWorkLocation();
 
     long countByStartDateGreaterThanEqual(LocalDate date);
+
+    long countByDepartmentId(UUID departmentId);
+
+    @Query(
+        "SELECT new com.humano.repository.hr.projection.EmployeeCountRow(e.position.id, null, COUNT(e)) FROM Employee e GROUP BY e.position.id"
+    )
+    List<EmployeeCountRow> countByPosition();
+
+    long countByPositionId(UUID positionId);
 
     /**
      * Fetches the people-tree subtree (the manager at {@code rootPath} plus all

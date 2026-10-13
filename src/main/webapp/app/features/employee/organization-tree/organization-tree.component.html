@@ -55,7 +55,9 @@
           <div class="hum-orgnode__meta">{{ 'humano.organizationTree.noManager' | translate }}</div>
         }
         <div class="hum-orgnode__meta">
-          <lucide-icon name="users" [size]="12" />{{ 'humano.organizationTree.headcount' | translate: { count: node.totalHeadcount ?? 0 } }}
+          <lucide-icon name="users" [size]="12" />{{
+            'humano.organizationTree.headcount' | plural: node.totalHeadcount ?? 0 | translate: { count: node.totalHeadcount ?? 0 }
+          }}
         </div>
       </ng-template>
     </hum-org-chart>
@@ -116,7 +118,7 @@
                   <hum-badge [tone]="tone(c)" [label]="typeLabel(c.type)" [dot]="false" />
                   <span class="hum-orgnode__name" style="flex: 1; text-align: left">{{ c.name }}</span>
                   <span class="hum-orgnode__title tabular-nums">{{
-                    'humano.organizationTree.headcount' | translate: { count: c.totalHeadcount ?? 0 }
+                    'humano.organizationTree.headcount' | plural: c.totalHeadcount ?? 0 | translate: { count: c.totalHeadcount ?? 0 }
                   }}</span>
                 </button>
               }

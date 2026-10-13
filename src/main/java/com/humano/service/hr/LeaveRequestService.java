@@ -1,5 +1,6 @@
 package com.humano.service.hr;
 
+import com.humano.domain.enumeration.hr.ApprovalType;
 import com.humano.domain.enumeration.hr.LeaveStatus;
 import com.humano.domain.hr.LeaveRequest;
 import com.humano.domain.shared.Employee;
@@ -11,6 +12,7 @@ import com.humano.repository.hr.LeaveRequestRepository;
 import com.humano.repository.hr.specification.LeaveRequestSpecification;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
+import com.humano.service.hr.workflow.ApprovalWorkflowOrchestratorService;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -30,10 +32,16 @@ public class LeaveRequestService {
 
     private final LeaveRequestRepository leaveRequestRepository;
     private final EmployeeRepository employeeRepository;
+    private final ApprovalWorkflowOrchestratorService approvalWorkflowService;
 
-    public LeaveRequestService(LeaveRequestRepository leaveRequestRepository, EmployeeRepository employeeRepository) {
+    public LeaveRequestService(
+        LeaveRequestRepository leaveRequestRepository,
+        EmployeeRepository employeeRepository,
+        ApprovalWorkflowOrchestratorService approvalWorkflowService
+    ) {
         this.leaveRequestRepository = leaveRequestRepository;
         this.employeeRepository = employeeRepository;
+        this.approvalWorkflowService = approvalWorkflowService;
     }
 
     @Transactional("tenantTransactionManager")
@@ -62,6 +70,12 @@ public class LeaveRequestService {
         LeaveRequest savedRequest = leaveRequestRepository.save(leaveRequest);
         log.info("Created leave request with ID: {}", savedRequest.getId());
 
+        // Route it to the approver right away. Without a manager there is nobody to route to (the
+        // workflow would reject it), so the request stays pending for HR to decide directly.
+        if (employee.getManager() != null) {
+            approvalWorkflowService.submitLeaveRequest(savedRequest.getId());
+        }
+
         return mapToResponse(savedRequest);
     }
 
@@ -84,7 +98,14 @@ public class LeaveRequestService {
                 leaveRequest.setApprover(approver);
                 leaveRequest.setApproverComments(request.approverComments());
 
-                return mapToResponse(leaveRequestRepository.save(leaveRequest));
+                LeaveRequestResponse response = mapToResponse(leaveRequestRepository.save(leaveRequest));
+                // A direct HR decision supersedes the approval flow — take it out of the approver's inbox.
+                approvalWorkflowService.closePendingForEntity(
+                    id,
+                    ApprovalType.LEAVE_REQUEST,
+                    request.status().name().toLowerCase() + " by " + approver.getFirstName() + " " + approver.getLastName()
+                );
+                return response;
             })
             .orElseThrow(() -> EntityNotFoundException.create("LeaveRequest", id));
     }

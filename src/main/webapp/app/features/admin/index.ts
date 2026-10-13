@@ -11,6 +11,8 @@ export { DepartmentService } from './services/department.service';
 export type { Department, CreateDepartmentRequest, UpdateDepartmentRequest } from './models/department.model';
 
 export { PositionService } from './services/position.service';
+export { JobLevelService } from './services/job-level.service';
+export type { ReferenceData } from './models/reference-data.model';
 export type { Position, CreatePositionRequest, UpdatePositionRequest } from './models/position.model';
 
 export { OrganizationalUnitService } from './services/organizational-unit.service';

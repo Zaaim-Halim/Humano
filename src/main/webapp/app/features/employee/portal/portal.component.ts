@@ -49,7 +49,7 @@ export default class PortalComponent {
 
   protected readonly quickActions: QuickAction[] = [
     { icon: 'id-card', labelKey: 'humano.portal.actionProfile', link: '/my-profile' },
-    { icon: 'palmtree', labelKey: 'humano.portal.actionLeave', link: '/leave' },
+    { icon: 'palmtree', labelKey: 'humano.portal.actionLeave', link: '/leave/new' },
     { icon: 'clock', labelKey: 'humano.portal.actionTimesheet', link: '/timesheets' },
     { icon: 'file-text', labelKey: 'humano.portal.actionDocuments', link: '/my-documents' },
     { icon: 'user', labelKey: 'humano.portal.actionAccount', link: '/account/settings' },

@@ -2,7 +2,7 @@
   "humano": {
     "positions": {
       "title": "Positions",
-      "subtitle": "Roles and levels people can hold",
+      "subtitle": "Your job architecture — roles, levels and who holds them",
       "create": "New position",
       "editTitle": "Edit position",
       "colName": "Name",
@@ -10,14 +10,46 @@
       "colUnit": "Org unit",
       "colDescription": "Description",
       "colPeople": "People",
-      "levelHint": "e.g. Junior, Senior, L5",
       "noUnit": "No unit",
       "emptyTitle": "No positions",
       "emptyBody": "Create the first position to define roles for your org.",
       "created": "Position created",
       "updated": "Position updated",
       "deleted": "Position deleted",
-      "deleteQuestion": "Delete {{ name }}? Positions held by employees can't be removed."
+      "deleteQuestion": "Delete {{ name }}? Positions held by employees can't be removed.",
+      "search": "Search positions, units or levels…",
+      "allUnits": "All units",
+      "filled": "Filled",
+      "vacant": "Vacant",
+      "vacantHint": "Positions nobody holds",
+      "vacantOne": "Vacant",
+      "levels": "Levels",
+      "peopleShort": {
+        "one": "{{ count }} person",
+        "other": "{{ count }} people"
+      },
+      "viewLadder": "Career ladder",
+      "viewChart": "Position hierarchy",
+      "holders": {
+        "one": "{{ count }} holder",
+        "other": "{{ count }} holders"
+      },
+      "subPositions": {
+        "one": "{{ count }} reporting position",
+        "other": "{{ count }} reporting positions"
+      },
+      "selectLevel": "Select a level…",
+      "noParent": "Top of the hierarchy",
+      "reportsInto": "Reports into",
+      "reportsIntoHint": "The position this role reports to — builds the position hierarchy.",
+      "subPositionsTitle": "Reporting positions",
+      "heldBy": "Held by",
+      "noHolders": "Nobody holds this position yet.",
+      "noHierarchy": "No position hierarchy yet",
+      "noHierarchyBody": "Set “Reports into” on positions to build the hierarchy.",
+      "standalone": "{{ count }} positions aren't linked to the hierarchy.",
+      "noMatch": "No positions match",
+      "noMatchBody": "Try a different search or unit."
     }
   }
 }

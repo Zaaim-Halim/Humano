@@ -2,15 +2,13 @@
   "humano": {
     "orgUnits": {
       "title": "Org units",
-      "subtitle": "Departments, sectors and teams that make up the organization",
+      "subtitle": "The units your organization is built from — structure, leaders and headcount",
       "create": "New unit",
       "editTitle": "Edit unit",
       "colName": "Name",
       "colType": "Type",
-      "colParent": "Parent",
       "colManager": "Manager",
       "colPeople": "People",
-      "colSubUnits": "Sub-units",
       "typeUnset": "Select a type…",
       "noParent": "No parent (top-level)",
       "emptyTitle": "No organizational units",
@@ -18,7 +16,25 @@
       "created": "Unit created",
       "updated": "Unit updated",
       "deleted": "Unit deleted",
-      "deleteQuestion": "Delete {{ name }}? Units with sub-units or members can't be removed."
+      "deleteQuestion": "Delete {{ name }}? Units with sub-units or members can't be removed.",
+      "units": "Units",
+      "topLevel": "{{ count }} at the top level",
+      "levels": "Levels",
+      "withoutManager": "Without a manager",
+      "noManager": "No manager",
+      "search": "Search units, managers or types…",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "viewChart": "View as chart",
+      "actions": "Actions",
+      "subUnits": {
+        "one": "{{ count }} sub-unit",
+        "other": "{{ count }} sub-units"
+      },
+      "directOf": "{{ direct }} directly in this unit",
+      "noMatch": "No units match",
+      "noMatchBody": "Try a different name, manager or type.",
+      "colParent": "Parent unit"
     }
   }
 }

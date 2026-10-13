@@ -89,9 +89,11 @@ export class PeopleTreeComponent implements OnInit {
 
   protected readonly subtitle = computed(() => {
     const root = this.focused() ? this.roots()[0] : null;
-    return root
-      ? this.translate.instant('humano.peopleTree.focusedOn', { name: root.fullName })
-      : this.translate.instant('humano.peopleTree.subtitle');
+    return String(
+      root
+        ? this.translate.instant('humano.peopleTree.focusedOn', { name: root.fullName })
+        : this.translate.instant('humano.peopleTree.subtitle'),
+    );
   });
 
   /** Fetches one level of reports for a node whose children were trimmed. */
@@ -99,7 +101,7 @@ export class PeopleTreeComponent implements OnInit {
     this.hierarchy.getEmployeeSubtree(node.id, 1).pipe(map(r => (r.root.children ?? []).map(toPersonNode)));
 
   protected readonly reportsLabel = (node: PersonNode): string =>
-    this.translate.instant('humano.peopleTree.reports', { direct: node.directReports ?? 0, total: node.totalReports ?? 0 });
+    String(this.translate.instant('humano.peopleTree.reports', { direct: node.directReports ?? 0, total: node.totalReports ?? 0 }));
 
   /** Deepest level already fetched; selecting a deeper level re-fetches once. */
   private loadedDepth = -1;

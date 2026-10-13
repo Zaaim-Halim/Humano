@@ -1,0 +1,63 @@
+{
+  "humano": {
+    "leave": {
+      "title": "Leave",
+      "subtitle": "Time off across the company — requests, approvals and who's away",
+      "request": "Request leave",
+      "tabMine": "My leave",
+      "tabCalendar": "Team calendar",
+      "tabRequests": "Requests",
+      "pending": "Pending",
+      "awaitingDecision": "Waiting for a decision",
+      "onLeaveToday": "On leave today",
+      "upcoming": "Starting soon",
+      "nextTwoWeeks": "in the next 14 days",
+      "takenThisYear": "Taken this year",
+      "upcomingMine": "Booked ahead",
+      "awaitingManager": "Waiting for your manager",
+      "days": {
+        "one": "{{ count }} day",
+        "other": "{{ count }} days"
+      },
+      "noLeaveTitle": "No leave yet",
+      "noLeaveBody": "Your requests and their status will show up here.",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "today": "Today",
+      "pendingLegend": "Pending",
+      "calendarEmptyTitle": "Nobody is away this month",
+      "calendarEmptyBody": "Approved and pending leave will appear on the calendar.",
+      "searchName": "Search by name…",
+      "typeLabel": "Type",
+      "allTypes": "All types",
+      "allStatuses": "All",
+      "status": {
+        "PENDING": "Pending",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected"
+      },
+      "type": {
+        "VACATION": "Vacation",
+        "SICK": "Sick leave",
+        "MATERNITY": "Parental leave",
+        "UNPAID": "Unpaid leave"
+      },
+      "noRequestsTitle": "No requests here",
+      "noRequestsBody": "Nothing matches this filter.",
+      "requestTitle": "Leave request",
+      "from": "From",
+      "to": "To",
+      "duration": "Duration",
+      "decidedBy": "Decided by",
+      "reason": "Reason",
+      "decisionNote": "Decision note",
+      "yourDecision": "Your decision",
+      "commentPlaceholder": "Add a note for the employee (optional)",
+      "noApproverProfile": "Your account has no employee profile, so you can't record a decision.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approved": "Leave approved",
+      "rejected": "Leave rejected"
+    }
+  }
+}

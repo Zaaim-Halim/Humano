@@ -36,6 +36,7 @@ import com.humano.dto.hr.requests.CreateTrainingRequest;
 import com.humano.dto.hr.requests.EnrollEmployeeTrainingRequest;
 import com.humano.dto.hr.requests.ProcessExpenseClaimRequest;
 import com.humano.dto.hr.requests.ProcessLeaveRequest;
+import com.humano.dto.hr.requests.UpdatePositionRequest;
 import com.humano.dto.hr.responses.EmployeePersonalDetails;
 import com.humano.dto.hr.responses.ReferenceDataRef;
 import com.humano.dto.payroll.request.ApprovePayrollRunRequest;
@@ -74,7 +75,6 @@ import com.humano.service.hr.PositionService;
 import com.humano.service.hr.ProjectService;
 import com.humano.service.hr.TimesheetService;
 import com.humano.service.hr.TrainingService;
-import com.humano.service.hr.workflow.ApprovalWorkflowOrchestratorService;
 import com.humano.service.payroll.CompensationService;
 import com.humano.service.payroll.PayrollCalendarService;
 import com.humano.service.payroll.PayrollProcessingService;
@@ -119,7 +119,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  *       placed in the hierarchy (CEO → department heads → managers → reports), plus ~45 more staff.</li>
  *   <li>Compensation, addresses, emergency contacts and contracts for everyone.</li>
  *   <li>Projects, two weeks of timesheets and attendance, leave and expenses in every state —
- *       pending items go through the approval workflow so managers have a real inbox.</li>
+ *       new requests are routed to the approval workflow, so managers have a real inbox.</li>
  *   <li>Trainings with enrolments, performance reviews, monthly payroll periods and a calculated
  *       run for last month (best-effort: payroll needs tax configuration the demo may lack).</li>
  * </ul>
@@ -150,7 +150,6 @@ public class DemoDataSeeder {
     private final AttendanceService attendanceService;
     private final LeaveRequestService leaveRequestService;
     private final ExpenseClaimService expenseClaimService;
-    private final ApprovalWorkflowOrchestratorService approvalService;
     private final TrainingService trainingService;
     private final PerformanceReviewService reviewService;
     private final PayrollCalendarService payrollCalendarService;
@@ -202,7 +201,6 @@ public class DemoDataSeeder {
         AttendanceService attendanceService,
         LeaveRequestService leaveRequestService,
         ExpenseClaimService expenseClaimService,
-        ApprovalWorkflowOrchestratorService approvalService,
         TrainingService trainingService,
         PerformanceReviewService reviewService,
         PayrollCalendarService payrollCalendarService,
@@ -239,7 +237,6 @@ public class DemoDataSeeder {
         this.attendanceService = attendanceService;
         this.leaveRequestService = leaveRequestService;
         this.expenseClaimService = expenseClaimService;
-        this.approvalService = approvalService;
         this.trainingService = trainingService;
         this.reviewService = reviewService;
         this.payrollCalendarService = payrollCalendarService;
@@ -292,6 +289,7 @@ public class DemoDataSeeder {
             if (!section("load people", this::loadPeople)) {
                 return;
             }
+            section("missing personas", this::ensureMissingPersonas);
         } else {
             log.info("[demo-data] seeding demo company…");
             if (!section("org structure", this::seedStructure) || !section("people", this::seedPeople)) {
@@ -304,6 +302,9 @@ public class DemoDataSeeder {
             section("performance reviews", this::seedReviews);
         }
         // Each of these guards itself, so a section that failed on an earlier boot is retried.
+        if (inTx(() -> positionRepository.findAll().stream().noneMatch(p -> p.getParentPosition() != null))) {
+            section("position hierarchy", this::seedPositionHierarchy);
+        }
         if (inTx(leaveRequestRepository::count) == 0) {
             section("leave", this::seedLeave);
         }
@@ -754,7 +755,8 @@ public class DemoDataSeeder {
             ),
             // IT
             p("integration.admin", "Sara", "Lindgren", Gender.FEMALE, "IT", "IT", "Integration Engineer", "SENIOR", "tenant.admin", 9600),
-            p("it.support", "Noah", "Kim", Gender.MALE, "IT", "IT", "IT Support Specialist", "MID", "tenant.admin", 5800)
+            p("it.support", "Noah", "Kim", Gender.MALE, "IT", "IT", "IT Support Specialist", "MID", "tenant.admin", 5800),
+            p("admin", "Alex", "Morgan", Gender.NON_BINARY, "IT", "IT", "HR Systems Administrator", "SENIOR", "tenant.admin", 9400)
         );
     }
 
@@ -869,43 +871,7 @@ public class DemoDataSeeder {
 
         // 1. Personas: their logins are plain users; graft the employee row onto each, then fill it in.
         for (Person person : personas()) {
-            String login = person.key() + "@demo.humano";
-            UUID positionId = position(person.unit(), person.title(), person.level());
-            UUID unitId = unitIds.get(person.unit());
-            UUID id = inTx(() -> graftEmployee(login, positionId, unitId));
-            if (id == null) {
-                log.warn("[demo-data] persona login {} not found; skipped", login);
-                continue;
-            }
-            UUID managerId = person.managerKey() == null ? null : ids.get(person.managerKey());
-            inTx(() -> {
-                Employee e = employeeRepository.findById(id).orElseThrow();
-                e.setFirstName(person.firstName());
-                e.setLastName(person.lastName());
-                e.setJobTitle(person.title());
-                e.setStatus(EmployeeStatus.ACTIVE);
-                e.setStartDate(startDateFor(person.level()));
-                e.setCountry(countryRepository.getReferenceById(usaId));
-                e.setNationality(countryRepository.getReferenceById(usaId));
-                e.setDepartment(departmentRepository.getReferenceById(departmentIds.get(person.department())));
-                e.setUnit(unitRepository.getReferenceById(unitId));
-                e.setManager(managerId == null ? null : employeeRepository.getReferenceById(managerId));
-                e.setPhone(phone());
-                e.setWorkPhone(phone());
-                e.setGender(person.gender());
-                e.setBirthDate(birthDate());
-                e.setWorkLocation(workLocation());
-                e.setFte(BigDecimal.ONE);
-                e.setEmployeeNumber(employeeNumber());
-                e.setEmploymentType(pick(types, "FULL_TIME"));
-                e.setLevel(pick(levels, person.level()));
-                e.setGrade(pick(grades, gradeFor(person.level())));
-                authorityRepository.findById(AuthoritiesConstants.EMPLOYEE).ifPresent(a -> e.getAuthorities().add(a));
-                employeeRepository.saveAndFlush(e); // @PreUpdate recomputes the materialized path
-                return null;
-            });
-            ids.put(person.key(), id);
-            remember(person, id, managerId);
+            seedPersona(person, ids, levels, grades, types);
         }
 
         // 2. Staff: brand-new logins through the same one-step provisioning the HR UI uses.
@@ -961,8 +927,109 @@ public class DemoDataSeeder {
         }
     }
 
+    /**
+     * Turns a persona login into an employee: grafts the employee row onto the existing user,
+     * then fills in name, job, placement and reference data. Returns false if the login is absent.
+     */
+    private boolean seedPersona(
+        Person person,
+        Map<String, UUID> ids,
+        List<? extends AbstractReferenceData> levels,
+        List<? extends AbstractReferenceData> grades,
+        List<? extends AbstractReferenceData> types
+    ) {
+        String login = person.key() + "@demo.humano";
+        UUID positionId = position(person.unit(), person.title(), person.level());
+        UUID unitId = unitIds.get(person.unit());
+        UUID managerId = person.managerKey() == null ? null : ids.get(person.managerKey());
+        // Graft and fill in one transaction, so an interrupted boot never leaves a half-made employee.
+        UUID id = inTx(() -> {
+            UUID grafted = graftEmployee(login, positionId, unitId);
+            if (grafted == null) {
+                return null;
+            }
+            Employee e = employeeRepository.findById(grafted).orElseThrow();
+            e.setFirstName(person.firstName());
+            e.setLastName(person.lastName());
+            e.setJobTitle(person.title());
+            e.setStatus(EmployeeStatus.ACTIVE);
+            e.setStartDate(startDateFor(person.level()));
+            e.setCountry(countryRepository.getReferenceById(usaId));
+            e.setNationality(countryRepository.getReferenceById(usaId));
+            e.setDepartment(departmentRepository.getReferenceById(departmentIds.get(person.department())));
+            e.setPosition(positionRepository.getReferenceById(positionId));
+            e.setUnit(unitRepository.getReferenceById(unitId));
+            e.setManager(managerId == null ? null : employeeRepository.getReferenceById(managerId));
+            e.setPhone(phone());
+            e.setWorkPhone(phone());
+            e.setGender(person.gender());
+            e.setBirthDate(birthDate());
+            e.setWorkLocation(workLocation());
+            e.setFte(BigDecimal.ONE);
+            e.setEmployeeNumber(employeeNumber());
+            e.setEmploymentType(pickAny(types, "FULL_TIME"));
+            e.setLevel(pickAny(levels, person.level()));
+            e.setGrade(pickAny(grades, gradeFor(person.level())));
+            authorityRepository.findById(AuthoritiesConstants.EMPLOYEE).ifPresent(a -> e.getAuthorities().add(a));
+            employeeRepository.saveAndFlush(e); // @PreUpdate recomputes the materialized path
+            return grafted;
+        });
+        if (id == null) {
+            log.warn("[demo-data] persona login {} not found; skipped", login);
+            return false;
+        }
+        ids.put(person.key(), id);
+        remember(person, id, managerId);
+        return true;
+    }
+
+    /**
+     * Personas added after the company was first seeded (e.g. the admin login) get their employee
+     * record, placement and pay on the next boot.
+     */
+    private void ensureMissingPersonas() {
+        inTx(() -> {
+            unitRepository.findAll().forEach(u -> unitIds.put(u.getName(), u.getId()));
+            departmentRepository.findAll().forEach(d -> departmentIds.put(d.getName(), d.getId()));
+            positionRepository.findAll().forEach(p -> positionIds.put(p.getName(), p.getId()));
+            // Continue employee numbering after the highest EMP-#### already issued.
+            employeeCounter = employeeRepository
+                .findAll()
+                .stream()
+                .map(Employee::getEmployeeNumber)
+                .filter(n -> n != null && n.matches("EMP-\\d+"))
+                .mapToInt(n -> Integer.parseInt(n.substring(4)))
+                .max()
+                .orElse(employeeCounter);
+            return null;
+        });
+        Map<String, UUID> ids = new HashMap<>();
+        byKey.forEach((key, seeded) -> ids.put(key, seeded.id()));
+        var levels = inTx(jobLevelRepository::findAll);
+        var grades = inTx(jobGradeRepository::findAll);
+        var types = inTx(employmentTypeRepository::findAll);
+        for (Person person : personas()) {
+            boolean missing = inTx(() ->
+                userRepository
+                    .findOneByLogin(person.key() + "@demo.humano")
+                    .map(u -> employeeRepository.findById(u.getId()).map(e -> e.getJobTitle() == null).orElse(true))
+                    .orElse(false)
+            );
+            if (missing && seedPersona(person, ids, levels, grades, types)) {
+                Seeded seeded = byKey.get(person.key());
+                UUID positionId = positionIds.get(person.title());
+                LocalDate start = inTx(() -> employeeRepository.findById(seeded.id()).orElseThrow().getStartDate());
+                compensationService.createCompensation(
+                    new CreateCompensationRequest(seeded.id(), positionId, usdId, seeded.salary(), Basis.MONTHLY, start, null)
+                );
+                log.info("[demo-data] added persona {} as an employee", person.key());
+            }
+        }
+    }
+
     private void remember(Person person, UUID id, UUID managerId) {
         Seeded seeded = new Seeded(person.key(), id, person.department(), person.title(), managerId, BigDecimal.valueOf(person.salary()));
+        people.removeIf(p -> p.id().equals(id)); // a repaired persona was already loaded
         people.add(seeded);
         byKey.put(person.key(), seeded);
     }
@@ -1044,6 +1111,41 @@ public class DemoDataSeeder {
             });
             return null;
         });
+    }
+
+    /**
+     * Links each position to the position its holders most often report to — the reporting lines
+     * already encode the job architecture, so the position chart mirrors the people chart.
+     */
+    private void seedPositionHierarchy() {
+        Map<UUID, UUID> parentOf = inTx(() -> {
+            Map<UUID, Map<UUID, Integer>> votes = new HashMap<>();
+            for (Employee e : employeeRepository.findAll()) {
+                if (e.getManager() == null || e.getPosition() == null || e.getManager().getPosition() == null) {
+                    continue;
+                }
+                UUID own = e.getPosition().getId();
+                UUID parent = e.getManager().getPosition().getId();
+                if (!own.equals(parent)) {
+                    votes.computeIfAbsent(own, k -> new HashMap<>()).merge(parent, 1, Integer::sum);
+                }
+            }
+            Map<UUID, UUID> result = new HashMap<>();
+            votes.forEach((own, counts) ->
+                counts.entrySet().stream().max(Map.Entry.comparingByValue()).ifPresent(best -> result.put(own, best.getKey()))
+            );
+            return result;
+        });
+        int linked = 0;
+        for (Map.Entry<UUID, UUID> link : parentOf.entrySet()) {
+            // Skip 2-cycles (A→B and B→A): keep the edge from the less senior side only once.
+            if (link.getKey().equals(parentOf.get(link.getValue()))) {
+                continue;
+            }
+            positionService.updatePosition(link.getKey(), new UpdatePositionRequest(null, null, null, null, link.getValue()));
+            linked++;
+        }
+        log.info("[demo-data] linked {} positions to their parent position", linked);
     }
 
     // ---------------------------------------------------------------- employee records
@@ -1209,9 +1311,8 @@ public class DemoDataSeeder {
         UUID id = leaveRequestService
             .createLeaveRequest(new CreateLeaveRequest(start, start.plusDays(days - 1L), type, reason, e.id()))
             .id();
-        if (outcome == LeaveStatus.PENDING) {
-            approvalService.submitLeaveRequest(id); // lands in the manager's approvals inbox
-        } else {
+        // Creating the request routes it to the manager's approvals inbox; decided ones are then closed.
+        if (outcome != LeaveStatus.PENDING) {
             String comment = outcome == LeaveStatus.APPROVED ? "Approved — enjoy your time off." : "Declined: overlaps the year-end close.";
             leaveRequestService.processLeaveRequest(id, new ProcessLeaveRequest(outcome, comment, e.managerId()));
         }
@@ -1237,8 +1338,9 @@ public class DemoDataSeeder {
                     new CreateExpenseClaimRequest(e.id(), today.minusDays(3 + random.nextInt(40)), new BigDecimal(x[1]), x[0])
                 )
                 .id();
+            // Creating the claim routes it to the manager; every third one stays pending there.
             switch ((i / 2) % 3) {
-                case 0 -> approvalService.submitExpenseClaim(id);
+                case 0 -> {}
                 case 1 -> expenseClaimService.processExpenseClaim(id, new ProcessExpenseClaimRequest(ExpenseClaimStatus.APPROVED));
                 default -> expenseClaimService.processExpenseClaim(id, new ProcessExpenseClaimRequest(ExpenseClaimStatus.REJECTED));
             }
@@ -1394,8 +1496,10 @@ public class DemoDataSeeder {
 
     // ---------------------------------------------------------------- helpers
 
-    private <T extends AbstractReferenceData> T pick(List<T> all, String code) {
-        return all.stream().filter(r -> code.equals(r.getCode())).findFirst().orElse(null);
+    /** Reference data by code from a list of a known subtype (cast at the call site's setter). */
+    @SuppressWarnings("unchecked")
+    private <T extends AbstractReferenceData> T pickAny(List<? extends AbstractReferenceData> all, String code) {
+        return (T) all.stream().filter(r -> code.equals(r.getCode())).findFirst().orElse(null);
     }
 
     private <T> T pickOne(T[] values) {

@@ -28,7 +28,7 @@
       "manager": "Manager",
       "statusUnset": "Not set",
       "departmentUnset": "No department",
-      "managerPlaceholder": "Search by job title…",
+      "managerPlaceholder": "Search by name, title or email…",
       "searching": "Searching…",
       "noResults": "No matches",
       "select": "Select…",

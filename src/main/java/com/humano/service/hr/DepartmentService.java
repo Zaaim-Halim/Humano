@@ -6,8 +6,11 @@ import com.humano.dto.hr.requests.CreateDepartmentRequest;
 import com.humano.dto.hr.requests.UpdateDepartmentRequest;
 import com.humano.dto.hr.responses.DepartmentResponse;
 import com.humano.repository.hr.DepartmentRepository;
+import com.humano.repository.hr.projection.EmployeeCountRow;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,7 +91,14 @@ public class DepartmentService {
     public Page<DepartmentResponse> getAllDepartments(Pageable pageable) {
         log.debug("Request to get all Departments");
 
-        return departmentRepository.findAll(pageable).map(this::mapToResponse);
+        // One GROUP BY for every department's headcount instead of loading each employee collection.
+        Map<UUID, Long> counts = new HashMap<>();
+        for (EmployeeCountRow row : employeeRepository.countByDepartment()) {
+            if (row.key() != null) {
+                counts.put((UUID) row.key(), row.count());
+            }
+        }
+        return departmentRepository.findAll(pageable).map(d -> mapToResponse(d, counts.getOrDefault(d.getId(), 0L)));
     }
 
     @Transactional("tenantTransactionManager")
@@ -153,6 +163,10 @@ public class DepartmentService {
     }
 
     private DepartmentResponse mapToResponse(Department department) {
+        return mapToResponse(department, department.getId() == null ? 0 : employeeRepository.countByDepartmentId(department.getId()));
+    }
+
+    private DepartmentResponse mapToResponse(Department department, long employeeCount) {
         Employee head = department.getHead();
         return new DepartmentResponse(
             department.getId(),
@@ -160,7 +174,7 @@ public class DepartmentService {
             department.getDescription(),
             head != null ? head.getId() : null,
             head != null ? head.getFirstName() + " " + head.getLastName() : null,
-            department.getEmployees() != null ? department.getEmployees().size() : 0,
+            (int) employeeCount,
             department.getCreatedBy(),
             department.getCreatedDate(),
             department.getLastModifiedBy(),

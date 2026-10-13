@@ -4,6 +4,7 @@ import com.humano.domain.hr.Position;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
@@ -14,4 +15,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface PositionRepository extends JpaRepository<Position, UUID>, JpaSpecificationExecutor<Position> {
     Page<Position> findByUnitId(UUID unitId, Pageable pageable);
+
+    /** Listing fetches unit and parent position in the same query — both are shown on every row. */
+    @Override
+    @EntityGraph(attributePaths = { "unit", "parentPosition" })
+    Page<Position> findAll(Pageable pageable);
 }

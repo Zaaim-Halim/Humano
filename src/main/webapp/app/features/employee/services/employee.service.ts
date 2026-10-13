@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 import { Page, PageRequest, RestResourceService } from 'app/core/api';
 import { createRequestOption } from 'app/core/request/request-util';
@@ -11,6 +11,7 @@ import {
   EmployeeSearchRequest,
   SimpleEmployeeProfile,
   UpdateEmployeeProfileRequest,
+  personName,
 } from '../models/employee.model';
 
 /**
@@ -33,6 +34,16 @@ export class EmployeeService extends RestResourceService<
   /** `POST /api/hr/employees/search` — criteria in body, pagination in query. */
   search(criteria: EmployeeSearchRequest, req?: PageRequest): Observable<Page<SimpleEmployeeProfile>> {
     return this.http.post<Page<SimpleEmployeeProfile>>(`${this.resourceUrl}/search`, criteria, { params: createRequestOption(req) });
+  }
+
+  /**
+   * Options for an employee picker (autocomplete): matches name, title, email or employee
+   * number; labelled by name with the job title underneath.
+   */
+  searchOptions(term: string, size = 10): Observable<{ value: string; label: string; sublabel?: string | null }[]> {
+    return this.search({ query: term }, { page: 0, size }).pipe(
+      map(res => res.content.map(e => ({ value: e.id, label: personName(e), sublabel: e.jobTitle ?? e.departmentName }))),
+    );
   }
 
   /** `GET /api/hr/employees/stats` — headcount by status, department and work location. */

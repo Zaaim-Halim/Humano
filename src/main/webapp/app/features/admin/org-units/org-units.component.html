@@ -10,67 +10,155 @@
   </hum-page-header>
 
   @if (loading()) {
-    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+    <div class="hum-dir-stats hum-dir-stats--even">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="hum-dir-stat"><hum-skeleton [height]="56" /></div>
+      }
+    </div>
+    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
   } @else if (error(); as e) {
     <hum-alert tone="danger" [title]="e">
       <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
     </hum-alert>
-  } @else if (units().length === 0) {
+  } @else if (roots().length === 0) {
     <hum-empty-state
       icon="network"
       [title]="'humano.orgUnits.emptyTitle' | translate"
       [description]="'humano.orgUnits.emptyBody' | translate"
-      [hasAction]="canManage"
     >
-      <hum-button hum-empty-action variant="primary" icon="plus" (click)="openCreate()">{{
-        'humano.orgUnits.create' | translate
-      }}</hum-button>
+      @if (canManage) {
+        <hum-button hum-empty-action variant="primary" icon="plus" (click)="openCreate()">{{
+          'humano.orgUnits.create' | translate
+        }}</hum-button>
+      }
     </hum-empty-state>
   } @else {
-    <table class="hum-table">
-      <thead>
-        <tr>
-          <th>{{ 'humano.orgUnits.colName' | translate }}</th>
-          <th>{{ 'humano.orgUnits.colType' | translate }}</th>
-          <th>{{ 'humano.orgUnits.colParent' | translate }}</th>
-          <th>{{ 'humano.orgUnits.colManager' | translate }}</th>
-          <th class="tabular-nums">{{ 'humano.orgUnits.colPeople' | translate }}</th>
-          <th class="tabular-nums">{{ 'humano.orgUnits.colSubUnits' | translate }}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (u of units(); track u.id) {
-          <tr>
-            <td>{{ u.name }}</td>
-            <td><hum-badge tone="info" [label]="titleCase(u.type)" [dot]="false" /></td>
-            <td>{{ u.parentUnitName ?? '—' }}</td>
-            <td>{{ u.managerName ?? '—' }}</td>
-            <td class="tabular-nums">{{ u.employeeCount }}</td>
-            <td class="tabular-nums">{{ u.subUnitCount }}</td>
-            <td style="text-align: right; white-space: nowrap">
-              @if (canManage) {
-                <hum-icon-button icon="pencil" [label]="'entity.action.edit' | translate" (click)="openEdit(u)" />
-                <hum-icon-button
-                  icon="trash-2"
-                  variant="ghost"
-                  [label]="'entity.action.delete' | translate"
-                  (click)="deleteTarget.set(u)"
-                />
-              }
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-3)">
-      <span style="color: var(--text-muted); font-size: var(--text-sm)">{{ total() }}</span>
-      <div style="display: flex; gap: var(--space-2)">
-        <hum-button variant="outline" size="sm" [disabled]="page() === 0" (click)="goto(page() - 1)">‹</hum-button>
-        <hum-button variant="outline" size="sm" [disabled]="(page() + 1) * size >= total()" (click)="goto(page() + 1)">›</hum-button>
+    <section class="hum-dir-stats hum-dir-stats--even">
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.orgUnits.units' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().units }}</div>
+        <div class="hum-dir-stat__sub">{{ 'humano.orgUnits.topLevel' | translate: { count: stats().topLevel } }}</div>
       </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.orgUnits.levels' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().levels }}</div>
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.orgUnits.colPeople' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().people }}</div>
+      </div>
+      <div class="hum-dir-stat" [class.hum-dir-stat--warn]="stats().withoutManager > 0">
+        <div class="hum-dir-stat__label">{{ 'humano.orgUnits.withoutManager' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().withoutManager }}</div>
+      </div>
+    </section>
+
+    <div class="hum-dir-toolbar">
+      <div class="hum-dir-toolbar__search">
+        <hum-input
+          icon="search"
+          type="search"
+          [placeholder]="'humano.orgUnits.search' | translate"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+        />
+      </div>
+      <hum-button variant="ghost" size="sm" icon="chevrons-up-down" (click)="setAllExpanded(true)">{{
+        'humano.orgUnits.expandAll' | translate
+      }}</hum-button>
+      <hum-button variant="ghost" size="sm" icon="chevrons-down-up" (click)="setAllExpanded(false)">{{
+        'humano.orgUnits.collapseAll' | translate
+      }}</hum-button>
+      <hum-button variant="outline" size="sm" icon="network" routerLink="/organization-tree">{{
+        'humano.orgUnits.viewChart' | translate
+      }}</hum-button>
     </div>
+
+    @if (rows().length) {
+      <div class="hum-table-wrap">
+        <table class="hum-table hum-tree-table" role="treegrid" [attr.aria-label]="'humano.orgUnits.title' | translate">
+          <thead>
+            <tr>
+              <th>{{ 'humano.orgUnits.colName' | translate }}</th>
+              <th>{{ 'humano.orgUnits.colType' | translate }}</th>
+              <th>{{ 'humano.orgUnits.colManager' | translate }}</th>
+              <th style="width: 220px">{{ 'humano.orgUnits.colPeople' | translate }}</th>
+              <th style="width: 88px">
+                <span class="sr-only">{{ 'humano.orgUnits.actions' | translate }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of rows(); track r.node.id) {
+              <tr [attr.aria-level]="r.depth + 1" [attr.aria-expanded]="r.hasChildren ? !collapsed().has(r.node.id) || !!query() : null">
+                <td>
+                  <span class="hum-tree-table__name" [style.padding-left.px]="r.depth * 24">
+                    @if (r.hasChildren) {
+                      <button
+                        type="button"
+                        class="hum-tree-table__toggle"
+                        [attr.aria-label]="(collapsed().has(r.node.id) ? 'humano.action.expand' : 'humano.action.collapse') | translate"
+                        (click)="toggle(r.node.id)"
+                      >
+                        <lucide-icon [name]="collapsed().has(r.node.id) && !query() ? 'chevron-right' : 'chevron-down'" [size]="16" />
+                      </button>
+                    } @else {
+                      <span class="hum-tree-table__toggle" aria-hidden="true"></span>
+                    }
+                    <a class="hum-tree-table__link" [routerLink]="['/organization-tree', r.node.id]">{{ r.node.name }}</a>
+                    @if (r.node.childCount) {
+                      <span class="hum-tree-table__muted">{{
+                        'humano.orgUnits.subUnits' | plural: r.node.childCount | translate: { count: r.node.childCount }
+                      }}</span>
+                    }
+                  </span>
+                </td>
+                <td><hum-badge [tone]="tone(r.node.type)" [label]="titleCase(r.node.type)" [dot]="false" /></td>
+                <td>
+                  @if (r.node.manager; as m) {
+                    <a class="hum-person" [routerLink]="['/employees', m.id]">
+                      <hum-avatar [name]="m.fullName" [src]="m.imageUrl" size="xs" />
+                      <span class="hum-person__name" style="font-weight: 400">{{ m.fullName }}</span>
+                    </a>
+                  } @else {
+                    <span class="hum-entity-card__warn"
+                      ><lucide-icon name="circle-alert" [size]="14" />{{ 'humano.orgUnits.noManager' | translate }}</span
+                    >
+                  }
+                </td>
+                <td>
+                  <div class="hum-tree-table__metric">
+                    <span class="tabular-nums" [title]="'humano.orgUnits.directOf' | translate: { direct: r.node.headcount ?? 0 }">{{
+                      r.node.totalHeadcount ?? 0
+                    }}</span>
+                    <div class="hum-meter" style="flex: 1"><span [style.width.%]="share(r.node)"></span></div>
+                  </div>
+                </td>
+                <td style="text-align: right; white-space: nowrap">
+                  @if (canManage) {
+                    <hum-icon-button icon="pencil" size="sm" [label]="'entity.action.edit' | translate" (click)="openEdit(r.node)" />
+                    <hum-icon-button
+                      icon="trash-2"
+                      size="sm"
+                      [label]="'entity.action.delete' | translate"
+                      (click)="deleteTarget.set(r.node)"
+                    />
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <hum-empty-state
+        icon="search"
+        [title]="'humano.orgUnits.noMatch' | translate"
+        [description]="'humano.orgUnits.noMatchBody' | translate"
+      >
+        <hum-button hum-empty-action variant="secondary" (click)="query.set('')">{{ 'humano.action.clearFilters' | translate }}</hum-button>
+      </hum-empty-state>
+    }
   }
 </div>
 

@@ -1,0 +1,328 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.leave.title' | translate" [subtitle]="'humano.leave.subtitle' | translate" [hasActions]="!!me()">
+    <hum-button hum-page-actions variant="primary" icon="plus" (click)="newRequest()">{{ 'humano.leave.request' | translate }}</hum-button>
+  </hum-page-header>
+
+  @if (canViewAll) {
+    <section class="hum-dir-stats hum-dir-stats--even">
+      <div class="hum-dir-stat" [class.hum-dir-stat--warn]="(overview()?.pending ?? 0) > 0">
+        <div class="hum-dir-stat__label">{{ 'humano.leave.pending' | translate }}</div>
+        @if (overview(); as o) {
+          <div class="hum-dir-stat__value tabular-nums">{{ o.pending }}</div>
+          <div class="hum-dir-stat__sub">{{ 'humano.leave.awaitingDecision' | translate }}</div>
+        } @else {
+          <hum-skeleton [height]="44" />
+        }
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.leave.onLeaveToday' | translate }}</div>
+        @if (overview(); as o) {
+          <div class="hum-dir-stat__value tabular-nums">{{ o.onLeaveToday }}</div>
+        } @else {
+          <hum-skeleton [height]="44" />
+        }
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.leave.upcoming' | translate }}</div>
+        @if (overview(); as o) {
+          <div class="hum-dir-stat__value tabular-nums">{{ o.upcoming }}</div>
+          <div class="hum-dir-stat__sub">{{ 'humano.leave.nextTwoWeeks' | translate }}</div>
+        } @else {
+          <hum-skeleton [height]="44" />
+        }
+      </div>
+    </section>
+  }
+
+  @if (tabs().length > 1) {
+    <hum-tabs [items]="tabs()" [value]="tab()" (valueChange)="setTab($event)" />
+  }
+
+  <div style="margin-top: var(--space-4)">
+    @switch (tab()) {
+      <!-- ============================== My leave ============================== -->
+      @case ('mine') {
+        <section class="hum-dir-stats hum-dir-stats--even">
+          <div class="hum-dir-stat">
+            <div class="hum-dir-stat__label">{{ 'humano.leave.takenThisYear' | translate }}</div>
+            <div class="hum-dir-stat__value tabular-nums">{{ mineStats().taken }}</div>
+            <div class="hum-dir-stat__sub">
+              {{ 'humano.leave.days' | plural: mineStats().taken | translate: { count: mineStats().taken } }}
+            </div>
+          </div>
+          <div class="hum-dir-stat">
+            <div class="hum-dir-stat__label">{{ 'humano.leave.upcomingMine' | translate }}</div>
+            <div class="hum-dir-stat__value tabular-nums">{{ mineStats().upcoming }}</div>
+            <div class="hum-dir-stat__sub">
+              {{ 'humano.leave.days' | plural: mineStats().upcoming | translate: { count: mineStats().upcoming } }}
+            </div>
+          </div>
+          <div class="hum-dir-stat">
+            <div class="hum-dir-stat__label">{{ 'humano.leave.pending' | translate }}</div>
+            <div class="hum-dir-stat__value tabular-nums">{{ mineStats().pending }}</div>
+            <div class="hum-dir-stat__sub">{{ 'humano.leave.awaitingManager' | translate }}</div>
+          </div>
+        </section>
+
+        @if (mineError(); as e) {
+          <hum-alert tone="danger" [title]="e"
+            ><hum-button variant="outline" size="sm" (click)="loadMine()">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+          >
+        } @else if (mine() === null) {
+          <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+        } @else if (!mine()!.length) {
+          <hum-empty-state
+            icon="palmtree"
+            [title]="'humano.leave.noLeaveTitle' | translate"
+            [description]="'humano.leave.noLeaveBody' | translate"
+          >
+            <hum-button hum-empty-action variant="primary" icon="plus" (click)="newRequest()">{{
+              'humano.leave.request' | translate
+            }}</hum-button>
+          </hum-empty-state>
+        } @else {
+          <ol class="hum-timeline">
+            @for (r of mine(); track r.id) {
+              <li class="hum-timeline__item" [style.--hum-accent]="typeColor(r.leaveType)">
+                <div class="hum-timeline__date">
+                  <span class="hum-timeline__month">{{ r.startDate | date: 'MMM' }}</span>
+                  <span class="hum-timeline__day tabular-nums">{{ r.startDate | date: 'd' }}</span>
+                </div>
+                <div class="hum-timeline__body">
+                  <div class="hum-timeline__head">
+                    <span class="hum-timeline__title">{{ 'humano.leave.type.' + r.leaveType | translate }}</span>
+                    <hum-badge [status]="r.status" />
+                  </div>
+                  <div class="hum-timeline__meta tabular-nums">
+                    {{ r.startDate | date: 'mediumDate' }} – {{ r.endDate | date: 'mediumDate' }} ·
+                    {{ 'humano.leave.days' | plural: r.daysCount | translate: { count: r.daysCount ?? 0 } }}
+                  </div>
+                  @if (r.reason) {
+                    <p class="hum-timeline__text">{{ r.reason }}</p>
+                  }
+                  @if (r.approverComments) {
+                    <p class="hum-timeline__note">
+                      <lucide-icon name="message-square" [size]="12" />{{ r.approverName }}: {{ r.approverComments }}
+                    </p>
+                  }
+                </div>
+              </li>
+            }
+          </ol>
+        }
+      }
+
+      <!-- ============================== Team calendar ============================== -->
+      @case ('calendar') {
+        <div class="hum-dir-toolbar">
+          <div class="hum-segmented">
+            <hum-icon-button icon="chevron-left" size="sm" [label]="'humano.leave.prevMonth' | translate" (click)="shiftMonth(-1)" />
+            <hum-icon-button icon="chevron-right" size="sm" [label]="'humano.leave.nextMonth' | translate" (click)="shiftMonth(1)" />
+          </div>
+          <h2 class="hum-cal-title">{{ monthLabel() }}</h2>
+          <hum-button variant="ghost" size="sm" (click)="thisMonth()">{{ 'humano.leave.today' | translate }}</hum-button>
+          <div class="hum-legend" style="margin-left: auto">
+            @for (t of types; track t) {
+              <span class="hum-legend__item"
+                ><span class="hum-legend__dot" [style.background]="typeColor(t)"></span>{{ 'humano.leave.type.' + t | translate }}</span
+              >
+            }
+            <span class="hum-legend__item"
+              ><span class="hum-legend__dot hum-legend__dot--pending"></span>{{ 'humano.leave.pendingLegend' | translate }}</span
+            >
+          </div>
+        </div>
+
+        @if (calendarError(); as e) {
+          <hum-alert tone="danger" [title]="e" />
+        } @else if (monthRequests() === null) {
+          <hum-skeleton [height]="320" />
+        } @else if (!calendarRows().length) {
+          <hum-empty-state
+            icon="calendar"
+            [title]="'humano.leave.calendarEmptyTitle' | translate"
+            [description]="'humano.leave.calendarEmptyBody' | translate"
+          />
+        } @else {
+          <div class="hum-cal" [style.--hum-cal-days]="days().length">
+            <div class="hum-cal__row hum-cal__row--head">
+              <div class="hum-cal__name"></div>
+              <div class="hum-cal__track">
+                @for (d of days(); track d.iso) {
+                  <div class="hum-cal__day" [class.is-weekend]="d.weekend" [class.is-today]="d.iso === today">
+                    <span class="hum-cal__weekday">{{ d.weekday }}</span>
+                    <span class="tabular-nums">{{ d.day }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+            @for (row of calendarRows(); track row.id) {
+              <div class="hum-cal__row">
+                <a class="hum-cal__name" [routerLink]="['/employees', row.id]">
+                  <hum-avatar [name]="row.name" size="xs" />
+                  <span>{{ row.name }}</span>
+                </a>
+                <div class="hum-cal__track">
+                  @for (d of days(); track d.iso) {
+                    <div class="hum-cal__cell" [class.is-weekend]="d.weekend"></div>
+                  }
+                  @if (todayInMonth() > 0) {
+                    <div class="hum-cal__today" [style.grid-column]="todayInMonth()"></div>
+                  }
+                  @for (b of row.bars; track b.request.id) {
+                    <button
+                      type="button"
+                      class="hum-cal__bar"
+                      [class.is-pending]="b.request.status === 'PENDING'"
+                      [style.grid-column]="b.start + ' / span ' + b.span"
+                      [style.--hum-accent]="typeColor(b.request.leaveType)"
+                      [title]="
+                        ('humano.leave.type.' + b.request.leaveType | translate) +
+                        ' · ' +
+                        (b.request.startDate | date: 'mediumDate') +
+                        ' – ' +
+                        (b.request.endDate | date: 'mediumDate')
+                      "
+                      (click)="open(b.request)"
+                    >
+                      @if (b.span > 2) {
+                        <span>{{ 'humano.leave.type.' + b.request.leaveType | translate }}</span>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+
+      <!-- ============================== Requests ============================== -->
+      @case ('requests') {
+        <div class="hum-dir-toolbar">
+          <div class="hum-dir-toolbar__search">
+            <hum-input
+              icon="search"
+              type="search"
+              [placeholder]="'humano.leave.searchName' | translate"
+              [ngModel]="nameFilter()"
+              (ngModelChange)="nameFilter.set($event)"
+            />
+          </div>
+          <label class="hum-dir-toolbar__field">
+            <span>{{ 'humano.leave.typeLabel' | translate }}</span>
+            <hum-select [options]="typeOptions()" [ngModel]="typeFilter()" (ngModelChange)="typeFilter.set($event)" />
+          </label>
+        </div>
+        <div class="hum-chips">
+          @for (s of statusChips; track s) {
+            <button type="button" class="hum-chip" [class.is-active]="statusFilter() === s" (click)="statusFilter.set(s)">
+              {{ (s ? 'humano.leave.status.' + s : 'humano.leave.allStatuses') | translate }}
+              @if (statusFilter() === s && requests()) {
+                <span class="hum-chip__count tabular-nums">{{ requestsTotal() }}</span>
+              }
+            </button>
+          }
+        </div>
+
+        @if (requestsError(); as e) {
+          <hum-alert tone="danger" [title]="e" />
+        } @else if (requests() === null) {
+          <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+        } @else if (!visibleRequests().length) {
+          <hum-empty-state
+            icon="inbox"
+            [title]="'humano.leave.noRequestsTitle' | translate"
+            [description]="'humano.leave.noRequestsBody' | translate"
+          />
+        } @else {
+          <div class="hum-request-list">
+            @for (r of visibleRequests(); track r.id) {
+              <button type="button" class="hum-request" [style.--hum-accent]="typeColor(r.leaveType)" (click)="open(r)">
+                <hum-avatar [name]="r.employeeName ?? ''" size="sm" />
+                <span class="hum-request__who">
+                  <span class="hum-request__name">{{ r.employeeName }}</span>
+                  <span class="hum-request__type"
+                    ><span class="hum-legend__dot" [style.background]="typeColor(r.leaveType)"></span
+                    >{{ 'humano.leave.type.' + r.leaveType | translate }}</span
+                  >
+                </span>
+                <span class="hum-request__when tabular-nums">
+                  {{ r.startDate | date: 'MMM d' }} – {{ r.endDate | date: 'MMM d, y' }}
+                  <span class="hum-request__days">{{
+                    'humano.leave.days' | plural: r.daysCount | translate: { count: r.daysCount ?? 0 }
+                  }}</span>
+                </span>
+                <span class="hum-request__reason">{{ r.reason }}</span>
+                <hum-badge [status]="r.status" />
+              </button>
+            }
+          </div>
+        }
+      }
+    }
+  </div>
+</div>
+
+<hum-drawer
+  [open]="selected() !== null"
+  [title]="'humano.leave.requestTitle' | translate"
+  width="440px"
+  [hasFooter]="selected()?.status === 'PENDING' && canDecide"
+  (closed)="selected.set(null)"
+>
+  @if (selected(); as r) {
+    <div class="hum-profile-head">
+      <hum-avatar [name]="r.employeeName ?? ''" size="lg" />
+      <div>
+        <a class="hum-profile-head__name" style="text-decoration: none" [routerLink]="['/employees', r.employeeId]">{{ r.employeeName }}</a>
+        <div class="hum-profile-head__title">{{ 'humano.leave.type.' + r.leaveType | translate }}</div>
+        <hum-badge [status]="r.status" />
+      </div>
+    </div>
+    <dl class="hum-dl hum-profile-section">
+      <dt>{{ 'humano.leave.from' | translate }}</dt>
+      <dd class="tabular-nums">{{ r.startDate | date: 'fullDate' }}</dd>
+      <dt>{{ 'humano.leave.to' | translate }}</dt>
+      <dd class="tabular-nums">{{ r.endDate | date: 'fullDate' }}</dd>
+      <dt>{{ 'humano.leave.duration' | translate }}</dt>
+      <dd>{{ 'humano.leave.days' | plural: r.daysCount | translate: { count: r.daysCount ?? 0 } }}</dd>
+      @if (r.approverName) {
+        <dt>{{ 'humano.leave.decidedBy' | translate }}</dt>
+        <dd>{{ r.approverName }}</dd>
+      }
+    </dl>
+    <section class="hum-profile-section">
+      <h3 class="hum-section-title">{{ 'humano.leave.reason' | translate }}</h3>
+      <p style="margin: 0; white-space: pre-line">{{ r.reason ?? '—' }}</p>
+    </section>
+    @if (r.approverComments) {
+      <section class="hum-profile-section">
+        <h3 class="hum-section-title">{{ 'humano.leave.decisionNote' | translate }}</h3>
+        <p style="margin: 0">{{ r.approverComments }}</p>
+      </section>
+    }
+    @if (r.status === 'PENDING' && canDecide) {
+      <section class="hum-profile-section">
+        <h3 class="hum-section-title">{{ 'humano.leave.yourDecision' | translate }}</h3>
+        @if (!me()) {
+          <hum-alert tone="warning" [title]="'humano.leave.noApproverProfile' | translate" />
+        } @else {
+          <hum-textarea
+            [placeholder]="'humano.leave.commentPlaceholder' | translate"
+            [ngModel]="comment()"
+            (ngModelChange)="comment.set($event)"
+          />
+        }
+      </section>
+    }
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="outline" icon="x" [disabled]="!me()" [loading]="deciding()" (click)="decide($any('REJECTED'))">{{
+      'humano.leave.reject' | translate
+    }}</hum-button>
+    <hum-button variant="primary" icon="check" [disabled]="!me()" [loading]="deciding()" (click)="decide($any('APPROVED'))">{{
+      'humano.leave.approve' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>

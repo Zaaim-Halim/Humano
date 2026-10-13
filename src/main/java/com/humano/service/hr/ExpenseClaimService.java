@@ -1,5 +1,6 @@
 package com.humano.service.hr;
 
+import com.humano.domain.enumeration.hr.ApprovalType;
 import com.humano.domain.enumeration.hr.ExpenseClaimStatus;
 import com.humano.domain.hr.ExpenseClaim;
 import com.humano.domain.shared.Employee;
@@ -11,6 +12,7 @@ import com.humano.repository.hr.ExpenseClaimRepository;
 import com.humano.repository.hr.specification.ExpenseClaimSpecification;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
+import com.humano.service.hr.workflow.ApprovalWorkflowOrchestratorService;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -34,10 +36,16 @@ public class ExpenseClaimService {
 
     private final ExpenseClaimRepository expenseClaimRepository;
     private final EmployeeRepository employeeRepository;
+    private final ApprovalWorkflowOrchestratorService approvalWorkflowService;
 
-    public ExpenseClaimService(ExpenseClaimRepository expenseClaimRepository, EmployeeRepository employeeRepository) {
+    public ExpenseClaimService(
+        ExpenseClaimRepository expenseClaimRepository,
+        EmployeeRepository employeeRepository,
+        ApprovalWorkflowOrchestratorService approvalWorkflowService
+    ) {
         this.expenseClaimRepository = expenseClaimRepository;
         this.employeeRepository = employeeRepository;
+        this.approvalWorkflowService = approvalWorkflowService;
     }
 
     /**
@@ -64,6 +72,11 @@ public class ExpenseClaimService {
         ExpenseClaim savedClaim = expenseClaimRepository.save(claim);
         log.info("Created expense claim with ID: {}", savedClaim.getId());
 
+        // Route it to the approver right away; without a manager it waits for finance to decide.
+        if (employee.getManager() != null) {
+            approvalWorkflowService.submitExpenseClaim(savedClaim.getId());
+        }
+
         return mapToResponse(savedClaim);
     }
 
@@ -86,7 +99,14 @@ public class ExpenseClaimService {
                 }
 
                 claim.setStatus(request.status());
-                return mapToResponse(expenseClaimRepository.save(claim));
+                ExpenseClaimResponse response = mapToResponse(expenseClaimRepository.save(claim));
+                // A direct finance decision supersedes the approval flow — take it out of the approver's inbox.
+                approvalWorkflowService.closePendingForEntity(
+                    id,
+                    ApprovalType.EXPENSE_CLAIM,
+                    request.status().name().toLowerCase() + " directly"
+                );
+                return response;
             })
             .orElseThrow(() -> EntityNotFoundException.create("ExpenseClaim", id));
     }

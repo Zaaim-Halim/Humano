@@ -18,6 +18,8 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -53,6 +55,20 @@ public class PayrollRunResource {
     public PayrollRunResource(PayrollProcessingService processingService, PayslipService payslipService) {
         this.processingService = processingService;
         this.payslipService = payslipService;
+    }
+
+    /** Run history, newest pay period first (page / size / sort query params). */
+    @GetMapping
+    @RequirePermission(PermissionsConstants.VIEW_PAYROLL_RUN)
+    public ResponseEntity<Page<PayrollRunResponse>> list(Pageable pageable) {
+        return ResponseEntity.ok(processingService.listRuns(pageable));
+    }
+
+    /** One run with its current status and totals. */
+    @GetMapping("/{id}")
+    @RequirePermission(PermissionsConstants.VIEW_PAYROLL_RUN)
+    public ResponseEntity<PayrollRunResponse> get(@PathVariable UUID id) {
+        return ResponseEntity.ok(processingService.getRun(id));
     }
 
     @PostMapping

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { normalizeHttpError } from 'app/core/api';
@@ -63,6 +64,7 @@ function dateOrder(group: AbstractControl): ValidationErrors | null {
   templateUrl: './leave-request.component.html',
 })
 export default class LeaveRequestComponent {
+  private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly leaveService = inject(LeaveRequestService);
   private readonly currentEmployee = inject(CurrentEmployeeService);
@@ -134,7 +136,7 @@ export default class LeaveRequestComponent {
       next: () => {
         this.toast.success(this.translate.instant('humano.leaveRequest.submitted'));
         this.submitting.set(false);
-        this.form.reset({ leaveType: '', startDate: '', endDate: '', reason: '' });
+        void this.router.navigate(['/leave']);
       },
       error: (err: unknown) => {
         this.toast.danger(normalizeHttpError(err));

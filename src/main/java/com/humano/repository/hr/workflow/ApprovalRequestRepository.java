@@ -81,6 +81,13 @@ public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequest
     boolean existsPendingApproval(@Param("entityId") UUID entityId, @Param("type") ApprovalType type);
 
     /**
+     * Pending approvals for an entity — used to close them when the entity is decided outside
+     * the workflow (e.g. HR approves a leave request directly).
+     */
+    @Query("SELECT a FROM ApprovalRequest a " + "WHERE a.entityId = :entityId AND a.approvalType = :type AND a.status = 'PENDING_APPROVAL'")
+    List<ApprovalRequest> findPendingByEntity(@Param("entityId") UUID entityId, @Param("type") ApprovalType type);
+
+    /**
      * Find approvals submitted within date range.
      */
     Page<ApprovalRequest> findByApprovalTypeAndSubmittedAtBetween(

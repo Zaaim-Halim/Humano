@@ -7,7 +7,11 @@ import com.humano.dto.hr.requests.UpdatePositionRequest;
 import com.humano.dto.hr.responses.PositionResponse;
 import com.humano.repository.hr.OrganizationalUnitRepository;
 import com.humano.repository.hr.PositionRepository;
+import com.humano.repository.hr.projection.EmployeeCountRow;
+import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,10 +27,16 @@ public class PositionService {
 
     private final PositionRepository positionRepository;
     private final OrganizationalUnitRepository organizationalUnitRepository;
+    private final EmployeeRepository employeeRepository;
 
-    public PositionService(PositionRepository positionRepository, OrganizationalUnitRepository organizationalUnitRepository) {
+    public PositionService(
+        PositionRepository positionRepository,
+        OrganizationalUnitRepository organizationalUnitRepository,
+        EmployeeRepository employeeRepository
+    ) {
         this.positionRepository = positionRepository;
         this.organizationalUnitRepository = organizationalUnitRepository;
+        this.employeeRepository = employeeRepository;
     }
 
     @Transactional("tenantTransactionManager")
@@ -102,14 +112,16 @@ public class PositionService {
     public Page<PositionResponse> getAllPositions(Pageable pageable) {
         log.debug("Request to get all Positions");
 
-        return positionRepository.findAll(pageable).map(this::mapToResponse);
+        Map<UUID, Long> counts = headcounts();
+        return positionRepository.findAll(pageable).map(p -> mapToResponse(p, counts.getOrDefault(p.getId(), 0L)));
     }
 
     @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PositionResponse> getPositionsByUnit(UUID unitId, Pageable pageable) {
         log.debug("Request to get Positions by Unit: {}", unitId);
 
-        return positionRepository.findByUnitId(unitId, pageable).map(this::mapToResponse);
+        Map<UUID, Long> counts = headcounts();
+        return positionRepository.findByUnitId(unitId, pageable).map(p -> mapToResponse(p, counts.getOrDefault(p.getId(), 0L)));
     }
 
     @Transactional("tenantTransactionManager")
@@ -123,7 +135,20 @@ public class PositionService {
         log.info("Deleted position with ID: {}", id);
     }
 
+    /** One GROUP BY for every position's headcount, instead of loading each employee collection. */
+    private Map<UUID, Long> headcounts() {
+        Map<UUID, Long> counts = new HashMap<>();
+        for (EmployeeCountRow row : employeeRepository.countByPosition()) {
+            counts.put((UUID) row.key(), row.count());
+        }
+        return counts;
+    }
+
     private PositionResponse mapToResponse(Position position) {
+        return mapToResponse(position, position.getId() == null ? 0 : employeeRepository.countByPositionId(position.getId()));
+    }
+
+    private PositionResponse mapToResponse(Position position, long employeeCount) {
         return new PositionResponse(
             position.getId(),
             position.getName(),
@@ -133,7 +158,7 @@ public class PositionService {
             position.getUnit() != null ? position.getUnit().getName() : null,
             position.getParentPosition() != null ? position.getParentPosition().getId() : null,
             position.getParentPosition() != null ? position.getParentPosition().getName() : null,
-            position.getEmployees() != null ? position.getEmployees().size() : 0,
+            (int) employeeCount,
             position.getCreatedBy(),
             position.getCreatedDate(),
             position.getLastModifiedBy(),

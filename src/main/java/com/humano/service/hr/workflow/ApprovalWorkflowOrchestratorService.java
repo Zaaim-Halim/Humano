@@ -312,6 +312,35 @@ public class ApprovalWorkflowOrchestratorService {
     }
 
     /**
+     * Closes any pending approval for an entity that was decided outside the workflow (HR
+     * approving or rejecting a leave request or expense claim directly), so it no longer sits
+     * in the approver's inbox. The approver is told who decided; the workflow is cancelled.
+     *
+     * @param entityId the leave request / expense claim id
+     * @param type which kind of approval to close
+     * @param outcome human-readable decision, e.g. "approved by HR"
+     */
+    public void closePendingForEntity(UUID entityId, ApprovalType type, String outcome) {
+        for (ApprovalRequest approvalRequest : approvalRequestRepository.findPendingByEntity(entityId, type)) {
+            approvalRequest.setStatus(WorkflowStatus.CANCELLED);
+            approvalRequest.setApproverComments("Decided outside the approval flow: " + outcome);
+            approvalRequestRepository.save(approvalRequest);
+            if (approvalRequest.getWorkflowInstance() != null) {
+                workflowStateManager.cancelWorkflow(approvalRequest.getWorkflowInstance().getId(), "Decided directly: " + outcome);
+            }
+            notificationService.notifyApprovalDecision(
+                approvalRequest.getApprover().getId(),
+                "Approval no longer needed",
+                "A request from " + approvalRequest.getRequestor().getFirstName() + " was " + outcome + ", so it has left your inbox.",
+                approvalRequest.getEntityId(),
+                approvalRequest.getEntityType(),
+                false
+            );
+            log.info("Closed pending approval {} for {} {} ({})", approvalRequest.getId(), type, entityId, outcome);
+        }
+    }
+
+    /**
      * Get approval status.
      */
     @Transactional(value = "tenantTransactionManager", readOnly = true)

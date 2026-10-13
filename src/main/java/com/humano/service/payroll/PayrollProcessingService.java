@@ -16,6 +16,7 @@ import com.humano.dto.payroll.response.PayrollRunSummaryResponse;
 import com.humano.repository.hr.LeaveRequestRepository;
 import com.humano.repository.payroll.*;
 import com.humano.repository.payroll.CurrencyRepository;
+import com.humano.repository.payroll.projection.RunTotalsRow;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.security.AuthorityPermissionService;
 import com.humano.security.PermissionsConstants;
@@ -33,7 +34,9 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -1898,6 +1901,62 @@ public class PayrollProcessingService {
             log.warn("Error calculating component {} for employee {}: {}", component.getCode(), employee.getId(), e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Payroll run history, newest pay period first. Totals for the whole page come from one
+     * GROUP BY over the results instead of loading every run's results.
+     */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public Page<PayrollRunResponse> listRuns(Pageable pageable) {
+        Pageable sorted = PageRequest.of(
+            pageable.getPageNumber(),
+            pageable.getPageSize(),
+            pageable.getSort().isSorted() ? pageable.getSort() : Sort.by(Sort.Direction.DESC, "period.startDate", "createdDate")
+        );
+        Page<PayrollRun> page = payrollRunRepository.findHistory(sorted);
+        Map<UUID, RunTotalsRow> totals = new HashMap<>();
+        if (page.hasContent()) {
+            for (RunTotalsRow row : payrollResultRepository.totalsForRuns(page.map(PayrollRun::getId).getContent())) {
+                // Mixed-currency runs keep the first currency's totals — the same limitation as the summary.
+                totals.putIfAbsent(row.runId(), row);
+            }
+        }
+        return page.map(run -> {
+            RunTotalsRow t = totals.get(run.getId());
+            PayrollPeriod period = run.getPeriod();
+            String currency = run.getReportingCurrency() != null
+                ? run.getReportingCurrency().getCode().getCode()
+                : t != null ? t.currency().getCode() : null;
+            return new PayrollRunResponse(
+                run.getId(),
+                period.getId(),
+                period.getCode(),
+                period.getStartDate(),
+                period.getEndDate(),
+                period.getPaymentDate(),
+                run.getScope(),
+                run.getStatus(),
+                t != null ? (int) t.employees() : 0,
+                t != null ? t.gross() : BigDecimal.ZERO,
+                t != null ? t.deductions() : BigDecimal.ZERO,
+                t != null ? t.net() : BigDecimal.ZERO,
+                t != null ? t.employerCost() : BigDecimal.ZERO,
+                currency,
+                run.getApprovedAt(),
+                run.getApprovedBy() != null ? run.getApprovedBy().getFirstName() + " " + run.getApprovedBy().getLastName() : null,
+                Collections.emptyList(),
+                run.getCreatedDate() != null ? OffsetDateTime.from(run.getCreatedDate().atOffset(java.time.ZoneOffset.UTC)) : null,
+                run.getCreatedBy()
+            );
+        });
+    }
+
+    /** One payroll run with its current status and totals. */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public PayrollRunResponse getRun(UUID runId) {
+        PayrollRun run = payrollRunRepository.findById(runId).orElseThrow(() -> new EntityNotFoundException("PayrollRun", runId));
+        return toRunResponse(run, Collections.emptyList());
     }
 
     private PayrollRunResponse toRunResponse(PayrollRun run, List<PayrollRunResponse.PayrollValidationError> errors) {

@@ -127,7 +127,12 @@ const SEARCHABLE = '.hum-orgnode, .hum-orgchart__member';
     <ng-template #level let-nodes let-depth="depth">
       <ul class="hum-orgchart__level" [attr.role]="depth === 0 ? null : 'group'" [style.gap]="depth === 0 ? 'var(--space-8)' : null">
         @for (n of branches(nodes, depth); track n.id) {
-          <li class="hum-orgchart__item" role="treeitem" [attr.aria-expanded]="childCount(n) ? isExpanded(n, depth) : null">
+          <li
+            class="hum-orgchart__item"
+            role="treeitem"
+            aria-selected="false"
+            [attr.aria-expanded]="childCount(n) ? isExpanded(n, depth) : null"
+          >
             <div class="hum-orgnode" [class.hum-orgnode--root]="depth === 0" [attr.data-tone]="nodeTone()?.(n) ?? null">
               @if (nodeDef(); as def) {
                 <ng-container *ngTemplateOutlet="def.template; context: { $implicit: n, depth: depth }" />
@@ -159,7 +164,7 @@ const SEARCHABLE = '.hum-orgnode, .hum-orgchart__member';
             <li class="hum-orgchart__item">
               <ul class="hum-orgchart__team" role="group" [style.--hum-team-cols]="members.length > 6 ? 2 : 1">
                 @for (m of members; track m.id) {
-                  <li role="treeitem">
+                  <li role="treeitem" aria-selected="false">
                     <ng-container *ngTemplateOutlet="def.template; context: { $implicit: m, depth: depth }" />
                   </li>
                 }
@@ -169,24 +174,26 @@ const SEARCHABLE = '.hum-orgnode, .hum-orgchart__member';
         }
       </ul>
     </ng-template>
-    <div class="hum-orgchart__search" role="search">
-      <lucide-icon name="search" [size]="14" aria-hidden="true" />
-      <input
-        type="search"
-        [placeholder]="searchPlaceholder()"
-        [attr.aria-label]="searchPlaceholder()"
-        [value]="query()"
-        (input)="onQuery($any($event.target).value)"
-        (keydown)="onSearchKey($event)"
-      />
-      @if (query()) {
-        <span class="hum-orgchart__search-count tabular-nums" aria-live="polite">
-          {{ matchCount() ? current() + 1 + ' / ' + matchCount() : 'No matches' }}
-        </span>
-        <hum-icon-button icon="chevron-up" label="Previous match" size="sm" [disabled]="!matchCount()" (click)="goToMatch(-1)" />
-        <hum-icon-button icon="chevron-down" label="Next match" size="sm" [disabled]="!matchCount()" (click)="goToMatch(1)" />
-      }
-    </div>
+    @if (searchable()) {
+      <div class="hum-orgchart__search" role="search">
+        <lucide-icon name="search" [size]="14" aria-hidden="true" />
+        <input
+          type="search"
+          [placeholder]="searchPlaceholder()"
+          [attr.aria-label]="searchPlaceholder()"
+          [value]="query()"
+          (input)="onQuery($any($event.target).value)"
+          (keydown)="onSearchKey($event)"
+        />
+        @if (query()) {
+          <span class="hum-orgchart__search-count tabular-nums" aria-live="polite">
+            {{ matchCount() ? current() + 1 + ' / ' + matchCount() : 'No matches' }}
+          </span>
+          <hum-icon-button icon="chevron-up" label="Previous match" size="sm" [disabled]="!matchCount()" (click)="goToMatch(-1)" />
+          <hum-icon-button icon="chevron-down" label="Next match" size="sm" [disabled]="!matchCount()" (click)="goToMatch(1)" />
+        }
+      </div>
+    }
     <div class="hum-orgchart__zoom" role="toolbar" aria-label="Chart view">
       <hum-icon-button icon="minus" label="Zoom out (−)" size="sm" [disabled]="zoom() <= minZoom" (click)="zoomBy(1 / step)" />
       <button type="button" class="hum-orgchart__zoom-value tabular-nums" title="Actual size (1)" (click)="setZoom(1)">
@@ -219,6 +226,8 @@ export class OrgChartComponent {
   readonly toggleLabel = input<(node: any) => string>(n => String(childCountOf(n)));
   /** Optional accent tone per node (`brand` | `info` | `success` | `warning`). */
   readonly nodeTone = input<((node: any) => string | null) | null>(null);
+  /** Show the search box; turn off when the page already filters the tree itself. */
+  readonly searchable = input(true);
   /** Placeholder (and accessible name) of the search box. */
   readonly searchPlaceholder = input('Search');
   /** Emits true when a search starts and false when it is cleared. */
@@ -400,14 +409,14 @@ export class OrgChartComponent {
   }
 
   protected onPointerMove(event: PointerEvent): void {
-    if (!this.drag || event.pointerId !== this.drag.id) return;
+    if (this.drag?.id !== event.pointerId) return;
     const el = this.viewport().nativeElement;
     el.scrollLeft = this.drag.left - (event.clientX - this.drag.x);
     el.scrollTop = this.drag.top - (event.clientY - this.drag.y);
   }
 
   protected onPointerUp(event: PointerEvent): void {
-    if (!this.drag || event.pointerId !== this.drag.id) return;
+    if (this.drag?.id !== event.pointerId) return;
     this.viewport().nativeElement.releasePointerCapture(event.pointerId);
     this.drag = null;
     this.panning.set(false);
@@ -415,7 +424,7 @@ export class OrgChartComponent {
 
   protected onKey(event: KeyboardEvent): void {
     if (event.target !== this.viewport().nativeElement) return;
-    const actions: Record<string, () => void> = {
+    const actions: Partial<Record<string, () => void>> = {
       '+': () => this.zoomBy(STEP),
       '=': () => this.zoomBy(STEP),
       '-': () => this.zoomBy(1 / STEP),
@@ -458,9 +467,7 @@ export class OrgChartComponent {
   private applySearch(q: string): void {
     const root = this.viewport().nativeElement;
     root.querySelectorAll('.is-match, .is-current').forEach(e => e.classList.remove('is-match', 'is-current'));
-    this.matches = q
-      ? Array.from(root.querySelectorAll<HTMLElement>(SEARCHABLE)).filter(e => (e.textContent ?? '').toLowerCase().includes(q))
-      : [];
+    this.matches = q ? Array.from(root.querySelectorAll<HTMLElement>(SEARCHABLE)).filter(e => e.textContent.toLowerCase().includes(q)) : [];
     this.matches.forEach(e => e.classList.add('is-match'));
     this.matchCount.set(this.matches.length);
     if (this.current() >= this.matches.length) this.current.set(0);
@@ -469,8 +476,8 @@ export class OrgChartComponent {
 
   private highlightCurrent(): void {
     this.matches.forEach(e => e.classList.remove('is-current'));
+    if (this.current() >= this.matches.length) return;
     const target = this.matches[this.current()];
-    if (!target) return;
     target.classList.add('is-current');
     const el = this.viewport().nativeElement;
     const box = target.getBoundingClientRect();

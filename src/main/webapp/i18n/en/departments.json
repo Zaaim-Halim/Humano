@@ -2,7 +2,7 @@
   "humano": {
     "departments": {
       "title": "Departments",
-      "subtitle": "Functional groupings and their heads",
+      "subtitle": "Functional groupings, who leads them and how big they are",
       "create": "New department",
       "editTitle": "Edit department",
       "colName": "Name",
@@ -14,7 +14,29 @@
       "created": "Department created",
       "updated": "Department updated",
       "deleted": "Department deleted",
-      "deleteQuestion": "Delete {{ name }}? Departments with members can't be removed."
+      "deleteQuestion": "Delete {{ name }}? Departments with members can't be removed.",
+      "search": "Search departments or heads…",
+      "sortSize": "Largest first",
+      "sortName": "Name (A–Z)",
+      "avgSize": "{{ avg }} per department on average",
+      "largest": "Largest",
+      "peopleCount": {
+        "one": "{{ count }} person",
+        "other": "{{ count }} people"
+      },
+      "people": "people",
+      "withoutHead": "Without a head",
+      "assignHeads": "Assign a head to each department",
+      "allHaveHeads": "Every department has a head",
+      "noHead": "No head assigned",
+      "noDescription": "No description",
+      "shareOfCompany": "Share of company",
+      "members": "People",
+      "noMembers": "No one is in this department yet.",
+      "andMore": "and {{ count }} more",
+      "viewInDirectory": "View in directory",
+      "noMatch": "No departments match",
+      "noMatchBody": "Try a different name."
     }
   }
 }

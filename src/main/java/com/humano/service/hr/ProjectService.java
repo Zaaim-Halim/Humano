@@ -5,7 +5,11 @@ import com.humano.dto.hr.requests.CreateProjectRequest;
 import com.humano.dto.hr.requests.UpdateProjectRequest;
 import com.humano.dto.hr.responses.ProjectResponse;
 import com.humano.repository.hr.ProjectRepository;
+import com.humano.repository.hr.TimesheetRepository;
+import com.humano.repository.hr.projection.EmployeeCountRow;
 import com.humano.service.errors.EntityNotFoundException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,9 +28,11 @@ public class ProjectService {
     private static final Logger log = LoggerFactory.getLogger(ProjectService.class);
 
     private final ProjectRepository projectRepository;
+    private final TimesheetRepository timesheetRepository;
 
-    public ProjectService(ProjectRepository projectRepository) {
+    public ProjectService(ProjectRepository projectRepository, TimesheetRepository timesheetRepository) {
         this.projectRepository = projectRepository;
+        this.timesheetRepository = timesheetRepository;
     }
 
     /**
@@ -105,7 +111,12 @@ public class ProjectService {
     public Page<ProjectResponse> getAllProjects(Pageable pageable) {
         log.debug("Request to get all Projects");
 
-        return projectRepository.findAll(pageable).map(this::mapToResponse);
+        // One GROUP BY for every project's entry count instead of loading each timesheet collection.
+        Map<UUID, Long> counts = new HashMap<>();
+        for (EmployeeCountRow row : timesheetRepository.countByProject()) {
+            counts.put((UUID) row.key(), row.count());
+        }
+        return projectRepository.findAll(pageable).map(p -> mapToResponse(p, counts.getOrDefault(p.getId(), 0L)));
     }
 
     /**
@@ -125,13 +136,17 @@ public class ProjectService {
     }
 
     private ProjectResponse mapToResponse(Project project) {
+        return mapToResponse(project, project.getId() == null ? 0 : timesheetRepository.countByProjectId(project.getId()));
+    }
+
+    private ProjectResponse mapToResponse(Project project, long timesheetCount) {
         return new ProjectResponse(
             project.getId(),
             project.getName(),
             project.getDescription(),
             project.getStartTime(),
             project.getEndTime(),
-            project.getTimesheets() != null ? project.getTimesheets().size() : 0,
+            (int) timesheetCount,
             project.getCreatedBy(),
             project.getCreatedDate(),
             project.getLastModifiedBy(),

@@ -94,6 +94,11 @@ const routes: Routes = [
       {
         path: 'leave',
         title: 'humano.nav.leave',
+        loadComponent: () => import('./features/employee/leave/leave.component'),
+      },
+      {
+        path: 'leave/new',
+        title: 'humano.leaveRequest.title',
         loadComponent: () => import('./features/employee/leave-request/leave-request.component'),
       },
       {
