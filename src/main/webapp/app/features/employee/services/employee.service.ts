@@ -7,6 +7,7 @@ import { createRequestOption } from 'app/core/request/request-util';
 import {
   CreateEmployeeRequest,
   EmployeeProfile,
+  EmployeeDirectoryStats,
   EmployeeSearchRequest,
   SimpleEmployeeProfile,
   UpdateEmployeeProfileRequest,
@@ -32,6 +33,11 @@ export class EmployeeService extends RestResourceService<
   /** `POST /api/hr/employees/search` — criteria in body, pagination in query. */
   search(criteria: EmployeeSearchRequest, req?: PageRequest): Observable<Page<SimpleEmployeeProfile>> {
     return this.http.post<Page<SimpleEmployeeProfile>>(`${this.resourceUrl}/search`, criteria, { params: createRequestOption(req) });
+  }
+
+  /** `GET /api/hr/employees/stats` — headcount by status, department and work location. */
+  stats(): Observable<EmployeeDirectoryStats> {
+    return this.http.get<EmployeeDirectoryStats>(`${this.resourceUrl}/stats`);
   }
 
   /** `GET /api/hr/employees/assignable-roles` — role names grantable on the form. */

@@ -21,5 +21,9 @@ public record OrganizationalUnitTreeNode(
     String parentUnitName,
     EmployeeRef manager,
     Long headcount,
+    /** Sub-units in the full hierarchy — present even when {@code children} is trimmed by depth. */
+    Integer childCount,
+    /** Employees in this unit and all its sub-units — only when headcount was requested. */
+    Long totalHeadcount,
     List<OrganizationalUnitTreeNode> children
 ) {}

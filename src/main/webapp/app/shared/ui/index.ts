@@ -46,6 +46,8 @@ export type { MenuItem } from './navigation/menu.component';
 // Data / workflow
 export { StepperComponent } from './data/stepper.component';
 export { DataTableComponent } from './data/data-table.component';
+export { OrgChartComponent, OrgChartMemberDirective, OrgChartNodeDirective } from './data/org-chart.component';
+export type { OrgChartNode, OrgChartNodeContext } from './data/org-chart.component';
 export type { Column, Row, SortState } from './data/data-table.component';
 
 // Shell

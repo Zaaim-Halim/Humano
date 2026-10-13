@@ -1,6 +1,7 @@
 package com.humano.dto.hr.requests;
 
 import com.humano.domain.enumeration.hr.EmployeeStatus;
+import com.humano.domain.enumeration.hr.WorkLocationType;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -25,5 +26,6 @@ public record EmployeeSearchRequest(
     LocalDate startDateFrom,
     LocalDate startDateTo,
     LocalDate endDateFrom,
-    LocalDate endDateTo
+    LocalDate endDateTo,
+    WorkLocationType workLocation
 ) {}

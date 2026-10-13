@@ -66,8 +66,8 @@ class HierarchyQueriesIT {
     }
 
     @Test
-    void organizationalUnitRootsQueryParsesAndExecutes() {
-        assertThatCode(() -> organizationalUnitRepository.findAllRoots()).doesNotThrowAnyException();
+    void organizationalUnitAllRowsQueryParsesAndExecutes() {
+        assertThatCode(() -> organizationalUnitRepository.findAllHierarchyRows()).doesNotThrowAnyException();
     }
 
     @Test
@@ -90,8 +90,8 @@ class HierarchyQueriesIT {
     }
 
     @Test
-    void organizationalUnitRootDirectHeadcountsQueryParsesAndExecutes() {
-        assertThatCode(() -> organizationalUnitRepository.findRootDirectHeadcounts()).doesNotThrowAnyException();
+    void organizationalUnitAllHeadcountsQueryParsesAndExecutes() {
+        assertThatCode(() -> organizationalUnitRepository.findAllHeadcounts()).doesNotThrowAnyException();
     }
 
     @Test

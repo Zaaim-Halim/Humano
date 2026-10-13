@@ -46,8 +46,8 @@ public interface OrganizationalUnitRepository
     List<OrganizationalUnitHierarchyRow> findSubtree(@Param("rootPath") String rootPath);
 
     /**
-     * Projects all root units (no parent) with manager descriptor. Used to render the
-     * full top-level org chart when no specific root is given.
+     * Projects every unit with parent and manager descriptors — the whole org-unit forest in
+     * one query, assembled in memory by the caller.
      */
     @Query(
         """
@@ -59,11 +59,10 @@ public interface OrganizationalUnitRepository
         FROM OrganizationalUnit u
         LEFT JOIN u.parentUnit p
         LEFT JOIN u.manager m
-        WHERE u.parentUnit IS NULL
         ORDER BY u.name
         """
     )
-    List<OrganizationalUnitHierarchyRow> findAllRoots();
+    List<OrganizationalUnitHierarchyRow> findAllHierarchyRows();
 
     /**
      * Projects an arbitrary set of units by id — used to materialise an ancestor chain
@@ -124,20 +123,18 @@ public interface OrganizationalUnitRepository
     List<UnitHeadcountRow> findSubtreeHeadcounts(@Param("rootPath") String rootPath);
 
     /**
-     * One GROUP BY query returning the direct employee count for every root unit
-     * (no parent). Used by the roots overview when {@code includeHeadcount=true} —
-     * single SQL round-trip regardless of root count.
+     * One GROUP BY query returning the direct employee count of every unit — single SQL
+     * round-trip regardless of unit count.
      */
     @Query(
         """
         SELECT new com.humano.repository.hr.projection.UnitHeadcountRow(u.id, COUNT(e.id))
         FROM OrganizationalUnit u
         LEFT JOIN Employee e ON e.unit = u
-        WHERE u.parentUnit IS NULL
         GROUP BY u.id
         """
     )
-    List<UnitHeadcountRow> findRootDirectHeadcounts();
+    List<UnitHeadcountRow> findAllHeadcounts();
 
     /**
      * Rewrites the materialized-path prefix on every descendant of a unit whose own

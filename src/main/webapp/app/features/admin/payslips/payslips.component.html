@@ -53,11 +53,11 @@
                 <div class="tabular-nums" style="color: var(--text-muted); font-size: var(--text-xs)">{{ p.employeeCode }}</div>
               }
             </td>
-            <td>{{ p.periodCode ?? (p.periodStart ? (p.periodStart | date: 'MMM y') : '—') }}</td>
+            <td>{{ p.periodStart | payPeriod: p.periodCode }}</td>
             <td>{{ p.paymentDate ? (p.paymentDate | date: 'mediumDate') : '—' }}</td>
-            <td class="hum-table__num tabular-nums">{{ p.gross }} {{ p.currencyCode }}</td>
+            <td class="hum-table__num tabular-nums">{{ p.gross | money: p.currencyCode }}</td>
             <td class="hum-table__num tabular-nums" style="font-weight: 600; color: var(--text-strong)">
-              {{ p.net }} {{ p.currencyCode }}
+              {{ p.net | money: p.currencyCode }}
             </td>
           </tr>
         }

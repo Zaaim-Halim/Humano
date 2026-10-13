@@ -1,5 +1,6 @@
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { normalizeHttpError } from 'app/core/api';
@@ -17,7 +18,7 @@ import { Payslip, PayslipService } from '../index';
 @Component({
   selector: 'hum-payslip',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, ButtonComponent, AlertComponent, EmptyStateComponent, SkeletonRowComponent],
+  imports: [MoneyPipe, PayPeriodPipe, DatePipe, TranslatePipe, ButtonComponent, AlertComponent, EmptyStateComponent, SkeletonRowComponent],
   templateUrl: './payslip.component.html',
 })
 export default class PayslipComponent {

@@ -61,8 +61,13 @@
                   (keydown.enter)="openEmployee(j.id)"
                   (keydown.space)="openEmployee(j.id); $event.preventDefault()"
                 >
-                  <td>{{ j.jobTitle ?? '—' }}</td>
-                  <td>{{ j.departmentName ?? '—' }}</td>
+                  <td>
+                    <div style="font-weight: 500">{{ name(j) }}</div>
+                    @if (j.jobTitle) {
+                      <div style="color: var(--text-muted); font-size: var(--text-xs)">{{ j.jobTitle }}</div>
+                    }
+                  </td>
+                  <td style="color: var(--text-muted)">{{ j.departmentName ?? '—' }}</td>
                 </tr>
               }
             </tbody>

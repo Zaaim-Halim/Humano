@@ -1,6 +1,6 @@
 {
   "error": {
-    "title": "Error page!",
+    "title": "Something went wrong",
     "http": {
       "400": "Bad request.",
       "403": "You are not authorized to access this page.",
@@ -9,6 +9,15 @@
       "500": "Internal server error."
     },
     "concurrencyFailure": "Another user modified this data at the same time as you. Your changes were rejected.",
-    "validation": "Validation error on the server."
+    "validation": "Validation error on the server.",
+    "forbidden": {
+      "title": "You don’t have access to this page",
+      "description": "Your role doesn’t include this area. If you think you need access, ask your workspace administrator."
+    },
+    "notFound": {
+      "title": "Page not found",
+      "description": "The page you’re looking for doesn’t exist or has moved.",
+      "home": "Back to dashboard"
+    }
   }
 }

@@ -3,6 +3,7 @@
 
 // Enums
 export { EmployeeStatus } from './models/enums/employee-status.enum';
+export { WorkLocationType } from './models/enums/work-location-type.enum';
 export { LeaveType } from './models/enums/leave-type.enum';
 export { LeaveStatus } from './models/enums/leave-status.enum';
 export { AttendanceStatus } from './models/enums/attendance-status.enum';
@@ -22,6 +23,7 @@ export type {
   CreateEmployeeRequest,
   UpdateEmployeeProfileRequest,
   EmployeeSearchRequest,
+  EmployeeDirectoryStats,
 } from './models/employee.model';
 
 // Leave
@@ -78,6 +80,7 @@ export type {
   OrganizationalUnitRef,
   EmployeeTreeNode,
   EmployeeHierarchyResponse,
+  EmployeeForestResponse,
   OrganizationalUnitTreeNode,
   OrganizationalUnitHierarchyResponse,
   HierarchyAncestorsResponse,
@@ -85,6 +88,4 @@ export type {
 
 // Tree Components
 export { PeopleTreeComponent } from './people-tree/people-tree.component';
-export { EmployeeTreeNodeComponent } from './people-tree/employee-tree-node/employee-tree-node.component';
 export { OrganizationTreeComponent } from './organization-tree/organization-tree.component';
-export { OrganizationalUnitNodeComponent } from './organization-tree/organizational-unit-node/organizational-unit-node.component';

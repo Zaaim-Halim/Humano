@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import {
+  EmployeeForestResponse,
   EmployeeHierarchyResponse,
   EmployeeTreeNode,
   OrganizationalUnitHierarchyResponse,
@@ -20,6 +21,16 @@ import {
 export class HrHierarchyService {
   private readonly baseUrl = '/api/hr/hierarchy';
   private readonly http = inject(HttpClient);
+
+  /**
+   * `GET /employees/tree` — the whole reporting forest trimmed to `maxDepth` levels below the
+   * top. Nodes carry `directReports` so deeper levels can be loaded on demand via
+   * {@link getEmployeeSubtree}.
+   */
+  getEmployeeTree(maxDepth?: number): Observable<EmployeeForestResponse> {
+    const params = maxDepth !== undefined ? { maxDepth: maxDepth.toString() } : undefined;
+    return this.http.get<EmployeeForestResponse>(`${this.baseUrl}/employees/tree`, { params });
+  }
 
   /**
    * Fetches the people-tree subtree rooted at the given employee,
@@ -47,15 +58,15 @@ export class HrHierarchyService {
   }
 
   /**
-   * Fetches every top-level organizational unit as a flat list.
-   * Pass includeHeadcount=true to attach per-root employee counts.
-   *
-   * @param includeHeadcount if true, includes per-unit employee counts
+   * `GET /units/tree` — the whole org-unit forest trimmed to `maxDepth` levels; with
+   * `includeHeadcount` each node also carries its own and rolled-up headcount.
    */
-  getOrganizationalUnitRoots(includeHeadcount = false): Observable<OrganizationalUnitHierarchyResponse> {
-    return this.http.get<OrganizationalUnitHierarchyResponse>(`${this.baseUrl}/units/roots`, {
-      params: { includeHeadcount: includeHeadcount.toString() },
-    });
+  getOrganizationalUnitTree(maxDepth?: number, includeHeadcount = false): Observable<OrganizationalUnitHierarchyResponse> {
+    const params: Record<string, string> = { includeHeadcount: includeHeadcount.toString() };
+    if (maxDepth !== undefined) {
+      params['maxDepth'] = maxDepth.toString();
+    }
+    return this.http.get<OrganizationalUnitHierarchyResponse>(`${this.baseUrl}/units/tree`, { params });
   }
 
   /**

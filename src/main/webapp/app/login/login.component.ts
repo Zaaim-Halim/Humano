@@ -71,9 +71,9 @@ export default class LoginComponent {
       next: () => {
         this.loading.set(false);
         // AccountService.navigateToStoredUrl() redirects to the intended URL when
-        // the guard stored one; otherwise land on home.
+        // the guard stored one; otherwise land in the app (`''` is the public landing page).
         if (!this.router.getCurrentNavigation()) {
-          void this.router.navigate(['']);
+          void this.router.navigate(['/dashboard']);
         }
       },
       error: () => {

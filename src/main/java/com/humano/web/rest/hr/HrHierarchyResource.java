@@ -1,5 +1,6 @@
 package com.humano.web.rest.hr;
 
+import com.humano.dto.hr.responses.hierarchy.EmployeeForestResponse;
 import com.humano.dto.hr.responses.hierarchy.EmployeeHierarchyResponse;
 import com.humano.dto.hr.responses.hierarchy.EmployeeTreeNode;
 import com.humano.dto.hr.responses.hierarchy.HierarchyAncestorsResponse;
@@ -36,7 +37,8 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <h2>Org-unit tree</h2>
  * <ul>
- *   <li>{@code GET /api/hr/hierarchy/units/roots} — every top-level unit, flat</li>
+ *   <li>{@code GET /api/hr/hierarchy/units/tree} — the whole org-unit forest (+ headcount)</li>
+ *   <li>{@code GET /api/hr/hierarchy/employees/tree} — the whole reporting forest with report counts</li>
  *   <li>{@code GET /api/hr/hierarchy/units/{id}/subtree} — unit + descendants (+ headcount)</li>
  *   <li>{@code GET /api/hr/hierarchy/units/{id}/ancestors} — top-level → leaf chain</li>
  *   <li>{@code GET /api/hr/hierarchy/units/{id}/employees} — every employee under a unit subtree</li>
@@ -75,6 +77,20 @@ public class HrHierarchyResource {
     }
 
     /**
+     * Returns the whole reporting hierarchy as a forest (every employee without a manager and
+     * their subtree), trimmed to {@code maxDepth} levels. Nodes carry report counts from the full
+     * hierarchy; load deeper levels lazily with {@code /employees/{id}/subtree}.
+     *
+     * @param maxDepth levels below the top-level employees; omit for "no limit"
+     */
+    @GetMapping("/employees/tree")
+    @RequirePermission(PermissionsConstants.READ_EMPLOYEE)
+    public ResponseEntity<EmployeeForestResponse> getEmployeeTree(@RequestParam(required = false) @Min(0) Integer maxDepth) {
+        LOG.debug("REST request to get employee forest: maxDepth={}", maxDepth);
+        return ResponseEntity.ok(hierarchyService.getEmployeeTree(maxDepth));
+    }
+
+    /**
      * Returns the root-to-leaf manager chain for the given employee — root manager
      * first, the employee themselves last.
      */
@@ -88,16 +104,18 @@ public class HrHierarchyResource {
     // ==================== Org-unit tree ====================
 
     /**
-     * Returns every top-level organizational unit as a flat list (no children
-     * expanded). Pass {@code includeHeadcount=true} to attach per-root counts.
+     * Returns the whole org-unit forest (every unit without a parent and its sub-units),
+     * trimmed to {@code maxDepth} levels. Nodes carry their sub-unit count; with
+     * {@code includeHeadcount=true} also own and rolled-up headcounts.
      */
-    @GetMapping("/units/roots")
+    @GetMapping("/units/tree")
     @RequirePermission(PermissionsConstants.VIEW_ORGANIZATIONAL_UNITS)
-    public ResponseEntity<OrganizationalUnitHierarchyResponse> getOrganizationalUnitRoots(
+    public ResponseEntity<OrganizationalUnitHierarchyResponse> getOrganizationalUnitTree(
+        @RequestParam(required = false) @Min(0) Integer maxDepth,
         @RequestParam(defaultValue = "false") boolean includeHeadcount
     ) {
-        LOG.debug("REST request to get org-unit roots (includeHeadcount={})", includeHeadcount);
-        return ResponseEntity.ok(hierarchyService.getOrganizationalUnitRoots(includeHeadcount));
+        LOG.debug("REST request to get org-unit forest (maxDepth={}, includeHeadcount={})", maxDepth, includeHeadcount);
+        return ResponseEntity.ok(hierarchyService.getOrganizationalUnitTree(maxDepth, includeHeadcount));
     }
 
     /**

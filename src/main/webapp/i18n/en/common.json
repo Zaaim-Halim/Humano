@@ -16,7 +16,8 @@
       "clearFilters": "Clear filters",
       "expand": "Expand",
       "collapse": "Collapse",
-      "clear": "Clear"
+      "clear": "Clear",
+      "close": "Close"
     }
   }
 }

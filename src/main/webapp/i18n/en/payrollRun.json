@@ -7,7 +7,7 @@
       "stepCalculated": "Calculated",
       "stepApproved": "Approved",
       "stepPosted": "Posted",
-      "statusNote": "Lifecycle reflects actions taken this session (no run-state endpoint).",
+      "statusNote": "Status reflects the actions taken on this page.",
       "employees": "Employees",
       "processed": "Processed",
       "errors": "Errors",

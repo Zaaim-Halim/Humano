@@ -76,7 +76,7 @@
                 <div>
                   <div class="hum-field__label">{{ 'humano.employee360.currentSalary' | translate }}</div>
                   <div class="tabular-nums" style="font-size: var(--text-xl); font-weight: var(--weight-semibold)">
-                    {{ cur.baseAmount }} {{ cur.currencyCode }}
+                    {{ cur.baseAmount | money: cur.currencyCode }}
                   </div>
                   <div class="hum-field__hint">{{ cur.basis }}</div>
                 </div>
@@ -103,7 +103,7 @@
                   @for (h of comp.history; track h.compensationId) {
                     <tr>
                       <td class="tabular-nums">{{ h.effectiveFrom }}</td>
-                      <td class="hum-table__num tabular-nums">{{ h.newAmount }} {{ h.currencyCode }}</td>
+                      <td class="hum-table__num tabular-nums">{{ h.newAmount | money: h.currencyCode }}</td>
                       <td>{{ h.reason ?? '—' }}</td>
                     </tr>
                   }

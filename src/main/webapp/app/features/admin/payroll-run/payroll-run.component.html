@@ -1,5 +1,9 @@
 <div class="hum-page">
-  <hum-page-header [title]="'humano.payrollRun.title' | translate" [subtitle]="summary().data?.periodCode ?? ''" hasActions>
+  <hum-page-header
+    [title]="'humano.payrollRun.title' | translate"
+    [subtitle]="summary().data?.periodCode ? (null | payPeriod: summary().data?.periodCode) : ''"
+    hasActions
+  >
     <div hum-page-actions style="display: flex; gap: var(--space-2)">
       <hum-button variant="secondary" size="sm" [loading]="busy()" (click)="calculate()">{{
         'humano.payrollRun.calculate' | translate
@@ -44,11 +48,11 @@
       <hum-stat-tile [label]="'humano.payrollRun.employees' | translate" [value]="s.totalEmployees" icon="users" />
       <hum-stat-tile [label]="'humano.payrollRun.processed' | translate" [value]="s.processedEmployees" icon="check-check" />
       <hum-stat-tile [label]="'humano.payrollRun.errors' | translate" [value]="s.errorCount" icon="info" />
-      <hum-stat-tile [label]="'humano.payrollRun.gross' | translate" [value]="s.totalGross + ' ' + (s.currencyCode ?? '')" icon="wallet" />
-      <hum-stat-tile [label]="'humano.payrollRun.net' | translate" [value]="s.totalNet + ' ' + (s.currencyCode ?? '')" icon="wallet" />
+      <hum-stat-tile [label]="'humano.payrollRun.gross' | translate" [value]="s.totalGross | money: s.currencyCode" icon="wallet" />
+      <hum-stat-tile [label]="'humano.payrollRun.net' | translate" [value]="s.totalNet | money: s.currencyCode" icon="wallet" />
       <hum-stat-tile
         [label]="'humano.payrollRun.employerCost' | translate"
-        [value]="s.totalEmployerCost + ' ' + (s.currencyCode ?? '')"
+        [value]="s.totalEmployerCost | money: s.currencyCode"
         icon="wallet"
       />
     </div>
@@ -65,13 +69,13 @@
       >
         <hum-stat-tile
           [label]="'humano.payrollRun.grossChange' | translate"
-          [value]="c.grossChange + ' ' + (s.currencyCode ?? '')"
+          [value]="c.grossChange | money: s.currencyCode : true"
           [trend]="c.grossChangePercentage + '%'"
           [trendDirection]="c.grossChange >= 0 ? 'up' : 'down'"
         />
         <hum-stat-tile
           [label]="'humano.payrollRun.netChange' | translate"
-          [value]="c.netChange + ' ' + (s.currencyCode ?? '')"
+          [value]="c.netChange | money: s.currencyCode : true"
           [trend]="c.netChangePercentage + '%'"
           [trendDirection]="c.netChange >= 0 ? 'up' : 'down'"
         />
@@ -126,9 +130,9 @@
         @for (r of results().data; track r.id) {
           <tr>
             <td>{{ r.employeeName ?? r.employeeCode ?? r.employeeId }}</td>
-            <td class="hum-table__num tabular-nums">{{ r.gross }} {{ r.currencyCode }}</td>
-            <td class="hum-table__num tabular-nums">{{ r.totalDeductions }} {{ r.currencyCode }}</td>
-            <td class="hum-table__num tabular-nums">{{ r.net }} {{ r.currencyCode }}</td>
+            <td class="hum-table__num tabular-nums">{{ r.gross | money: r.currencyCode }}</td>
+            <td class="hum-table__num tabular-nums">{{ r.totalDeductions | money: r.currencyCode }}</td>
+            <td class="hum-table__num tabular-nums">{{ r.net | money: r.currencyCode }}</td>
           </tr>
         }
       </tbody>

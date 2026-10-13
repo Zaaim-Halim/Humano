@@ -23,5 +23,9 @@ public record EmployeeTreeNode(
     String path,
     EmployeeRef manager,
     OrganizationalUnitRef unit,
+    /** Direct reports in the full hierarchy — present on tree responses even when {@code children} is trimmed. */
+    Integer directReports,
+    /** All reports below this person (direct and indirect) — tree responses only. */
+    Integer totalReports,
     List<EmployeeTreeNode> children
 ) {}

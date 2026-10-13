@@ -2,16 +2,27 @@
   "humano": {
     "organizationTree": {
       "title": "Organization tree",
-      "subtitle": "Browse units, sub-units and their leadership",
+      "subtitle": "Divisions, departments and teams with their leaders and headcount",
       "statUnits": "Units",
       "statLevels": "Levels",
-      "statRoots": "Top-level",
+      "statPeople": "People",
       "manager": "Manager",
+      "noManager": "No manager assigned",
       "headcount": "{{ count }} people",
-      "subUnitsHidden": "{{ count }} hidden",
+      "subUnits": "{{ count }} sub-units",
+      "expandTop": "Top level",
+      "expandAll": "Everything",
+      "wholeOrganization": "Whole organization",
       "errorTitle": "Couldn't load the organization tree",
       "emptyTitle": "No organizational units",
-      "emptyBody": "No organizational units are available yet."
+      "emptyBody": "Create organizational units to see your structure here.",
+      "search": "Find a unit or manager",
+      "partOf": "Part of {{ name }}",
+      "directPeople": "Directly in unit",
+      "subUnitsTitle": "Sub-units",
+      "people": "People",
+      "noPeople": "No one is assigned to this unit yet.",
+      "focus": "Focus on this unit"
     }
   }
 }

@@ -1,6 +1,7 @@
 package com.humano.repository.hr.specification;
 
 import com.humano.domain.enumeration.hr.EmployeeStatus;
+import com.humano.domain.enumeration.hr.WorkLocationType;
 import com.humano.domain.hr.Department;
 import com.humano.domain.hr.OrganizationalUnit;
 import com.humano.domain.hr.Position;
@@ -136,13 +137,14 @@ public class EmployeeSpecification {
     }
 
     /**
-     * Single free-text term matched (case-insensitive, partial) against first name OR last
-     * name OR job title — for single-box pickers/typeaheads. Blank term matches everything.
+     * Single free-text term matched (case-insensitive, partial) against first name, last name,
+     * job title, email or employee number — for search boxes and typeaheads. Blank term matches
+     * everything.
      *
      * @param term the search term
      * @return Specification
      */
-    public static Specification<Employee> matchesNameOrJobTitle(String term) {
+    public static Specification<Employee> matchesSearchTerm(String term) {
         return (root, query, criteriaBuilder) -> {
             if (term == null || term.isBlank()) {
                 return criteriaBuilder.conjunction();
@@ -151,9 +153,27 @@ public class EmployeeSpecification {
             return criteriaBuilder.or(
                 criteriaBuilder.like(criteriaBuilder.lower(root.get("firstName")), like),
                 criteriaBuilder.like(criteriaBuilder.lower(root.get("lastName")), like),
-                criteriaBuilder.like(criteriaBuilder.lower(root.get("jobTitle")), like)
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("jobTitle")), like),
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), like),
+                criteriaBuilder.like(criteriaBuilder.lower(root.get("employeeNumber")), like)
             );
         };
+    }
+
+    /**
+     * Filter employees by active status.
+     *
+     * @return Specification
+     */
+    /**
+     * Filter employees by work location (onsite / remote / hybrid); null matches everything.
+     *
+     * @param workLocation the work location
+     * @return Specification
+     */
+    public static Specification<Employee> hasWorkLocation(WorkLocationType workLocation) {
+        return (root, query, criteriaBuilder) ->
+            workLocation == null ? criteriaBuilder.conjunction() : criteriaBuilder.equal(root.get("workLocation"), workLocation);
     }
 
     /**

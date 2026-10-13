@@ -2,20 +2,67 @@
   "humano": {
     "directory": {
       "title": "Employees",
-      "search": "Search by job title…",
+      "subtitle": "Everyone in your organization",
+      "search": "Search name, title, email or employee number…",
       "filterDepartment": "Department",
+      "filterLocation": "Location",
       "filterStatus": "Status",
+      "sortBy": "Sort",
       "all": "All",
-      "count": "{{ total }} employees",
+      "allDepartments": "All departments",
+      "allLocations": "All locations",
+      "status": {
+        "ACTIVE": "Active",
+        "INACTIVE": "Inactive",
+        "TERMINATED": "Terminated"
+      },
+      "location": {
+        "ONSITE": "On-site",
+        "HYBRID": "Hybrid",
+        "REMOTE": "Remote",
+        "UNSPECIFIED": "Not set"
+      },
+      "sort": {
+        "firstName_asc": "Name (A–Z)",
+        "startDate_desc": "Newest joiners",
+        "startDate_asc": "Longest tenure",
+        "jobTitle_asc": "Job title"
+      },
+      "view": "View",
+      "viewCards": "Card view",
+      "viewTable": "Table view",
+      "headcount": "Headcount",
+      "activeOf": "{{ active }} active",
+      "byDepartment": "By department",
+      "noDepartment": "No department",
+      "workLocation": "Work location",
+      "newJoiners": "New joiners",
+      "last90Days": "in the last 90 days",
       "colName": "Name",
       "colJobTitle": "Job title",
       "colDepartment": "Department",
       "colPosition": "Position",
+      "colManager": "Manager",
+      "colLocation": "Location",
+      "colStartDate": "Start date",
       "colStatus": "Status",
+      "range": "{{ start }}–{{ end }} of {{ total }}",
+      "prevPage": "Previous page",
+      "nextPage": "Next page",
+      "tenureNew": "Joined this month",
+      "tenureYears": "{{ years }} yr {{ months }} mo",
+      "tenureMonths": "{{ months }} mo",
+      "contact": "Contact",
+      "email": "Email",
+      "phone": "Phone",
+      "organization": "Organization",
+      "employment": "Employment",
+      "employeeNumber": "Employee no.",
+      "employmentType": "Employment type",
+      "showInTree": "Show in people tree",
       "emptyTitle": "No employees found",
-      "emptyDescription": "Adjust your filters, or add the first employee.",
-      "addEmployee": "Add employee",
-      "bulkSelected": "selected"
+      "emptyDescription": "Try a different search or filter, or add someone new.",
+      "addEmployee": "Add employee"
     }
   }
 }

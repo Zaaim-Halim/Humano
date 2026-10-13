@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime } from 'rxjs';
 import { Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
+import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { createListResource } from 'app/core/api';
@@ -29,6 +30,8 @@ import { PayslipService } from '../index';
   selector: 'hum-payslips',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    MoneyPipe,
+    PayPeriodPipe,
     ReactiveFormsModule,
     DatePipe,
     TranslatePipe,

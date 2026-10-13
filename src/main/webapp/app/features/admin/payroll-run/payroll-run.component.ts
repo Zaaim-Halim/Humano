@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable } from 'rxjs';
 
@@ -46,6 +47,8 @@ const idle = <T>(): Holder<T> => ({ data: null, loading: false, error: null });
   selector: 'hum-payroll-run',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    MoneyPipe,
+    PayPeriodPipe,
     TranslatePipe,
     PageHeaderComponent,
     StepperComponent,

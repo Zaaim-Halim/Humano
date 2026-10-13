@@ -38,7 +38,7 @@ public class EmployeeNotification extends AbstractAuditingEntity<UUID> {
     /**
      * Whether the notification has been read.
      */
-    @Column(name = "read", nullable = false)
+    @Column(name = "`read`", nullable = false) // quoted: READ is a reserved word in MySQL
     private Boolean read;
 
     /**

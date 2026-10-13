@@ -24,6 +24,7 @@ import java.util.TimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -79,6 +80,8 @@ public class DevDataSeeder implements ApplicationRunner {
     private final PasswordEncoder passwordEncoder;
     private final TransactionTemplate masterTx;
     private final TransactionTemplate tenantTx;
+    private final DemoDataSeeder demoDataSeeder;
+    private final boolean seedDemoData;
 
     public DevDataSeeder(
         TenantRepository tenantRepository,
@@ -88,8 +91,12 @@ public class DevDataSeeder implements ApplicationRunner {
         UserRepository userRepository,
         PasswordEncoder passwordEncoder,
         @Qualifier("masterTransactionManager") PlatformTransactionManager masterTransactionManager,
-        @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager
+        @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager,
+        DemoDataSeeder demoDataSeeder,
+        @Value("${humano.dev.seed.demo-data:true}") boolean seedDemoData
     ) {
+        this.demoDataSeeder = demoDataSeeder;
+        this.seedDemoData = seedDemoData;
         this.tenantRepository = tenantRepository;
         this.provisioningService = provisioningService;
         this.subscriptionPlanRepository = subscriptionPlanRepository;
@@ -108,6 +115,9 @@ public class DevDataSeeder implements ApplicationRunner {
                 return; // provisioning failed; already logged
             }
             seedUsers(tenant);
+            if (seedDemoData) {
+                seedDemoCompany(tenant);
+            }
             logCredentials();
         } catch (Exception e) {
             // Never let dev seeding break startup.
@@ -182,6 +192,19 @@ public class DevDataSeeder implements ApplicationRunner {
         dto.setAdminPassword(PASSWORD);
         // preferredRegion left null → non-dedicated, round-robin to the default (localhost) dev DB server.
         return dto;
+    }
+
+    /** Fills the demo tenant with a realistic company (see {@link DemoDataSeeder}). */
+    private void seedDemoCompany(Tenant tenant) {
+        String previous = TenantContext.getCurrentTenant();
+        TenantContext.setCurrentTenant(tenant.getSubdomain());
+        try {
+            demoDataSeeder.seed();
+        } catch (Exception e) {
+            log.error("[demo-data] seeding failed (non-fatal, app continues): {}", e.getMessage(), e);
+        } finally {
+            restoreTenant(previous);
+        }
     }
 
     /** Creates one activated user per role in the tenant's authority catalog (each in its own tx). */

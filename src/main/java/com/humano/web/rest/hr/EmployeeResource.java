@@ -4,6 +4,7 @@ import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.requests.CreateEmployeeRequest;
 import com.humano.dto.hr.requests.EmployeeSearchRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeProfileRequest;
+import com.humano.dto.hr.responses.EmployeeDirectoryStatsResponse;
 import com.humano.dto.hr.responses.EmployeeProfileResponse;
 import com.humano.dto.hr.responses.SimpleEmployeeProfileResponse;
 import com.humano.security.PermissionsConstants;
@@ -139,6 +140,19 @@ public class EmployeeResource {
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
 
         return ResponseEntity.ok().headers(headers).body(page);
+    }
+
+    /**
+     * {@code GET  /employees/stats} : Directory aggregates — headcount by status, department and
+     * work location, and joiners in the last 90 days.
+     *
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the aggregates in body
+     */
+    @GetMapping("/stats")
+    @RequirePermission(PermissionsConstants.READ_EMPLOYEE)
+    public ResponseEntity<EmployeeDirectoryStatsResponse> getDirectoryStats() {
+        LOG.debug("REST request to get employee directory stats");
+        return ResponseEntity.ok(employeeProfileService.getDirectoryStats());
     }
 
     /**

@@ -1,0 +1,1466 @@
+package com.humano.dev;
+
+import com.humano.domain.enumeration.CountryCode;
+import com.humano.domain.enumeration.CurrencyCode;
+import com.humano.domain.enumeration.hr.AttendanceStatus;
+import com.humano.domain.enumeration.hr.EmployeeStatus;
+import com.humano.domain.enumeration.hr.ExpenseClaimStatus;
+import com.humano.domain.enumeration.hr.Gender;
+import com.humano.domain.enumeration.hr.LeaveStatus;
+import com.humano.domain.enumeration.hr.LeaveType;
+import com.humano.domain.enumeration.hr.OrganizationalUnitType;
+import com.humano.domain.enumeration.hr.TrainingStatus;
+import com.humano.domain.enumeration.hr.WorkLocationType;
+import com.humano.domain.enumeration.payroll.Basis;
+import com.humano.domain.enumeration.payroll.RunStatus;
+import com.humano.domain.hr.Department;
+import com.humano.domain.hr.OrganizationalUnit;
+import com.humano.domain.payroll.PayrollPeriod;
+import com.humano.domain.shared.AbstractReferenceData;
+import com.humano.domain.shared.Employee;
+import com.humano.domain.shared.User;
+import com.humano.dto.hr.requests.CreateAddressRequest;
+import com.humano.dto.hr.requests.CreateAttendanceRequest;
+import com.humano.dto.hr.requests.CreateDepartmentRequest;
+import com.humano.dto.hr.requests.CreateEmergencyContactRequest;
+import com.humano.dto.hr.requests.CreateEmployeeRequest;
+import com.humano.dto.hr.requests.CreateEmploymentContractRequest;
+import com.humano.dto.hr.requests.CreateExpenseClaimRequest;
+import com.humano.dto.hr.requests.CreateLeaveRequest;
+import com.humano.dto.hr.requests.CreateOrganizationalUnitRequest;
+import com.humano.dto.hr.requests.CreatePerformanceReviewRequest;
+import com.humano.dto.hr.requests.CreatePositionRequest;
+import com.humano.dto.hr.requests.CreateProjectRequest;
+import com.humano.dto.hr.requests.CreateTimesheetRequest;
+import com.humano.dto.hr.requests.CreateTrainingRequest;
+import com.humano.dto.hr.requests.EnrollEmployeeTrainingRequest;
+import com.humano.dto.hr.requests.ProcessExpenseClaimRequest;
+import com.humano.dto.hr.requests.ProcessLeaveRequest;
+import com.humano.dto.hr.responses.EmployeePersonalDetails;
+import com.humano.dto.hr.responses.ReferenceDataRef;
+import com.humano.dto.payroll.request.ApprovePayrollRunRequest;
+import com.humano.dto.payroll.request.CreateCompensationRequest;
+import com.humano.dto.payroll.request.GeneratePayrollPeriodsRequest;
+import com.humano.dto.payroll.request.InitiatePayrollRunRequest;
+import com.humano.dto.payroll.response.PayrollRunResponse;
+import com.humano.repository.hr.DepartmentRepository;
+import com.humano.repository.hr.EmploymentTypeRepository;
+import com.humano.repository.hr.ExpenseClaimRepository;
+import com.humano.repository.hr.JobGradeRepository;
+import com.humano.repository.hr.JobLevelRepository;
+import com.humano.repository.hr.LeaveRequestRepository;
+import com.humano.repository.hr.OrganizationalUnitRepository;
+import com.humano.repository.hr.PositionRepository;
+import com.humano.repository.payroll.CountryRepository;
+import com.humano.repository.payroll.CurrencyRepository;
+import com.humano.repository.payroll.PayrollCalendarRepository;
+import com.humano.repository.payroll.PayrollPeriodRepository;
+import com.humano.repository.payroll.PayslipRepository;
+import com.humano.repository.shared.AuthorityRepository;
+import com.humano.repository.shared.EmployeeRepository;
+import com.humano.repository.shared.UserRepository;
+import com.humano.security.AuthoritiesConstants;
+import com.humano.service.hr.AddressService;
+import com.humano.service.hr.AttendanceService;
+import com.humano.service.hr.DepartmentService;
+import com.humano.service.hr.EmergencyContactService;
+import com.humano.service.hr.EmployeeProfileService;
+import com.humano.service.hr.EmploymentContractService;
+import com.humano.service.hr.ExpenseClaimService;
+import com.humano.service.hr.LeaveRequestService;
+import com.humano.service.hr.OrganizationalUnitService;
+import com.humano.service.hr.PerformanceReviewService;
+import com.humano.service.hr.PositionService;
+import com.humano.service.hr.ProjectService;
+import com.humano.service.hr.TimesheetService;
+import com.humano.service.hr.TrainingService;
+import com.humano.service.hr.workflow.ApprovalWorkflowOrchestratorService;
+import com.humano.service.payroll.CompensationService;
+import com.humano.service.payroll.PayrollCalendarService;
+import com.humano.service.payroll.PayrollProcessingService;
+import com.humano.service.payroll.PayslipService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+/**
+ * Fills the dev demo tenant with a realistic company, so every screen has something to show.
+ * <p>
+ * Called by {@link DevDataSeeder} after the persona logins exist; disable with
+ * {@code humano.dev.seed.demo-data=false}. Everything goes through the service layer — the same
+ * request records and validation the REST API uses — so the data honours the backend contract.
+ * Fail-soft per section (a failing section is logged and the rest continue) and idempotent: it runs
+ * once, keyed on a marker employee, and a fixed {@link Random} seed keeps the data identical across
+ * fresh databases.
+ *
+ * <h3>What it creates</h3>
+ * <ul>
+ *   <li>An org-unit tree (company → departments → engineering teams), departments and positions.</li>
+ *   <li>The persona logins from {@link DevDataSeeder} turned into employees with realistic names,
+ *       placed in the hierarchy (CEO → department heads → managers → reports), plus ~45 more staff.</li>
+ *   <li>Compensation, addresses, emergency contacts and contracts for everyone.</li>
+ *   <li>Projects, two weeks of timesheets and attendance, leave and expenses in every state —
+ *       pending items go through the approval workflow so managers have a real inbox.</li>
+ *   <li>Trainings with enrolments, performance reviews, monthly payroll periods and a calculated
+ *       run for last month (best-effort: payroll needs tax configuration the demo may lack).</li>
+ * </ul>
+ */
+@Component
+@Profile("dev")
+public class DemoDataSeeder {
+
+    private static final Logger log = LoggerFactory.getLogger(DemoDataSeeder.class);
+
+    /** Present once the demo company has been seeded — the idempotency marker. */
+    private static final String MARKER_LOGIN = "amelia.clarke@demo-company.com";
+    private static final String STAFF_DOMAIN = "demo-company.com";
+
+    private final Random random = new Random(20261013L);
+    private final LocalDate today = LocalDate.now();
+
+    private final OrganizationalUnitService unitService;
+    private final DepartmentService departmentService;
+    private final PositionService positionService;
+    private final EmployeeProfileService employeeProfileService;
+    private final CompensationService compensationService;
+    private final AddressService addressService;
+    private final EmergencyContactService emergencyContactService;
+    private final EmploymentContractService contractService;
+    private final ProjectService projectService;
+    private final TimesheetService timesheetService;
+    private final AttendanceService attendanceService;
+    private final LeaveRequestService leaveRequestService;
+    private final ExpenseClaimService expenseClaimService;
+    private final ApprovalWorkflowOrchestratorService approvalService;
+    private final TrainingService trainingService;
+    private final PerformanceReviewService reviewService;
+    private final PayrollCalendarService payrollCalendarService;
+    private final PayrollProcessingService payrollProcessingService;
+    private final PayslipService payslipService;
+
+    private final UserRepository userRepository;
+    private final EmployeeRepository employeeRepository;
+    private final AuthorityRepository authorityRepository;
+    private final DepartmentRepository departmentRepository;
+    private final OrganizationalUnitRepository unitRepository;
+    private final PositionRepository positionRepository;
+    private final CountryRepository countryRepository;
+    private final CurrencyRepository currencyRepository;
+    private final EmploymentTypeRepository employmentTypeRepository;
+    private final JobLevelRepository jobLevelRepository;
+    private final JobGradeRepository jobGradeRepository;
+    private final PayrollCalendarRepository payrollCalendarRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
+    private final ExpenseClaimRepository expenseClaimRepository;
+    private final PayslipRepository payslipRepository;
+    private final PayrollPeriodRepository payrollPeriodRepository;
+    private final TransactionTemplate tenantTx;
+
+    @PersistenceContext(unitName = "tenant")
+    private EntityManager entityManager;
+
+    // Resolved during seeding.
+    private final Map<String, UUID> unitIds = new HashMap<>();
+    private final Map<String, UUID> departmentIds = new HashMap<>();
+    private final Map<String, UUID> positionIds = new HashMap<>();
+    /** Every seeded employee, in creation order (managers before their reports). */
+    private final List<Seeded> people = new ArrayList<>();
+    private final Map<String, Seeded> byKey = new HashMap<>();
+    private UUID usaId;
+    private UUID usdId;
+
+    public DemoDataSeeder(
+        OrganizationalUnitService unitService,
+        DepartmentService departmentService,
+        PositionService positionService,
+        EmployeeProfileService employeeProfileService,
+        CompensationService compensationService,
+        AddressService addressService,
+        EmergencyContactService emergencyContactService,
+        EmploymentContractService contractService,
+        ProjectService projectService,
+        TimesheetService timesheetService,
+        AttendanceService attendanceService,
+        LeaveRequestService leaveRequestService,
+        ExpenseClaimService expenseClaimService,
+        ApprovalWorkflowOrchestratorService approvalService,
+        TrainingService trainingService,
+        PerformanceReviewService reviewService,
+        PayrollCalendarService payrollCalendarService,
+        PayrollProcessingService payrollProcessingService,
+        PayslipService payslipService,
+        UserRepository userRepository,
+        EmployeeRepository employeeRepository,
+        AuthorityRepository authorityRepository,
+        DepartmentRepository departmentRepository,
+        OrganizationalUnitRepository unitRepository,
+        PositionRepository positionRepository,
+        CountryRepository countryRepository,
+        CurrencyRepository currencyRepository,
+        EmploymentTypeRepository employmentTypeRepository,
+        JobLevelRepository jobLevelRepository,
+        JobGradeRepository jobGradeRepository,
+        PayrollCalendarRepository payrollCalendarRepository,
+        LeaveRequestRepository leaveRequestRepository,
+        ExpenseClaimRepository expenseClaimRepository,
+        PayslipRepository payslipRepository,
+        PayrollPeriodRepository payrollPeriodRepository,
+        @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager
+    ) {
+        this.unitService = unitService;
+        this.departmentService = departmentService;
+        this.positionService = positionService;
+        this.employeeProfileService = employeeProfileService;
+        this.compensationService = compensationService;
+        this.addressService = addressService;
+        this.emergencyContactService = emergencyContactService;
+        this.contractService = contractService;
+        this.projectService = projectService;
+        this.timesheetService = timesheetService;
+        this.attendanceService = attendanceService;
+        this.leaveRequestService = leaveRequestService;
+        this.expenseClaimService = expenseClaimService;
+        this.approvalService = approvalService;
+        this.trainingService = trainingService;
+        this.reviewService = reviewService;
+        this.payrollCalendarService = payrollCalendarService;
+        this.payrollProcessingService = payrollProcessingService;
+        this.payslipService = payslipService;
+        this.userRepository = userRepository;
+        this.employeeRepository = employeeRepository;
+        this.authorityRepository = authorityRepository;
+        this.departmentRepository = departmentRepository;
+        this.unitRepository = unitRepository;
+        this.positionRepository = positionRepository;
+        this.countryRepository = countryRepository;
+        this.currencyRepository = currencyRepository;
+        this.employmentTypeRepository = employmentTypeRepository;
+        this.jobLevelRepository = jobLevelRepository;
+        this.jobGradeRepository = jobGradeRepository;
+        this.payrollCalendarRepository = payrollCalendarRepository;
+        this.leaveRequestRepository = leaveRequestRepository;
+        this.expenseClaimRepository = expenseClaimRepository;
+        this.payslipRepository = payslipRepository;
+        this.payrollPeriodRepository = payrollPeriodRepository;
+        this.tenantTx = new TransactionTemplate(tenantTransactionManager);
+    }
+
+    /** One seeded person: the key is the persona local part or the staff login. */
+    private record Seeded(String key, UUID id, String department, String title, UUID managerId, BigDecimal salary) {}
+
+    /** A person to create: persona (existing login) or new staff member. */
+    private record Person(
+        String key,
+        String firstName,
+        String lastName,
+        Gender gender,
+        String department,
+        String unit,
+        String title,
+        String level,
+        String managerKey,
+        int salary,
+        boolean persona
+    ) {}
+
+    /** Must run with the demo tenant already set in {@code TenantContext}. */
+    public void seed() {
+        if (!section("reference data", this::resolveReferenceData)) {
+            return;
+        }
+        if (userRepository.findOneByLogin(MARKER_LOGIN).isPresent()) {
+            log.info("[demo-data] demo company already seeded; checking remaining sections");
+            if (!section("load people", this::loadPeople)) {
+                return;
+            }
+        } else {
+            log.info("[demo-data] seeding demo company…");
+            if (!section("org structure", this::seedStructure) || !section("people", this::seedPeople)) {
+                return;
+            }
+            section("department heads", this::assignHeads);
+            section("employee records", this::seedEmployeeRecords);
+            section("time tracking", this::seedTime);
+            section("trainings", this::seedTrainings);
+            section("performance reviews", this::seedReviews);
+        }
+        // Each of these guards itself, so a section that failed on an earlier boot is retried.
+        if (inTx(leaveRequestRepository::count) == 0) {
+            section("leave", this::seedLeave);
+        }
+        if (inTx(expenseClaimRepository::count) == 0) {
+            section("expenses", this::seedExpenses);
+        }
+        if (inTx(payslipRepository::count) == 0) {
+            section("payroll", this::seedPayroll);
+        }
+        log.info("[demo-data] done: {} employees in the demo company", people.size());
+    }
+
+    /** Rebuilds {@link #people} from the database when the company was seeded on an earlier boot. */
+    private void loadPeople() {
+        inTx(() -> {
+            for (Employee e : employeeRepository.findAll()) {
+                Seeded seeded = new Seeded(
+                    e.getLogin(),
+                    e.getId(),
+                    e.getDepartment() == null ? null : e.getDepartment().getName(),
+                    e.getJobTitle() == null ? "" : e.getJobTitle(),
+                    e.getManager() == null ? null : e.getManager().getId(),
+                    null
+                );
+                people.add(seeded);
+                byKey.put(seeded.key().replace("@demo.humano", ""), seeded);
+            }
+            return null;
+        });
+    }
+
+    /** Runs one section; logs and swallows failures so later sections still run. */
+    private boolean section(String name, Runnable body) {
+        try {
+            body.run();
+            log.info("[demo-data] {} ✓", name);
+            return true;
+        } catch (Exception e) {
+            log.warn("[demo-data] {} failed (non-fatal): {}", name, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    private <T> T inTx(Supplier<T> body) {
+        return tenantTx.execute(status -> body.get());
+    }
+
+    // ---------------------------------------------------------------- reference data
+
+    private void resolveReferenceData() {
+        usaId = countryRepository
+            .findAll()
+            .stream()
+            .filter(c -> c.getCode() == CountryCode.US)
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("country US missing"))
+            .getId();
+        usdId = currencyRepository
+            .findByCode(CurrencyCode.USD)
+            .orElseThrow(() -> new IllegalStateException("currency USD missing"))
+            .getId();
+    }
+
+    private ReferenceDataRef ref(List<? extends AbstractReferenceData> all, String code) {
+        return all.stream().filter(r -> code.equals(r.getCode())).findFirst().map(ReferenceDataRef::of).orElse(null);
+    }
+
+    // ---------------------------------------------------------------- structure
+
+    private static final Map<String, String> DEPARTMENTS = new LinkedHashMap<>();
+
+    static {
+        DEPARTMENTS.put("Executive Office", "Company leadership, strategy and governance.");
+        DEPARTMENTS.put("People & Culture", "Recruiting, onboarding, benefits, learning and employee relations.");
+        DEPARTMENTS.put("Finance", "Accounting, payroll, billing, expenses and financial reporting.");
+        DEPARTMENTS.put("Engineering", "Builds and runs the Demo Company product platform.");
+        DEPARTMENTS.put("Sales", "New business, account management and partnerships.");
+        DEPARTMENTS.put("Operations", "Workplace, scheduling, time and attendance.");
+        DEPARTMENTS.put("IT", "Internal systems, integrations, devices and support.");
+    }
+
+    private void seedStructure() {
+        UUID root = unit("Demo Company", OrganizationalUnitType.DIVISION, null);
+        for (Map.Entry<String, String> d : DEPARTMENTS.entrySet()) {
+            unit(d.getKey(), OrganizationalUnitType.DEPARTMENT, root);
+            UUID existing = inTx(() ->
+                departmentRepository
+                    .findAll()
+                    .stream()
+                    .filter(x -> d.getKey().equals(x.getName()))
+                    .findFirst()
+                    .map(Department::getId)
+                    .orElse(null)
+            );
+            departmentIds.put(
+                d.getKey(),
+                existing != null
+                    ? existing
+                    : departmentService.createDepartment(new CreateDepartmentRequest(d.getKey(), d.getValue(), null)).id()
+            );
+        }
+        for (String team : List.of("Platform Team", "Product Team", "Mobile Team")) {
+            unit(team, OrganizationalUnitType.TEAM, unitIds.get("Engineering"));
+        }
+        for (String team : List.of("Enterprise Sales", "Customer Success")) {
+            unit(team, OrganizationalUnitType.TEAM, unitIds.get("Sales"));
+        }
+        inTx(() -> {
+            positionRepository.findAll().forEach(pos -> positionIds.put(pos.getName(), pos.getId()));
+            return null;
+        });
+    }
+
+    /** Finds an org unit by name or creates it — lets an interrupted seed resume without duplicates. */
+    private UUID unit(String name, OrganizationalUnitType type, UUID parentId) {
+        UUID existing = inTx(() ->
+            unitRepository.findAll().stream().filter(u -> name.equals(u.getName())).findFirst().map(OrganizationalUnit::getId).orElse(null)
+        );
+        UUID id = existing != null
+            ? existing
+            : unitService.createOrganizationalUnit(new CreateOrganizationalUnitRequest(name, type, parentId, null)).id();
+        unitIds.put(name, id);
+        return id;
+    }
+
+    /** Position names are unique tenant-wide, so one position per title, anchored to the first unit using it. */
+    private UUID position(String unit, String title, String level) {
+        return positionIds.computeIfAbsent(title, k ->
+            positionService.createPosition(new CreatePositionRequest(title, null, level, unitIds.get(unit), null)).id()
+        );
+    }
+
+    // ---------------------------------------------------------------- people
+
+    /** Persona logins (from DevDataSeeder) with the real person behind each one. Order = hierarchy. */
+    private static List<Person> personas() {
+        return List.of(
+            p(
+                "executive",
+                "Olivia",
+                "Bennett",
+                Gender.FEMALE,
+                "Executive Office",
+                "Executive Office",
+                "Chief Executive Officer",
+                "PRINCIPAL",
+                null,
+                26000
+            ),
+            p(
+                "organization.admin",
+                "Hannah",
+                "Schmidt",
+                Gender.FEMALE,
+                "Executive Office",
+                "Executive Office",
+                "Chief of Staff",
+                "LEAD",
+                "executive",
+                15500
+            ),
+            p(
+                "compliance.officer",
+                "Rafael",
+                "Costa",
+                Gender.MALE,
+                "Executive Office",
+                "Executive Office",
+                "Compliance Officer",
+                "SENIOR",
+                "executive",
+                11800
+            ),
+            p(
+                "hr.manager",
+                "Sofia",
+                "Martinez",
+                Gender.FEMALE,
+                "People & Culture",
+                "People & Culture",
+                "Head of People",
+                "LEAD",
+                "executive",
+                15000
+            ),
+            p(
+                "finance.manager",
+                "Daniel",
+                "Okafor",
+                Gender.MALE,
+                "Finance",
+                "Finance",
+                "Chief Financial Officer",
+                "PRINCIPAL",
+                "executive",
+                21000
+            ),
+            p(
+                "department.head",
+                "Marcus",
+                "Chen",
+                Gender.MALE,
+                "Engineering",
+                "Engineering",
+                "VP of Engineering",
+                "PRINCIPAL",
+                "executive",
+                22000
+            ),
+            p(
+                "attendance.admin",
+                "Grace",
+                "Thompson",
+                Gender.FEMALE,
+                "Operations",
+                "Operations",
+                "Head of Operations",
+                "LEAD",
+                "executive",
+                13000
+            ),
+            p("tenant.admin", "Ethan", "Walker", Gender.MALE, "IT", "IT", "Head of IT", "LEAD", "executive", 14000),
+            // People & Culture
+            p(
+                "hr.specialist",
+                "Aisha",
+                "Rahman",
+                Gender.FEMALE,
+                "People & Culture",
+                "People & Culture",
+                "HR Business Partner",
+                "SENIOR",
+                "hr.manager",
+                8200
+            ),
+            p(
+                "recruiter",
+                "Tom",
+                "Fischer",
+                Gender.MALE,
+                "People & Culture",
+                "People & Culture",
+                "Talent Acquisition Partner",
+                "MID",
+                "hr.manager",
+                7000
+            ),
+            p(
+                "onboarding.specialist",
+                "Mei",
+                "Tanaka",
+                Gender.FEMALE,
+                "People & Culture",
+                "People & Culture",
+                "Onboarding Specialist",
+                "MID",
+                "hr.manager",
+                6400
+            ),
+            p(
+                "benefits.admin",
+                "Carlos",
+                "Mendes",
+                Gender.MALE,
+                "People & Culture",
+                "People & Culture",
+                "Benefits Manager",
+                "SENIOR",
+                "hr.manager",
+                8000
+            ),
+            p(
+                "benefits.specialist",
+                "Nora",
+                "Lindqvist",
+                Gender.FEMALE,
+                "People & Culture",
+                "People & Culture",
+                "Benefits Specialist",
+                "MID",
+                "benefits.admin",
+                6000
+            ),
+            p(
+                "leave.admin",
+                "Isabel",
+                "Ruiz",
+                Gender.FEMALE,
+                "People & Culture",
+                "People & Culture",
+                "Absence Manager",
+                "SENIOR",
+                "hr.manager",
+                7400
+            ),
+            p(
+                "leave.approver",
+                "Kwame",
+                "Asante",
+                Gender.MALE,
+                "People & Culture",
+                "People & Culture",
+                "HR Operations Lead",
+                "LEAD",
+                "hr.manager",
+                8600
+            ),
+            p(
+                "training.admin",
+                "Elena",
+                "Petrova",
+                Gender.FEMALE,
+                "People & Culture",
+                "People & Culture",
+                "Learning & Development Lead",
+                "LEAD",
+                "hr.manager",
+                8800
+            ),
+            p(
+                "training.coordinator",
+                "Liam",
+                "O'Brien",
+                Gender.MALE,
+                "People & Culture",
+                "People & Culture",
+                "Training Coordinator",
+                "JUNIOR",
+                "training.admin",
+                5200
+            ),
+            p(
+                "performance.admin",
+                "Yara",
+                "Haddad",
+                Gender.FEMALE,
+                "People & Culture",
+                "People & Culture",
+                "Performance Program Manager",
+                "SENIOR",
+                "hr.manager",
+                8400
+            ),
+            p(
+                "performance.reviewer",
+                "Jonas",
+                "Weber",
+                Gender.MALE,
+                "People & Culture",
+                "People & Culture",
+                "Talent Review Specialist",
+                "MID",
+                "performance.admin",
+                6800
+            ),
+            // Finance
+            p("payroll.admin", "Fatima", "Zahra", Gender.FEMALE, "Finance", "Finance", "Payroll Manager", "LEAD", "finance.manager", 9800),
+            p("payroll.specialist", "Ben", "Carter", Gender.MALE, "Finance", "Finance", "Payroll Specialist", "MID", "payroll.admin", 6500),
+            p("payroll.viewer", "Chloe", "Dubois", Gender.FEMALE, "Finance", "Finance", "Payroll Analyst", "JUNIOR", "payroll.admin", 5400),
+            p(
+                "finance.specialist",
+                "Arjun",
+                "Mehta",
+                Gender.MALE,
+                "Finance",
+                "Finance",
+                "Financial Analyst",
+                "MID",
+                "finance.manager",
+                7200
+            ),
+            p("billing.admin", "Laura", "Rossi", Gender.FEMALE, "Finance", "Finance", "Billing Manager", "SENIOR", "finance.manager", 8300),
+            p(
+                "billing.specialist",
+                "Samuel",
+                "Adeyemi",
+                Gender.MALE,
+                "Finance",
+                "Finance",
+                "Billing Specialist",
+                "MID",
+                "billing.admin",
+                5900
+            ),
+            p(
+                "expense.admin",
+                "Anna",
+                "Kowalski",
+                Gender.FEMALE,
+                "Finance",
+                "Finance",
+                "Accounts Payable Lead",
+                "SENIOR",
+                "finance.manager",
+                7800
+            ),
+            p(
+                "expense.approver",
+                "David",
+                "Levi",
+                Gender.MALE,
+                "Finance",
+                "Finance",
+                "Finance Controller",
+                "LEAD",
+                "finance.manager",
+                10200
+            ),
+            p("auditor", "Ingrid", "Larsen", Gender.FEMALE, "Finance", "Finance", "Internal Auditor", "SENIOR", "finance.manager", 9000),
+            p(
+                "report.admin",
+                "Victor",
+                "Nguyen",
+                Gender.MALE,
+                "Finance",
+                "Finance",
+                "Business Intelligence Lead",
+                "LEAD",
+                "finance.manager",
+                9400
+            ),
+            p("report.viewer", "Emma", "Jansen", Gender.FEMALE, "Finance", "Finance", "Reporting Analyst", "JUNIOR", "report.admin", 5600),
+            // Engineering
+            p(
+                "manager",
+                "Priya",
+                "Natarajan",
+                Gender.FEMALE,
+                "Engineering",
+                "Platform Team",
+                "Engineering Manager",
+                "LEAD",
+                "department.head",
+                14500
+            ),
+            p("employee", "Lucas", "Moreau", Gender.MALE, "Engineering", "Platform Team", "Software Engineer", "MID", "manager", 9200),
+            p(
+                "timesheet.approver",
+                "Omar",
+                "Farouk",
+                Gender.MALE,
+                "Engineering",
+                "Product Team",
+                "Engineering Manager",
+                "LEAD",
+                "department.head",
+                14000
+            ),
+            // IT
+            p("integration.admin", "Sara", "Lindgren", Gender.FEMALE, "IT", "IT", "Integration Engineer", "SENIOR", "tenant.admin", 9600),
+            p("it.support", "Noah", "Kim", Gender.MALE, "IT", "IT", "IT Support Specialist", "MID", "tenant.admin", 5800)
+        );
+    }
+
+    private static Person p(
+        String key,
+        String first,
+        String last,
+        Gender gender,
+        String dept,
+        String unit,
+        String title,
+        String level,
+        String manager,
+        int salary
+    ) {
+        return new Person(key, first, last, gender, dept, unit, title, level, manager, salary, true);
+    }
+
+    private static Person s(
+        String first,
+        String last,
+        Gender g,
+        String dept,
+        String unit,
+        String title,
+        String level,
+        String manager,
+        int salary
+    ) {
+        String login = (first + "." + last).toLowerCase().replaceAll("[^a-z.]", "") + "@" + STAFF_DOMAIN;
+        return new Person(login, first, last, g, dept, unit, title, level, manager, salary, false);
+    }
+
+    /** Additional staff (new logins, created through one-step provisioning). */
+    private static List<Person> staff() {
+        String platform = "manager";
+        String product = "timesheet.approver";
+        String mobileLead = "kenji.watanabe@" + STAFF_DOMAIN;
+        String salesHead = "amelia.clarke@" + STAFF_DOMAIN;
+        String entLead = "jack.morrison@" + STAFF_DOMAIN;
+        String csLead = "lena.hoffmann@" + STAFF_DOMAIN;
+        String ops = "attendance.admin";
+        return List.of(
+            // Engineering — Mobile team lead first so reports can reference them.
+            s("Kenji", "Watanabe", Gender.MALE, "Engineering", "Mobile Team", "Engineering Manager", "LEAD", "department.head", 14200),
+            s("Ava", "Johansson", Gender.FEMALE, "Engineering", "Platform Team", "Staff Software Engineer", "PRINCIPAL", platform, 13800),
+            s("Mateo", "Garcia", Gender.MALE, "Engineering", "Platform Team", "Senior Software Engineer", "SENIOR", platform, 11500),
+            s("Zoe", "Papadopoulos", Gender.FEMALE, "Engineering", "Platform Team", "Site Reliability Engineer", "SENIOR", platform, 11200),
+            s("Ibrahim", "Diallo", Gender.MALE, "Engineering", "Platform Team", "Software Engineer", "MID", platform, 9000),
+            s("Hana", "Suzuki", Gender.FEMALE, "Engineering", "Platform Team", "Junior Software Engineer", "JUNIOR", platform, 6800),
+            s("Ethan", "Brooks", Gender.MALE, "Engineering", "Platform Team", "Software Engineer Intern", "INTERN", platform, 3500),
+            s("Maya", "Goldberg", Gender.FEMALE, "Engineering", "Product Team", "Senior Software Engineer", "SENIOR", product, 11400),
+            s("Andrei", "Popescu", Gender.MALE, "Engineering", "Product Team", "Software Engineer", "MID", product, 9100),
+            s("Leila", "Karimi", Gender.FEMALE, "Engineering", "Product Team", "Product Designer", "SENIOR", product, 10200),
+            s("Felix", "Novak", Gender.MALE, "Engineering", "Product Team", "QA Engineer", "MID", product, 7800),
+            s("Ruth", "Abebe", Gender.FEMALE, "Engineering", "Product Team", "Product Manager", "SENIOR", product, 11900),
+            s("Diego", "Alvarez", Gender.MALE, "Engineering", "Mobile Team", "Senior Mobile Engineer", "SENIOR", mobileLead, 11300),
+            s("Sun", "Li", Gender.FEMALE, "Engineering", "Mobile Team", "Mobile Engineer", "MID", mobileLead, 9000),
+            s("Patrick", "Murphy", Gender.MALE, "Engineering", "Mobile Team", "Mobile Engineer", "MID", mobileLead, 8900),
+            s("Amara", "Okonkwo", Gender.FEMALE, "Engineering", "Mobile Team", "Junior Mobile Engineer", "JUNIOR", mobileLead, 6700),
+            // Sales
+            s("Amelia", "Clarke", Gender.FEMALE, "Sales", "Sales", "VP of Sales", "PRINCIPAL", "executive", 19000),
+            s("Jack", "Morrison", Gender.MALE, "Sales", "Enterprise Sales", "Enterprise Sales Lead", "LEAD", salesHead, 12500),
+            s("Lena", "Hoffmann", Gender.FEMALE, "Sales", "Customer Success", "Customer Success Lead", "LEAD", salesHead, 11000),
+            s("Ricardo", "Silva", Gender.MALE, "Sales", "Enterprise Sales", "Account Executive", "SENIOR", entLead, 9500),
+            s("Julia", "Novakova", Gender.FEMALE, "Sales", "Enterprise Sales", "Account Executive", "MID", entLead, 8200),
+            s("Hassan", "Ali", Gender.MALE, "Sales", "Enterprise Sales", "Sales Development Representative", "JUNIOR", entLead, 5200),
+            s(
+                "Charlotte",
+                "Evans",
+                Gender.FEMALE,
+                "Sales",
+                "Enterprise Sales",
+                "Sales Development Representative",
+                "JUNIOR",
+                entLead,
+                5100
+            ),
+            s("Tariq", "Hussain", Gender.MALE, "Sales", "Customer Success", "Customer Success Manager", "MID", csLead, 7600),
+            s("Sophie", "Laurent", Gender.FEMALE, "Sales", "Customer Success", "Customer Success Manager", "MID", csLead, 7500),
+            s("Erik", "Svensson", Gender.MALE, "Sales", "Customer Success", "Support Specialist", "JUNIOR", csLead, 5000),
+            s("Nadia", "Benali", Gender.FEMALE, "Sales", "Sales", "Partnerships Manager", "SENIOR", salesHead, 9800),
+            // Operations
+            s("Paul", "Martin", Gender.MALE, "Operations", "Operations", "Office Manager", "SENIOR", ops, 6900),
+            s("Rosa", "Fernandez", Gender.FEMALE, "Operations", "Operations", "Workforce Scheduler", "MID", ops, 5800),
+            s("George", "Baker", Gender.MALE, "Operations", "Operations", "Facilities Coordinator", "JUNIOR", ops, 4800),
+            s("Ines", "Duarte", Gender.FEMALE, "Operations", "Operations", "Operations Analyst", "MID", ops, 6200),
+            // People, Finance, IT extra hands
+            s(
+                "Victoria",
+                "Ivanova",
+                Gender.FEMALE,
+                "People & Culture",
+                "People & Culture",
+                "HR Coordinator",
+                "JUNIOR",
+                "hr.specialist",
+                4900
+            ),
+            s("Kofi", "Mensah", Gender.MALE, "Finance", "Finance", "Accountant", "MID", "expense.approver", 6600),
+            s("Alice", "Moreno", Gender.FEMALE, "Finance", "Finance", "Accounts Payable Clerk", "JUNIOR", "expense.admin", 4700),
+            s("Max", "Keller", Gender.MALE, "IT", "IT", "Systems Administrator", "SENIOR", "tenant.admin", 8700),
+            s("Lucia", "Romano", Gender.FEMALE, "IT", "IT", "Security Analyst", "SENIOR", "tenant.admin", 9300)
+        );
+    }
+
+    private void seedPeople() {
+        Map<String, UUID> ids = new HashMap<>();
+        var levels = inTx(jobLevelRepository::findAll);
+        var grades = inTx(jobGradeRepository::findAll);
+        var types = inTx(employmentTypeRepository::findAll);
+
+        // 1. Personas: their logins are plain users; graft the employee row onto each, then fill it in.
+        for (Person person : personas()) {
+            String login = person.key() + "@demo.humano";
+            UUID positionId = position(person.unit(), person.title(), person.level());
+            UUID unitId = unitIds.get(person.unit());
+            UUID id = inTx(() -> graftEmployee(login, positionId, unitId));
+            if (id == null) {
+                log.warn("[demo-data] persona login {} not found; skipped", login);
+                continue;
+            }
+            UUID managerId = person.managerKey() == null ? null : ids.get(person.managerKey());
+            inTx(() -> {
+                Employee e = employeeRepository.findById(id).orElseThrow();
+                e.setFirstName(person.firstName());
+                e.setLastName(person.lastName());
+                e.setJobTitle(person.title());
+                e.setStatus(EmployeeStatus.ACTIVE);
+                e.setStartDate(startDateFor(person.level()));
+                e.setCountry(countryRepository.getReferenceById(usaId));
+                e.setNationality(countryRepository.getReferenceById(usaId));
+                e.setDepartment(departmentRepository.getReferenceById(departmentIds.get(person.department())));
+                e.setUnit(unitRepository.getReferenceById(unitId));
+                e.setManager(managerId == null ? null : employeeRepository.getReferenceById(managerId));
+                e.setPhone(phone());
+                e.setWorkPhone(phone());
+                e.setGender(person.gender());
+                e.setBirthDate(birthDate());
+                e.setWorkLocation(workLocation());
+                e.setFte(BigDecimal.ONE);
+                e.setEmployeeNumber(employeeNumber());
+                e.setEmploymentType(pick(types, "FULL_TIME"));
+                e.setLevel(pick(levels, person.level()));
+                e.setGrade(pick(grades, gradeFor(person.level())));
+                authorityRepository.findById(AuthoritiesConstants.EMPLOYEE).ifPresent(a -> e.getAuthorities().add(a));
+                employeeRepository.saveAndFlush(e); // @PreUpdate recomputes the materialized path
+                return null;
+            });
+            ids.put(person.key(), id);
+            remember(person, id, managerId);
+        }
+
+        // 2. Staff: brand-new logins through the same one-step provisioning the HR UI uses.
+        for (Person person : staff()) {
+            UUID managerId = ids.get(person.managerKey());
+            UUID existingId = inTx(() -> userRepository.findOneByLogin(person.key()).map(User::getId).orElse(null));
+            if (existingId != null) {
+                ids.put(person.key(), existingId);
+                remember(person, existingId, managerId);
+                continue;
+            }
+            CreateEmployeeRequest request = new CreateEmployeeRequest(
+                person.key(),
+                person.firstName(),
+                person.lastName(),
+                person.key(),
+                null,
+                "en",
+                Set.of(AuthoritiesConstants.USER),
+                person.title(),
+                phone(),
+                startDateFor(person.level()),
+                null,
+                EmployeeStatus.ACTIVE,
+                usaId,
+                departmentIds.get(person.department()),
+                position(person.unit(), person.title(), person.level()),
+                unitIds.get(person.unit()),
+                managerId,
+                new EmployeePersonalDetails(
+                    employeeNumber(),
+                    birthDate(),
+                    person.gender(),
+                    pickOne(CITIES)[0],
+                    phone(),
+                    workLocation(),
+                    "INTERN".equals(person.level()) ? new BigDecimal("0.50") : BigDecimal.ONE,
+                    null,
+                    null,
+                    null
+                ),
+                null,
+                null,
+                ref(types, "INTERN".equals(person.level()) ? "INTERN" : "FULL_TIME"),
+                ref(grades, gradeFor(person.level())),
+                ref(levels, person.level()),
+                null,
+                null
+            );
+            UUID id = employeeProfileService.provisionEmployee(request).id();
+            ids.put(person.key(), id);
+            remember(person, id, managerId);
+        }
+    }
+
+    private void remember(Person person, UUID id, UUID managerId) {
+        Seeded seeded = new Seeded(person.key(), id, person.department(), person.title(), managerId, BigDecimal.valueOf(person.salary()));
+        people.add(seeded);
+        byKey.put(person.key(), seeded);
+    }
+
+    /**
+     * Adds the {@code employee} child row to an existing persona user (JOINED inheritance) so the
+     * login becomes an employee without changing its id or password. Returns null if absent.
+     */
+    private UUID graftEmployee(String login, UUID positionId, UUID unitId) {
+        User user = userRepository.findOneByLogin(login).orElse(null);
+        if (user == null) {
+            return null;
+        }
+        UUID id = user.getId();
+        if (employeeRepository.existsById(id)) {
+            return id;
+        }
+        entityManager
+            .createNativeQuery(
+                "INSERT INTO employee (id, status, position_id, unit_id, path) " +
+                "VALUES (UUID_TO_BIN(:id), 'ACTIVE', UUID_TO_BIN(:position), UUID_TO_BIN(:unit), :path)"
+            )
+            .setParameter("id", id.toString())
+            .setParameter("position", positionId.toString())
+            .setParameter("unit", unitId.toString())
+            .setParameter("path", "/" + id)
+            .executeUpdate();
+        entityManager.clear(); // drop the cached plain-User instance so the next load sees an Employee
+        return id;
+    }
+
+    private void assignHeads() {
+        Map<String, String> heads = Map.of(
+            "Executive Office",
+            "executive",
+            "People & Culture",
+            "hr.manager",
+            "Finance",
+            "finance.manager",
+            "Engineering",
+            "department.head",
+            "Sales",
+            "amelia.clarke@" + STAFF_DOMAIN,
+            "Operations",
+            "attendance.admin",
+            "IT",
+            "tenant.admin"
+        );
+        Map<String, String> teamLeads = Map.of(
+            "Platform Team",
+            "manager",
+            "Product Team",
+            "timesheet.approver",
+            "Mobile Team",
+            "kenji.watanabe@" + STAFF_DOMAIN,
+            "Enterprise Sales",
+            "jack.morrison@" + STAFF_DOMAIN,
+            "Customer Success",
+            "lena.hoffmann@" + STAFF_DOMAIN,
+            "Demo Company",
+            "executive"
+        );
+        inTx(() -> {
+            heads.forEach((dept, key) -> {
+                Seeded head = byKey.get(key);
+                if (head == null) {
+                    return;
+                }
+                Department d = departmentRepository.findById(departmentIds.get(dept)).orElseThrow();
+                d.setHead(employeeRepository.getReferenceById(head.id()));
+                OrganizationalUnit u = unitRepository.findById(unitIds.get(dept)).orElseThrow();
+                u.setManager(employeeRepository.getReferenceById(head.id()));
+            });
+            teamLeads.forEach((unit, key) -> {
+                Seeded lead = byKey.get(key);
+                if (lead != null) {
+                    unitRepository.findById(unitIds.get(unit)).orElseThrow().setManager(employeeRepository.getReferenceById(lead.id()));
+                }
+            });
+            return null;
+        });
+    }
+
+    // ---------------------------------------------------------------- employee records
+
+    private static final String[][] CITIES = {
+        { "Austin", "TX", "73301" },
+        { "Seattle", "WA", "98101" },
+        { "Denver", "CO", "80202" },
+        { "Boston", "MA", "02108" },
+        { "Chicago", "IL", "60601" },
+        { "Portland", "OR", "97201" },
+        { "Raleigh", "NC", "27601" },
+        { "San Diego", "CA", "92101" },
+    };
+    private static final String[] STREETS = {
+        "Maple Avenue",
+        "Oak Street",
+        "Cedar Lane",
+        "Pine Road",
+        "Elm Street",
+        "Lakeview Drive",
+        "Hillcrest Road",
+    };
+    private static final String[] RELATIONSHIPS = { "Spouse", "Partner", "Parent", "Sibling", "Friend" };
+    private static final String[] CONTACT_FIRST = {
+        "Michael",
+        "Sarah",
+        "James",
+        "Linda",
+        "Robert",
+        "Maria",
+        "John",
+        "Patricia",
+        "Ahmed",
+        "Mina",
+    };
+
+    private void seedEmployeeRecords() {
+        for (Seeded e : people) {
+            Employee entity = inTx(() -> employeeRepository.findById(e.id()).orElseThrow());
+            LocalDate start = entity.getStartDate();
+            UUID positionId = inTx(() -> employeeRepository.findById(e.id()).orElseThrow().getPosition().getId());
+            String lastName = entity.getLastName();
+
+            compensationService.createCompensation(
+                new CreateCompensationRequest(e.id(), positionId, usdId, e.salary(), Basis.MONTHLY, start, null)
+            );
+            String[] city = pickOne(CITIES);
+            addressService.create(
+                new CreateAddressRequest(
+                    e.id(),
+                    "Home",
+                    (100 + random.nextInt(8900)) + " " + pickOne(STREETS),
+                    null,
+                    random.nextInt(3) == 0 ? "Apt " + (1 + random.nextInt(40)) : null,
+                    city[0],
+                    city[1],
+                    city[2],
+                    usaId,
+                    true
+                )
+            );
+            emergencyContactService.create(
+                new CreateEmergencyContactRequest(e.id(), pickOne(CONTACT_FIRST) + " " + lastName, pickOne(RELATIONSHIPS), phone(), null)
+            );
+            contractService.create(
+                new CreateEmploymentContractRequest(
+                    e.id(),
+                    "CT-" + start.getYear() + "-" + String.format("%04d", people.indexOf(e) + 1),
+                    start,
+                    null,
+                    "Permanent",
+                    positionId,
+                    departmentIds.get(e.department()),
+                    new BigDecimal("40.0"),
+                    start.minusDays(14),
+                    "Active"
+                )
+            );
+        }
+    }
+
+    // ---------------------------------------------------------------- time
+
+    private void seedTime() {
+        List<UUID> projects = new ArrayList<>();
+        String[][] defs = {
+            { "Payroll Engine v2", "Rebuild of the payroll calculation engine for multi-country support." },
+            { "Mobile App Launch", "First public release of the employee self-service mobile app." },
+            { "Customer Portal", "Self-service portal for enterprise customers." },
+            { "SOC 2 Readiness", "Controls, evidence collection and audit preparation." },
+        };
+        for (String[] d : defs) {
+            projects.add(
+                projectService
+                    .createProject(
+                        new CreateProjectRequest(d[0], d[1], today.minusMonths(4).atTime(9, 0), today.plusMonths(5).atTime(18, 0))
+                    )
+                    .id()
+            );
+        }
+        // Two working weeks of timesheets for engineering; attendance for everyone.
+        List<LocalDate> days = workingDays(today.minusDays(1), 10);
+        for (Seeded e : people) {
+            boolean engineer = "Engineering".equals(e.department());
+            for (LocalDate day : days) {
+                if (engineer) {
+                    timesheetService.createTimesheet(
+                        new CreateTimesheetRequest(
+                            e.id(),
+                            day,
+                            BigDecimal.valueOf(7 + random.nextInt(3)).setScale(1),
+                            projects.get(random.nextInt(2))
+                        )
+                    );
+                }
+                int roll = random.nextInt(20);
+                AttendanceStatus status = roll == 0
+                    ? AttendanceStatus.LATE
+                    : roll == 1 ? AttendanceStatus.WORK_FROM_HOME : AttendanceStatus.PRESENT;
+                LocalTime in = LocalTime.of(8, 30).plusMinutes(random.nextInt(45) + (status == AttendanceStatus.LATE ? 60 : 0));
+                attendanceService.createAttendance(
+                    new CreateAttendanceRequest(e.id(), day, in, in.plusHours(8).plusMinutes(random.nextInt(60)), status)
+                );
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- leave & expenses
+
+    private static final String[] VACATION_REASONS = {
+        "Family vacation planned months ago; handover notes are in the team wiki.",
+        "Annual leave to attend a wedding abroad, coverage arranged with my team.",
+        "Taking a long weekend to rest after the quarterly release.",
+        "Visiting family for the holidays, will be reachable for emergencies.",
+    };
+    private static final String[] SICK_REASONS = {
+        "Seasonal flu, doctor recommended rest for a few days.",
+        "Recovering from a minor outpatient procedure as advised by my doctor.",
+    };
+
+    private void seedLeave() {
+        List<Seeded> staff = people.stream().filter(p -> p.managerId() != null).toList();
+        int i = 0;
+        for (Seeded e : staff) {
+            int kind = i++ % 6;
+            switch (kind) {
+                case 0 -> leave(e, LeaveType.VACATION, today.minusDays(40), 5, LeaveStatus.APPROVED);
+                case 1 -> leave(e, LeaveType.SICK, today.minusDays(18), 2, LeaveStatus.APPROVED);
+                case 2 -> leave(e, LeaveType.VACATION, nextMonday().plusWeeks(2), 5, LeaveStatus.PENDING);
+                case 3 -> leave(e, LeaveType.VACATION, today.minusDays(1), 4, LeaveStatus.APPROVED); // on leave today
+                case 4 -> leave(e, LeaveType.UNPAID, today.plusDays(30), 3, LeaveStatus.REJECTED);
+                default -> leave(e, LeaveType.VACATION, today.plusDays(10), 2, LeaveStatus.PENDING);
+            }
+        }
+    }
+
+    private void leave(Seeded e, LeaveType type, LocalDate start, int days, LeaveStatus outcome) {
+        String reason = type == LeaveType.SICK ? pickOne(SICK_REASONS) : pickOne(VACATION_REASONS);
+        if (type == LeaveType.UNPAID) {
+            reason = "Unpaid leave requested to handle a personal relocation matter.";
+        }
+        UUID id = leaveRequestService
+            .createLeaveRequest(new CreateLeaveRequest(start, start.plusDays(days - 1L), type, reason, e.id()))
+            .id();
+        if (outcome == LeaveStatus.PENDING) {
+            approvalService.submitLeaveRequest(id); // lands in the manager's approvals inbox
+        } else {
+            String comment = outcome == LeaveStatus.APPROVED ? "Approved — enjoy your time off." : "Declined: overlaps the year-end close.";
+            leaveRequestService.processLeaveRequest(id, new ProcessLeaveRequest(outcome, comment, e.managerId()));
+        }
+    }
+
+    private static final String[][] EXPENSES = {
+        { "Client dinner with Northwind Traders procurement team", "184.50" },
+        { "Train tickets to the Chicago customer workshop", "236.00" },
+        { "Conference pass — DevOps Days", "450.00" },
+        { "Ergonomic keyboard for home office", "129.99" },
+        { "Hotel, two nights for the Boston onsite", "612.40" },
+        { "Taxi from airport to client office", "58.20" },
+        { "Team offsite lunch", "312.75" },
+    };
+
+    private void seedExpenses() {
+        List<Seeded> staff = people.stream().filter(p -> p.managerId() != null).toList();
+        for (int i = 0; i < staff.size(); i += 2) {
+            Seeded e = staff.get(i);
+            String[] x = EXPENSES[i % EXPENSES.length];
+            UUID id = expenseClaimService
+                .createExpenseClaim(
+                    new CreateExpenseClaimRequest(e.id(), today.minusDays(3 + random.nextInt(40)), new BigDecimal(x[1]), x[0])
+                )
+                .id();
+            switch ((i / 2) % 3) {
+                case 0 -> approvalService.submitExpenseClaim(id);
+                case 1 -> expenseClaimService.processExpenseClaim(id, new ProcessExpenseClaimRequest(ExpenseClaimStatus.APPROVED));
+                default -> expenseClaimService.processExpenseClaim(id, new ProcessExpenseClaimRequest(ExpenseClaimStatus.REJECTED));
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- learning & performance
+
+    private void seedTrainings() {
+        Object[][] defs = {
+            {
+                "Security Awareness 2026",
+                "KnowBe4",
+                -60,
+                -59,
+                "Annual mandatory security and phishing awareness.",
+                "Online",
+                TrainingStatus.COMPLETED,
+            },
+            {
+                "Leading High-Performing Teams",
+                "Harvard ManageMentor",
+                -20,
+                -18,
+                "Coaching, feedback and delegation for people managers.",
+                "Boston, MA",
+                TrainingStatus.COMPLETED,
+            },
+            {
+                "AWS Solutions Architect – Associate",
+                "AWS Training",
+                14,
+                18,
+                "Exam preparation bootcamp.",
+                "Online",
+                TrainingStatus.PLANNED,
+            },
+            {
+                "Payroll Compliance Update",
+                "American Payroll Association",
+                21,
+                21,
+                "Federal and state payroll changes for next year.",
+                "Online",
+                TrainingStatus.PLANNED,
+            },
+        };
+        for (int t = 0; t < defs.length; t++) {
+            Object[] d = defs[t];
+            UUID trainingId = trainingService
+                .createTraining(
+                    new CreateTrainingRequest(
+                        (String) d[0],
+                        (String) d[1],
+                        today.plusDays((int) d[2]),
+                        today.plusDays((int) d[3]),
+                        (String) d[4],
+                        (String) d[5],
+                        d[6] == TrainingStatus.COMPLETED ? "Certificate of completion" : null
+                    )
+                )
+                .id();
+            for (Seeded e : people) {
+                boolean enrol =
+                    switch (t) {
+                        case 0 -> true;
+                        case 1 -> e.title().contains("Manager") || e.title().contains("Lead") || e.title().startsWith("Head");
+                        case 2 -> "Engineering".equals(e.department()) || "IT".equals(e.department());
+                        default -> "Finance".equals(e.department()) && e.title().contains("Payroll");
+                    };
+                if (enrol) {
+                    trainingService.enrollEmployee(new EnrollEmployeeTrainingRequest(e.id(), trainingId, (TrainingStatus) d[6], null));
+                }
+            }
+        }
+    }
+
+    private static final String[] REVIEW_COMMENTS = {
+        "Consistently delivers high-quality work and raises the bar for the team.",
+        "Strong collaborator; next step is owning larger cross-team initiatives.",
+        "Met expectations this cycle. Focus area: clearer written status updates.",
+        "Exceptional ownership during the release crunch; a role model for peers.",
+        "Solid technical growth. Would benefit from more proactive stakeholder communication.",
+    };
+
+    private void seedReviews() {
+        for (Seeded e : people) {
+            if (e.managerId() == null) {
+                continue;
+            }
+            int rating = 3 + (random.nextInt(10) < 7 ? random.nextInt(2) : (random.nextBoolean() ? 2 : -1));
+            reviewService.createPerformanceReview(
+                new CreatePerformanceReviewRequest(
+                    e.id(),
+                    e.managerId(),
+                    today.withDayOfYear(1).plusMonths(6).minusDays(1),
+                    pickOne(REVIEW_COMMENTS),
+                    Math.max(1, Math.min(5, rating))
+                )
+            );
+        }
+    }
+
+    // ---------------------------------------------------------------- payroll
+
+    private void seedPayroll() {
+        UUID calendarId = inTx(() -> payrollCalendarRepository.findAll().stream().findFirst().orElseThrow().getId());
+        LocalDate from = today.withDayOfYear(1);
+        LocalDate to = today.withDayOfMonth(1).plusMonths(2).minusDays(1);
+        payrollCalendarService.generatePeriods(new GeneratePayrollPeriodsRequest(calendarId, from, to, 5, true));
+        LocalDate lastMonth = today.minusMonths(1).withDayOfMonth(1);
+        // Read back from the repository: generatePeriods only returns periods it newly created.
+        PayrollPeriod period = inTx(() ->
+            payrollPeriodRepository
+                .findAll()
+                .stream()
+                .filter(p -> !p.getStartDate().isAfter(lastMonth) && !p.getEndDate().isBefore(lastMonth))
+                .findFirst()
+                .orElse(null)
+        );
+        if (period == null) {
+            log.info("[demo-data] no payroll period covering {}; skipping run", lastMonth);
+            return;
+        }
+        // Idempotent: re-initiating the same period returns the existing run.
+        PayrollRunResponse run = payrollProcessingService.initiatePayrollRun(
+            new InitiatePayrollRunRequest(
+                period.getId(),
+                InitiatePayrollRunRequest.PayrollScope.ALL,
+                List.of(),
+                false,
+                "Monthly payroll",
+                null
+            )
+        );
+        UUID runId = run.id();
+        log.info("[demo-data] payroll run {} for {} is {}", runId, period.getCode(), run.status());
+        RunStatus status = run.status();
+        if (status == RunStatus.DRAFT) {
+            status = payrollProcessingService.calculatePayroll(runId).status();
+        }
+        if (status == RunStatus.CALCULATED) {
+            Seeded approver = byKey.get("payroll.admin");
+            UUID approverId = approver != null ? approver.id() : null;
+            status = payrollProcessingService
+                .approvePayrollRun(new ApprovePayrollRunRequest(runId, approverId, "Reviewed against last month's variance report.", false))
+                .status();
+        }
+        if (status == RunStatus.APPROVED || status == RunStatus.POSTED) {
+            log.info("[demo-data] {} payslips generated", payslipService.generatePayslipsForRun(runId).size());
+        }
+    }
+
+    // ---------------------------------------------------------------- helpers
+
+    private <T extends AbstractReferenceData> T pick(List<T> all, String code) {
+        return all.stream().filter(r -> code.equals(r.getCode())).findFirst().orElse(null);
+    }
+
+    private <T> T pickOne(T[] values) {
+        return values[random.nextInt(values.length)];
+    }
+
+    private static String gradeFor(String level) {
+        return switch (level) {
+            case "INTERN", "JUNIOR" -> "G1";
+            case "MID" -> "G2";
+            case "SENIOR" -> "G3";
+            default -> "G4";
+        };
+    }
+
+    private LocalDate startDateFor(String level) {
+        int maxMonths =
+            switch (level) {
+                case "PRINCIPAL", "LEAD" -> 72;
+                case "SENIOR" -> 48;
+                case "INTERN" -> 3;
+                default -> 30;
+            };
+        // A handful of recent joiners so the dashboard feed has something fresh.
+        int months = random.nextInt(6) == 0 ? random.nextInt(2) : 2 + random.nextInt(maxMonths);
+        return today.minusMonths(months).minusDays(random.nextInt(28));
+    }
+
+    private LocalDate birthDate() {
+        return today.minusYears(23 + random.nextInt(30)).minusDays(random.nextInt(365));
+    }
+
+    private String phone() {
+        return String.format("+1 (%03d) 555-%04d", 200 + random.nextInt(700), random.nextInt(10000));
+    }
+
+    private int employeeCounter = 1000;
+
+    private String employeeNumber() {
+        return "EMP-" + (++employeeCounter);
+    }
+
+    private WorkLocationType workLocation() {
+        int r = random.nextInt(10);
+        return r < 5 ? WorkLocationType.HYBRID : r < 8 ? WorkLocationType.ONSITE : WorkLocationType.REMOTE;
+    }
+
+    private LocalDate nextMonday() {
+        LocalDate d = today.plusDays(1);
+        while (d.getDayOfWeek() != DayOfWeek.MONDAY) {
+            d = d.plusDays(1);
+        }
+        return d;
+    }
+
+    /** The {@code count} most recent working days up to and including {@code end}. */
+    private static List<LocalDate> workingDays(LocalDate end, int count) {
+        List<LocalDate> out = new ArrayList<>();
+        LocalDate d = end;
+        while (out.size() < count) {
+            if (d.getDayOfWeek() != DayOfWeek.SATURDAY && d.getDayOfWeek() != DayOfWeek.SUNDAY) {
+                out.add(d);
+            }
+            d = d.minusDays(1);
+        }
+        return out;
+    }
+}

@@ -7,7 +7,7 @@ import { map } from 'rxjs/operators';
 import { Page, normalizeHttpError } from 'app/core/api';
 import { Authority } from 'app/config/authority.constants';
 import { AccountService } from 'app/core/auth/account.service';
-import { SimpleEmployeeProfile, EmployeeService, LeaveRequestService, LeaveStatus } from 'app/features/employee';
+import { SimpleEmployeeProfile, EmployeeService, LeaveRequestService, LeaveStatus, personName } from 'app/features/employee';
 
 import { DepartmentService } from '../index';
 import {
@@ -68,6 +68,7 @@ export default class DashboardComponent {
   protected readonly pendingLeave = signal<Kpi>(kpiIdle());
   protected readonly onLeaveToday = signal<Kpi>(kpiIdle());
 
+  protected readonly name = personName;
   protected readonly joiners = signal<SimpleEmployeeProfile[] | null>(null);
   protected readonly joinersLoading = signal(true);
   protected readonly joinersError = signal<string | null>(null);

@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import { EmptyStateComponent, PageHeaderComponent } from 'app/shared/ui';
+import { ButtonComponent, EmptyStateComponent } from 'app/shared/ui';
 
 /**
  * Access-denied page — where `UserRouteAccessService` lands an authenticated
@@ -11,11 +12,16 @@ import { EmptyStateComponent, PageHeaderComponent } from 'app/shared/ui';
 @Component({
   selector: 'hum-access-denied',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageHeaderComponent, EmptyStateComponent, TranslatePipe],
+  imports: [EmptyStateComponent, ButtonComponent, RouterLink, TranslatePipe],
   template: `
     <div class="hum-page">
-      <hum-page-header [title]="'error.title' | translate" />
-      <hum-empty-state icon="shield-x" [title]="'error.http.403' | translate" [description]="'error.http.403' | translate" />
+      <hum-empty-state
+        icon="shield-x"
+        [title]="'error.forbidden.title' | translate"
+        [description]="'error.forbidden.description' | translate"
+      >
+        <hum-button hum-empty-action variant="outline" routerLink="/dashboard">{{ 'error.notFound.home' | translate }}</hum-button>
+      </hum-empty-state>
     </div>
   `,
 })

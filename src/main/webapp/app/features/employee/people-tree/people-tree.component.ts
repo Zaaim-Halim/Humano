@@ -1,32 +1,49 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
-import { TranslatePipe } from '@ngx-translate/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { LucideAngularModule } from 'lucide-angular';
+import { Observable, map } from 'rxjs';
 
 import { normalizeHttpError } from 'app/core/api';
 import {
   AlertComponent,
+  AvatarComponent,
   ButtonComponent,
   CardComponent,
   EmptyStateComponent,
+  OrgChartComponent,
+  OrgChartMemberDirective,
+  OrgChartNode,
+  OrgChartNodeDirective,
   PageHeaderComponent,
   SkeletonRowComponent,
   StatTileComponent,
 } from 'app/shared/ui';
 
 import { HrHierarchyService } from '../services/hr-hierarchy.service';
-import { CurrentEmployeeService } from '../services/current-employee.service';
-import { EmployeeHierarchyResponse, EmployeeTreeNode } from '../models/hierarchy.model';
-import { EmployeeTreeNodeComponent } from './employee-tree-node/employee-tree-node.component';
+import { EmployeeTreeNode } from '../models/hierarchy.model';
+
+/** An employee node shaped for the generic org chart (`childCount` = direct reports). */
+type PersonNode = EmployeeTreeNode & OrgChartNode & { children?: PersonNode[] };
+
+function toPersonNode(n: EmployeeTreeNode): PersonNode {
+  return { ...n, childCount: n.directReports ?? n.children?.length ?? 0, children: n.children?.map(toPersonNode) };
+}
+
+interface TreeStats {
+  people: number;
+  managers: number;
+  levels: number;
+}
 
 /**
- * People Tree — browse the reporting hierarchy rooted at an employee.
+ * People Tree — the reporting hierarchy as an org chart.
  *
- * Routed at `/people-tree/:employeeId`; the no-param `/people-tree` route resolves
- * the signed-in user's own employee id via {@link CurrentEmployeeService}; an account
- * with no employee record still resolves to null, so it degrades to a "pick someone
- * from the directory" empty state rather than erroring. Also embeddable via the
- * `rootEmployeeId` input.
+ * `/people-tree` loads the whole company in one request (`/employees/tree`), only as deep as
+ * the selected level; deeper branches are fetched when expanded. People with neither manager
+ * nor reports are listed separately. `/people-tree/:employeeId` (or the `rootEmployeeId` input)
+ * focuses on one person's organization. Searching loads every level so all people can match.
  */
 @Component({
   selector: 'hum-people-tree',
@@ -34,74 +51,126 @@ import { EmployeeTreeNodeComponent } from './employee-tree-node/employee-tree-no
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TranslatePipe,
+    LucideAngularModule,
+    RouterLink,
     PageHeaderComponent,
     CardComponent,
     StatTileComponent,
     AlertComponent,
+    AvatarComponent,
     ButtonComponent,
     EmptyStateComponent,
     SkeletonRowComponent,
-    EmployeeTreeNodeComponent,
+    OrgChartComponent,
+    OrgChartNodeDirective,
+    OrgChartMemberDirective,
   ],
   templateUrl: './people-tree.component.html',
 })
 export class PeopleTreeComponent implements OnInit {
   /** Root employee id when embedded; the route param wins for the routed page. */
   readonly rootEmployeeId = input<string>();
-  /** Max levels below the root; omit for the full subtree. */
-  readonly maxDepth = input<number>();
 
-  protected readonly root = signal<EmployeeTreeNode | null>(null);
+  protected readonly expandOptions = [
+    { depth: 1, label: 'humano.peopleTree.expandLeaders' },
+    { depth: 2, label: 'humano.peopleTree.expandTwo' },
+    { depth: 99, label: 'humano.peopleTree.expandAll' },
+  ];
+  protected readonly expandDepth = signal(1);
+
+  /** Top-level people who have reports (or the focused person). */
+  protected readonly roots = signal<PersonNode[]>([]);
+  /** Top-level people with no reports — not part of any reporting line. */
+  protected readonly unassigned = signal<PersonNode[]>([]);
+  protected readonly stats = signal<TreeStats>({ people: 0, managers: 0, levels: 0 });
+  protected readonly focused = signal<string | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly totalNodes = signal(0);
-  protected readonly maxLevels = signal(0);
+
+  protected readonly subtitle = computed(() => {
+    const root = this.focused() ? this.roots()[0] : null;
+    return root
+      ? this.translate.instant('humano.peopleTree.focusedOn', { name: root.fullName })
+      : this.translate.instant('humano.peopleTree.subtitle');
+  });
+
+  /** Fetches one level of reports for a node whose children were trimmed. */
+  protected readonly loadReports = (node: PersonNode): Observable<PersonNode[]> =>
+    this.hierarchy.getEmployeeSubtree(node.id, 1).pipe(map(r => (r.root.children ?? []).map(toPersonNode)));
+
+  protected readonly reportsLabel = (node: PersonNode): string =>
+    this.translate.instant('humano.peopleTree.reports', { direct: node.directReports ?? 0, total: node.totalReports ?? 0 });
+
+  /** Deepest level already fetched; selecting a deeper level re-fetches once. */
+  private loadedDepth = -1;
 
   private readonly hierarchy = inject(HrHierarchyService);
-  private readonly currentEmployee = inject(CurrentEmployeeService);
+  private readonly translate = inject(TranslateService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
-    // `resolve()` is synchronous today (a known-null seam). When the backend
-    // endpoint lands and it turns async, the no-param route should read
-    // `currentEmployeeId` reactively rather than snapshotting it here.
-    this.currentEmployee.resolve();
-    const id = this.resolveRootId();
-    if (id) this.load(id);
+    this.reload();
+  }
+
+  protected setDepth(depth: number): void {
+    this.expandDepth.set(depth);
+    if (depth > this.loadedDepth) {
+      this.reload();
+    }
+  }
+
+  /** Searching needs every person rendered, so load and expand everything. */
+  protected onSearchActive(active: boolean): void {
+    if (active && this.expandDepth() < 99) {
+      this.setDepth(99);
+    }
   }
 
   protected reload(): void {
-    const id = this.resolveRootId();
-    if (id) this.load(id);
+    const id = this.rootEmployeeId() ?? this.route.snapshot.paramMap.get('employeeId');
+    this.focused.set(id);
+    const depth = this.expandDepth() >= 99 ? undefined : this.expandDepth();
+    this.loading.set(this.roots().length === 0);
+    this.error.set(null);
+
+    const source: Observable<{ roots: EmployeeTreeNode[]; stats: TreeStats }> = id
+      ? this.hierarchy.getEmployeeSubtree(id, depth).pipe(
+          map(r => ({
+            roots: [r.root],
+            stats: { people: (r.root.totalReports ?? 0) + 1, managers: 0, levels: 0 },
+          })),
+        )
+      : this.hierarchy
+          .getEmployeeTree(depth)
+          .pipe(map(r => ({ roots: r.roots, stats: { people: r.totalPeople, managers: r.managers, levels: r.levels } })));
+
+    source.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ roots, stats }) => {
+        const nodes = roots.map(toPersonNode);
+        const withReports = id ? nodes : nodes.filter(n => (n.directReports ?? 0) > 0);
+        this.roots.set(withReports);
+        this.unassigned.set(nodes.filter(n => !withReports.includes(n)));
+        this.stats.set(stats);
+        this.loadedDepth = depth ?? 99;
+        this.loading.set(false);
+      },
+      error: (err: unknown) => {
+        this.error.set(normalizeHttpError(err));
+        this.loading.set(false);
+      },
+    });
+  }
+
+  protected showWholeCompany(): void {
+    void this.router.navigate(['/people-tree']).then(() => {
+      this.roots.set([]);
+      this.reload();
+    });
   }
 
   protected goToDirectory(): void {
     void this.router.navigate(['/employees']);
-  }
-
-  private resolveRootId(): string | null {
-    return this.rootEmployeeId() ?? this.route.snapshot.paramMap.get('employeeId') ?? this.currentEmployee.currentEmployeeId();
-  }
-
-  private load(id: string): void {
-    this.loading.set(true);
-    this.error.set(null);
-    this.hierarchy
-      .getEmployeeSubtree(id, this.maxDepth())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (response: EmployeeHierarchyResponse) => {
-          this.root.set(response.root);
-          this.totalNodes.set(response.totalNodes);
-          this.maxLevels.set(response.maxDepth);
-          this.loading.set(false);
-        },
-        error: (err: unknown) => {
-          this.error.set(normalizeHttpError(err));
-          this.loading.set(false);
-        },
-      });
   }
 }

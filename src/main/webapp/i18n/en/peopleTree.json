@@ -2,15 +2,23 @@
   "humano": {
     "peopleTree": {
       "title": "People tree",
-      "subtitle": "Browse the reporting hierarchy by manager",
+      "subtitle": "Who reports to whom, from the top of the company down",
       "statTotal": "People",
       "statLevels": "Levels",
-      "reportsTo": "Reports to",
-      "subordinatesHidden": "{{ count }} hidden",
-      "noRootTitle": "Pick someone to start",
-      "noRootBody": "Open an employee from the directory to explore their reporting line.",
+      "statManagers": "Managers",
+      "reports": "{{ direct }} direct · {{ total }} total",
+      "expandLeaders": "Leadership",
+      "expandTwo": "Two levels",
+      "expandAll": "Everyone",
+      "wholeCompany": "Whole company",
+      "focusedOn": "Showing {{ name }}'s organization",
+      "unassignedTitle": "Not in a reporting line",
+      "unassignedBody": "These people have no manager and no direct reports.",
+      "noRootTitle": "No reporting lines yet",
+      "noRootBody": "Assign managers to employees to build the people tree.",
       "goToDirectory": "Go to directory",
-      "errorTitle": "Couldn't load the people tree"
+      "errorTitle": "Couldn't load the people tree",
+      "search": "Find a person or title"
     }
   }
 }

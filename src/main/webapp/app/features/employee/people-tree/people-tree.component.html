@@ -1,29 +1,99 @@
 <div class="hum-page">
-  <hum-page-header [title]="'humano.peopleTree.title' | translate" [subtitle]="'humano.peopleTree.subtitle' | translate" />
+  <hum-page-header [title]="'humano.peopleTree.title' | translate" [subtitle]="subtitle()" />
 
   @if (loading()) {
-    <hum-card><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></hum-card>
+    <div class="hum-orgchart" aria-busy="true"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
   } @else if (error(); as e) {
     <hum-alert tone="danger" [title]="'humano.peopleTree.errorTitle' | translate">
       <p style="margin: 0 0 var(--space-2)">{{ e }}</p>
       <hum-button variant="outline" size="sm" (click)="reload()">{{ 'humano.action.retry' | translate }}</hum-button>
     </hum-alert>
-  } @else if (root(); as r) {
-    <div
-      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4)"
-    >
-      <hum-stat-tile icon="users" [label]="'humano.peopleTree.statTotal' | translate" [value]="totalNodes()" />
-      <hum-stat-tile icon="layers" [label]="'humano.peopleTree.statLevels' | translate" [value]="maxLevels()" />
+  } @else if (roots().length) {
+    @if (!focused()) {
+      <div
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: var(--space-3);
+          margin-bottom: var(--space-4);
+        "
+      >
+        <hum-stat-tile icon="users" [label]="'humano.peopleTree.statTotal' | translate" [value]="stats().people" />
+        <hum-stat-tile icon="user-check" [label]="'humano.peopleTree.statManagers' | translate" [value]="stats().managers" />
+        <hum-stat-tile icon="layers" [label]="'humano.peopleTree.statLevels' | translate" [value]="stats().levels" />
+      </div>
+    }
+
+    <div class="hum-orgchart-toolbar">
+      <div class="hum-orgchart-toolbar__group">
+        @for (opt of expandOptions; track opt.depth) {
+          <hum-button size="sm" [variant]="expandDepth() === opt.depth ? 'secondary' : 'ghost'" (click)="setDepth(opt.depth)">
+            {{ opt.label | translate }}
+          </hum-button>
+        }
+      </div>
+      @if (focused()) {
+        <hum-button size="sm" variant="outline" (click)="showWholeCompany()">
+          <lucide-icon name="network" [size]="14" />{{ 'humano.peopleTree.wholeCompany' | translate }}
+        </hum-button>
+      }
     </div>
-    <hum-card>
-      <hum-employee-tree-node [node]="r" />
-    </hum-card>
+
+    <hum-org-chart
+      [label]="'humano.peopleTree.title' | translate"
+      [searchPlaceholder]="'humano.peopleTree.search' | translate"
+      [roots]="roots()"
+      [expandDepth]="expandDepth()"
+      [loadChildren]="loadReports"
+      [toggleLabel]="reportsLabel"
+      (searchActive)="onSearchActive($event)"
+    >
+      <ng-template humOrgChartNode let-node>
+        <hum-avatar class="hum-orgnode__avatar" [name]="node.fullName" [src]="node.imageUrl" size="lg" />
+        <a class="hum-orgnode__name" [routerLink]="['/employees', node.id]" [title]="node.fullName">{{ node.fullName }}</a>
+        @if (node.jobTitle) {
+          <div class="hum-orgnode__title" [title]="node.jobTitle">{{ node.jobTitle }}</div>
+        }
+        @if (node.unit) {
+          <div class="hum-orgnode__meta"><lucide-icon name="network" [size]="12" />{{ node.unit.name }}</div>
+        }
+      </ng-template>
+      <ng-template humOrgChartMember let-node>
+        <a class="hum-orgchart__member" [routerLink]="['/employees', node.id]">
+          <hum-avatar [name]="node.fullName" [src]="node.imageUrl" size="sm" />
+          <span class="hum-orgchart__member-text">
+            <span class="hum-orgnode__name">{{ node.fullName }}</span>
+            <span class="hum-orgnode__title">{{ node.jobTitle ?? '—' }}</span>
+          </span>
+        </a>
+      </ng-template>
+    </hum-org-chart>
+
+    @if (unassigned().length) {
+      <hum-card [title]="'humano.peopleTree.unassignedTitle' | translate" hasHeader style="margin-top: var(--space-4)">
+        <p style="margin: 0 0 var(--space-3); color: var(--text-muted); font-size: var(--text-sm)">
+          {{ 'humano.peopleTree.unassignedBody' | translate }}
+        </p>
+        <ul class="hum-orgchart__team" style="--hum-team-cols: 3; box-shadow: none">
+          @for (u of unassigned(); track u.id) {
+            <li>
+              <a class="hum-orgchart__member" [routerLink]="['/employees', u.id]">
+                <hum-avatar [name]="u.fullName" [src]="u.imageUrl" size="sm" />
+                <span class="hum-orgchart__member-text">
+                  <span class="hum-orgnode__name">{{ u.fullName }}</span>
+                  <span class="hum-orgnode__title">{{ u.jobTitle ?? '—' }}</span>
+                </span>
+              </a>
+            </li>
+          }
+        </ul>
+      </hum-card>
+    }
   } @else {
     <hum-empty-state
       icon="users"
       [title]="'humano.peopleTree.noRootTitle' | translate"
       [description]="'humano.peopleTree.noRootBody' | translate"
-      hasAction
     >
       <hum-button hum-empty-action variant="primary" (click)="goToDirectory()">{{
         'humano.peopleTree.goToDirectory' | translate

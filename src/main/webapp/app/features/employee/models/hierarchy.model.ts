@@ -34,6 +34,10 @@ export interface EmployeeTreeNode {
   path: string;
   manager: EmployeeRef | null;
   unit: OrganizationalUnitRef | null;
+  /** Direct reports in the full hierarchy (tree responses only; `children` may be trimmed). */
+  directReports?: number | null;
+  /** All reports below this person (tree responses only). */
+  totalReports?: number | null;
   children?: EmployeeTreeNode[];
 }
 
@@ -41,6 +45,14 @@ export interface EmployeeTreeNode {
  * EmployeeHierarchyResponse — envelope for a single employee subtree
  * Provides metadata about the tree (totalNodes, maxDepth) and the root node
  */
+/** `GET /employees/tree` — the whole reporting forest; totals describe the full hierarchy. */
+export interface EmployeeForestResponse {
+  totalPeople: number;
+  managers: number;
+  levels: number;
+  roots: EmployeeTreeNode[];
+}
+
 export interface EmployeeHierarchyResponse {
   rootId: string;
   totalNodes: number;
@@ -64,6 +76,10 @@ export interface OrganizationalUnitTreeNode {
   // Backend `Long headcount` — populated when includeHeadcount is requested,
   // null otherwise (Jackson always emits the record component).
   headcount?: number | null;
+  /** Sub-units in the full hierarchy (`children` may be trimmed by depth). */
+  childCount?: number | null;
+  /** People in this unit and all its sub-units (when headcount was requested). */
+  totalHeadcount?: number | null;
   children?: OrganizationalUnitTreeNode[];
 }
 

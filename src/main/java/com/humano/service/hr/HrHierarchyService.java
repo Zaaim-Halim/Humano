@@ -2,6 +2,7 @@ package com.humano.service.hr;
 
 import com.humano.domain.hr.OrganizationalUnit;
 import com.humano.domain.shared.Employee;
+import com.humano.dto.hr.responses.hierarchy.EmployeeForestResponse;
 import com.humano.dto.hr.responses.hierarchy.EmployeeHierarchyResponse;
 import com.humano.dto.hr.responses.hierarchy.EmployeeRef;
 import com.humano.dto.hr.responses.hierarchy.EmployeeTreeNode;
@@ -85,11 +86,41 @@ public class HrHierarchyService {
         int rootDepth = countSegments(root.getPath());
 
         List<EmployeeHierarchyRow> filtered = trimByDepth(rows, EmployeeHierarchyRow::path, rootDepth, maxDepth);
-        EmployeeTreeNode tree = assembleEmployeeTree(filtered, rootEmployeeId);
+        EmployeeTreeNode tree = assembleEmployeeForest(filtered, reportCounts(rows)).get(rootEmployeeId);
 
         int returned = filtered.size();
         int reachedDepth = filtered.stream().mapToInt(r -> countSegments(r.path()) - rootDepth).max().orElse(0);
         return new EmployeeHierarchyResponse(rootEmployeeId, returned, reachedDepth, tree);
+    }
+
+    /**
+     * Returns the whole reporting hierarchy as a forest — every employee without a manager with
+     * their subtree — trimmed to {@code maxDepth} levels below the top. One query; every node
+     * carries its direct/total report counts from the full hierarchy, so a client can render a
+     * shallow tree and lazily load deeper levels via {@link #getEmployeeSubtree}.
+     *
+     * @param maxDepth levels below each top-level employee (null = no limit; 0 = top level only)
+     */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public EmployeeForestResponse getEmployeeTree(Integer maxDepth) {
+        log.debug("Building employee forest (maxDepth={})", maxDepth);
+
+        List<EmployeeHierarchyRow> rows = employeeRepository.findAllHierarchyRows();
+        Map<String, int[]> counts = reportCounts(rows);
+        List<EmployeeHierarchyRow> filtered = trimByDepth(rows, EmployeeHierarchyRow::path, 1, maxDepth);
+
+        Map<UUID, EmployeeTreeNode> forest = assembleEmployeeForest(filtered, counts);
+        List<EmployeeTreeNode> roots = new ArrayList<>();
+        for (EmployeeHierarchyRow row : filtered) {
+            if (row.managerId() == null) {
+                roots.add(forest.get(row.id()));
+            }
+        }
+        roots.sort(Comparator.comparingInt((EmployeeTreeNode n) -> n.totalReports() == null ? 0 : n.totalReports()).reversed());
+
+        int managers = (int) counts.values().stream().filter(c -> c[0] > 0).count();
+        int levels = rows.stream().mapToInt(r -> countSegments(r.path())).max().orElse(0);
+        return new EmployeeForestResponse(rows.size(), managers, levels, roots);
     }
 
     /**
@@ -114,7 +145,7 @@ public class HrHierarchyService {
         for (UUID id : chainIds) {
             EmployeeHierarchyRow row = byId.get(id);
             if (row != null) {
-                chain.add(toEmployeeNode(row, countSegments(row.path()), Collections.emptyList()));
+                chain.add(toEmployeeNode(row, countSegments(row.path()), null, Collections.emptyList()));
             }
         }
         return HierarchyAncestorsResponse.forEmployee(employeeId, chain);
@@ -143,32 +174,38 @@ public class HrHierarchyService {
         int rootDepth = countSegments(root.getPath());
         List<OrganizationalUnitHierarchyRow> filtered = trimByDepth(rows, OrganizationalUnitHierarchyRow::path, rootDepth, maxDepth);
 
-        Map<UUID, Long> headcounts = includeHeadcount ? loadHeadcounts(root.getPath()) : Collections.emptyMap();
+        Map<UUID, Long> headcounts = includeHeadcount ? loadHeadcounts(root.getPath()) : null;
 
-        OrganizationalUnitTreeNode tree = assembleUnitTree(filtered, rootUnitId, headcounts);
+        OrganizationalUnitTreeNode tree = assembleUnitForest(filtered, unitRollups(rows, headcounts)).get(rootUnitId);
         int reachedDepth = filtered.stream().mapToInt(r -> countSegments(r.path()) - rootDepth).max().orElse(0);
         return new OrganizationalUnitHierarchyResponse(rootUnitId, filtered.size(), reachedDepth, List.of(tree));
     }
 
     /**
-     * Returns every root organizational unit (no parent), each as a flat node with
-     * no children. Use {@link #getOrganizationalUnitSubtree} on each root to expand.
-     * <p>
-     * When {@code includeHeadcount} is true, attaches each root's direct employee
-     * count via one extra GROUP BY query — never one per root.
+     * Returns the whole org-unit forest — every unit without a parent with its sub-units —
+     * trimmed to {@code maxDepth} levels. Two queries at most (units + one GROUP BY for
+     * headcounts); every node carries its sub-unit count and, with headcounts, the rolled-up
+     * total of its subtree.
+     *
+     * @param maxDepth levels below each top-level unit (null = no limit; 0 = top level only)
      */
     @Transactional(value = "tenantTransactionManager", readOnly = true)
-    public OrganizationalUnitHierarchyResponse getOrganizationalUnitRoots(boolean includeHeadcount) {
-        log.debug("Loading all root org units (includeHeadcount={})", includeHeadcount);
+    public OrganizationalUnitHierarchyResponse getOrganizationalUnitTree(Integer maxDepth, boolean includeHeadcount) {
+        log.debug("Building org-unit forest (maxDepth={}, includeHeadcount={})", maxDepth, includeHeadcount);
 
-        List<OrganizationalUnitHierarchyRow> rows = organizationalUnitRepository.findAllRoots();
-        Map<UUID, Long> headcounts = includeHeadcount && !rows.isEmpty() ? loadRootHeadcounts() : Collections.emptyMap();
+        List<OrganizationalUnitHierarchyRow> rows = organizationalUnitRepository.findAllHierarchyRows();
+        Map<UUID, Long> headcounts = includeHeadcount ? loadAllHeadcounts() : null;
+        List<OrganizationalUnitHierarchyRow> filtered = trimByDepth(rows, OrganizationalUnitHierarchyRow::path, 1, maxDepth);
 
-        List<OrganizationalUnitTreeNode> roots = new ArrayList<>(rows.size());
-        for (OrganizationalUnitHierarchyRow row : rows) {
-            roots.add(toUnitNode(row, countSegments(row.path()), headcounts.get(row.id()), Collections.emptyList()));
+        Map<UUID, OrganizationalUnitTreeNode> forest = assembleUnitForest(filtered, unitRollups(rows, headcounts));
+        List<OrganizationalUnitTreeNode> roots = new ArrayList<>();
+        for (OrganizationalUnitHierarchyRow row : filtered) {
+            if (row.parentUnitId() == null) {
+                roots.add(forest.get(row.id()));
+            }
         }
-        return new OrganizationalUnitHierarchyResponse(null, roots.size(), 0, roots);
+        int levels = rows.stream().mapToInt(r -> countSegments(r.path())).max().orElse(0);
+        return new OrganizationalUnitHierarchyResponse(null, rows.size(), levels, roots);
     }
 
     /**
@@ -209,7 +246,7 @@ public class HrHierarchyService {
         List<EmployeeHierarchyRow> rows = employeeRepository.findEmployeesInUnitSubtree(root.getPath());
         List<EmployeeTreeNode> result = new ArrayList<>(rows.size());
         for (EmployeeHierarchyRow row : rows) {
-            result.add(toEmployeeNode(row, countSegments(row.path()), Collections.emptyList()));
+            result.add(toEmployeeNode(row, countSegments(row.path()), null, Collections.emptyList()));
         }
         return result;
     }
@@ -218,30 +255,34 @@ public class HrHierarchyService {
     // Internal — tree assembly
     // ============================================================================
 
-    private EmployeeTreeNode assembleEmployeeTree(List<EmployeeHierarchyRow> rows, UUID rootId) {
+    /**
+     * Assembles employee rows into trees; returns every node by id (roots are the nodes whose
+     * manager is absent from {@code rows}). {@code counts} maps id → [direct, total] reports.
+     */
+    private Map<UUID, EmployeeTreeNode> assembleEmployeeForest(List<EmployeeHierarchyRow> rows, Map<String, int[]> counts) {
         Map<UUID, List<EmployeeTreeNode>> childrenByParent = new HashMap<>(rows.size());
         Map<UUID, EmployeeHierarchyRow> rowsById = indexById(rows, EmployeeHierarchyRow::id);
 
-        // Two-pass: first allocate the children buckets, then materialise nodes bottom-up by depth.
+        // Materialise nodes bottom-up by depth so each node is built with its finished children.
         List<EmployeeHierarchyRow> sorted = new ArrayList<>(rows);
         sorted.sort(Comparator.comparingInt(r -> -countSegments(r.path()))); // deepest first
 
         Map<UUID, EmployeeTreeNode> nodesById = new HashMap<>(rows.size());
         for (EmployeeHierarchyRow row : sorted) {
             List<EmployeeTreeNode> childList = childrenByParent.getOrDefault(row.id(), Collections.emptyList());
-            EmployeeTreeNode node = toEmployeeNode(row, countSegments(row.path()), childList);
+            EmployeeTreeNode node = toEmployeeNode(row, countSegments(row.path()), counts.get(row.id().toString()), childList);
             nodesById.put(row.id(), node);
             if (row.managerId() != null && rowsById.containsKey(row.managerId())) {
                 childrenByParent.computeIfAbsent(row.managerId(), k -> new ArrayList<>()).add(node);
             }
         }
-        return nodesById.get(rootId);
+        return nodesById;
     }
 
-    private OrganizationalUnitTreeNode assembleUnitTree(
+    /** Assembles unit rows into trees; returns every node by id. */
+    private Map<UUID, OrganizationalUnitTreeNode> assembleUnitForest(
         List<OrganizationalUnitHierarchyRow> rows,
-        UUID rootId,
-        Map<UUID, Long> headcounts
+        Map<UUID, UnitRollup> rollups
     ) {
         Map<UUID, List<OrganizationalUnitTreeNode>> childrenByParent = new HashMap<>(rows.size());
         Map<UUID, OrganizationalUnitHierarchyRow> rowsById = indexById(rows, OrganizationalUnitHierarchyRow::id);
@@ -252,16 +293,79 @@ public class HrHierarchyService {
         Map<UUID, OrganizationalUnitTreeNode> nodesById = new HashMap<>(rows.size());
         for (OrganizationalUnitHierarchyRow row : sorted) {
             List<OrganizationalUnitTreeNode> childList = childrenByParent.getOrDefault(row.id(), Collections.emptyList());
-            OrganizationalUnitTreeNode node = toUnitNode(row, countSegments(row.path()), headcounts.get(row.id()), childList);
+            OrganizationalUnitTreeNode node = toUnitNode(row, countSegments(row.path()), rollups.get(row.id()), childList);
             nodesById.put(row.id(), node);
             if (row.parentUnitId() != null && rowsById.containsKey(row.parentUnitId())) {
                 childrenByParent.computeIfAbsent(row.parentUnitId(), k -> new ArrayList<>()).add(node);
             }
         }
-        return nodesById.get(rootId);
+        return nodesById;
     }
 
-    private EmployeeTreeNode toEmployeeNode(EmployeeHierarchyRow row, int depth, List<EmployeeTreeNode> children) {
+    /**
+     * Direct and total report counts for every employee in {@code rows}, derived from the
+     * materialized paths in one O(N × depth) pass: id → [direct, total]. Keyed by the path
+     * segment string so no UUID parsing is needed.
+     */
+    private Map<String, int[]> reportCounts(List<EmployeeHierarchyRow> rows) {
+        Map<String, int[]> counts = new HashMap<>(rows.size() * 2);
+        for (EmployeeHierarchyRow row : rows) {
+            counts.computeIfAbsent(row.id().toString(), k -> new int[2]);
+            String[] segments = row.path() == null ? new String[0] : row.path().substring(1).split("/");
+            for (int i = 0; i < segments.length - 1; i++) {
+                int[] c = counts.computeIfAbsent(segments[i], k -> new int[2]);
+                c[1]++;
+                if (i == segments.length - 2) {
+                    c[0]++;
+                }
+            }
+        }
+        return counts;
+    }
+
+    /** Per-unit figures from the full hierarchy: sub-unit count, own headcount and subtree total. */
+    private record UnitRollup(int childCount, Long headcount, Long totalHeadcount) {}
+
+    /**
+     * Sub-unit counts (always) and rolled-up headcounts (when {@code headcounts} is non-null)
+     * for every unit in {@code rows}. Uses parent ids rather than paths — unit paths are built
+     * from names — and sums each subtree once (post-order), so the pass is O(N).
+     */
+    private Map<UUID, UnitRollup> unitRollups(List<OrganizationalUnitHierarchyRow> rows, Map<UUID, Long> headcounts) {
+        Map<UUID, List<UUID>> childrenOf = new HashMap<>();
+        for (OrganizationalUnitHierarchyRow row : rows) {
+            if (row.parentUnitId() != null) {
+                childrenOf.computeIfAbsent(row.parentUnitId(), k -> new ArrayList<>()).add(row.id());
+            }
+        }
+        Map<UUID, Long> totals = new HashMap<>(rows.size());
+        if (headcounts != null) {
+            // Deepest first, so every child's total is known before its parent's.
+            List<OrganizationalUnitHierarchyRow> sorted = new ArrayList<>(rows);
+            sorted.sort(Comparator.comparingInt(r -> -countSegments(r.path())));
+            for (OrganizationalUnitHierarchyRow row : sorted) {
+                long total = headcounts.getOrDefault(row.id(), 0L);
+                for (UUID child : childrenOf.getOrDefault(row.id(), List.of())) {
+                    total += totals.getOrDefault(child, 0L);
+                }
+                totals.put(row.id(), total);
+            }
+        }
+        Map<UUID, UnitRollup> rollups = new HashMap<>(rows.size());
+        for (OrganizationalUnitHierarchyRow row : rows) {
+            rollups.put(
+                row.id(),
+                new UnitRollup(
+                    childrenOf.getOrDefault(row.id(), List.of()).size(),
+                    headcounts == null ? null : headcounts.getOrDefault(row.id(), 0L),
+                    headcounts == null ? null : totals.get(row.id())
+                )
+            );
+        }
+        return rollups;
+    }
+
+    private EmployeeTreeNode toEmployeeNode(EmployeeHierarchyRow row, int depth, int[] counts, List<EmployeeTreeNode> children) {
         EmployeeRef manager = EmployeeRef.of(
             row.managerId(),
             row.managerFirstName(),
@@ -281,6 +385,8 @@ public class HrHierarchyService {
             row.path(),
             manager,
             unit,
+            counts == null ? null : counts[0],
+            counts == null ? null : counts[1],
             children
         );
     }
@@ -296,7 +402,7 @@ public class HrHierarchyService {
     private OrganizationalUnitTreeNode toUnitNode(
         OrganizationalUnitHierarchyRow row,
         int depth,
-        Long headcount,
+        UnitRollup rollup,
         List<OrganizationalUnitTreeNode> children
     ) {
         EmployeeRef manager = EmployeeRef.of(
@@ -315,7 +421,9 @@ public class HrHierarchyService {
             row.parentUnitId(),
             row.parentUnitName(),
             manager,
-            headcount,
+            rollup == null ? null : rollup.headcount(),
+            rollup == null ? null : rollup.childCount(),
+            rollup == null ? null : rollup.totalHeadcount(),
             children
         );
     }
@@ -328,9 +436,9 @@ public class HrHierarchyService {
         return headcounts;
     }
 
-    private Map<UUID, Long> loadRootHeadcounts() {
+    private Map<UUID, Long> loadAllHeadcounts() {
         Map<UUID, Long> headcounts = new HashMap<>();
-        for (UnitHeadcountRow row : organizationalUnitRepository.findRootDirectHeadcounts()) {
+        for (UnitHeadcountRow row : organizationalUnitRepository.findAllHeadcounts()) {
             headcounts.put(row.unitId(), row.headcount());
         }
         return headcounts;

@@ -1,6 +1,7 @@
 import { AuditFields } from 'app/core/api';
 
 import { EmployeeStatus } from './enums/employee-status.enum';
+import { WorkLocationType } from './enums/work-location-type.enum';
 
 /**
  * Minimal embedded reference to a reference-data / country row. On reads it carries id + code +
@@ -24,7 +25,7 @@ export interface EmployeePersonalDetails {
   gender?: string | null;
   placeOfBirth?: string | null;
   workPhone?: string | null;
-  workLocation?: string | null;
+  workLocation?: WorkLocationType | null;
   fte?: number | null;
   probationEndDate?: string | null;
   confirmationDate?: string | null;
@@ -49,6 +50,27 @@ export interface SimpleEmployeeProfile {
   status: EmployeeStatus;
   departmentName: string | null;
   positionName: string | null;
+  email: string | null;
+  imageUrl: string | null;
+  employeeNumber: string | null;
+  /** ISO date. */
+  startDate: string | null;
+  workLocation: WorkLocationType | null;
+  unitName: string | null;
+  managerId: string | null;
+  managerName: string | null;
+}
+
+/** `GET /api/hr/employees/stats` — directory header aggregates. */
+export interface EmployeeDirectoryStats {
+  total: number;
+  /** Count per EmployeeStatus name. */
+  byStatus: Record<string, number>;
+  /** Largest first; `id` null = no department. */
+  byDepartment: { id: string | null; name: string | null; count: number }[];
+  /** Count per WorkLocationType name (`UNSPECIFIED` when unset). */
+  byWorkLocation: Record<string, number>;
+  joinedLast90Days: number;
 }
 
 /** Display name for an employee row: "First Last", else job title, else id. */
@@ -150,7 +172,7 @@ export type UpdateEmployeeProfileRequest = Partial<CreateEmployeeProfileRequest>
 
 /** Criteria for `POST /api/hr/employees/search` (AND-combined, all optional). */
 export interface EmployeeSearchRequest {
-  /** Free-text term matched (OR) against first name, last name, and job title. */
+  /** Free-text term matched (OR) against first name, last name, job title, email and employee number. */
   query?: string;
   firstName?: string;
   lastName?: string;
@@ -166,4 +188,5 @@ export interface EmployeeSearchRequest {
   startDateTo?: string;
   endDateFrom?: string;
   endDateTo?: string;
+  workLocation?: WorkLocationType;
 }

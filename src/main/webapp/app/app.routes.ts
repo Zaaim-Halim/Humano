@@ -248,6 +248,7 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { permissions: [Permission.VIEW_PLATFORM_BILLING] },
       },
+      { path: '**', title: 'error.notFound.title', loadComponent: () => import('./layouts/not-found.component') },
     ],
   },
 ];

@@ -12,6 +12,7 @@ import com.humano.dto.hr.requests.CreateEmployeeRequest;
 import com.humano.dto.hr.requests.EmployeeSearchRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeProfileRequest;
 import com.humano.dto.hr.responses.CountryRef;
+import com.humano.dto.hr.responses.EmployeeDirectoryStatsResponse;
 import com.humano.dto.hr.responses.EmployeePersonalDetails;
 import com.humano.dto.hr.responses.EmployeeProfileResponse;
 import com.humano.dto.hr.responses.GovernmentIdentification;
@@ -26,6 +27,7 @@ import com.humano.repository.hr.MaritalStatusRepository;
 import com.humano.repository.hr.OrganizationalUnitRepository;
 import com.humano.repository.hr.PositionRepository;
 import com.humano.repository.hr.TerminationReasonRepository;
+import com.humano.repository.hr.projection.EmployeeCountRow;
 import com.humano.repository.hr.specification.EmployeeSpecification;
 import com.humano.repository.payroll.CountryRepository;
 import com.humano.repository.shared.AuthorityRepository;
@@ -38,7 +40,11 @@ import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import com.humano.web.rest.errors.EmailAlreadyUsedException;
 import com.humano.web.rest.errors.LoginAlreadyUsedException;
+import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -285,7 +291,10 @@ public class EmployeeProfileService {
         );
 
         if (searchRequest.query() != null && !searchRequest.query().isBlank()) {
-            specification = specification.and(EmployeeSpecification.matchesNameOrJobTitle(searchRequest.query()));
+            specification = specification.and(EmployeeSpecification.matchesSearchTerm(searchRequest.query()));
+        }
+        if (searchRequest.workLocation() != null) {
+            specification = specification.and(EmployeeSpecification.hasWorkLocation(searchRequest.workLocation()));
         }
 
         return employeeRepository.findAll(specification, pageable).map(this::mapToSimpleEmployeeProfileResponse);
@@ -700,7 +709,44 @@ public class EmployeeProfileService {
             employee.getPhone(),
             employee.getStatus(),
             Optional.ofNullable(employee.getDepartment()).map(Department::getName).orElse(null),
-            employee.getPosition().getName()
+            employee.getPosition().getName(),
+            employee.getEmail(),
+            employee.getImageUrl(),
+            employee.getEmployeeNumber(),
+            employee.getStartDate(),
+            employee.getWorkLocation(),
+            Optional.ofNullable(employee.getUnit()).map(OrganizationalUnit::getName).orElse(null),
+            Optional.ofNullable(employee.getManager()).map(Employee::getId).orElse(null),
+            Optional.ofNullable(employee.getManager()).map(m -> joinName(m.getFirstName(), m.getLastName())).orElse(null)
         );
+    }
+
+    private static String joinName(String first, String last) {
+        return ((first == null ? "" : first) + " " + (last == null ? "" : last)).trim();
+    }
+
+    /**
+     * Directory header aggregates: headcount by status, department and work location, plus
+     * joiners in the last 90 days. Four small GROUP BY / COUNT queries.
+     */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public EmployeeDirectoryStatsResponse getDirectoryStats() {
+        Map<String, Long> byStatus = new LinkedHashMap<>();
+        long total = 0;
+        for (EmployeeCountRow row : employeeRepository.countByStatus()) {
+            byStatus.put(String.valueOf(row.key()), row.count());
+            total += row.count();
+        }
+        List<EmployeeDirectoryStatsResponse.DepartmentCount> byDepartment = employeeRepository
+            .countByDepartment()
+            .stream()
+            .map(row -> new EmployeeDirectoryStatsResponse.DepartmentCount((UUID) row.key(), row.label(), row.count()))
+            .toList();
+        Map<String, Long> byWorkLocation = new LinkedHashMap<>();
+        for (EmployeeCountRow row : employeeRepository.countByWorkLocation()) {
+            byWorkLocation.put(row.key() == null ? "UNSPECIFIED" : String.valueOf(row.key()), row.count());
+        }
+        long joined = employeeRepository.countByStartDateGreaterThanEqual(LocalDate.now().minusDays(90));
+        return new EmployeeDirectoryStatsResponse(total, byStatus, byDepartment, byWorkLocation, joined);
     }
 }

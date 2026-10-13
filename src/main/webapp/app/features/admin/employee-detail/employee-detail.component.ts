@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable } from 'rxjs';
 
@@ -73,6 +74,8 @@ const idle = <T>(): TabState<T> => ({ data: null, loading: false, error: null })
   selector: 'hum-employee-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    MoneyPipe,
+    PayPeriodPipe,
     ReactiveFormsModule,
     TranslatePipe,
     AvatarComponent,

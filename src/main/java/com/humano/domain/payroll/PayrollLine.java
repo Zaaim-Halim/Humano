@@ -80,7 +80,7 @@ public class PayrollLine extends AbstractAuditingEntity<UUID> {
      * <p>
      * Provides transparency and auditability for payroll calculations.
      */
-    @Column(name = "explain", columnDefinition = "TEXT")
+    @Column(name = "`explain`", columnDefinition = "TEXT") // quoted: EXPLAIN is a reserved word in MySQL
     private String explain;
 
     /**
