@@ -1,0 +1,311 @@
+<div class="hum-page hum-page--narrow">
+  @if (account(); as a) {
+    <!-- Identity -->
+    <header class="hum-acct-hero">
+      <div class="hum-acct-hero__photo">
+        <hum-avatar [name]="fullName()" [src]="a.imageUrl" size="xl" />
+        @if (canUploadPhoto()) {
+          <label class="hum-acct-hero__upload" [class.is-busy]="photoBusy()" [attr.aria-label]="'humano.account.changePhoto' | translate">
+            <lucide-icon [name]="photoBusy() ? 'loader-circle' : 'camera'" [size]="16" [class.hum-spin]="photoBusy()" />
+            <input type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onPhoto($event)" [disabled]="photoBusy()" />
+          </label>
+        }
+      </div>
+      <div class="hum-acct-hero__text">
+        <h1>{{ fullName() }}</h1>
+        <p>{{ a.email }}</p>
+        <div class="hum-acct-hero__roles">
+          @for (r of roles().slice(0, 4); track r) {
+            <span class="hum-role-chip" [class.is-admin]="r === 'ROLE_ADMIN'">{{ roleLabel(r) }}</span>
+          }
+          @if (roles().length > 4) {
+            <span class="hum-kpi__hint">+{{ roles().length - 4 }}</span>
+          }
+        </div>
+      </div>
+      <hum-button variant="secondary" size="sm" icon="id-card" routerLink="/my-profile">{{
+        'humano.account.viewProfile' | translate
+      }}</hum-button>
+    </header>
+
+    <hum-tabs [items]="tabs()" [value]="tab()" (valueChange)="setTab($event)" />
+
+    <div class="hum-acct-body">
+      @switch (tab()) {
+        @case ('profile') {
+          <section class="hum-set-card">
+            <header>
+              <h3>{{ 'humano.account.personalTitle' | translate }}</h3>
+              <p>{{ 'humano.account.personalHint' | translate }}</p>
+            </header>
+            <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+              <div class="hum-set-grid hum-set-grid--2">
+                <hum-form-field [label]="'humano.employeeForm.firstName' | translate" controlId="acct-first">
+                  <hum-input inputId="acct-first" formControlName="firstName" autocomplete="given-name" />
+                </hum-form-field>
+                <hum-form-field [label]="'humano.employeeForm.lastName' | translate" controlId="acct-last">
+                  <hum-input inputId="acct-last" formControlName="lastName" autocomplete="family-name" />
+                </hum-form-field>
+                <hum-form-field
+                  [label]="'humano.employeeForm.email' | translate"
+                  controlId="acct-email"
+                  required
+                  [hint]="'humano.account.emailHint' | translate"
+                  [error]="invalid('profile', 'email') ? ('humano.employeeForm.emailRequired' | translate) : undefined"
+                >
+                  <hum-input
+                    inputId="acct-email"
+                    type="email"
+                    formControlName="email"
+                    autocomplete="email"
+                    [invalid]="invalid('profile', 'email')"
+                  />
+                </hum-form-field>
+                <hum-form-field
+                  [label]="'humano.account.signInName' | translate"
+                  controlId="acct-login"
+                  [hint]="'humano.account.signInNameHint' | translate"
+                >
+                  <hum-input inputId="acct-login" [ngModel]="a.login" [ngModelOptions]="{ standalone: true }" disabled />
+                </hum-form-field>
+              </div>
+              <div class="hum-acct-actions">
+                <hum-button
+                  type="button"
+                  variant="ghost"
+                  [disabled]="profileForm.pristine"
+                  (click)="profileForm.reset({ firstName: a.firstName ?? '', lastName: a.lastName ?? '', email: a.email })"
+                  >{{ 'humano.action.cancel' | translate }}</hum-button
+                >
+                <hum-button type="submit" variant="primary" icon="save" [loading]="savingProfile()" [disabled]="profileForm.pristine">{{
+                  'humano.action.save' | translate
+                }}</hum-button>
+              </div>
+            </form>
+          </section>
+
+          <section class="hum-set-card">
+            <header>
+              <h3>{{ 'humano.account.photoTitle' | translate }}</h3>
+              <p>{{ (canUploadPhoto() ? 'humano.account.photoHint' : 'humano.account.photoNoProfile') | translate }}</p>
+            </header>
+            @if (canUploadPhoto()) {
+              <div class="hum-acct-photo">
+                <hum-avatar [name]="fullName()" [src]="a.imageUrl" size="lg" />
+                <hum-button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  icon="upload"
+                  [loading]="photoBusy()"
+                  (click)="photoInput.click()"
+                  >{{ 'humano.account.uploadPhoto' | translate }}</hum-button
+                >
+                <input #photoInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onPhoto($event)" />
+                @if (a.imageUrl) {
+                  <hum-button type="button" variant="ghost" size="sm" icon="trash-2" [disabled]="photoBusy()" (click)="removePhoto()">{{
+                    'humano.account.removePhoto' | translate
+                  }}</hum-button>
+                }
+                <span class="hum-kpi__hint">{{ 'humano.account.photoRules' | translate }}</span>
+              </div>
+            }
+          </section>
+        }
+
+        @case ('security') {
+          <section class="hum-set-card">
+            <header>
+              <h3>{{ 'humano.account.passwordTitle' | translate }}</h3>
+              <p>{{ 'humano.account.passwordHint' | translate }}</p>
+            </header>
+            <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate class="hum-acct-pw">
+              <div style="display: grid; gap: var(--space-3)">
+                <hum-form-field
+                  [label]="'humano.account.currentPassword' | translate"
+                  controlId="pw-current"
+                  required
+                  [error]="invalid('password', 'currentPassword') ? ('humano.employeeForm.required' | translate) : undefined"
+                >
+                  <hum-input
+                    inputId="pw-current"
+                    [type]="showPasswords() ? 'text' : 'password'"
+                    formControlName="currentPassword"
+                    autocomplete="current-password"
+                    [invalid]="invalid('password', 'currentPassword')"
+                  />
+                </hum-form-field>
+                <hum-form-field
+                  [label]="'humano.account.newPassword' | translate"
+                  controlId="pw-new"
+                  required
+                  [error]="invalid('password', 'newPassword') ? ('humano.account.tooShort' | translate: { n: passwordMin }) : undefined"
+                >
+                  <hum-input
+                    inputId="pw-new"
+                    [type]="showPasswords() ? 'text' : 'password'"
+                    formControlName="newPassword"
+                    autocomplete="new-password"
+                    [invalid]="invalid('password', 'newPassword')"
+                  />
+                </hum-form-field>
+                <div class="hum-acct-strength" [attr.data-level]="strength()">
+                  @for (i of [1, 2, 3, 4]; track i) {
+                    <span [class.is-on]="strength() >= i"></span>
+                  }
+                  <em>{{ 'humano.account.strength.' + strength() | translate }}</em>
+                </div>
+                <hum-form-field
+                  [label]="'humano.account.confirmPassword' | translate"
+                  controlId="pw-confirm"
+                  required
+                  [error]="
+                    passwordForm.errors?.['mismatch'] && passwordForm.controls.confirmPassword.touched
+                      ? ('humano.account.mismatch' | translate)
+                      : undefined
+                  "
+                >
+                  <hum-input
+                    inputId="pw-confirm"
+                    [type]="showPasswords() ? 'text' : 'password'"
+                    formControlName="confirmPassword"
+                    autocomplete="new-password"
+                  />
+                </hum-form-field>
+                <button type="button" class="hum-linkbtn" (click)="showPasswords.set(!showPasswords())">
+                  <lucide-icon [name]="showPasswords() ? 'eye-off' : 'eye'" [size]="14" />{{
+                    (showPasswords() ? 'humano.account.hidePasswords' : 'humano.account.showPasswords') | translate
+                  }}
+                </button>
+              </div>
+              <ul class="hum-acct-rules">
+                @for (r of rules(); track r.key) {
+                  <li [class.is-ok]="r.ok">
+                    <lucide-icon [name]="r.ok ? 'circle-check' : 'circle'" [size]="16" />{{
+                      'humano.account.rule.' + r.key | translate: { n: passwordMin }
+                    }}
+                  </li>
+                }
+              </ul>
+              <div class="hum-acct-actions" style="grid-column: 1 / -1">
+                <hum-button type="submit" variant="primary" icon="key-round" [loading]="savingPassword()">{{
+                  'humano.account.changePassword' | translate
+                }}</hum-button>
+              </div>
+            </form>
+          </section>
+
+          <section class="hum-set-card">
+            <header class="hum-set-card__head-row">
+              <div>
+                <h3>{{ 'humano.account.devicesTitle' | translate }}</h3>
+                <p>{{ 'humano.account.devicesHint' | translate }}</p>
+              </div>
+              @if ((sessions() ?? []).length > 1) {
+                <hum-button variant="outline" size="sm" icon="log-out" (click)="confirmSignOutAll.set(true)">{{
+                  'humano.account.signOutAll' | translate
+                }}</hum-button>
+              }
+            </header>
+            @if (sessionsError(); as e) {
+              <hum-alert tone="danger" [title]="e">
+                <hum-button variant="outline" size="sm" (click)="loadSessions()">{{ 'humano.action.retry' | translate }}</hum-button>
+              </hum-alert>
+            } @else if (sessions() === null) {
+              <hum-skeleton-row /><hum-skeleton-row />
+            } @else {
+              <ul class="hum-acct-devices">
+                @for (s of sessions(); track s.series) {
+                  <li>
+                    <span class="hum-records__icon"><lucide-icon [name]="s.device.icon" [size]="18" /></span>
+                    <span class="hum-person__text">
+                      <span class="hum-person__name">{{ s.device.label }}</span>
+                      <span class="hum-person__sub"
+                        >{{ s.ipAddress }} · {{ 'humano.account.since' | translate: { date: (s.tokenDate | date: 'mediumDate') } }}</span
+                      >
+                    </span>
+                    <hum-button variant="ghost" size="sm" icon="log-out" (click)="revoke(s.series)">{{
+                      'humano.account.signOut' | translate
+                    }}</hum-button>
+                  </li>
+                } @empty {
+                  <p class="hum-insights__note">{{ 'humano.account.noDevices' | translate }}</p>
+                }
+              </ul>
+            }
+          </section>
+        }
+
+        @case ('preferences') {
+          <section class="hum-set-card">
+            <header>
+              <h3>{{ 'humano.account.appearanceTitle' | translate }}</h3>
+              <p>{{ 'humano.account.appearanceHint' | translate }}</p>
+            </header>
+            <div class="hum-acct-label">{{ 'humano.account.theme' | translate }}</div>
+            <div class="hum-acct-choices" role="radiogroup" [attr.aria-label]="'humano.account.theme' | translate">
+              @for (t of ['light', 'dark']; track t) {
+                <button
+                  type="button"
+                  role="radio"
+                  class="hum-acct-choice"
+                  [class.is-on]="theme.theme() === t"
+                  [attr.aria-checked]="theme.theme() === t"
+                  (click)="theme.setTheme($any(t))"
+                >
+                  <span class="hum-acct-choice__preview" [attr.data-preview]="t"><i></i><b></b><b></b></span>
+                  <span
+                    ><lucide-icon [name]="t === 'dark' ? 'moon' : 'sun'" [size]="14" />{{
+                      'humano.account.themeValue.' + t | translate
+                    }}</span
+                  >
+                </button>
+              }
+            </div>
+            <div class="hum-acct-label">{{ 'humano.account.density' | translate }}</div>
+            <div class="hum-acct-choices" role="radiogroup" [attr.aria-label]="'humano.account.density' | translate">
+              @for (d of ['comfortable', 'compact']; track d) {
+                <button
+                  type="button"
+                  role="radio"
+                  class="hum-acct-choice hum-acct-choice--text"
+                  [class.is-on]="theme.density() === d"
+                  [attr.aria-checked]="theme.density() === d"
+                  (click)="theme.setDensity($any(d))"
+                >
+                  <strong>{{ 'humano.account.densityValue.' + d | translate }}</strong>
+                  <span class="hum-kpi__hint">{{ 'humano.account.densityHint.' + d | translate }}</span>
+                </button>
+              }
+            </div>
+          </section>
+
+          <section class="hum-set-card">
+            <header>
+              <h3>{{ 'humano.account.languageTitle' | translate }}</h3>
+              <p>{{ 'humano.account.languageHint' | translate }}</p>
+            </header>
+            <div style="max-width: 320px">
+              <hum-select [options]="languageOptions" [ngModel]="a.langKey" (ngModelChange)="setLanguage($event)" />
+            </div>
+          </section>
+        }
+      }
+    </div>
+
+    <hum-dialog
+      [open]="confirmSignOutAll()"
+      [title]="'humano.account.signOutAllTitle' | translate"
+      [description]="'humano.account.signOutAllBody' | translate"
+      hasFooter
+      (closed)="confirmSignOutAll.set(false)"
+    >
+      <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="secondary" (click)="confirmSignOutAll.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+        <hum-button variant="destructive" icon="log-out" (click)="signOutAll()">{{ 'humano.account.signOutAll' | translate }}</hum-button>
+      </div>
+    </hum-dialog>
+  } @else {
+    <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+  }
+</div>

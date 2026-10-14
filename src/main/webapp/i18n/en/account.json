@@ -1,0 +1,79 @@
+{
+  "humano": {
+    "account": {
+      "title": "Account",
+      "viewProfile": "View my profile",
+      "changePhoto": "Change photo",
+      "tab": {
+        "profile": "Profile",
+        "security": "Security",
+        "preferences": "Preferences"
+      },
+      "personalTitle": "Personal information",
+      "personalHint": "Your name and email as they appear across Humano.",
+      "emailHint": "Used to sign in and for notifications.",
+      "signInName": "Sign-in name",
+      "signInNameHint": "Set by your administrator.",
+      "profileSaved": "Your profile has been updated.",
+      "photoTitle": "Profile photo",
+      "photoHint": "Shown on your profile, in the people tree and next to your requests.",
+      "photoNoProfile": "Your account isn't linked to an employee profile, so it has no photo.",
+      "uploadPhoto": "Upload a photo",
+      "removePhoto": "Remove",
+      "photoRules": "JPG, PNG or WebP, up to 2 MB.",
+      "passwordTitle": "Password",
+      "passwordHint": "Use a password you don't use anywhere else.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "tooShort": "Use at least {{ n }} characters.",
+      "mismatch": "The passwords don't match.",
+      "showPasswords": "Show passwords",
+      "hidePasswords": "Hide passwords",
+      "strength": {
+        "0": "Enter a new password",
+        "1": "Weak",
+        "2": "Fair",
+        "3": "Good",
+        "4": "Strong"
+      },
+      "rule": {
+        "length": "At least {{ n }} characters",
+        "case": "Upper- and lower-case letters",
+        "number": "A number",
+        "symbol": "A symbol (e.g. ! ? #)"
+      },
+      "changePassword": "Change password",
+      "passwordChanged": "Your password has been changed.",
+      "wrongPassword": "Your current password is incorrect.",
+      "devicesTitle": "Signed-in devices",
+      "devicesHint": "Devices where you chose “Remember me”. Sign out any you don't recognise.",
+      "since": "Signed in since {{ date }}",
+      "signOut": "Sign out",
+      "signOutAll": "Sign out everywhere",
+      "signOutAllTitle": "Sign out of all remembered devices?",
+      "signOutAllBody": "You'll need to sign in again on those devices. This session stays open.",
+      "signedOutDevice": "Device signed out.",
+      "noDevices": "No remembered devices.",
+      "appearanceTitle": "Appearance",
+      "appearanceHint": "Saved on this device.",
+      "theme": "Theme",
+      "themeValue": {
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "density": "Density",
+      "densityValue": {
+        "comfortable": "Comfortable",
+        "compact": "Compact"
+      },
+      "densityHint": {
+        "comfortable": "More space between rows and fields.",
+        "compact": "Fits more on screen."
+      },
+      "languageTitle": "Language",
+      "languageHint": "Used for menus, emails and documents.",
+      "preferencesSaved": "Preferences saved."
+    }
+  }
+}

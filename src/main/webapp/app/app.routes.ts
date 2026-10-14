@@ -70,20 +70,13 @@ const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       { path: 'accessdenied', title: 'error.title', loadComponent: () => import('./layouts/access-denied.component') },
+      { path: 'account', pathMatch: 'full', redirectTo: 'account/profile' },
       {
-        path: 'account/settings',
-        title: 'global.menu.account.settings',
-        loadComponent: () => import('./account/settings/settings.component'),
-      },
-      {
-        path: 'account/password',
-        title: 'global.menu.account.password',
-        loadComponent: () => import('./account/password/password.component'),
-      },
-      {
-        path: 'account/sessions',
-        title: 'global.menu.account.sessions',
-        loadComponent: () => import('./account/sessions/sessions.component'),
+        // Own account: profile, security (password, signed-in devices), preferences. Legacy
+        // `settings` / `password` / `sessions` paths open the matching tab.
+        path: 'account/:section',
+        title: 'humano.account.title',
+        loadComponent: () => import('./account/account.component'),
       },
       {
         path: 'dashboard',

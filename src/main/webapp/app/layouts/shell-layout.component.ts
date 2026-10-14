@@ -195,8 +195,10 @@ export default class ShellLayoutComponent {
         void this.router.navigate(['/login']);
         break;
       case 'profile':
+        void this.router.navigate(['/my-profile']);
+        break;
       case 'settings':
-        void this.router.navigate(['/account/settings']);
+        void this.router.navigate(['/account', 'profile']);
         break;
     }
   }

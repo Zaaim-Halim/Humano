@@ -25,70 +25,8 @@ import {
   ToastService,
 } from 'app/shared/ui';
 
-import { AdminUser, RolePermissions, humanizeCode } from '../../models/user-admin.model';
+import { AdminUser, ROLE_GROUPS, RolePermissions, humanizeCode } from '../../models/user-admin.model';
 import { UserAdminService } from '../../services/user-admin.service';
-
-/** Roles grouped by area for the role picker and the roles overview. */
-const ROLE_GROUPS: { id: string; icon: string; roles: string[] }[] = [
-  {
-    id: 'core',
-    icon: 'shield-check',
-    roles: [
-      'ROLE_ADMIN',
-      'ROLE_TENANT_ADMIN',
-      'ROLE_ORGANIZATION_ADMIN',
-      'ROLE_EXECUTIVE',
-      'ROLE_DEPARTMENT_HEAD',
-      'ROLE_MANAGER',
-      'ROLE_EMPLOYEE',
-      'ROLE_USER',
-    ],
-  },
-  {
-    id: 'people',
-    icon: 'users',
-    roles: [
-      'ROLE_HR_MANAGER',
-      'ROLE_HR_SPECIALIST',
-      'ROLE_RECRUITER',
-      'ROLE_ONBOARDING_SPECIALIST',
-      'ROLE_PERFORMANCE_ADMIN',
-      'ROLE_PERFORMANCE_REVIEWER',
-      'ROLE_TRAINING_ADMIN',
-      'ROLE_TRAINING_COORDINATOR',
-    ],
-  },
-  { id: 'time', icon: 'timer', roles: ['ROLE_LEAVE_ADMIN', 'ROLE_LEAVE_APPROVER', 'ROLE_ATTENDANCE_ADMIN', 'ROLE_TIMESHEET_APPROVER'] },
-  {
-    id: 'money',
-    icon: 'wallet',
-    roles: [
-      'ROLE_PAYROLL_ADMIN',
-      'ROLE_PAYROLL_SPECIALIST',
-      'ROLE_PAYROLL_VIEWER',
-      'ROLE_BENEFITS_ADMIN',
-      'ROLE_BENEFITS_SPECIALIST',
-      'ROLE_EXPENSE_ADMIN',
-      'ROLE_EXPENSE_APPROVER',
-      'ROLE_FINANCE_MANAGER',
-      'ROLE_FINANCE_SPECIALIST',
-      'ROLE_BILLING_ADMIN',
-      'ROLE_BILLING_SPECIALIST',
-    ],
-  },
-  {
-    id: 'oversight',
-    icon: 'eye',
-    roles: [
-      'ROLE_AUDITOR',
-      'ROLE_COMPLIANCE_OFFICER',
-      'ROLE_REPORT_ADMIN',
-      'ROLE_REPORT_VIEWER',
-      'ROLE_IT_SUPPORT',
-      'ROLE_INTEGRATION_ADMIN',
-    ],
-  },
-];
 
 /**
  * Users & access (administrators) — who can sign in and what they may do.

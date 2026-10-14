@@ -55,7 +55,45 @@
       "category": "Employee category",
       "maritalStatus": "Marital status",
       "notSet": "Not set",
-      "hiddenEntry": "hidden"
+      "hiddenEntry": "hidden",
+      "backToProfile": "Back to profile",
+      "backToDirectory": "Back to employees",
+      "editing": "Edit {{ name }}",
+      "createHint": "Add someone to the company — they'll get an email to set their password.",
+      "sections": "Form sections",
+      "accountFixed": "The sign-in account belongs to this person.",
+      "accountFixedHint": "Account details are changed by the person in their account settings.",
+      "jobHint": "Where they sit in the organization and who they report to.",
+      "endDateHint": "Leave empty while employment is ongoing.",
+      "fte": "Working time (%)",
+      "fteHint": "100 = full time; 50 = half time.",
+      "workLocation": "Work location",
+      "employeeNumber": "Employee number",
+      "probationEnd": "Probation ends",
+      "confirmation": "Confirmed on",
+      "personalHint": "Used on HR records and documents; visible to HR and the person.",
+      "birthDate": "Date of birth",
+      "gender": "Gender",
+      "placeOfBirth": "Place of birth",
+      "workPhone": "Work phone",
+      "idsHint": "Stored securely and shown masked. Type a new value to replace it; leave blank to keep the current one.",
+      "keepCurrent": "Leave blank to keep",
+      "rolesSelected": "{{ n }} selected",
+      "fixErrors": "Fix the highlighted fields",
+      "section": {
+        "account": "Account",
+        "job": "Job & placement",
+        "employment": "Employment",
+        "personal": "Personal details",
+        "ids": "Government IDs",
+        "access": "Access & roles",
+        "custom": "Custom fields"
+      },
+      "statusValue": {
+        "ACTIVE": "Active",
+        "INACTIVE": "Inactive",
+        "TERMINATED": "Terminated"
+      }
     }
   }
 }

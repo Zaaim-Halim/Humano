@@ -12,19 +12,21 @@ import {
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { LucideAngularModule } from 'lucide-angular';
 import { Observable, map } from 'rxjs';
 
 import { normalizeHttpError } from 'app/core/api';
 import {
   AlertComponent,
   AutocompleteComponent,
+  AvatarComponent,
+  BadgeComponent,
   AutocompleteOption,
   ButtonComponent,
   CardComponent,
   CheckboxComponent,
   FormFieldComponent,
   InputComponent,
-  PageHeaderComponent,
   SelectComponent,
   SelectOption,
   SkeletonRowComponent,
@@ -42,16 +44,18 @@ import {
   PositionService,
   ReferenceData,
 } from 'app/features/admin';
-import { humanizeCode } from 'app/features/admin/models/user-admin.model';
+import { ROLE_GROUPS, humanizeCode } from 'app/features/admin/models/user-admin.model';
 import {
   EmployeeAttributeService,
   EmployeeService,
   EmployeeStatus,
   personName,
   type CreateEmployeeRequest,
+  WorkLocationType,
   type EmployeeProfile,
   type UpdateEmployeeProfileRequest,
 } from 'app/features/employee';
+import type { EmployeePersonalDetails } from 'app/features/employee/models/employee.model';
 
 /** Client-side username pattern; the backend enforces the full LOGIN_REGEX. */
 const LOGIN_PATTERN = /^[_.@A-Za-z0-9-]+$/;
@@ -66,7 +70,11 @@ function dateOrder(group: AbstractControl): ValidationErrors | null {
 }
 
 /**
- * Create / edit an employee profile (HR).
+ * Create / edit an employee profile (HR) — one page of sectioned cards with an in-page menu:
+ * account, job & placement, employment (classification from Settings → Lists, work location,
+ * FTE, probation), personal details, government ids (edit only, write-only: blank keeps the
+ * stored value; the current one shows masked), access & roles (grouped by area), custom fields.
+ * A sticky bar saves and flags unsaved changes.
  *
  * - **Edit** (`/employees/:id/edit`) loads the profile and `PUT`s changes.
  * - **Create** (`/employees/new`) provisions the account and HR profile together
@@ -86,7 +94,9 @@ const REF_KEYS: RefKey[] = ['employmentType', 'level', 'grade', 'category', 'mar
   imports: [
     ReactiveFormsModule,
     TranslatePipe,
-    PageHeaderComponent,
+    LucideAngularModule,
+    AvatarComponent,
+    BadgeComponent,
     CardComponent,
     CheckboxComponent,
     FormFieldComponent,
@@ -173,8 +183,60 @@ export default class EmployeeFormComponent implements OnInit {
 
   protected readonly statusOptions: SelectOption[] = [
     { value: '', label: this.translate.instant('humano.employeeForm.statusUnset') },
-    ...Object.values(EmployeeStatus).map(s => ({ value: s, label: s })),
+    ...Object.values(EmployeeStatus).map(s => ({ value: s, label: this.translate.instant(`humano.employeeForm.statusValue.${s}`) })),
   ];
+  protected readonly genderOptions: SelectOption[] = [
+    { value: '', label: this.translate.instant('humano.employeeForm.notSet') },
+    ...['MALE', 'FEMALE', 'NON_BINARY', 'OTHER', 'PREFER_NOT_TO_SAY'].map(g => ({
+      value: g,
+      label: this.translate.instant(`humano.employee360.genderValue.${g}`),
+    })),
+  ];
+  protected readonly locationOptions: SelectOption[] = [
+    { value: '', label: this.translate.instant('humano.employeeForm.notSet') },
+    ...['ONSITE', 'HYBRID', 'REMOTE'].map(l => ({ value: l, label: this.translate.instant(`humano.directory.location.${l}`) })),
+  ];
+
+  /** The profile being edited (header and masked government ids). */
+  protected readonly profile = signal<EmployeeProfile | null>(null);
+  protected readonly fullName = computed(() => {
+    const p = this.profile();
+    return p ? [p.firstName, p.lastName].filter(Boolean).join(' ') || (p.jobTitle ?? '') : '';
+  });
+
+  /** Sections, for the in-page menu (government ids only once the employee exists). */
+  protected readonly sections = computed(() =>
+    [
+      { id: 'account', icon: 'user', create: true, edit: true },
+      { id: 'job', icon: 'briefcase', create: true, edit: true },
+      { id: 'employment', icon: 'file-signature', create: true, edit: true },
+      { id: 'personal', icon: 'id-card', create: true, edit: true },
+      { id: 'ids', icon: 'shield-check', create: false, edit: true },
+      { id: 'access', icon: 'key-round', create: true, edit: true },
+      { id: 'custom', icon: 'list', create: false, edit: true },
+    ].filter(s => (this.isEdit() ? s.edit : s.create)),
+  );
+
+  /** Roles grouped by area (same groups as Settings → Users & access), unknown roles last. */
+  protected readonly roleGroups = computed(() => {
+    const assignable = new Set(this.assignableRoles());
+    const grouped = new Set(ROLE_GROUPS.flatMap(g => g.roles));
+    const groups = ROLE_GROUPS.map(g => ({ ...g, roles: g.roles.filter(r => assignable.has(r)) })).filter(g => g.roles.length);
+    const other = [...assignable].filter(r => !grouped.has(r));
+    return other.length ? [...groups, { id: 'other', icon: 'tag', roles: other }] : groups;
+  });
+  private readonly initialRoles = signal<string>('');
+  /** Unsaved changes: any field, or the role selection. */
+  protected readonly rolesChanged = computed(() => [...this.selectedRoles()].sort().join() !== this.initialRoles());
+
+  protected jump(id: string): void {
+    document.getElementById(`emp-section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /** Last four characters of a stored government id ("•••• 1234"). */
+  protected masked(value: string | null | undefined): string {
+    return value ? `•••• ${value.slice(-4)}` : '';
+  }
 
   protected readonly form = this.fb.nonNullable.group(
     {
@@ -199,6 +261,22 @@ export default class EmployeeFormComponent implements OnInit {
       gradeId: [''],
       categoryId: [''],
       maritalStatusId: [''],
+      // Employment details.
+      employeeNumber: ['', Validators.maxLength(50)],
+      workLocation: [''],
+      fte: ['', [Validators.min(1), Validators.max(100)]],
+      probationEndDate: [''],
+      confirmationDate: [''],
+      // Personal.
+      birthDate: [''],
+      gender: [''],
+      placeOfBirth: ['', Validators.maxLength(100)],
+      workPhone: ['', Validators.maxLength(40)],
+      // Government ids — write-only: blank keeps the stored value.
+      nationalId: ['', Validators.maxLength(50)],
+      passportNumber: ['', Validators.maxLength(50)],
+      taxNumber: ['', Validators.maxLength(50)],
+      socialSecurityNumber: ['', Validators.maxLength(50)],
     },
     { validators: dateOrder },
   );
@@ -375,7 +453,23 @@ export default class EmployeeFormComponent implements OnInit {
       ...(v.gradeId ? { grade: { id: v.gradeId } } : {}),
       ...(v.categoryId ? { category: { id: v.categoryId } } : {}),
       ...(v.maritalStatusId ? { maritalStatus: { id: v.maritalStatusId } } : {}),
+      personalDetails: this.compact<EmployeePersonalDetails>({
+        employeeNumber: v.employeeNumber.trim(),
+        workLocation: (v.workLocation || undefined) as WorkLocationType | undefined,
+        fte: v.fte ? Number(v.fte) / 100 : undefined,
+        probationEndDate: v.probationEndDate,
+        confirmationDate: v.confirmationDate,
+        birthDate: v.birthDate,
+        gender: v.gender,
+        placeOfBirth: v.placeOfBirth.trim(),
+        workPhone: v.workPhone.trim(),
+      }),
     };
+  }
+
+  /** Drops blank entries — the API leaves omitted fields unchanged. */
+  private compact<T extends object>(obj: T): T {
+    return Object.fromEntries(Object.entries(obj).filter(([, val]) => val !== '' && val !== undefined && val !== null)) as T;
   }
 
   /** Create body: account identity + roles + required profile fields. */
@@ -394,10 +488,17 @@ export default class EmployeeFormComponent implements OnInit {
     };
   }
 
-  /** Update body: profile fields + full role replacement. */
+  /** Update body: profile fields + full role replacement; government ids only when retyped. */
   private buildUpdateBody(): UpdateEmployeeProfileRequest {
     const v = this.form.getRawValue();
+    const ids = this.compact({
+      nationalId: v.nationalId.trim(),
+      passportNumber: v.passportNumber.trim(),
+      taxNumber: v.taxNumber.trim(),
+      socialSecurityNumber: v.socialSecurityNumber.trim(),
+    });
     return {
+      ...(Object.keys(ids).length ? { governmentIds: ids } : {}),
       startDate: v.startDate,
       positionId: v.positionId,
       unitId: v.unitId,
@@ -429,7 +530,17 @@ export default class EmployeeFormComponent implements OnInit {
             gradeId: p.grade?.id ?? '',
             categoryId: p.category?.id ?? '',
             maritalStatusId: p.maritalStatus?.id ?? '',
+            employeeNumber: p.personalDetails?.employeeNumber ?? '',
+            workLocation: p.personalDetails?.workLocation ?? '',
+            fte: p.personalDetails?.fte ? String(Math.round(Number(p.personalDetails.fte) * 100)) : '',
+            probationEndDate: p.personalDetails?.probationEndDate ?? '',
+            confirmationDate: p.personalDetails?.confirmationDate ?? '',
+            birthDate: p.personalDetails?.birthDate ?? '',
+            gender: p.personalDetails?.gender ?? '',
+            placeOfBirth: p.personalDetails?.placeOfBirth ?? '',
+            workPhone: p.personalDetails?.workPhone ?? '',
           });
+          this.profile.set(p);
           this.refCurrent.set({
             employmentType: p.employmentType?.id ?? undefined,
             level: p.level?.id ?? undefined,
@@ -441,6 +552,8 @@ export default class EmployeeFormComponent implements OnInit {
             p.managerId ? { value: p.managerId, label: p.managerName ?? p.managerId, sublabel: p.managerJobTitle } : null,
           );
           this.selectedRoles.set(new Set(p.authorities));
+          this.initialRoles.set([...p.authorities].sort().join());
+          this.form.markAsPristine();
           this.loading.set(false);
         },
         error: (err: unknown) => {

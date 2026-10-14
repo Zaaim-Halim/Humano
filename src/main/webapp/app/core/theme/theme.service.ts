@@ -6,6 +6,7 @@ export type Chrome = 'app' | 'platform';
 
 /** localStorage key the pre-paint script in index.html also reads/writes. */
 const THEME_STORAGE_KEY = 'humano-theme';
+const DENSITY_STORAGE_KEY = 'humano-density';
 
 /**
  * Drives the runtime appearance switches the design system reads off the root
@@ -20,7 +21,7 @@ const THEME_STORAGE_KEY = 'humano-theme';
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   readonly theme = signal<Theme>(this.readStoredTheme());
-  readonly density = signal<Density>('comfortable');
+  readonly density = signal<Density>(this.readStoredDensity());
   readonly chrome = signal<Chrome>('app');
 
   private readonly document = inject(DOCUMENT);
@@ -33,6 +34,7 @@ export class ThemeService {
       this.applyAttr(root, 'density', this.density(), 'compact');
       this.applyAttr(root, 'chrome', this.chrome(), 'platform');
       this.persistTheme(theme);
+      this.persist(DENSITY_STORAGE_KEY, this.density());
     });
   }
 
@@ -67,6 +69,22 @@ export class ThemeService {
       return localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
     } catch {
       return 'light';
+    }
+  }
+
+  private readStoredDensity(): Density {
+    try {
+      return localStorage.getItem(DENSITY_STORAGE_KEY) === 'compact' ? 'compact' : 'comfortable';
+    } catch {
+      return 'comfortable';
+    }
+  }
+
+  private persist(key: string, value: string): void {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Ignore storage failures — runtime state still holds.
     }
   }
 
