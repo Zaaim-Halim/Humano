@@ -119,7 +119,7 @@ public class PayslipService {
         List<Payslip> savedPayslips = payslipRepository.saveAll(payslips);
         log.info("Generated {} payslips for run {}", savedPayslips.size(), runId);
 
-        return savedPayslips.stream().map(this::toResponse).toList();
+        return savedPayslips.stream().map(this::toSummaryResponse).toList();
     }
 
     /**
@@ -195,7 +195,7 @@ public class PayslipService {
                 },
                 pageable
             )
-            .map(this::toResponse);
+            .map(this::toSummaryResponse);
     }
 
     /**
@@ -208,7 +208,7 @@ public class PayslipService {
                 (Specification<Payslip>) (root, query, cb) -> cb.equal(root.get("result").get("payrollPeriod").get("id"), periodId),
                 pageable
             )
-            .map(this::toResponse);
+            .map(this::toSummaryResponse);
     }
 
     /**
@@ -534,7 +534,7 @@ public class PayslipService {
                 },
                 pageable
             )
-            .map(this::toResponse);
+            .map(this::toSummaryResponse);
     }
 
     /**
@@ -605,8 +605,11 @@ public class PayslipService {
             searchRequest.createdDateFrom(),
             searchRequest.createdDateTo()
         );
+        if (searchRequest.query() != null && !searchRequest.query().isBlank()) {
+            specification = specification.and(PayslipSpecification.matchesSearchTerm(searchRequest.query()));
+        }
 
-        return payslipRepository.findAll(specification, pageable).map(this::toResponse);
+        return payslipRepository.findAll(specification, pageable).map(this::toSummaryResponse);
     }
 
     /**
@@ -639,7 +642,7 @@ public class PayslipService {
             searchRequest.createdDateTo()
         );
 
-        return payslipRepository.findAll(specification, pageable).map(this::toResponse);
+        return payslipRepository.findAll(specification, pageable).map(this::toSummaryResponse);
     }
 
     private String generatePayslipNumber(String periodPrefix, long sequence) {
@@ -667,6 +670,37 @@ public class PayslipService {
                 .max(Long::compare)
                 .orElse(0L) +
             1
+        );
+    }
+
+    /**
+     * List-row mapping: header figures only, no line breakdown (which costs a query per payslip).
+     * Lists are fetched with their result, employee and period in one query (see the repository).
+     */
+    private PayslipResponse toSummaryResponse(Payslip payslip) {
+        PayrollResult result = payslip.getResult();
+        Employee employee = result.getEmployee();
+        PayrollPeriod period = result.getPayrollPeriod();
+        return new PayslipResponse(
+            payslip.getId(),
+            payslip.getNumber(),
+            employee.getId(),
+            employee.getFirstName() + " " + employee.getLastName(),
+            employee.getLogin(),
+            employee.getDepartment() != null ? employee.getDepartment().getName() : null,
+            employee.getPosition() != null ? employee.getPosition().getName() : null,
+            result.getId(),
+            period.getId(),
+            period.getCode(),
+            period.getStartDate(),
+            period.getEndDate(),
+            period.getPaymentDate(),
+            result.getGross(),
+            result.getTotalDeductions(),
+            result.getNet(),
+            result.getCurrency() != null ? result.getCurrency().getCode().getCode() : null,
+            payslip.getPdfUrl(),
+            null
         );
     }
 

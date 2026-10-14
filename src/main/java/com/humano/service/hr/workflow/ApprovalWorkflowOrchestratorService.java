@@ -678,18 +678,23 @@ public class ApprovalWorkflowOrchestratorService {
         }
     }
 
+    /**
+     * The approval steps for a request: the requester's department-specific chain when that
+     * department has one, otherwise the tenant-wide chain (steps with no department). For
+     * amount-bearing requests only steps whose thresholds cover the amount are considered.
+     */
     private List<ApprovalChainConfig> getApprovalChain(ApprovalType type, Double amount, UUID departmentId) {
-        List<ApprovalChainConfig> chain;
+        List<ApprovalChainConfig> candidates = amount != null
+            ? approvalChainConfigRepository.findByApprovalTypeAndAmountThreshold(type, amount)
+            : approvalChainConfigRepository.findByApprovalTypeAndActiveTrueOrderBySequenceOrderAsc(type);
 
-        if (amount != null) {
-            chain = approvalChainConfigRepository.findByApprovalTypeAndAmountThreshold(type, amount);
-        } else if (departmentId != null) {
-            chain = approvalChainConfigRepository.findByApprovalTypeAndDepartmentIdAndActiveTrueOrderBySequenceOrderAsc(type, departmentId);
-        } else {
-            chain = approvalChainConfigRepository.findByApprovalTypeAndActiveTrueOrderBySequenceOrderAsc(type);
-        }
-
-        return chain;
+        List<ApprovalChainConfig> departmentChain = departmentId == null
+            ? List.of()
+            : candidates.stream().filter(c -> departmentId.equals(c.getDepartmentId())).toList();
+        List<ApprovalChainConfig> chain = departmentChain.isEmpty()
+            ? candidates.stream().filter(c -> c.getDepartmentId() == null).toList()
+            : departmentChain;
+        return chain.stream().sorted(Comparator.comparing(ApprovalChainConfig::getSequenceOrder)).toList();
     }
 
     private List<ApprovalChainConfig> createDefaultApprovalChain(ApprovalType type) {

@@ -1,8 +1,8 @@
 {
   "humano": {
     "payrollRuns": {
-      "title": "Payroll runs",
-      "subtitle": "Start a payroll run for an open period",
+      "title": "Payroll",
+      "subtitle": "Every pay run — where it stands and what it cost",
       "newRun": "New run",
       "period": "Period",
       "selectPeriod": "Select a period",
@@ -12,9 +12,28 @@
       "initiated": "Payroll run started",
       "noPeriodsTitle": "No open periods",
       "noPeriodsBody": "There are no open payroll periods to run. Generate or open a period in the payroll calendar first.",
-      "noPermissionTitle": "View only",
-      "noPermissionBody": "You can view payroll runs but need the create-run permission to start one.",
-      "loadHint": "Loading periods needs payroll-calendar access."
+      "loadHint": "Loading periods needs payroll-calendar access.",
+      "lastNet": "Last net payroll",
+      "peoplePaid": "People paid",
+      "vsPrevious": "{{ count }} the run before",
+      "employerCost": "Employer cost",
+      "inProgress": "Runs in progress",
+      "inProgressHint": "Not yet posted",
+      "trend": "Net pay and deductions by month",
+      "net": "Net",
+      "gross": "Gross",
+      "deductions": "Deductions",
+      "people": "People",
+      "history": "Run history",
+      "paidOn": "Paid {{ date }}",
+      "emptyTitle": "No payroll runs yet",
+      "emptyBody": "Start the first run for an open pay period.",
+      "stage": {
+        "DRAFT": "Draft",
+        "CALCULATED": "Calculated",
+        "APPROVED": "Approved",
+        "POSTED": "Posted"
+      }
     }
   }
 }

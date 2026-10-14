@@ -4,25 +4,41 @@
     [subtitle]="summary().data?.periodCode ? (null | payPeriod: summary().data?.periodCode) : ''"
     hasActions
   >
+    <!-- Only the actions that make sense for the run's current status. -->
     <div hum-page-actions style="display: flex; gap: var(--space-2)">
-      <hum-button variant="secondary" size="sm" [loading]="busy()" (click)="calculate()">{{
-        'humano.payrollRun.calculate' | translate
-      }}</hum-button>
-      <hum-button variant="secondary" size="sm" [loading]="busy()" (click)="recalculate()">{{
-        'humano.payrollRun.recalculate' | translate
-      }}</hum-button>
-      <hum-button variant="secondary" size="sm" [loading]="busy()" (click)="confirm.set('approve')">{{
-        'humano.payrollRun.approve' | translate
-      }}</hum-button>
-      <hum-button variant="primary" size="sm" [loading]="busy()" (click)="confirm.set('post')">{{
-        'humano.payrollRun.post' | translate
-      }}</hum-button>
+      @switch (run()?.status) {
+        @case ('DRAFT') {
+          <hum-button variant="primary" size="sm" icon="calculator" [loading]="busy()" (click)="calculate()">{{
+            'humano.payrollRun.calculate' | translate
+          }}</hum-button>
+        }
+        @case ('CALCULATED') {
+          <hum-button variant="secondary" size="sm" icon="refresh-cw" [loading]="busy()" (click)="recalculate()">{{
+            'humano.payrollRun.recalculate' | translate
+          }}</hum-button>
+          <hum-button variant="primary" size="sm" icon="check" [loading]="busy()" (click)="confirm.set('approve')">{{
+            'humano.payrollRun.approve' | translate
+          }}</hum-button>
+        }
+        @case ('APPROVED') {
+          <hum-button variant="secondary" size="sm" icon="file-text" [loading]="busy()" (click)="generatePayslips()">{{
+            'humano.payrollRun.generatePayslips' | translate
+          }}</hum-button>
+          <hum-button variant="primary" size="sm" icon="send" [loading]="busy()" (click)="confirm.set('post')">{{
+            'humano.payrollRun.post' | translate
+          }}</hum-button>
+        }
+        @case ('POSTED') {
+          <hum-button variant="secondary" size="sm" icon="file-text" routerLink="/payroll/payslips">{{
+            'humano.payrollRun.viewPayslips' | translate
+          }}</hum-button>
+        }
+      }
     </div>
   </hum-page-header>
 
-  <!-- Lifecycle stepper (action-driven; see component note) -->
+  <!-- Lifecycle stepper -->
   <hum-stepper [steps]="steps()" [current]="currentStep()" />
-  <div class="hum-field__hint" style="margin: var(--space-2) 0 var(--space-4)">{{ 'humano.payrollRun.statusNote' | translate }}</div>
 
   @if (run()?.validationErrors?.length) {
     <hum-alert tone="warning" [title]="'humano.payrollRun.validationTitle' | translate">
@@ -44,7 +60,7 @@
     >
   } @else if (summary().data; as s) {
     <!-- KPI totals -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-3); margin: var(--space-4) 0">
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-3); margin: var(--space-4) 0">
       <hum-stat-tile [label]="'humano.payrollRun.employees' | translate" [value]="s.totalEmployees" icon="users" />
       <hum-stat-tile [label]="'humano.payrollRun.processed' | translate" [value]="s.processedEmployees" icon="check-check" />
       <hum-stat-tile [label]="'humano.payrollRun.errors' | translate" [value]="s.errorCount" icon="info" />
@@ -137,11 +153,6 @@
         }
       </tbody>
     </table>
-    <div style="margin-top: var(--space-3)">
-      <hum-button variant="outline" size="sm" icon="receipt" [loading]="busy()" (click)="generatePayslips()">{{
-        'humano.payrollRun.generatePayslips' | translate
-      }}</hum-button>
-    </div>
   } @else {
     <hum-empty-state icon="wallet" [title]="'humano.payrollRun.notFound' | translate" />
   }

@@ -1,30 +1,98 @@
 <div class="hum-page">
-  <hum-page-header
-    [title]="'humano.payslips.title' | translate"
-    [subtitle]="'humano.payslips.subtitle' | translate: { total: list.total() }"
-  />
+  <hum-page-header [title]="'humano.payslips.title' | translate" [subtitle]="'humano.payslips.subtitle' | translate" />
 
-  <form [formGroup]="filters" style="display: flex; gap: var(--space-3); margin-bottom: var(--space-4); max-width: 360px">
-    <hum-input formControlName="number" icon="search" [placeholder]="'humano.payslips.search' | translate" />
+  @if (runs() === null) {
+    <hum-skeleton [height]="96" />
+  } @else if (runs()!.length) {
+    <div class="hum-chips" role="tablist" [attr.aria-label]="'humano.payslips.period' | translate">
+      @for (r of runs(); track r.id) {
+        <button
+          type="button"
+          role="tab"
+          class="hum-chip"
+          [class.is-active]="selectedRun()?.id === r.id"
+          [attr.aria-selected]="selectedRun()?.id === r.id"
+          (click)="selectRun(r)"
+        >
+          {{ null | payPeriod: r.periodCode }}
+          <span class="hum-chip__count tabular-nums">{{ r.employeeCount }}</span>
+        </button>
+      }
+    </div>
+
+    @if (selectedRun(); as r) {
+      <section class="hum-dir-stats hum-dir-stats--even">
+        <div class="hum-dir-stat">
+          <div class="hum-dir-stat__label">{{ 'humano.payslips.totalNet' | translate }}</div>
+          <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums">{{ r.totalNet | money: r.currencyCode }}</div>
+          <div class="hum-dir-stat__sub">{{ 'humano.payslips.paidOn' | translate: { date: (r.paymentDate | date: 'mediumDate') } }}</div>
+        </div>
+        <div class="hum-dir-stat">
+          <div class="hum-dir-stat__label">{{ 'humano.payslips.totalGross' | translate }}</div>
+          <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums">{{ r.totalGross | money: r.currencyCode }}</div>
+        </div>
+        <div class="hum-dir-stat">
+          <div class="hum-dir-stat__label">{{ 'humano.payslips.averageNet' | translate }}</div>
+          <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums">
+            {{ (r.employeeCount ? r.totalNet / r.employeeCount : 0) | money: r.currencyCode }}
+          </div>
+        </div>
+        <div class="hum-dir-stat">
+          <div class="hum-dir-stat__label">{{ 'humano.payslips.deductionRate' | translate }}</div>
+          <div class="hum-dir-stat__value tabular-nums">
+            {{ r.totalGross ? ((r.totalDeductions / r.totalGross) * 100).toFixed(1) : 0 }}%
+          </div>
+          <div class="hum-meter" [style.--hum-accent]="'var(--indigo-300)'">
+            <span [style.width.%]="r.totalGross ? (r.totalDeductions / r.totalGross) * 100 : 0"></span>
+          </div>
+        </div>
+      </section>
+    }
+  }
+
+  <form [formGroup]="filters" class="hum-dir-toolbar" (submit)="$event.preventDefault()">
+    <div class="hum-dir-toolbar__search">
+      <hum-input formControlName="q" type="search" icon="search" [placeholder]="'humano.payslips.search' | translate" />
+    </div>
+    @if (list.total() || list.loading()) {
+      <span class="hum-dir-toolbar__field tabular-nums">{{ 'humano.payslips.count' | translate: { total: list.total() } }}</span>
+    }
+    <div class="hum-segmented" role="group" [attr.aria-label]="'humano.directory.view' | translate">
+      <hum-icon-button
+        icon="layout-grid"
+        [label]="'humano.directory.viewCards' | translate"
+        size="sm"
+        [variant]="view() === 'cards' ? 'secondary' : 'ghost'"
+        (click)="setView('cards')"
+      />
+      <hum-icon-button
+        icon="list"
+        [label]="'humano.directory.viewTable' | translate"
+        size="sm"
+        [variant]="view() === 'table' ? 'secondary' : 'ghost'"
+        (click)="setView('table')"
+      />
+    </div>
   </form>
 
   @if (list.loading()) {
-    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+    <div class="hum-payslip-grid">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="hum-payslip-card"><hum-skeleton [height]="120" /></div>
+      }
+    </div>
   } @else if (list.error(); as e) {
     <hum-alert tone="danger" [title]="e">
       <hum-button variant="outline" size="sm" (click)="list.reload()">{{ 'humano.action.retry' | translate }}</hum-button>
     </hum-alert>
   } @else if (list.empty()) {
-    @if (hasFilter()) {
+    @if (filters.getRawValue().q.trim()) {
       <hum-empty-state
-        icon="filter"
-        hasAction
+        icon="search"
         [title]="'humano.payslips.noMatchTitle' | translate"
         [description]="'humano.payslips.noMatchDescription' | translate"
       >
-        <hum-button hum-empty-action variant="outline" size="sm" (click)="clearFilters()">{{
-          'humano.action.clearFilters' | translate
-        }}</hum-button>
+        <hum-button hum-empty-action variant="secondary" (click)="clearSearch()">{{ 'humano.action.clearFilters' | translate }}</hum-button>
       </hum-empty-state>
     } @else {
       <hum-empty-state
@@ -34,53 +102,92 @@
       />
     }
   } @else {
-    <table class="hum-table">
-      <thead>
-        <tr>
-          <th>{{ 'humano.payslips.colEmployee' | translate }}</th>
-          <th>{{ 'humano.payslips.colPeriod' | translate }}</th>
-          <th>{{ 'humano.payslips.colPaymentDate' | translate }}</th>
-          <th class="hum-table__num">{{ 'humano.payslips.colGross' | translate }}</th>
-          <th class="hum-table__num">{{ 'humano.payslips.colNet' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
+    @if (view() === 'cards') {
+      <div class="hum-payslip-grid">
         @for (p of list.items(); track p.id) {
-          <tr style="cursor: pointer" (click)="open(p)">
-            <td>
-              <div style="font-weight: 500; color: var(--text-strong)">{{ p.employeeName ?? '—' }}</div>
-              @if (p.employeeCode) {
-                <div class="tabular-nums" style="color: var(--text-muted); font-size: var(--text-xs)">{{ p.employeeCode }}</div>
-              }
-            </td>
-            <td>{{ p.periodStart | payPeriod: p.periodCode }}</td>
-            <td>{{ p.paymentDate ? (p.paymentDate | date: 'mediumDate') : '—' }}</td>
-            <td class="hum-table__num tabular-nums">{{ p.gross | money: p.currencyCode }}</td>
-            <td class="hum-table__num tabular-nums" style="font-weight: 600; color: var(--text-strong)">
-              {{ p.net | money: p.currencyCode }}
-            </td>
-          </tr>
+          <a class="hum-payslip-card" [routerLink]="['/payroll/payslips', p.id]">
+            <div class="hum-payslip-card__head">
+              <hum-avatar [name]="p.employeeName ?? ''" size="sm" />
+              <span class="hum-payslip-card__who">
+                <span class="hum-payslip-card__name">{{ p.employeeName }}</span>
+                <span class="hum-payslip-card__sub">{{ p.position ?? p.department ?? '—' }}</span>
+              </span>
+            </div>
+            <div class="hum-payslip-card__net tabular-nums">{{ p.net | money: p.currencyCode }}</div>
+            <div class="hum-payslip-card__split" [title]="('humano.payslips.gross' | translate) + ' ' + (p.gross | money: p.currencyCode)">
+              <span [style.width.%]="netShare(p)"></span>
+            </div>
+            <div class="hum-payslip-card__foot tabular-nums">
+              <span>{{ 'humano.payslips.gross' | translate }} {{ p.gross | money: p.currencyCode }}</span>
+              <span>−{{ p.totalDeductions | money: p.currencyCode }}</span>
+            </div>
+            <div class="hum-payslip-card__number"><lucide-icon name="receipt" [size]="12" />{{ p.number }}</div>
+          </a>
         }
-      </tbody>
-    </table>
+      </div>
+    } @else {
+      <div class="hum-table-wrap">
+        <table class="hum-table">
+          <thead>
+            <tr>
+              <th>{{ 'humano.payslips.colEmployee' | translate }}</th>
+              <th>{{ 'humano.payslips.colDepartment' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.payslips.gross' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.payslips.colDeductions' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.payslips.colNet' | translate }}</th>
+              <th style="width: 140px">{{ 'humano.payslips.colSplit' | translate }}</th>
+              <th>{{ 'humano.payslips.colNumber' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of list.items(); track p.id) {
+              <tr style="cursor: pointer" tabindex="0" (click)="open(p)" (keydown.enter)="open(p)">
+                <td>
+                  <span class="hum-person">
+                    <hum-avatar [name]="p.employeeName ?? ''" size="xs" />
+                    <span class="hum-person__text">
+                      <span class="hum-person__name">{{ p.employeeName }}</span>
+                      <span class="hum-person__sub">{{ p.position ?? '' }}</span>
+                    </span>
+                  </span>
+                </td>
+                <td>{{ p.department ?? '—' }}</td>
+                <td class="hum-table__num tabular-nums">{{ p.gross | money: p.currencyCode }}</td>
+                <td class="hum-table__num tabular-nums" style="color: var(--text-muted)">
+                  −{{ p.totalDeductions | money: p.currencyCode }}
+                </td>
+                <td class="hum-table__num tabular-nums">
+                  <strong>{{ p.net | money: p.currencyCode }}</strong>
+                </td>
+                <td>
+                  <div class="hum-payslip-card__split"><span [style.width.%]="netShare(p)"></span></div>
+                </td>
+                <td class="tabular-nums" style="color: var(--text-muted)">{{ p.number }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
 
-    <div style="display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3)">
-      <hum-button
+    <div class="hum-pager">
+      <span class="tabular-nums">{{ page() * pageSize + 1 }}–{{ page() * pageSize + list.items().length }} / {{ list.total() }}</span>
+      <hum-icon-button
+        icon="chevron-left"
+        [label]="'humano.directory.prevPage' | translate"
         variant="outline"
         size="sm"
-        [disabled]="(list.params().page ?? 0) === 0"
-        (click)="list.setParams({ page: (list.params().page ?? 0) - 1 })"
-        aria-label="Previous page"
-        >‹</hum-button
-      >
-      <hum-button
+        [disabled]="page() === 0"
+        (click)="goto(page() - 1)"
+      />
+      <hum-icon-button
+        icon="chevron-right"
+        [label]="'humano.directory.nextPage' | translate"
         variant="outline"
         size="sm"
-        [disabled]="((list.params().page ?? 0) + 1) * (list.params().size ?? 25) >= list.total()"
-        (click)="list.setParams({ page: (list.params().page ?? 0) + 1 })"
-        aria-label="Next page"
-        >›</hum-button
-      >
+        [disabled]="(page() + 1) * pageSize >= list.total()"
+        (click)="goto(page() + 1)"
+      />
     </div>
   }
 </div>

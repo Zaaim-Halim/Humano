@@ -1,47 +1,185 @@
 <div class="hum-page">
-  <hum-page-header [title]="'humano.payrollRuns.title' | translate" [subtitle]="'humano.payrollRuns.subtitle' | translate" />
+  <hum-page-header
+    [title]="'humano.payrollRuns.title' | translate"
+    [subtitle]="'humano.payrollRuns.subtitle' | translate"
+    [hasActions]="canCreate"
+  >
+    <hum-button hum-page-actions variant="primary" icon="play" (click)="openNewRun()">{{
+      'humano.payrollRuns.newRun' | translate
+    }}</hum-button>
+  </hum-page-header>
 
-  @if (!canCreate) {
-    <hum-alert tone="info" [title]="'humano.payrollRuns.noPermissionTitle' | translate">
-      {{ 'humano.payrollRuns.noPermissionBody' | translate }}
-    </hum-alert>
-  } @else if (loading()) {
-    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
-  } @else if (error(); as e) {
+  @if (runsError(); as e) {
     <hum-alert tone="danger" [title]="e">
-      <div style="margin-bottom: var(--space-2)">{{ 'humano.payrollRuns.loadHint' | translate }}</div>
-      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+      <hum-button variant="outline" size="sm" (click)="loadRuns()">{{ 'humano.action.retry' | translate }}</hum-button>
     </hum-alert>
-  } @else if (noPeriods()) {
-    <hum-alert tone="info" [title]="'humano.payrollRuns.noPeriodsTitle' | translate">
-      {{ 'humano.payrollRuns.noPeriodsBody' | translate }}
-    </hum-alert>
-  } @else {
-    <form [formGroup]="form" (ngSubmit)="submit()" style="display: grid; gap: var(--space-4)">
-      <hum-card [title]="'humano.payrollRuns.newRun' | translate">
-        <div style="display: grid; gap: var(--space-4)">
-          <hum-form-field
-            [label]="'humano.payrollRuns.period' | translate"
-            controlId="run-period"
-            required
-            [error]="invalid('periodId') ? ('humano.employeeForm.required' | translate) : undefined"
-          >
-            <hum-select inputId="run-period" formControlName="periodId" [options]="periodOptions()" [invalid]="invalid('periodId')" />
-          </hum-form-field>
-
-          <hum-switch formControlName="draftMode" [label]="'humano.payrollRuns.draftMode' | translate" />
-
-          <hum-form-field [label]="'humano.payrollRuns.notes' | translate" controlId="run-notes">
-            <hum-textarea inputId="run-notes" formControlName="notes" [rows]="3" />
-          </hum-form-field>
-        </div>
-      </hum-card>
-
-      <div style="display: flex; justify-content: flex-end">
-        <hum-button type="submit" variant="primary" icon="play" [loading]="submitting()" [disabled]="form.invalid">{{
-          'humano.payrollRuns.start' | translate
+  } @else if (runs() === null) {
+    <div class="hum-dir-stats hum-dir-stats--even">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="hum-dir-stat"><hum-skeleton [height]="56" /></div>
+      }
+    </div>
+    <hum-skeleton [height]="240" />
+  } @else if (!runs()!.length) {
+    <hum-empty-state
+      icon="wallet"
+      [title]="'humano.payrollRuns.emptyTitle' | translate"
+      [description]="'humano.payrollRuns.emptyBody' | translate"
+    >
+      @if (canCreate) {
+        <hum-button hum-empty-action variant="primary" icon="play" (click)="openNewRun()">{{
+          'humano.payrollRuns.newRun' | translate
         }}</hum-button>
+      }
+    </hum-empty-state>
+  } @else {
+    @if (latest(); as l) {
+      <section class="hum-dir-stats hum-dir-stats--even">
+        <div class="hum-dir-stat">
+          <div class="hum-dir-stat__label">{{ 'humano.payrollRuns.lastNet' | translate }}</div>
+          <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums">{{ l.totalNet | money: l.currencyCode }}</div>
+          <div class="hum-dir-stat__sub">
+            {{ null | payPeriod: l.periodCode }}
+            @if (netChange() !== null) {
+              <span class="hum-delta" [class.is-up]="netChange()! > 0" [class.is-down]="netChange()! < 0">
+                <lucide-icon [name]="netChange()! >= 0 ? 'trending-up' : 'trending-down'" [size]="12" />{{ netChange()!.toFixed(1) }}%
+              </span>
+            }
+          </div>
+        </div>
+        <div class="hum-dir-stat">
+          <div class="hum-dir-stat__label">{{ 'humano.payrollRuns.peoplePaid' | translate }}</div>
+          <div class="hum-dir-stat__value tabular-nums">{{ l.employeeCount }}</div>
+          @if (previous(); as p) {
+            <div class="hum-dir-stat__sub">{{ 'humano.payrollRuns.vsPrevious' | translate: { count: p.employeeCount } }}</div>
+          }
+        </div>
+        <div class="hum-dir-stat">
+          <div class="hum-dir-stat__label">{{ 'humano.payrollRuns.employerCost' | translate }}</div>
+          <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums">{{ l.totalEmployerCost | money: l.currencyCode }}</div>
+        </div>
+        <div class="hum-dir-stat" [class.hum-dir-stat--warn]="inProgress() > 0">
+          <div class="hum-dir-stat__label">{{ 'humano.payrollRuns.inProgress' | translate }}</div>
+          <div class="hum-dir-stat__value tabular-nums">{{ inProgress() }}</div>
+          <div class="hum-dir-stat__sub">{{ 'humano.payrollRuns.inProgressHint' | translate }}</div>
+        </div>
+      </section>
+    }
+
+    <section class="hum-ts-card" style="margin-bottom: var(--space-5)">
+      <div class="hum-chart-head">
+        <h3 class="hum-section-title" style="margin: 0">{{ 'humano.payrollRuns.trend' | translate }}</h3>
+        <div class="hum-legend">
+          <span class="hum-legend__item"
+            ><span class="hum-legend__dot" style="background: var(--brand)"></span>{{ 'humano.payrollRuns.net' | translate }}</span
+          >
+          <span class="hum-legend__item"
+            ><span class="hum-legend__dot" style="background: var(--indigo-300)"></span
+            >{{ 'humano.payrollRuns.deductions' | translate }}</span
+          >
+        </div>
       </div>
-    </form>
+      <div class="hum-colchart" role="img" [attr.aria-label]="'humano.payrollRuns.trend' | translate">
+        @for (t of trend(); track t.run.id) {
+          <button
+            type="button"
+            class="hum-colchart__col"
+            (click)="openRun(t.run)"
+            [title]="(null | payPeriod: t.run.periodCode) + ' · ' + (t.run.totalGross | money: t.run.currencyCode)"
+          >
+            <span class="hum-colchart__value tabular-nums">{{ t.run.totalNet | money: t.run.currencyCode }}</span>
+            <span class="hum-colchart__area">
+              <span class="hum-colchart__stack">
+                <span [style.height.%]="t.deductions" style="background: var(--indigo-300)"></span>
+                <span [style.height.%]="t.net" style="background: var(--brand)"></span>
+              </span>
+            </span>
+            <span class="hum-colchart__label"
+              >{{ t.run.periodStart | date: 'MMM' }}<br /><span class="tabular-nums">{{ t.run.periodStart | date: 'y' }}</span></span
+            >
+          </button>
+        }
+      </div>
+    </section>
+
+    <h3 class="hum-section-title">{{ 'humano.payrollRuns.history' | translate }}</h3>
+    <div class="hum-run-list">
+      @for (r of runs(); track r.id) {
+        <a class="hum-run" [routerLink]="['/payroll/runs', r.id]">
+          <div class="hum-run__period">
+            <span class="hum-run__title">{{ null | payPeriod: r.periodCode }}</span>
+            <span class="hum-run__sub">
+              <lucide-icon name="calendar" [size]="12" />{{
+                'humano.payrollRuns.paidOn' | translate: { date: (r.paymentDate | date: 'mediumDate') }
+              }}
+            </span>
+          </div>
+          <div class="hum-run__progress">
+            <div class="hum-steps">
+              @for (s of stages; track s; let i = $index) {
+                <span
+                  class="hum-steps__dot"
+                  [class.is-done]="i <= stageIndex(r.status)"
+                  [title]="'humano.payrollRuns.stage.' + s | translate"
+                ></span>
+                @if (i < stages.length - 1) {
+                  <span class="hum-steps__bar" [class.is-done]="i < stageIndex(r.status)"></span>
+                }
+              }
+            </div>
+            <hum-badge [status]="r.status" />
+          </div>
+          <div class="hum-run__figure">
+            <span class="hum-run__label">{{ 'humano.payrollRuns.people' | translate }}</span>
+            <span class="tabular-nums">{{ r.employeeCount }}</span>
+          </div>
+          <div class="hum-run__figure">
+            <span class="hum-run__label">{{ 'humano.payrollRuns.gross' | translate }}</span>
+            <span class="tabular-nums">{{ r.totalGross | money: r.currencyCode }}</span>
+          </div>
+          <div class="hum-run__figure">
+            <span class="hum-run__label">{{ 'humano.payrollRuns.net' | translate }}</span>
+            <strong class="tabular-nums">{{ r.totalNet | money: r.currencyCode }}</strong>
+          </div>
+          <lucide-icon name="chevron-right" [size]="16" class="hum-run__chevron" />
+        </a>
+      }
+    </div>
   }
 </div>
+
+<hum-drawer [open]="formOpen()" [title]="'humano.payrollRuns.newRun' | translate" width="440px" hasFooter (closed)="formOpen.set(false)">
+  @if (calendarsLoading()) {
+    <hum-skeleton-row /><hum-skeleton-row />
+  } @else if (calendarsError(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <div style="margin-bottom: var(--space-2)">{{ 'humano.payrollRuns.loadHint' | translate }}</div>
+      <hum-button variant="outline" size="sm" (click)="loadCalendars()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (noPeriods()) {
+    <hum-alert tone="info" [title]="'humano.payrollRuns.noPeriodsTitle' | translate">{{
+      'humano.payrollRuns.noPeriodsBody' | translate
+    }}</hum-alert>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="submit()" style="display: grid; gap: var(--space-4)">
+      <hum-form-field
+        [label]="'humano.payrollRuns.period' | translate"
+        controlId="run-period"
+        required
+        [error]="invalid('periodId') ? ('humano.employeeForm.required' | translate) : undefined"
+      >
+        <hum-select inputId="run-period" formControlName="periodId" [options]="periodOptions()" [invalid]="invalid('periodId')" />
+      </hum-form-field>
+      <hum-switch formControlName="draftMode" [label]="'humano.payrollRuns.draftMode' | translate" />
+      <hum-form-field [label]="'humano.payrollRuns.notes' | translate" controlId="run-notes">
+        <hum-textarea inputId="run-notes" formControlName="notes" [rows]="3" />
+      </hum-form-field>
+    </form>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="formOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="play" [loading]="submitting()" [disabled]="form.invalid" (click)="submit()">{{
+      'humano.payrollRuns.start' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>

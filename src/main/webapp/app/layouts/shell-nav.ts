@@ -42,6 +42,14 @@ export const SHELL_NAV: ShellNavGroup[] = [
     items: [
       { id: 'dashboard', labelKey: 'humano.nav.dashboard', icon: 'layout-grid', link: '/dashboard', keywords: 'home overview kpis' },
       { id: 'portal', labelKey: 'humano.nav.portal', icon: 'user', link: '/me', keywords: 'me self service portal home my space' },
+      // Everyone: requests routed to you as a manager or approver.
+      {
+        id: 'approvals',
+        labelKey: 'humano.nav.approvals',
+        icon: 'check-check',
+        link: '/approvals',
+        keywords: 'pending review sign off inbox',
+      },
       {
         id: 'my-profile',
         labelKey: 'humano.nav.myProfile',
@@ -139,14 +147,6 @@ export const SHELL_NAV: ShellNavGroup[] = [
         link: '/payroll/payslips',
         keywords: 'salary slip pay statement',
         permissions: [Permission.VIEW_PAYSLIPS],
-      },
-      {
-        id: 'approvals',
-        labelKey: 'humano.nav.approvals',
-        icon: 'check-check',
-        link: '/approvals',
-        keywords: 'pending review sign off',
-        permissions: [Permission.APPROVE_LEAVE, Permission.APPROVE_EXPENSE_CLAIMS, Permission.APPROVE_OVERTIME],
       },
     ],
   },

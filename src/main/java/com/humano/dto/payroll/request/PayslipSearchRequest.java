@@ -23,5 +23,7 @@ public record PayslipSearchRequest(
     LocalDate periodEndTo,
     String createdBy,
     Instant createdDateFrom,
-    Instant createdDateTo
+    Instant createdDateTo,
+    /** Free text: employee first/last name or payslip number (case-insensitive, partial). */
+    String query
 ) {}

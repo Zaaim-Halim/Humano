@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 
@@ -114,7 +115,27 @@ export default class PayRuleEditorComponent {
   protected readonly metadata = signal<FormulaMetadata | null>(null);
   protected readonly validation = signal<FormulaValidationResult | null>(null);
   /** Every rule on the selected component — inactive ones included, so they can be re-enabled. */
-  protected readonly rules = signal<PayRuleSummary[]>([]);
+  /** Every rule (enabled or not) of every component, by component id. */
+  protected readonly allRules = signal(new Map<string, PayRuleSummary[]>());
+  /** Which part of the page is shown: the rules overview or the new-rule editor. */
+  protected readonly view = signal<'rules' | 'new'>('rules');
+  /** Components grouped by kind, each with its rules, for the overview. */
+  protected readonly ruleGroups = computed(() => {
+    const kinds = ['EARNING', 'DEDUCTION', 'EMPLOYER_CHARGE'];
+    const rules = this.allRules();
+    return kinds
+      .map(kind => ({
+        kind,
+        components: this.components()
+          .filter(c => c.kind === kind)
+          .map(c => ({ component: c, rules: rules.get(c.id) ?? [] })),
+      }))
+      .filter(g => g.components.length);
+  });
+  protected readonly ruleStats = computed(() => {
+    const all = [...this.allRules().values()].flat();
+    return { components: this.components().length, rules: all.length, active: all.filter(r => r.active).length };
+  });
   /** Rule id whose activate/deactivate call is in flight, to block double toggles. */
   protected readonly togglingId = signal<string | null>(null);
   /** Failure of the rules fetch — kept apart from `error` so the page itself stays usable. */
@@ -254,10 +275,7 @@ export default class PayRuleEditorComponent {
       this.validation.set(null);
       this.formulaLen.set(v.length);
     });
-    this.form.controls.payComponentId.valueChanges.subscribe(id => {
-      this.selectedComponentId.set(id);
-      this.loadRules(id);
-    });
+    this.form.controls.payComponentId.valueChanges.subscribe(id => this.selectedComponentId.set(id));
   }
 
   protected load(): void {
@@ -275,6 +293,7 @@ export default class PayRuleEditorComponent {
       next: c => {
         this.components.set(c);
         this.loading.set(false);
+        this.loadRules();
       },
       error: (err: unknown) => {
         this.error.set(normalizeHttpError(err));
@@ -283,22 +302,25 @@ export default class PayRuleEditorComponent {
     });
   }
 
-  /** Reload the rules of the selected component. Also the retry action for a failed fetch. */
-  protected loadRules(componentId = this.selectedComponentId()): void {
+  /** Load every component's rules (enabled or not). Also the retry action for a failed fetch. */
+  protected loadRules(): void {
     this.rulesError.set(null);
-    if (!componentId) {
-      this.rules.set([]);
+    const components = this.components();
+    if (!components.length) {
+      this.allRules.set(new Map());
       return;
     }
-    this.service.rules(componentId).subscribe({
-      next: r => this.rules.set(r),
-      error: (err: unknown) => {
-        // Don't fall through to the "no rules yet" empty state — that would claim the
-        // component has none when we simply failed to read them.
-        this.rules.set([]);
-        this.rulesError.set(normalizeHttpError(err));
-      },
+    forkJoin(components.map(c => this.service.rules(c.id))).subscribe({
+      next: lists => this.allRules.set(new Map(components.map((c, i) => [c.id, lists[i]]))),
+      // Don't show "no rules" when we simply failed to read them.
+      error: (err: unknown) => this.rulesError.set(normalizeHttpError(err)),
     });
+  }
+
+  /** Open the editor with a component preselected. */
+  protected addRuleFor(componentId: string): void {
+    this.form.controls.payComponentId.setValue(componentId);
+    this.view.set('new');
   }
 
   /**
@@ -323,7 +345,7 @@ export default class PayRuleEditorComponent {
   }
 
   private setLocalActive(ruleId: string, active: boolean): void {
-    this.rules.update(list => list.map(r => (r.id === ruleId ? { ...r, active } : r)));
+    this.allRules.update(map => new Map([...map].map(([id, list]) => [id, list.map(r => (r.id === ruleId ? { ...r, active } : r))])));
   }
 
   /** Insert a function call (`#name()`, cursor between the parens) at the caret. */
@@ -446,7 +468,8 @@ export default class PayRuleEditorComponent {
         this.form.controls.formula.reset('');
         this.form.controls.description.reset('');
         this.lastSelStart = this.lastSelEnd = null;
-        this.loadRules(raw.payComponentId);
+        this.loadRules();
+        this.view.set('rules');
       },
       error: (err: unknown) => {
         this.toast.danger(normalizeHttpError(err));

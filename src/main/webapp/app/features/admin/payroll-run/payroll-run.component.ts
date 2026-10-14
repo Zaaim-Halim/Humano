@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable } from 'rxjs';
 
 import { normalizeHttpError } from 'app/core/api';
-import { AccountService } from 'app/core/auth/account.service';
+import { CurrentEmployeeService } from 'app/features/employee';
 import {
   AlertComponent,
   ButtonComponent,
@@ -34,19 +35,16 @@ const idle = <T>(): Holder<T> => ({ data: null, loading: false, error: null });
  * summary (totals, variance vs previous period, by-department, top earners) and
  * per-employee results, with a lifecycle stepper and guarded approve/post.
  *
- * Backend reality (consume, don't invent):
- *  - There is **no GET for the run itself** — only `summary` + `results` (both
- *    GET). `RunStatus` is returned only by the action POSTs, so the stepper is
- *    driven by actions taken this session (TODO when a run-state endpoint lands).
- *  - No `validation-warnings`/`line-items` endpoints; `summary.errorCount` is the
- *    count, detailed `validationErrors` arrive on action responses.
- *  - `approve` needs an `approverId` UUID; the `Account` model omits `id` (it's
- *    on `MeResponse`), read defensively below — TODO: surface `id` on Account.
+ * The run's status comes from `GET /api/payroll/runs/{id}` and drives the stepper and the
+ * available actions; `summary.errorCount` counts validation errors, and the detailed
+ * `validationErrors` arrive on calculation responses. Approval is recorded against the
+ * signed-in user's employee record.
  */
 @Component({
   selector: 'hum-payroll-run',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    RouterLink,
     MoneyPipe,
     PayPeriodPipe,
     TranslatePipe,
@@ -66,14 +64,13 @@ export default class PayrollRunComponent {
   readonly id = input.required<string>();
 
   private readonly runService = inject(PayrollRunService);
-  private readonly accountService = inject(AccountService);
+  private readonly currentEmployee = inject(CurrentEmployeeService);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
-  private readonly account = this.accountService.trackCurrentAccount();
 
   protected readonly summary = signal<Holder<PayrollRunSummary>>(idle());
   protected readonly results = signal<Holder<PayrollResult[]>>(idle());
-  /** Populated from lifecycle action responses (no GET for the run). */
+  /** The run itself — status, totals and (after a calculation) validation errors. */
   protected readonly run = signal<PayrollRun | null>(null);
   protected readonly busy = signal(false);
   protected readonly confirm = signal<'approve' | 'post' | null>(null);
@@ -92,6 +89,7 @@ export default class PayrollRunComponent {
   protected readonly byDepartment = computed(() => Object.entries(this.summary().data?.byDepartment ?? {}));
 
   constructor() {
+    this.currentEmployee.resolve();
     effect(() => {
       const id = this.id();
       if (id) untracked(() => this.load(id));
@@ -99,7 +97,11 @@ export default class PayrollRunComponent {
   }
 
   protected load(id: string): void {
-    this.run.set(null);
+    this.runService.find(id).subscribe({
+      // Keep validation errors from the last action: the GET does not carry them.
+      next: run =>
+        this.run.update(prev => ({ ...run, validationErrors: prev?.id === run.id ? prev.validationErrors : run.validationErrors })),
+    });
     this.summary.set({ data: null, loading: true, error: null });
     this.runService.summary(id).subscribe({
       next: data => this.summary.set({ data, loading: false, error: null }),
@@ -137,10 +139,9 @@ export default class PayrollRunComponent {
   protected confirmAction(): void {
     const kind = this.confirm();
     if (kind === 'approve') {
-      // id from MeResponse; Account model omits it — read defensively (TODO: type `id` on Account).
-      const approverId = (this.account() as unknown as { id?: string } | null)?.id;
+      const approverId = this.currentEmployee.currentEmployeeId();
       if (!approverId) {
-        this.toast.danger('Approver id unavailable'); // TODO: backend/model — expose current-user id on Account.
+        this.toast.danger(this.translate.instant('humano.payrollRun.noApproverProfile'));
         this.confirm.set(null);
         return;
       }

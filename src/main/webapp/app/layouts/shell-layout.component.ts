@@ -6,6 +6,7 @@ import { merge } from 'rxjs';
 
 import { Authority } from 'app/config/authority.constants';
 import { AccountService } from 'app/core/auth/account.service';
+import { CurrentEmployeeService } from 'app/features/employee';
 import { ThemeService } from 'app/core/theme/theme.service';
 import { LoginService } from 'app/login/login.service';
 import {
@@ -102,6 +103,7 @@ export default class ShellLayoutComponent {
   private readonly loginService = inject(LoginService);
   private readonly translate = inject(TranslateService);
   private readonly router = inject(Router);
+  private readonly currentEmployee = inject(CurrentEmployeeService);
 
   private readonly account = this.accountService.trackCurrentAccount();
   protected readonly userMenuOpen = signal(false);
@@ -115,7 +117,10 @@ export default class ShellLayoutComponent {
     const name = [a.firstName, a.lastName].filter(Boolean).join(' ') || a.login;
     return {
       name,
-      role: this.t(a.authorities.includes(Authority.ADMIN) ? 'humano.shell.roles.admin' : 'humano.shell.roles.employee'),
+      // The person's job title when they have an employee record; otherwise their access level.
+      role:
+        this.currentEmployee.currentEmployee()?.jobTitle ??
+        this.t(a.authorities.includes(Authority.ADMIN) ? 'humano.shell.roles.admin' : 'humano.shell.roles.employee'),
       src: a.imageUrl,
     };
   });

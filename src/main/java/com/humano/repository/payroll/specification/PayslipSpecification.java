@@ -181,4 +181,17 @@ public final class PayslipSpecification {
             predicates.add(cb.lessThanOrEqualTo(periodJoin.get("endDate"), periodEndTo));
         }
     }
+
+    /** Employee first/last name or payslip number containing {@code term} (case-insensitive). */
+    public static Specification<Payslip> matchesSearchTerm(String term) {
+        return (root, query, cb) -> {
+            String like = "%" + term.trim().toLowerCase() + "%";
+            var employee = root.join("result").join("employee");
+            return cb.or(
+                cb.like(cb.lower(employee.get("firstName")), like),
+                cb.like(cb.lower(employee.get("lastName")), like),
+                cb.like(cb.lower(root.get("number")), like)
+            );
+        };
+    }
 }

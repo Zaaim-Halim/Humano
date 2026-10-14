@@ -4,6 +4,7 @@ import com.humano.dto.hr.workflow.requests.ApprovalDecisionRequest;
 import com.humano.dto.hr.workflow.requests.SubmitApprovalRequest;
 import com.humano.dto.hr.workflow.responses.ApprovalWorkflowResponse;
 import com.humano.dto.hr.workflow.responses.PendingApprovalSummary;
+import com.humano.security.ApprovalAccess;
 import com.humano.security.annotation.RequireHrManager;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.service.hr.workflow.ApprovalWorkflowOrchestratorService;
@@ -30,9 +31,11 @@ public class ApprovalWorkflowResource {
     private static final Logger LOG = LoggerFactory.getLogger(ApprovalWorkflowResource.class);
 
     private final ApprovalWorkflowOrchestratorService approvalService;
+    private final ApprovalAccess access;
 
-    public ApprovalWorkflowResource(ApprovalWorkflowOrchestratorService approvalService) {
+    public ApprovalWorkflowResource(ApprovalWorkflowOrchestratorService approvalService, ApprovalAccess access) {
         this.approvalService = approvalService;
+        this.access = access;
     }
 
     /**
@@ -42,6 +45,7 @@ public class ApprovalWorkflowResource {
     @RequireHrStaffOrEmployee
     public ResponseEntity<ApprovalWorkflowResponse> submitForApproval(@Valid @RequestBody SubmitApprovalRequest request) {
         LOG.debug("REST request to submit for approval: {}", request);
+        access.requireSelf(request.requestorId());
         ApprovalWorkflowResponse result = approvalService.submitForApproval(request);
         return ResponseEntity.ok(result);
     }
@@ -54,6 +58,7 @@ public class ApprovalWorkflowResource {
     public ResponseEntity<ApprovalWorkflowResponse> getApprovalStatus(@PathVariable UUID approvalId) {
         LOG.debug("REST request to get approval status: {}", approvalId);
         ApprovalWorkflowResponse result = approvalService.getApprovalStatus(approvalId);
+        access.requireParticipant(result);
         return ResponseEntity.ok(result);
     }
 
@@ -67,6 +72,7 @@ public class ApprovalWorkflowResource {
         @Valid @RequestBody ApprovalDecisionRequest decision
     ) {
         LOG.debug("REST request to process approval decision for {}: {}", approvalId, decision);
+        access.requireCurrentApprover(approvalService.getApprovalStatus(approvalId));
         ApprovalWorkflowResponse result = approvalService.processApprovalDecision(approvalId, decision);
         return ResponseEntity.ok(result);
     }
@@ -78,6 +84,7 @@ public class ApprovalWorkflowResource {
     @RequireHrStaffOrEmployee
     public ResponseEntity<Void> withdrawApproval(@PathVariable UUID approvalId, @RequestParam String reason) {
         LOG.debug("REST request to withdraw approval: {}", approvalId);
+        access.requireRequestor(approvalService.getApprovalStatus(approvalId));
         approvalService.withdrawApprovalRequest(approvalId, reason);
         return ResponseEntity.noContent().build();
     }
@@ -100,6 +107,7 @@ public class ApprovalWorkflowResource {
     @RequireHrStaffOrEmployee
     public ResponseEntity<List<PendingApprovalSummary>> getPendingApprovals(@PathVariable UUID approverId) {
         LOG.debug("REST request to get pending approvals for: {}", approverId);
+        access.requireSelf(approverId);
         List<PendingApprovalSummary> result = approvalService.getPendingApprovalsForApprover(approverId);
         return ResponseEntity.ok(result);
     }
@@ -111,6 +119,7 @@ public class ApprovalWorkflowResource {
     @RequireHrStaffOrEmployee
     public ResponseEntity<Page<PendingApprovalSummary>> getPendingApprovalsPaged(@PathVariable UUID approverId, Pageable pageable) {
         LOG.debug("REST request to get pending approvals (paged) for: {}", approverId);
+        access.requireSelf(approverId);
         Page<PendingApprovalSummary> page = approvalService.getPendingApprovalsForApprover(approverId, pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return ResponseEntity.ok().headers(headers).body(page);
@@ -123,6 +132,7 @@ public class ApprovalWorkflowResource {
     @RequireHrStaffOrEmployee
     public ResponseEntity<Long> countPendingApprovals(@PathVariable UUID approverId) {
         LOG.debug("REST request to count pending approvals for: {}", approverId);
+        access.requireSelf(approverId);
         long count = approvalService.countPendingApprovals(approverId);
         return ResponseEntity.ok(count);
     }
@@ -134,6 +144,7 @@ public class ApprovalWorkflowResource {
     @RequireHrStaffOrEmployee
     public ResponseEntity<Page<ApprovalWorkflowResponse>> getApprovalsByRequestor(@PathVariable UUID requestorId, Pageable pageable) {
         LOG.debug("REST request to get approvals by requestor: {}", requestorId);
+        access.requireSelf(requestorId);
         Page<ApprovalWorkflowResponse> page = approvalService.getApprovalsByRequestor(requestorId, pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return ResponseEntity.ok().headers(headers).body(page);

@@ -1,52 +1,199 @@
 <div class="hum-page">
   <hum-page-header [title]="'humano.approvals.title' | translate" [subtitle]="'humano.approvals.subtitle' | translate" />
 
-  @if (!resolved()) {
-    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
-  } @else if (!approverId()) {
-    <!-- No way to resolve the current user's approver (employee) id yet. -->
+  @if (resolved() && !approverId()) {
     <hum-empty-state
-      icon="check-check"
+      icon="inbox"
       [title]="'humano.approvals.noApproverTitle' | translate"
       [description]="'humano.approvals.noApproverBody' | translate"
     />
-  } @else if (loading()) {
-    <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
   } @else if (error(); as e) {
     <hum-alert tone="danger" [title]="e">
       <hum-button variant="outline" size="sm" (click)="reload()">{{ 'humano.action.retry' | translate }}</hum-button>
     </hum-alert>
-  } @else if (empty()) {
+  } @else if (items() === null) {
+    <div class="hum-dir-stats hum-dir-stats--even">
+      @for (i of [1, 2, 3]; track i) {
+        <div class="hum-dir-stat"><hum-skeleton [height]="56" /></div>
+      }
+    </div>
+    <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+  } @else if (!items()!.length) {
     <hum-empty-state
       icon="check-check"
       [title]="'humano.approvals.emptyTitle' | translate"
       [description]="'humano.approvals.emptyDescription' | translate"
     />
   } @else {
-    <table class="hum-table">
-      <thead>
-        <tr>
-          <th>{{ 'humano.approvals.colType' | translate }}</th>
-          <th>{{ 'humano.approvals.colRequestor' | translate }}</th>
-          <th>{{ 'humano.approvals.colStatus' | translate }}</th>
-          <th class="hum-table__num">{{ 'humano.approvals.colWaiting' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (a of items(); track a.approvalRequestId) {
-          <tr>
-            <td>
-              {{ a.approvalType }}
-              @if (a.entityDescription) {
-                <span style="color: var(--text-muted)"> · {{ a.entityDescription }}</span>
-              }
-            </td>
-            <td>{{ a.requestorName ?? '—' }}</td>
-            <td><hum-badge [status]="a.status" /></td>
-            <td class="hum-table__num tabular-nums">{{ a.daysWaiting }}</td>
-          </tr>
-        }
-      </tbody>
-    </table>
+    <section class="hum-dir-stats hum-dir-stats--even">
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.approvals.pending' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().pending }}</div>
+      </div>
+      <div class="hum-dir-stat" [class.hum-dir-stat--warn]="stats().overdue > 0">
+        <div class="hum-dir-stat__label">{{ 'humano.approvals.overdue' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().overdue }}</div>
+        <div class="hum-dir-stat__sub">{{ 'humano.approvals.overdueHint' | translate }}</div>
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.approvals.oldest' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ 'humano.approvals.daysShort' | translate: { count: stats().oldest } }}</div>
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.approvals.leaveDays' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().leaveDays }}</div>
+        <div class="hum-dir-stat__sub">{{ 'humano.approvals.leaveDaysHint' | translate }}</div>
+      </div>
+    </section>
+
+    <div class="hum-chips">
+      @for (c of typeChips(); track c.value) {
+        <button type="button" class="hum-chip" [class.is-active]="typeFilter() === c.value" (click)="typeFilter.set(c.value)">
+          {{ c.label }}<span class="hum-chip__count tabular-nums">{{ c.count }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="hum-request-list">
+      @for (i of visible(); track i.approvalRequestId) {
+        <button
+          type="button"
+          class="hum-approval"
+          [class.is-overdue]="i.isOverdue"
+          [style.--hum-accent]="style(i.approvalType).color"
+          (click)="open(i)"
+        >
+          <span class="hum-approval__icon"><lucide-icon [name]="style(i.approvalType).icon" [size]="16" /></span>
+          <span class="hum-request__who">
+            <span class="hum-request__name">{{ i.requestorName }}</span>
+            <span class="hum-request__type">{{ 'humano.approvals.type.' + i.approvalType | translate }}</span>
+          </span>
+          <span class="hum-request__reason">{{ i.entityDescription }}</span>
+          <span class="hum-approval__figure tabular-nums">
+            @if (i.amount !== null) {
+              {{ i.amount | money: 'USD' }}
+            } @else if (i.daysCount !== null) {
+              {{ 'humano.approvals.daysShort' | translate: { count: i.daysCount } }}
+            }
+          </span>
+          <span class="hum-approval__wait" [class.is-overdue]="i.isOverdue">
+            @if (i.isOverdue) {
+              <lucide-icon name="circle-alert" [size]="12" />{{ 'humano.approvals.overdueBy' | translate }}
+            } @else {
+              {{ 'humano.approvals.waiting' | translate: { count: i.daysWaiting } }}
+            }
+          </span>
+        </button>
+      }
+    </div>
   }
 </div>
+
+<hum-drawer
+  [open]="selected() !== null"
+  [title]="selected() ? ('humano.approvals.type.' + selected()!.approvalType | translate) : ''"
+  width="460px"
+  hasFooter
+  (closed)="selected.set(null)"
+>
+  @if (selected(); as i) {
+    <div class="hum-profile-head">
+      <hum-avatar [name]="i.requestorName ?? ''" size="lg" />
+      <div>
+        <a class="hum-profile-head__name" style="text-decoration: none" [routerLink]="['/employees', i.requestorId]">{{
+          i.requestorName
+        }}</a>
+        <div class="hum-profile-head__title">
+          {{ 'humano.approvals.submitted' | translate: { date: (i.submittedAt | date: 'medium') } }}
+        </div>
+        @if (i.isOverdue) {
+          <hum-badge tone="danger" [label]="'humano.approvals.overdueBy' | translate" [dot]="false" />
+        }
+      </div>
+    </div>
+
+    <section class="hum-profile-section">
+      <h3 class="hum-section-title">{{ 'humano.approvals.request' | translate }}</h3>
+      <p style="margin: 0 0 var(--space-2)">{{ i.entityDescription }}</p>
+      <dl class="hum-dl">
+        @if (i.amount !== null) {
+          <dt>{{ 'humano.approvals.amount' | translate }}</dt>
+          <dd class="tabular-nums">{{ i.amount | money: 'USD' }}</dd>
+        }
+        @if (i.daysCount !== null) {
+          <dt>{{ 'humano.approvals.duration' | translate }}</dt>
+          <dd>{{ 'humano.approvals.daysShort' | translate: { count: i.daysCount } }}</dd>
+        }
+        <dt>{{ 'humano.approvals.due' | translate }}</dt>
+        <dd class="tabular-nums">{{ i.dueDate | date: 'mediumDate' }}</dd>
+      </dl>
+    </section>
+
+    <section class="hum-profile-section">
+      <h3 class="hum-section-title">{{ 'humano.approvals.chain' | translate }}</h3>
+      @if (workflowError(); as e) {
+        <hum-alert tone="danger" [title]="e" />
+      } @else if (!workflow()) {
+        <hum-skeleton-row /><hum-skeleton-row />
+      } @else {
+        <ol class="hum-chain">
+          @for (step of chain(); track step.level) {
+            <li
+              class="hum-chain__step"
+              [class.is-done]="!!step.decided"
+              [class.is-current]="step.current"
+              [class.is-rejected]="step.decided?.decision === 'REJECT'"
+            >
+              <span class="hum-chain__marker">
+                @if (step.decided) {
+                  <lucide-icon [name]="step.decided.decision === 'REJECT' ? 'x' : 'check'" [size]="12" />
+                } @else {
+                  {{ step.level }}
+                }
+              </span>
+              <span class="hum-chain__body">
+                <span class="hum-chain__title">{{ 'humano.approvals.level' | translate: { level: step.level } }}</span>
+                <span class="hum-chain__meta">
+                  @if (step.decided; as d) {
+                    {{ d.approverName }} · {{ d.decision }} · {{ d.decidedAt | date: 'medium' }}
+                  } @else if (step.current) {
+                    {{ step.approverName ?? ('humano.approvals.you' | translate) }} · {{ 'humano.approvals.awaiting' | translate }}
+                  } @else {
+                    {{ 'humano.approvals.later' | translate }}
+                  }
+                </span>
+                @if (step.decided?.comments) {
+                  <span class="hum-chain__comment">“{{ step.decided!.comments }}”</span>
+                }
+              </span>
+            </li>
+          }
+        </ol>
+      }
+    </section>
+
+    <section class="hum-profile-section">
+      <h3 class="hum-section-title">{{ 'humano.approvals.yourDecision' | translate }}</h3>
+      <hum-textarea
+        [placeholder]="'humano.approvals.commentPlaceholder' | translate"
+        [ngModel]="comment()"
+        (ngModelChange)="comment.set($event)"
+      />
+    </section>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end; flex-wrap: wrap">
+    <hum-button
+      variant="ghost"
+      icon="message-square"
+      [loading]="deciding() === decisions.REQUEST_MORE_INFO"
+      (click)="decide(decisions.REQUEST_MORE_INFO)"
+      >{{ 'humano.approvals.askMore' | translate }}</hum-button
+    >
+    <hum-button variant="outline" icon="x" [loading]="deciding() === decisions.REJECT" (click)="decide(decisions.REJECT)">{{
+      'humano.approvals.reject' | translate
+    }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="deciding() === decisions.APPROVE" (click)="decide(decisions.APPROVE)">{{
+      'humano.approvals.approve' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>

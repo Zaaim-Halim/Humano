@@ -2,7 +2,9 @@ import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
+import { Page, PageRequest } from 'app/core/api';
 import { ApplicationConfigService } from 'app/core/config/application-config.service';
+import { createRequestOption } from 'app/core/request/request-util';
 
 import { PayrollResult } from '../models/payroll-result.model';
 import {
@@ -24,6 +26,16 @@ import { Payslip } from '../models/payslip.model';
 export class PayrollRunService {
   private readonly http = inject(HttpClient);
   private readonly resourceUrl = inject(ApplicationConfigService).getEndpointFor('api/payroll/runs');
+
+  /** `GET /api/payroll/runs` — run history, newest pay period first. */
+  list(req?: PageRequest): Observable<Page<PayrollRun>> {
+    return this.http.get<Page<PayrollRun>>(this.resourceUrl, { params: createRequestOption(req) });
+  }
+
+  /** `GET /api/payroll/runs/{id}` — one run with its current status and totals. */
+  find(id: string): Observable<PayrollRun> {
+    return this.http.get<PayrollRun>(`${this.resourceUrl}/${encodeURIComponent(id)}`);
+  }
 
   /** `POST /api/payroll/runs` — initiate a run for a period. */
   initiate(body: InitiatePayrollRunRequest): Observable<PayrollRun> {

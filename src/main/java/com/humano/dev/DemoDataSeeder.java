@@ -12,9 +12,14 @@ import com.humano.domain.enumeration.hr.OrganizationalUnitType;
 import com.humano.domain.enumeration.hr.TrainingStatus;
 import com.humano.domain.enumeration.hr.WorkLocationType;
 import com.humano.domain.enumeration.payroll.Basis;
+import com.humano.domain.enumeration.payroll.Kind;
+import com.humano.domain.enumeration.payroll.Measurement;
+import com.humano.domain.enumeration.payroll.PayComponentCode;
 import com.humano.domain.enumeration.payroll.RunStatus;
+import com.humano.domain.enumeration.payroll.TaxCode;
 import com.humano.domain.hr.Department;
 import com.humano.domain.hr.OrganizationalUnit;
+import com.humano.domain.payroll.PayComponent;
 import com.humano.domain.payroll.PayrollPeriod;
 import com.humano.domain.shared.AbstractReferenceData;
 import com.humano.domain.shared.Employee;
@@ -41,6 +46,9 @@ import com.humano.dto.hr.responses.EmployeePersonalDetails;
 import com.humano.dto.hr.responses.ReferenceDataRef;
 import com.humano.dto.payroll.request.ApprovePayrollRunRequest;
 import com.humano.dto.payroll.request.CreateCompensationRequest;
+import com.humano.dto.payroll.request.CreatePayComponentRequest;
+import com.humano.dto.payroll.request.CreatePayRuleRequest;
+import com.humano.dto.payroll.request.CreateTaxBracketRequest;
 import com.humano.dto.payroll.request.GeneratePayrollPeriodsRequest;
 import com.humano.dto.payroll.request.InitiatePayrollRunRequest;
 import com.humano.dto.payroll.response.PayrollRunResponse;
@@ -54,9 +62,12 @@ import com.humano.repository.hr.OrganizationalUnitRepository;
 import com.humano.repository.hr.PositionRepository;
 import com.humano.repository.payroll.CountryRepository;
 import com.humano.repository.payroll.CurrencyRepository;
+import com.humano.repository.payroll.PayComponentRepository;
 import com.humano.repository.payroll.PayrollCalendarRepository;
 import com.humano.repository.payroll.PayrollPeriodRepository;
+import com.humano.repository.payroll.PayrollRunRepository;
 import com.humano.repository.payroll.PayslipRepository;
+import com.humano.repository.payroll.TaxBracketRepository;
 import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.repository.shared.UserRepository;
@@ -76,9 +87,11 @@ import com.humano.service.hr.ProjectService;
 import com.humano.service.hr.TimesheetService;
 import com.humano.service.hr.TrainingService;
 import com.humano.service.payroll.CompensationService;
+import com.humano.service.payroll.PayComponentService;
 import com.humano.service.payroll.PayrollCalendarService;
 import com.humano.service.payroll.PayrollProcessingService;
 import com.humano.service.payroll.PayslipService;
+import com.humano.service.payroll.TaxCalculationService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.math.BigDecimal;
@@ -94,6 +107,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -155,6 +169,10 @@ public class DemoDataSeeder {
     private final PayrollCalendarService payrollCalendarService;
     private final PayrollProcessingService payrollProcessingService;
     private final PayslipService payslipService;
+    private final PayComponentRepository payComponentRepository;
+    private final TaxBracketRepository taxBracketRepository;
+    private final PayComponentService payComponentService;
+    private final TaxCalculationService taxCalculationService;
 
     private final UserRepository userRepository;
     private final EmployeeRepository employeeRepository;
@@ -172,6 +190,7 @@ public class DemoDataSeeder {
     private final ExpenseClaimRepository expenseClaimRepository;
     private final PayslipRepository payslipRepository;
     private final PayrollPeriodRepository payrollPeriodRepository;
+    private final PayrollRunRepository payrollRunRepository;
     private final TransactionTemplate tenantTx;
 
     @PersistenceContext(unitName = "tenant")
@@ -206,6 +225,10 @@ public class DemoDataSeeder {
         PayrollCalendarService payrollCalendarService,
         PayrollProcessingService payrollProcessingService,
         PayslipService payslipService,
+        PayComponentRepository payComponentRepository,
+        TaxBracketRepository taxBracketRepository,
+        PayComponentService payComponentService,
+        TaxCalculationService taxCalculationService,
         UserRepository userRepository,
         EmployeeRepository employeeRepository,
         AuthorityRepository authorityRepository,
@@ -222,6 +245,7 @@ public class DemoDataSeeder {
         ExpenseClaimRepository expenseClaimRepository,
         PayslipRepository payslipRepository,
         PayrollPeriodRepository payrollPeriodRepository,
+        PayrollRunRepository payrollRunRepository,
         @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager
     ) {
         this.unitService = unitService;
@@ -242,6 +266,10 @@ public class DemoDataSeeder {
         this.payrollCalendarService = payrollCalendarService;
         this.payrollProcessingService = payrollProcessingService;
         this.payslipService = payslipService;
+        this.payComponentRepository = payComponentRepository;
+        this.taxBracketRepository = taxBracketRepository;
+        this.payComponentService = payComponentService;
+        this.taxCalculationService = taxCalculationService;
         this.userRepository = userRepository;
         this.employeeRepository = employeeRepository;
         this.authorityRepository = authorityRepository;
@@ -258,6 +286,7 @@ public class DemoDataSeeder {
         this.expenseClaimRepository = expenseClaimRepository;
         this.payslipRepository = payslipRepository;
         this.payrollPeriodRepository = payrollPeriodRepository;
+        this.payrollRunRepository = payrollRunRepository;
         this.tenantTx = new TransactionTemplate(tenantTransactionManager);
     }
 
@@ -311,9 +340,13 @@ public class DemoDataSeeder {
         if (inTx(expenseClaimRepository::count) == 0) {
             section("expenses", this::seedExpenses);
         }
+        if (inTx(taxBracketRepository::count) == 0) {
+            section("payroll configuration", this::seedPayrollConfiguration);
+        }
         if (inTx(payslipRepository::count) == 0) {
             section("payroll", this::seedPayroll);
         }
+        section("payroll history", this::seedPayrollHistory);
         log.info("[demo-data] done: {} employees in the demo company", people.size());
     }
 
@@ -1446,25 +1479,147 @@ public class DemoDataSeeder {
 
     // ---------------------------------------------------------------- payroll
 
+    /**
+     * US-style statutory payroll, configured through the same services as the pay-rules screen:
+     * progressive federal income tax (monthly brackets), the employee FICA deduction (Social
+     * Security 6.2% up to the monthly wage base + Medicare 1.45%) and the matching employer share.
+     */
+    private void seedPayrollConfiguration() {
+        LocalDate from = today.withDayOfYear(1).minusYears(1);
+        // Monthly slices of taxable income → marginal rate (approximate 2026 federal schedule / 12).
+        Object[][] brackets = {
+            { "0", "1000", "0.10" },
+            { "1000", "4000", "0.12" },
+            { "4000", "8500", "0.22" },
+            { "8500", "16000", "0.24" },
+            { "16000", "20500", "0.32" },
+            { "20500", "51000", "0.35" },
+            { "51000", "10000000", "0.37" },
+        };
+        for (Object[] b : brackets) {
+            taxCalculationService.createTaxBracket(
+                new CreateTaxBracketRequest(
+                    usaId,
+                    TaxCode.PIT,
+                    new BigDecimal((String) b[0]),
+                    new BigDecimal((String) b[1]),
+                    new BigDecimal((String) b[2]),
+                    BigDecimal.ZERO,
+                    from,
+                    null
+                )
+            );
+        }
+        String fica = "#pct(#min(#grossSalary, 14675), 6.2) + #pct(#grossSalary, 1.45)";
+        Set<PayComponentCode> existing = inTx(() ->
+            payComponentRepository.findAll().stream().map(PayComponent::getCode).collect(Collectors.toSet())
+        );
+        if (!existing.contains(PayComponentCode.DEDUCTION)) {
+            UUID id = payComponentService
+                .createComponent(
+                    new CreatePayComponentRequest(
+                        PayComponentCode.DEDUCTION,
+                        "Social Security & Medicare",
+                        Kind.DEDUCTION,
+                        Measurement.AMOUNT,
+                        false,
+                        true,
+                        false,
+                        null
+                    )
+                )
+                .id();
+            payComponentService.createRule(
+                new CreatePayRuleRequest(
+                    id,
+                    fica,
+                    "Employee FICA: Social Security 6.2% up to the monthly wage base, plus Medicare 1.45%.",
+                    from,
+                    null,
+                    1,
+                    null,
+                    true
+                )
+            );
+        }
+        if (!existing.contains(PayComponentCode.EMPLOYER_CHARGE)) {
+            UUID id = payComponentService
+                .createComponent(
+                    new CreatePayComponentRequest(
+                        PayComponentCode.EMPLOYER_CHARGE,
+                        "Employer payroll taxes",
+                        Kind.EMPLOYER_CHARGE,
+                        Measurement.AMOUNT,
+                        false,
+                        false,
+                        false,
+                        null
+                    )
+                )
+                .id();
+            payComponentService.createRule(
+                new CreatePayRuleRequest(
+                    id,
+                    fica,
+                    "Employer share of Social Security and Medicare, matching the employee contribution.",
+                    from,
+                    null,
+                    1,
+                    null,
+                    true
+                )
+            );
+        }
+        log.info("[demo-data] payroll configured: {} income-tax brackets, FICA deduction and employer charge", brackets.length);
+    }
+
+    /** Last month's run: calculated and approved with payslips, waiting to be posted. */
     private void seedPayroll() {
+        ensurePeriods();
+        PayrollPeriod period = periodCovering(today.minusMonths(1).withDayOfMonth(1));
+        if (period == null) {
+            log.info("[demo-data] no payroll period for last month; skipping run");
+            return;
+        }
+        runPayroll(period, false);
+    }
+
+    /**
+     * The five months before last month: posted runs with payslips, so the run history and its
+     * trend have something to show. Posted periods are skipped; an interrupted run is resumed.
+     */
+    private void seedPayrollHistory() {
+        ensurePeriods();
+        LocalDate lastMonth = today.minusMonths(1).withDayOfMonth(1);
+        for (int back = 5; back >= 1; back--) {
+            PayrollPeriod period = periodCovering(lastMonth.minusMonths(back));
+            if (period != null && !inTx(() -> payrollRunRepository.existsByPeriodIdAndStatus(period.getId(), RunStatus.POSTED))) {
+                runPayroll(period, true);
+            }
+        }
+    }
+
+    private void ensurePeriods() {
         UUID calendarId = inTx(() -> payrollCalendarRepository.findAll().stream().findFirst().orElseThrow().getId());
-        LocalDate from = today.withDayOfYear(1);
+        LocalDate from = today.withDayOfMonth(1).minusMonths(7);
         LocalDate to = today.withDayOfMonth(1).plusMonths(2).minusDays(1);
         payrollCalendarService.generatePeriods(new GeneratePayrollPeriodsRequest(calendarId, from, to, 5, true));
-        LocalDate lastMonth = today.minusMonths(1).withDayOfMonth(1);
-        // Read back from the repository: generatePeriods only returns periods it newly created.
-        PayrollPeriod period = inTx(() ->
+    }
+
+    /** Read back from the repository: generatePeriods only returns periods it newly created. */
+    private PayrollPeriod periodCovering(LocalDate day) {
+        return inTx(() ->
             payrollPeriodRepository
                 .findAll()
                 .stream()
-                .filter(p -> !p.getStartDate().isAfter(lastMonth) && !p.getEndDate().isBefore(lastMonth))
+                .filter(p -> !p.getStartDate().isAfter(day) && !p.getEndDate().isBefore(day))
                 .findFirst()
                 .orElse(null)
         );
-        if (period == null) {
-            log.info("[demo-data] no payroll period covering {}; skipping run", lastMonth);
-            return;
-        }
+    }
+
+    /** Initiate → calculate → approve → payslips (→ post) for one period, resuming wherever it stopped. */
+    private void runPayroll(PayrollPeriod period, boolean post) {
         // Idempotent: re-initiating the same period returns the existing run.
         PayrollRunResponse run = payrollProcessingService.initiatePayrollRun(
             new InitiatePayrollRunRequest(
@@ -1477,7 +1632,6 @@ public class DemoDataSeeder {
             )
         );
         UUID runId = run.id();
-        log.info("[demo-data] payroll run {} for {} is {}", runId, period.getCode(), run.status());
         RunStatus status = run.status();
         if (status == RunStatus.DRAFT) {
             status = payrollProcessingService.calculatePayroll(runId).status();
@@ -1489,8 +1643,12 @@ public class DemoDataSeeder {
                 .approvePayrollRun(new ApprovePayrollRunRequest(runId, approverId, "Reviewed against last month's variance report.", false))
                 .status();
         }
-        if (status == RunStatus.APPROVED || status == RunStatus.POSTED) {
-            log.info("[demo-data] {} payslips generated", payslipService.generatePayslipsForRun(runId).size());
+        if (status == RunStatus.APPROVED) {
+            int payslips = payslipService.generatePayslipsForRun(runId).size();
+            if (post) {
+                status = payrollProcessingService.postPayrollRun(runId).status();
+            }
+            log.info("[demo-data] payroll {} → {} ({} payslips)", period.getCode(), status, payslips);
         }
     }
 

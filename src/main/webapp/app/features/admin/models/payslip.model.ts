@@ -29,6 +29,8 @@ export interface PayslipSearchRequest {
   employeeId?: string;
   payslipNumber?: string;
   payrollRunId?: string;
+  /** Free text: employee first/last name or payslip number. */
+  query?: string;
   minGross?: number;
   maxGross?: number;
   minNet?: number;

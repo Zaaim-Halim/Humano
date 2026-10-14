@@ -7,7 +7,6 @@
       "stepCalculated": "Calculated",
       "stepApproved": "Approved",
       "stepPosted": "Posted",
-      "statusNote": "Status reflects the actions taken on this page.",
       "employees": "Employees",
       "processed": "Processed",
       "errors": "Errors",
@@ -36,7 +35,9 @@
       "approved": "Run approved",
       "posted": "Run posted",
       "recalculated": "Run recalculated",
-      "payslipsGenerated": "Payslips generated"
+      "payslipsGenerated": "Payslips generated",
+      "noApproverProfile": "Your account has no employee profile, so you can't approve payroll.",
+      "viewPayslips": "View payslips"
     }
   }
 }

@@ -221,9 +221,9 @@ const routes: Routes = [
       {
         path: 'approvals',
         title: 'humano.nav.approvals',
+        // Approvals follow reporting lines (whoever a request is routed to), not roles — every
+        // signed-in employee gets the inbox; the API only returns and accepts their own items.
         loadComponent: () => import('./features/manager/approvals/approvals.component'),
-        canActivate: [UserRouteAccessService],
-        data: { permissions: [Permission.APPROVE_LEAVE, Permission.APPROVE_EXPENSE_CLAIMS, Permission.APPROVE_OVERTIME] },
       },
       {
         path: 'payroll/pay-rules',

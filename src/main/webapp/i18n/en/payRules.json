@@ -5,7 +5,7 @@
     },
     "payRules": {
       "title": "Pay rule formulas",
-      "subtitle": "Compose and validate pay-component formulas using the engine's functions and variables.",
+      "subtitle": "How each pay component is calculated — review, switch on or off, and add formulas",
       "targetTitle": "Rule target",
       "component": "Pay component",
       "selectComponent": "Select a component…",
@@ -45,15 +45,27 @@
       "useRecipe": "Use",
       "noRefResults": "No matches.",
       "dynamicHint": "Pay-component codes are also available as variables — e.g. #BASIC, #OT, #OT_RATE, #TAX_PIT, and #YTD_ year-to-date totals.",
-      "existingTitle": "Rules on this component",
-      "existingHint": "Every rule added to this component. Use the toggle to enable or disable one without deleting it.",
-      "noRules": "No rules on this component yet.",
       "enableRule": "Enable rule",
       "disableRule": "Disable rule",
       "enabled": "Rule enabled",
       "disabled": "Rule disabled",
       "save": "Save rule",
-      "saved": "Pay rule saved"
+      "saved": "Pay rule saved",
+      "newRule": "New rule",
+      "backToRules": "All rules",
+      "components": "Pay components",
+      "rulesCount": "Rules",
+      "activeCount": "Active rules",
+      "kind": {
+        "EARNING": "Earnings",
+        "DEDUCTION": "Deductions",
+        "EMPLOYER_CHARGE": "Employer charges"
+      },
+      "taxable": "taxable",
+      "social": "counts toward social security",
+      "addRule": "Add rule",
+      "noEnd": "no end date",
+      "noRulesComputed": "No rules — this component is calculated by the payroll engine itself (e.g. salary from compensation, income tax from brackets)."
     }
   }
 }

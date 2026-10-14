@@ -26,14 +26,6 @@ public interface ApprovalChainConfigRepository extends JpaRepository<ApprovalCha
     Optional<ApprovalChainConfig> findByApprovalTypeAndSequenceOrderAndActiveTrue(ApprovalType approvalType, Integer sequenceOrder);
 
     /**
-     * Find configurations for a specific department.
-     */
-    List<ApprovalChainConfig> findByApprovalTypeAndDepartmentIdAndActiveTrueOrderBySequenceOrderAsc(
-        ApprovalType approvalType,
-        UUID departmentId
-    );
-
-    /**
      * Find configurations by threshold range.
      */
     @Query(

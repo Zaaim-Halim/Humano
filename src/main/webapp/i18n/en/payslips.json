@@ -2,17 +2,26 @@
   "humano": {
     "payslips": {
       "title": "Payslips",
-      "subtitle": "{{ total }} payslips",
-      "search": "Search by payslip number…",
-      "colEmployee": "Employee",
-      "colPeriod": "Period",
-      "colPaymentDate": "Payment date",
-      "colGross": "Gross",
-      "colNet": "Net",
+      "subtitle": "Every payslip, by pay run",
+      "period": "Pay period",
+      "totalNet": "Net paid",
+      "paidOn": "Paid {{ date }}",
+      "totalGross": "Gross pay",
+      "averageNet": "Average net",
+      "deductionRate": "Deduction rate",
+      "search": "Search by name or payslip number…",
+      "count": "{{ total }} payslips",
+      "gross": "Gross",
       "emptyTitle": "No payslips",
       "emptyDescription": "Payslips appear here once a payroll run generates them.",
       "noMatchTitle": "No matching payslips",
-      "noMatchDescription": "No payslips match the current search."
+      "noMatchDescription": "Nobody in this pay run matches the search.",
+      "colEmployee": "Employee",
+      "colDepartment": "Department",
+      "colDeductions": "Deductions",
+      "colNet": "Net",
+      "colSplit": "Net of gross",
+      "colNumber": "Payslip no."
     }
   }
 }
