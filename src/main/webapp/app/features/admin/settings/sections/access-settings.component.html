@@ -1,0 +1,174 @@
+@if (error(); as e) {
+  <hum-alert tone="danger" [title]="e"
+    ><hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+  >
+} @else if (users() === null) {
+  <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+} @else {
+  <hum-tabs [items]="tabs()" [value]="tab()" (valueChange)="setTab($event)" />
+
+  @if (tab() === 'users') {
+    <section class="hum-set-card" style="margin-top: var(--space-3)">
+      <div class="hum-doc-toolbar">
+        <div style="width: 280px">
+          <hum-input
+            type="search"
+            icon="search"
+            [placeholder]="'humano.settings.access.searchUsers' | translate"
+            [ngModel]="query()"
+            (ngModelChange)="query.set($event)"
+          />
+        </div>
+        <div style="width: 240px">
+          <hum-select [options]="roleOptions()" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)" />
+        </div>
+        <span class="hum-records__spacer"></span>
+        @if (loadingPage()) {
+          <lucide-icon name="loader-circle" [size]="16" class="hum-spin" />
+        }
+      </div>
+      <ul class="hum-user-list" [class.is-loading]="loadingPage()">
+        @for (u of users(); track u.id) {
+          <li [class.is-off]="!u.activated">
+            <hum-avatar [name]="name(u)" [src]="u.imageUrl" size="sm" />
+            <span class="hum-person__text">
+              <span class="hum-person__name">
+                {{ name(u) }}
+                @if (isSelf(u)) {
+                  <hum-badge tone="brand" [label]="'humano.settings.access.you' | translate" [dot]="false" />
+                }
+              </span>
+              <span class="hum-person__sub">{{ u.email }}</span>
+            </span>
+            <span class="hum-user-list__roles">
+              @for (r of topRoles(u).slice(0, 3); track r) {
+                <span class="hum-role-chip" [class.is-admin]="r === 'ROLE_ADMIN'">{{ label(r) }}</span>
+              }
+              @if (u.authorities.length > 3) {
+                <span class="hum-kpi__hint">+{{ u.authorities.length - 3 }}</span>
+              }
+            </span>
+            <hum-switch
+              [ngModel]="u.activated"
+              [disabled]="isSelf(u)"
+              (ngModelChange)="setActive(u, $event)"
+              [ariaLabel]="'humano.settings.access.canSignIn' | translate"
+            />
+            <hum-button variant="ghost" size="sm" icon="pencil" (click)="openEdit(u)">{{
+              'humano.settings.access.editRoles' | translate
+            }}</hum-button>
+          </li>
+        } @empty {
+          <p class="hum-insights__note">{{ 'humano.settings.access.noUsers' | translate }}</p>
+        }
+      </ul>
+      @if (total() > pageSize) {
+        <div class="hum-pager">
+          <span class="tabular-nums">{{ 'humano.settings.access.range' | translate: range() }}</span>
+          <hum-icon-button
+            icon="chevron-left"
+            [label]="'humano.settings.access.prev' | translate"
+            variant="outline"
+            size="sm"
+            [disabled]="page() === 0"
+            (click)="goto(page() - 1)"
+          />
+          <span class="hum-kpi__hint tabular-nums">{{
+            'humano.settings.access.pageOf' | translate: { page: page() + 1, pages: lastPage() + 1 }
+          }}</span>
+          <hum-icon-button
+            icon="chevron-right"
+            [label]="'humano.settings.access.next' | translate"
+            variant="outline"
+            size="sm"
+            [disabled]="page() >= lastPage()"
+            (click)="goto(page() + 1)"
+          />
+        </div>
+      } @else if (total()) {
+        <div class="hum-pager">
+          <span class="tabular-nums">{{ 'humano.settings.access.range' | translate: range() }}</span>
+        </div>
+      }
+    </section>
+  } @else {
+    <div class="hum-role-groups">
+      @for (g of roleGroups(); track g.id) {
+        @if (g.roles.length) {
+          <section class="hum-set-card">
+            <header class="hum-insights__head">
+              <span class="hum-records__icon"><lucide-icon [name]="g.icon" [size]="16" /></span>
+              <h3>{{ 'humano.settings.access.group.' + g.id | translate }}</h3>
+            </header>
+            <ul class="hum-role-list">
+              @for (r of g.roles; track r) {
+                <li>
+                  <button
+                    type="button"
+                    class="hum-role-list__row"
+                    (click)="expandedRole.set(expandedRole() === r ? null : r)"
+                    [attr.aria-expanded]="expandedRole() === r"
+                  >
+                    <strong>{{ label(r) }}</strong>
+                    <span class="hum-kpi__hint">{{ 'humano.settings.access.holders' | translate: { n: holders().get(r) ?? 0 } }}</span>
+                    <span class="hum-records__spacer"></span>
+                    <span class="hum-records__count">{{ permissions(r) }}</span>
+                    <lucide-icon [name]="expandedRole() === r ? 'chevron-up' : 'chevron-down'" [size]="16" />
+                  </button>
+                  @if (expandedRole() === r) {
+                    <div class="hum-perm-chips">
+                      @for (p of permissionsOf(r); track p) {
+                        <span>{{ label(p) }}</span>
+                      }
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
+    </div>
+  }
+}
+
+<hum-drawer [open]="editing() !== null" [title]="editing() ? name(editing()!) : ''" width="520px" hasFooter (closed)="editing.set(null)">
+  @if (editing(); as u) {
+    <div style="display: grid; gap: var(--space-4)">
+      <label class="hum-set-switch">
+        <hum-switch [ngModel]="draftActive()" [disabled]="isSelf(u)" (ngModelChange)="draftActive.set($event)" />
+        <span>
+          <strong>{{ 'humano.settings.access.canSignIn' | translate }}</strong>
+          <span class="hum-kpi__hint">{{
+            (isSelf(u) ? 'humano.settings.access.selfHint' : 'humano.settings.access.canSignInHint') | translate
+          }}</span>
+        </span>
+      </label>
+      <div class="hum-kpi__hint">
+        {{ 'humano.settings.access.effective' | translate: { roles: draftRoles().size, perms: draftPermissionCount() } }}
+      </div>
+      @for (g of roleGroups(); track g.id) {
+        @if (g.roles.length) {
+          <fieldset class="hum-role-picker">
+            <legend><lucide-icon [name]="g.icon" [size]="14" />{{ 'humano.settings.access.group.' + g.id | translate }}</legend>
+            @for (r of g.roles; track r) {
+              <div class="hum-role-picker__item">
+                <hum-checkbox
+                  [label]="label(r)"
+                  [ngModel]="draftRoles().has(r)"
+                  [disabled]="isSelf(u) && r === 'ROLE_ADMIN'"
+                  (ngModelChange)="toggleRole(r, $event)"
+                />
+                <span class="hum-kpi__hint">{{ 'humano.settings.access.perms' | translate: { n: permissions(r) } }}</span>
+              </div>
+            }
+          </fieldset>
+        }
+      }
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="editing.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" [loading]="saving()" (click)="save()">{{ 'humano.action.save' | translate }}</hum-button>
+  </div>
+</hum-drawer>

@@ -4,6 +4,7 @@ import com.humano.dto.hr.requests.CreateReferenceDataRequest;
 import com.humano.dto.hr.requests.UpdateReferenceDataRequest;
 import com.humano.dto.hr.responses.ReferenceDataResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.MaritalStatusService;
 import jakarta.validation.Valid;
@@ -42,7 +43,7 @@ public class MaritalStatusResource {
     }
 
     @PostMapping
-    @RequirePermission(PermissionsConstants.MANAGE_ATTENDANCE)
+    @RequirePermission(PermissionsConstants.CONFIGURE_TENANT_SETTINGS)
     public ResponseEntity<ReferenceDataResponse> create(@Valid @RequestBody CreateReferenceDataRequest request) throws URISyntaxException {
         LOG.debug("REST request to create MaritalStatus: {}", request);
         ReferenceDataResponse result = service.create(request);
@@ -52,7 +53,7 @@ public class MaritalStatusResource {
     }
 
     @PutMapping("/{id}")
-    @RequirePermission(PermissionsConstants.MANAGE_ATTENDANCE)
+    @RequirePermission(PermissionsConstants.CONFIGURE_TENANT_SETTINGS)
     public ResponseEntity<ReferenceDataResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateReferenceDataRequest request) {
         LOG.debug("REST request to update MaritalStatus: {}", id);
         ReferenceDataResponse result = service.update(id, request);
@@ -62,7 +63,7 @@ public class MaritalStatusResource {
     }
 
     @GetMapping
-    @RequirePermission(PermissionsConstants.MANAGE_ATTENDANCE)
+    @RequireAuthenticated
     public ResponseEntity<Page<ReferenceDataResponse>> getAll(Pageable pageable) {
         Page<ReferenceDataResponse> page = service.getAll(pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
@@ -70,13 +71,13 @@ public class MaritalStatusResource {
     }
 
     @GetMapping("/{id}")
-    @RequirePermission(PermissionsConstants.MANAGE_ATTENDANCE)
+    @RequireAuthenticated
     public ResponseEntity<ReferenceDataResponse> get(@PathVariable UUID id) {
         return ResponseEntity.ok(service.getById(id));
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission(PermissionsConstants.MANAGE_ATTENDANCE)
+    @RequirePermission(PermissionsConstants.CONFIGURE_TENANT_SETTINGS)
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         LOG.debug("REST request to delete MaritalStatus: {}", id);
         service.delete(id);

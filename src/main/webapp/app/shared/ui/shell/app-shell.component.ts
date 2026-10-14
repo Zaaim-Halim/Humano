@@ -118,28 +118,31 @@ export interface ShellTenant {
     </aside>
 
     <header class="hum-topbar">
-      <button
-        type="button"
-        class="hum-topbar__menu"
-        [attr.aria-label]="menuLabel()"
-        [attr.aria-expanded]="sidebarOpen()"
-        aria-controls="hum-shell-sidebar"
-        (click)="toggleNav()"
-      >
-        <lucide-icon name="menu" [size]="18" />
-      </button>
-      @if (tenant(); as t) {
-        <button type="button" class="hum-topbar__tenant" (click)="tenantClick.emit()">
-          <hum-avatar [name]="t.name" [src]="t.src ?? null" size="xs" [square]="true" />
-          <span>{{ t.name }}</span>
-          <lucide-icon name="chevron-down" [size]="14" [style.opacity]="0.6" />
+      <div class="hum-topbar__start">
+        <button
+          type="button"
+          class="hum-topbar__menu"
+          [attr.aria-label]="menuLabel()"
+          [attr.aria-expanded]="sidebarOpen()"
+          aria-controls="hum-shell-sidebar"
+          (click)="toggleNav()"
+        >
+          <lucide-icon name="menu" [size]="18" />
         </button>
-      }
-      <button type="button" class="hum-topbar__search" (click)="searchClick.emit()" [style.margin-left]="tenant() ? 'var(--space-2)' : '0'">
+        @if (tenant(); as t) {
+          <button type="button" class="hum-topbar__tenant" (click)="tenantClick.emit()">
+            <hum-avatar [name]="t.name" [src]="t.src ?? null" size="xs" [square]="true" />
+            <span>{{ t.name }}</span>
+            <lucide-icon name="chevron-down" [size]="14" [style.opacity]="0.6" />
+          </button>
+        }
+      </div>
+      <!-- Three columns: company | search (centred) | actions. -->
+      <button type="button" class="hum-topbar__search" (click)="searchClick.emit()">
         <lucide-icon name="search" [size]="15" />
         <span style="flex:1;text-align:left">{{ searchPlaceholder() }}</span>
       </button>
-      <div class="hum-topbar__actions" [style.margin-left]="tenant() ? '0' : 'auto'"><ng-content select="[hum-topbar-actions]" /></div>
+      <div class="hum-topbar__actions"><ng-content select="[hum-topbar-actions]" /></div>
     </header>
 
     <main class="hum-shell__main"><ng-content /></main>

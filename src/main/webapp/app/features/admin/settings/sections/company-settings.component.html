@@ -1,0 +1,75 @@
+@if (error(); as e) {
+  <hum-alert tone="danger" [title]="e"
+    ><hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+  >
+} @else if (tenant(); as t) {
+  <form class="hum-set-form" [formGroup]="form" (ngSubmit)="save()">
+    <section class="hum-set-card">
+      <header>
+        <h3>{{ 'humano.settings.company.identity' | translate }}</h3>
+        <p>{{ 'humano.settings.company.identityHint' | translate }}</p>
+      </header>
+      <div class="hum-set-grid">
+        <hum-form-field
+          [label]="'humano.settings.company.name' | translate"
+          controlId="set-name"
+          required
+          [error]="invalid('name') ? ('humano.settings.required' | translate) : undefined"
+        >
+          <hum-input inputId="set-name" formControlName="name" [invalid]="invalid('name')" />
+        </hum-form-field>
+        <hum-form-field
+          [label]="'humano.settings.company.domain' | translate"
+          controlId="set-domain"
+          [hint]="'humano.settings.company.domainHint' | translate"
+          [error]="invalid('domain') ? ('humano.settings.company.domainError' | translate) : undefined"
+        >
+          <hum-input inputId="set-domain" formControlName="domain" placeholder="example.com" [invalid]="invalid('domain')" />
+        </hum-form-field>
+      </div>
+      <div class="hum-set-readonly">
+        <lucide-icon name="globe" [size]="16" />
+        <span>
+          <span class="hum-kpi__label">{{ 'humano.settings.company.workspace' | translate }}</span>
+          <strong>{{ t.subdomain }}</strong>
+        </span>
+        <span class="hum-kpi__hint">{{ 'humano.settings.company.workspaceHint' | translate }}</span>
+      </div>
+    </section>
+
+    <section class="hum-set-card">
+      <header>
+        <h3>{{ 'humano.settings.company.locale' | translate }}</h3>
+        <p>{{ 'humano.settings.company.localeHint' | translate }}</p>
+      </header>
+      <div class="hum-set-grid">
+        <hum-form-field
+          [label]="'humano.settings.company.timezone' | translate"
+          controlId="set-tz"
+          required
+          [hint]="'humano.settings.company.timezoneHint' | translate"
+        >
+          <hum-select formControlName="timezone" [options]="timezoneOptions()" />
+        </hum-form-field>
+        <hum-form-field
+          [label]="'humano.settings.company.currency' | translate"
+          controlId="set-currency"
+          [hint]="'humano.settings.company.currencyHint' | translate"
+        >
+          <hum-select formControlName="defaultCurrencyId" [options]="currencyOptions()" />
+        </hum-form-field>
+      </div>
+    </section>
+
+    <div class="hum-set-actions">
+      @if (form.dirty) {
+        <span class="hum-kpi__hint">{{ 'humano.settings.unsaved' | translate }}</span>
+      }
+      <hum-button type="submit" variant="primary" icon="save" [loading]="saving()" [disabled]="!form.dirty">{{
+        'humano.action.save' | translate
+      }}</hum-button>
+    </div>
+  </form>
+} @else {
+  <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+}

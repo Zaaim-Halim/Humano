@@ -46,7 +46,16 @@
       "addAttribute": "Add attribute",
       "saveAttributes": "Save attributes",
       "attributesSaved": "Attributes saved",
-      "duplicateKeys": "Attribute keys must be unique."
+      "duplicateKeys": "Attribute keys must be unique.",
+      "classificationTitle": "Classification",
+      "classificationHint": "Choices come from Settings → Lists.",
+      "employmentType": "Employment type",
+      "level": "Job level",
+      "grade": "Job grade",
+      "category": "Employee category",
+      "maritalStatus": "Marital status",
+      "notSet": "Not set",
+      "hiddenEntry": "hidden"
     }
   }
 }

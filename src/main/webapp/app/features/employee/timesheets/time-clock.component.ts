@@ -9,10 +9,10 @@ import { normalizeHttpError } from 'app/core/api';
 import { AlertComponent, BadgeComponent, ButtonComponent, CheckboxComponent, SkeletonRowComponent, ToastService } from 'app/shared/ui';
 
 import { ClockEvent, ClockEventType, TimeClockDay } from '../models/time-clock.model';
+import { CompanyService } from 'app/core/company/company.service';
+
 import { MeWorkService } from '../services/me-work.service';
 import { ClockSegment, clockDuration, clockScale, clockSegments, hm } from './clock-timeline';
-
-const WEEKLY_TARGET_MIN = 40 * 60;
 
 function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -55,6 +55,7 @@ export class TimeClockComponent {
   private readonly meWork = inject(MeWorkService);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
+  private readonly company = inject(CompanyService);
 
   protected readonly today = signal<TimeClockDay | null>(null);
   protected readonly todayError = signal<string | null>(null);
@@ -116,7 +117,8 @@ export class TimeClockComponent {
   });
   protected readonly weekTotal = computed(() => this.weekRows().reduce((s, r) => s + r.worked, 0));
   protected readonly weekBreaks = computed(() => (this.days() ?? []).reduce((s, d) => s + d.breakMinutes, 0));
-  protected readonly weekTarget = WEEKLY_TARGET_MIN;
+  /** The company's weekly hours (Settings → Payroll & time), in minutes. */
+  protected readonly weekTarget = computed(() => this.company.hoursPerWeek() * 60);
 
   constructor() {
     this.loadToday();

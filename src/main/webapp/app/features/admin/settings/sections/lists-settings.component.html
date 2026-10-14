@@ -1,0 +1,128 @@
+<div class="hum-lists">
+  <nav class="hum-lists__nav" [attr.aria-label]="'humano.settings.section.lists.title' | translate">
+    @for (l of lists; track l.id) {
+      <button type="button" class="hum-lists__item" [class.is-active]="current().id === l.id" (click)="select(l)">
+        <lucide-icon [name]="l.icon" [size]="16" />
+        <span>{{ 'humano.settings.lists.' + l.id + '.title' | translate }}</span>
+        @if (counts()[l.id] !== undefined) {
+          <span class="hum-records__count">{{ counts()[l.id] }}</span>
+        }
+      </button>
+    }
+  </nav>
+
+  <section class="hum-set-card hum-lists__body">
+    <header class="hum-set-card__head-row">
+      <div>
+        <h3>{{ 'humano.settings.lists.' + current().id + '.title' | translate }}</h3>
+        <p>{{ 'humano.settings.lists.' + current().id + '.hint' | translate }}</p>
+      </div>
+      <hum-button variant="primary" size="sm" icon="plus" (click)="openNew()">{{ 'humano.settings.lists.add' | translate }}</hum-button>
+    </header>
+
+    @if (error(); as e) {
+      <hum-alert tone="danger" [title]="e" />
+    } @else if (entries() === null) {
+      <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+    } @else {
+      @if ((entries()?.length ?? 0) > 8) {
+        <div style="max-width: 280px; margin-bottom: var(--space-3)">
+          <hum-input
+            type="search"
+            icon="search"
+            [placeholder]="'humano.settings.lists.search' | translate"
+            [ngModel]="query()"
+            (ngModelChange)="query.set($event)"
+          />
+        </div>
+      }
+      <ul class="hum-ref-list">
+        @for (e of visible(); track e.id) {
+          <li [class.is-off]="!e.active">
+            <span class="hum-ref-list__main">
+              <strong>{{ e.name }}</strong>
+              <code>{{ e.code }}</code>
+              @if (!e.active) {
+                <hum-badge tone="neutral" [label]="'humano.settings.lists.hidden' | translate" [dot]="false" />
+              }
+              @if (e.notes) {
+                <span class="hum-kpi__hint">{{ e.notes }}</span>
+              }
+            </span>
+            <hum-switch
+              [ngModel]="e.active"
+              (ngModelChange)="toggle(e, $event)"
+              [ariaLabel]="'humano.settings.lists.offered' | translate"
+            />
+            <hum-icon-button icon="pencil" size="sm" variant="ghost" [label]="'humano.action.edit' | translate" (click)="openEdit(e)" />
+            <hum-icon-button
+              icon="trash-2"
+              size="sm"
+              variant="ghost"
+              [label]="'humano.action.delete' | translate"
+              (click)="deleteTarget.set(e)"
+            />
+          </li>
+        } @empty {
+          <p class="hum-insights__note">{{ 'humano.settings.lists.empty' | translate }}</p>
+        }
+      </ul>
+    }
+  </section>
+</div>
+
+<hum-drawer
+  [open]="editing() !== null"
+  [title]="(editing() === 'new' ? 'humano.settings.lists.addTitle' : 'humano.settings.lists.editTitle') | translate"
+  hasFooter
+  (closed)="editing.set(null)"
+>
+  <form [formGroup]="form" style="display: grid; gap: var(--space-4)">
+    @if (editing() !== null) {
+      <hum-form-field
+        [label]="'humano.settings.lists.name' | translate"
+        controlId="ref-name"
+        required
+        [error]="invalid('name') ? ('humano.settings.required' | translate) : undefined"
+      >
+        <hum-input inputId="ref-name" formControlName="name" [invalid]="invalid('name')" (focusout)="suggestCode()" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.settings.lists.code' | translate"
+        controlId="ref-code"
+        required
+        [hint]="'humano.settings.lists.codeHint' | translate"
+        [error]="invalid('code') ? ('humano.settings.lists.codeError' | translate) : undefined"
+      >
+        <hum-input inputId="ref-code" formControlName="code" [invalid]="invalid('code')" />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.settings.lists.notes' | translate" controlId="ref-notes">
+        <hum-textarea formControlName="notes" />
+      </hum-form-field>
+      <label class="hum-set-switch">
+        <hum-switch formControlName="active" />
+        <span>
+          <strong>{{ 'humano.settings.lists.offered' | translate }}</strong>
+          <span class="hum-kpi__hint">{{ 'humano.settings.lists.offeredHint' | translate }}</span>
+        </span>
+      </label>
+    }
+  </form>
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="editing.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" [loading]="saving()" (click)="save()">{{ 'humano.action.save' | translate }}</hum-button>
+  </div>
+</hum-drawer>
+
+<hum-dialog
+  [open]="deleteTarget() !== null"
+  [title]="'humano.settings.lists.deleteTitle' | translate: { name: deleteTarget()?.name }"
+  [description]="'humano.settings.lists.deleteBody' | translate"
+  hasFooter
+  (closed)="deleteTarget.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="deleteTarget.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" (click)="confirmDelete()">{{ 'humano.action.delete' | translate }}</hum-button>
+  </div>
+</hum-dialog>

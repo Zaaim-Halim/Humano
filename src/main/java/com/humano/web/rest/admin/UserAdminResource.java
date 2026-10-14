@@ -36,6 +36,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -120,12 +121,16 @@ public class UserAdminResource {
 
     @GetMapping("/users")
     @RequireAdmin
-    public ResponseEntity<List<UserResponse>> getAllUsers(@org.springdoc.core.annotations.ParameterObject Pageable pageable) {
+    public ResponseEntity<List<UserResponse>> getAllUsers(
+        @org.springdoc.core.annotations.ParameterObject Pageable pageable,
+        @RequestParam(name = "q", required = false) String search,
+        @RequestParam(name = "role", required = false) String role
+    ) {
         LOG.debug("REST request to get all Users (admin)");
         if (!onlyContainsAllowedProperties(pageable)) {
             return ResponseEntity.badRequest().build();
         }
-        Page<UserResponse> page = userAccountService.getAllManagedUsers(pageable).map(UserResponse::fromUser);
+        Page<UserResponse> page = userAccountService.getAllManagedUsers(search, role, pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return new ResponseEntity<>(page.getContent(), headers, HttpStatus.OK);
     }

@@ -14,7 +14,7 @@
     <article class="hum-payslip">
       <header class="hum-payslip__letterhead">
         <div>
-          <div class="hum-payslip__brand">humano<span class="hum-side__dot" aria-hidden="true"></span></div>
+          <div class="hum-payslip__brand">{{ companyName() || 'humano' }}</div>
           <div class="hum-field__hint">{{ 'humano.payslip.title' | translate }}</div>
         </div>
         <div style="text-align: right">

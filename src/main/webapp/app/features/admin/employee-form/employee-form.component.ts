@@ -31,7 +31,18 @@ import {
   ToastService,
 } from 'app/shared/ui';
 
-import { DepartmentService, OrganizationalUnitService, PositionService } from 'app/features/admin';
+import {
+  DepartmentService,
+  EmployeeCategoryService,
+  EmploymentTypeService,
+  JobGradeService,
+  JobLevelService,
+  MaritalStatusService,
+  OrganizationalUnitService,
+  PositionService,
+  ReferenceData,
+} from 'app/features/admin';
+import { humanizeCode } from 'app/features/admin/models/user-admin.model';
 import {
   EmployeeAttributeService,
   EmployeeService,
@@ -65,6 +76,10 @@ function dateOrder(group: AbstractControl): ValidationErrors | null {
  * Country is intentionally omitted: no country reference endpoint is exposed to
  * the frontend yet, and `countryId` is optional on the API.
  */
+/** Classification fields backed by Settings → Lists. */
+type RefKey = 'employmentType' | 'level' | 'grade' | 'category' | 'maritalStatus';
+const REF_KEYS: RefKey[] = ['employmentType', 'level', 'grade', 'category', 'maritalStatus'];
+
 @Component({
   selector: 'hum-employee-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -120,6 +135,39 @@ export default class EmployeeFormComponent implements OnInit {
   protected readonly departments = signal<SelectOption[]>([]);
   protected readonly positions = signal<SelectOption[]>([]);
   protected readonly units = signal<SelectOption[]>([]);
+
+  /**
+   * Classification lists (Settings → Lists): only entries switched on are offered, but an
+   * employee's current value is kept (marked hidden) so editing never silently clears it.
+   */
+  private readonly refLists = signal<Record<RefKey, ReferenceData[]>>({
+    employmentType: [],
+    level: [],
+    grade: [],
+    category: [],
+    maritalStatus: [],
+  });
+  private readonly refCurrent = signal<Partial<Record<RefKey, string>>>({});
+  protected readonly refOptions = computed(() => {
+    const out = {} as Record<RefKey, SelectOption[]>;
+    for (const key of REF_KEYS) {
+      const current = this.refCurrent()[key];
+      const entries = this.refLists()[key].filter(e => e.active || e.id === current);
+      out[key] = [
+        { value: '', label: this.translate.instant('humano.employeeForm.notSet') },
+        ...entries.map(e => ({
+          value: e.id,
+          label: e.active ? e.name : `${e.name} (${this.translate.instant('humano.employeeForm.hiddenEntry')})`,
+        })),
+      ];
+    }
+    return out;
+  });
+  private readonly employmentTypeService = inject(EmploymentTypeService);
+  private readonly jobLevelService = inject(JobLevelService);
+  private readonly jobGradeService = inject(JobGradeService);
+  private readonly employeeCategoryService = inject(EmployeeCategoryService);
+  private readonly maritalStatusService = inject(MaritalStatusService);
   /** Seeds the manager autocomplete with the current value's label in edit mode. */
   protected readonly managerInitial = signal<AutocompleteOption | null>(null);
 
@@ -145,6 +193,12 @@ export default class EmployeeFormComponent implements OnInit {
       positionId: ['', [Validators.required]],
       unitId: ['', [Validators.required]],
       managerId: [''],
+      // Classification — choices come from Settings → Lists.
+      employmentTypeId: [''],
+      levelId: [''],
+      gradeId: [''],
+      categoryId: [''],
+      maritalStatusId: [''],
     },
     { validators: dateOrder },
   );
@@ -174,6 +228,9 @@ export default class EmployeeFormComponent implements OnInit {
       this.loadAttributes(id);
     }
   }
+
+  /** "ROLE_HR_MANAGER" → "HR manager" (same names as Settings → Users & access). */
+  protected readonly roleLabel = humanizeCode;
 
   /** Toggle a role in the selection (immutably, so OnPush picks up the change). */
   protected toggleRole(role: string, checked: boolean): void {
@@ -313,6 +370,11 @@ export default class EmployeeFormComponent implements OnInit {
       ...(v.status ? { status: v.status as EmployeeStatus } : {}),
       ...(v.departmentId ? { departmentId: v.departmentId } : {}),
       ...(v.managerId ? { managerId: v.managerId } : {}),
+      ...(v.employmentTypeId ? { employmentType: { id: v.employmentTypeId } } : {}),
+      ...(v.levelId ? { level: { id: v.levelId } } : {}),
+      ...(v.gradeId ? { grade: { id: v.gradeId } } : {}),
+      ...(v.categoryId ? { category: { id: v.categoryId } } : {}),
+      ...(v.maritalStatusId ? { maritalStatus: { id: v.maritalStatusId } } : {}),
     };
   }
 
@@ -362,6 +424,18 @@ export default class EmployeeFormComponent implements OnInit {
             positionId: p.positionId ?? '',
             unitId: p.unitId ?? '',
             managerId: p.managerId ?? '',
+            employmentTypeId: p.employmentType?.id ?? '',
+            levelId: p.level?.id ?? '',
+            gradeId: p.grade?.id ?? '',
+            categoryId: p.category?.id ?? '',
+            maritalStatusId: p.maritalStatus?.id ?? '',
+          });
+          this.refCurrent.set({
+            employmentType: p.employmentType?.id ?? undefined,
+            level: p.level?.id ?? undefined,
+            grade: p.grade?.id ?? undefined,
+            category: p.category?.id ?? undefined,
+            maritalStatus: p.maritalStatus?.id ?? undefined,
           });
           this.managerInitial.set(
             p.managerId ? { value: p.managerId, label: p.managerName ?? p.managerId, sublabel: p.managerJobTitle } : null,
@@ -376,7 +450,25 @@ export default class EmployeeFormComponent implements OnInit {
       });
   }
 
+  private loadReferenceLists(): void {
+    const req = { page: 0, size: 500, sort: ['name,asc'] };
+    const sources: Record<RefKey, { query: (r: typeof req) => Observable<{ content: ReferenceData[] }> }> = {
+      employmentType: this.employmentTypeService,
+      level: this.jobLevelService,
+      grade: this.jobGradeService,
+      category: this.employeeCategoryService,
+      maritalStatus: this.maritalStatusService,
+    };
+    for (const key of REF_KEYS) {
+      sources[key]
+        .query(req)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({ next: page => this.refLists.update(all => ({ ...all, [key]: page.content })) });
+    }
+  }
+
   private loadOptions(): void {
+    this.loadReferenceLists();
     const page = { size: 200, sort: ['name,asc'] };
     const withBlank = (opts: SelectOption[], placeholder: string): SelectOption[] => [{ value: '', label: placeholder }, ...opts];
 

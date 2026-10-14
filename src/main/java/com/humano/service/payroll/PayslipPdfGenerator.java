@@ -143,7 +143,9 @@ public class PayslipPdfGenerator {
         BigDecimal reportingNet,
         BigDecimal exchangeRate,
         LocalDate exchangeRateDate,
-        String generatedAt
+        String generatedAt,
+        /** The employer's name (Settings → Company), printed in the letterhead. */
+        String employerName
     ) {
         public record LineItem(String code, String name, BigDecimal quantity, BigDecimal rate, BigDecimal amount, String explain) {}
     }

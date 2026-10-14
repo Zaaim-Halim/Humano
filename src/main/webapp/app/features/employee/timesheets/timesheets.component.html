@@ -43,15 +43,15 @@
             <div>
               <div class="hum-dir-stat__label">{{ 'humano.timesheets.weekTotal' | translate }}</div>
               <div class="hum-dir-stat__value tabular-nums">
-                {{ myTotal() | number: '1.0-2' }}<span class="hum-ts-unit">/ {{ weeklyTarget }}h</span>
+                {{ myTotal() | number: '1.0-2' }}<span class="hum-ts-unit">/ {{ weeklyTarget() }}h</span>
               </div>
             </div>
             <div
               class="hum-meter"
               style="flex: 1"
-              [style.--hum-accent]="myTotal() >= weeklyTarget ? 'var(--success-solid)' : 'var(--brand)'"
+              [style.--hum-accent]="myTotal() >= weeklyTarget() ? 'var(--success-solid)' : 'var(--brand)'"
             >
-              <span [style.width.%]="(myTotal() / weeklyTarget) * 100 > 100 ? 100 : (myTotal() / weeklyTarget) * 100"></span>
+              <span [style.width.%]="(myTotal() / weeklyTarget()) * 100 > 100 ? 100 : (myTotal() / weeklyTarget()) * 100"></span>
             </div>
           </div>
 
@@ -62,8 +62,8 @@
           } @else {
             <div class="hum-ts-bars" role="img" [attr.aria-label]="'humano.timesheets.chartLabel' | translate">
               <div class="hum-ts-bars__plot" aria-hidden="true">
-                <div class="hum-ts-bars__target" [style.bottom.%]="(dailyTarget / myScale()) * 100">
-                  <span>{{ dailyTarget }}h</span>
+                <div class="hum-ts-bars__target" [style.bottom.%]="(dailyTarget() / myScale()) * 100">
+                  <span>{{ dailyTarget() }}h</span>
                 </div>
               </div>
               @for (d of myDays(); track d.iso) {
@@ -179,7 +179,7 @@
       <div class="hum-dir-stat">
         <div class="hum-dir-stat__label">{{ 'humano.timesheets.teamAverage' | translate }}</div>
         <div class="hum-dir-stat__value tabular-nums">{{ teamStats().average | number: '1.0-1' }}h</div>
-        <div class="hum-dir-stat__sub">{{ 'humano.timesheets.perPerson' | translate: { target: weeklyTarget } }}</div>
+        <div class="hum-dir-stat__sub">{{ 'humano.timesheets.perPerson' | translate: { target: weeklyTarget() } }}</div>
       </div>
       <div class="hum-dir-stat" [class.hum-dir-stat--warn]="teamStats().under > 0">
         <div class="hum-dir-stat__label">{{ 'humano.timesheets.teamUnder' | translate }}</div>
@@ -215,7 +215,7 @@
                 {{ r.hours[d.iso] ? (r.hours[d.iso] | number: '1.0-1') : '' }}
               </span>
             }
-            <span class="hum-heatmap__total tabular-nums" [class.is-under]="r.total < weeklyTarget * 0.9"
+            <span class="hum-heatmap__total tabular-nums" [class.is-under]="r.total < weeklyTarget() * 0.9"
               >{{ r.total | number: '1.0-1' }}h</span
             >
           </div>

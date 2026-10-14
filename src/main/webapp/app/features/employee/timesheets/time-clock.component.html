@@ -125,9 +125,9 @@
     </header>
     <div class="hum-clock-weektotal">
       <span class="hum-clock__mid tabular-nums">{{ duration(weekTotal()) }}</span>
-      <span class="hum-kpi__hint">{{ 'humano.timeclock.ofTarget' | translate: { target: weekTarget / 60 } }}</span>
-      <span class="hum-meter" style="flex: 1" [style.--hum-accent]="weekTotal() >= weekTarget ? 'var(--success-solid)' : 'var(--brand)'">
-        <span [style.width.%]="weekTotal() >= weekTarget ? 100 : (weekTotal() / weekTarget) * 100"></span>
+      <span class="hum-kpi__hint">{{ 'humano.timeclock.ofTarget' | translate: { target: weekTarget() / 60 } }}</span>
+      <span class="hum-meter" style="flex: 1" [style.--hum-accent]="weekTotal() >= weekTarget() ? 'var(--success-solid)' : 'var(--brand)'">
+        <span [style.width.%]="weekTotal() >= weekTarget() ? 100 : (weekTotal() / weekTarget()) * 100"></span>
       </span>
     </div>
     @if (days() === null) {

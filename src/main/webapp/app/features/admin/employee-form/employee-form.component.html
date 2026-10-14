@@ -116,6 +116,28 @@
         </div>
 
         <fieldset style="border: 0; padding: 0; margin: 0; display: grid; gap: var(--space-2)">
+          <legend style="font-weight: 600; padding: 0; margin: 0">{{ 'humano.employeeForm.classificationTitle' | translate }}</legend>
+          <p class="hum-pagehead__sub" style="margin: 0 0 var(--space-1)">{{ 'humano.employeeForm.classificationHint' | translate }}</p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4)">
+            <hum-form-field [label]="'humano.employeeForm.employmentType' | translate" controlId="emp-type">
+              <hum-select formControlName="employmentTypeId" [options]="refOptions().employmentType" />
+            </hum-form-field>
+            <hum-form-field [label]="'humano.employeeForm.level' | translate" controlId="emp-level">
+              <hum-select formControlName="levelId" [options]="refOptions().level" />
+            </hum-form-field>
+            <hum-form-field [label]="'humano.employeeForm.grade' | translate" controlId="emp-grade">
+              <hum-select formControlName="gradeId" [options]="refOptions().grade" />
+            </hum-form-field>
+            <hum-form-field [label]="'humano.employeeForm.category' | translate" controlId="emp-category">
+              <hum-select formControlName="categoryId" [options]="refOptions().category" />
+            </hum-form-field>
+            <hum-form-field [label]="'humano.employeeForm.maritalStatus' | translate" controlId="emp-marital">
+              <hum-select formControlName="maritalStatusId" [options]="refOptions().maritalStatus" />
+            </hum-form-field>
+          </div>
+        </fieldset>
+
+        <fieldset style="border: 0; padding: 0; margin: 0; display: grid; gap: var(--space-2)">
           <legend style="font-weight: 600; padding: 0; margin: 0">{{ 'humano.employeeForm.accessTitle' | translate }}</legend>
           <p class="hum-pagehead__sub" style="margin: 0 0 var(--space-1)">{{ 'humano.employeeForm.accessHint' | translate }}</p>
           @if (assignableRoles().length === 0) {
@@ -123,7 +145,7 @@
           } @else {
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-2)">
               @for (role of assignableRoles(); track role) {
-                <hum-checkbox [label]="role" [checked]="isRoleSelected(role)" (checkedChange)="toggleRole(role, $event)" />
+                <hum-checkbox [label]="roleLabel(role)" [checked]="isRoleSelected(role)" (checkedChange)="toggleRole(role, $event)" />
               }
             </div>
           }

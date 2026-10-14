@@ -1,0 +1,176 @@
+@if (error(); as e) {
+  <hum-alert tone="danger" [title]="e"
+    ><hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+  >
+} @else if (settings()) {
+  <form class="hum-set-form" [formGroup]="form" (ngSubmit)="save()">
+    <section class="hum-set-card">
+      <header>
+        <h3>{{ 'humano.settings.payroll.workingTime' | translate }}</h3>
+        <p>{{ 'humano.settings.payroll.workingTimeHint' | translate }}</p>
+      </header>
+      <div class="hum-set-grid hum-set-grid--4">
+        <hum-form-field
+          [label]="'humano.orgSettings.hoursPerDay' | translate"
+          controlId="ps-day"
+          required
+          [error]="invalid('standardHoursPerDay') ? ('humano.settings.range' | translate) : undefined"
+        >
+          <hum-input inputId="ps-day" type="number" formControlName="standardHoursPerDay" [invalid]="invalid('standardHoursPerDay')" />
+        </hum-form-field>
+        <hum-form-field
+          [label]="'humano.orgSettings.hoursPerWeek' | translate"
+          controlId="ps-week"
+          required
+          [error]="invalid('standardHoursPerWeek') ? ('humano.settings.range' | translate) : undefined"
+        >
+          <hum-input inputId="ps-week" type="number" formControlName="standardHoursPerWeek" [invalid]="invalid('standardHoursPerWeek')" />
+        </hum-form-field>
+        <hum-form-field
+          [label]="'humano.orgSettings.monthlyHours' | translate"
+          controlId="ps-month"
+          required
+          [hint]="'humano.settings.payroll.monthlyHint' | translate: { n: suggestedMonthly() }"
+          [error]="invalid('standardMonthlyHours') ? ('humano.settings.range' | translate) : undefined"
+        >
+          <hum-input inputId="ps-month" type="number" formControlName="standardMonthlyHours" [invalid]="invalid('standardMonthlyHours')" />
+        </hum-form-field>
+        <hum-form-field
+          [label]="'humano.orgSettings.overtimeMultiplier' | translate"
+          controlId="ps-ot"
+          required
+          [hint]="'humano.settings.payroll.overtimeHint' | translate"
+          [error]="invalid('defaultOvertimeMultiplier') ? ('humano.settings.range' | translate) : undefined"
+        >
+          <hum-input
+            inputId="ps-ot"
+            type="number"
+            formControlName="defaultOvertimeMultiplier"
+            [invalid]="invalid('defaultOvertimeMultiplier')"
+          />
+        </hum-form-field>
+      </div>
+    </section>
+
+    <section class="hum-set-card">
+      <header>
+        <h3>{{ 'humano.settings.payroll.payDefaults' | translate }}</h3>
+        <p>{{ 'humano.settings.payroll.payDefaultsHint' | translate }}</p>
+      </header>
+      <div class="hum-set-grid">
+        <hum-form-field [label]="'humano.orgSettings.defaultBasis' | translate" controlId="ps-basis" required>
+          <hum-select formControlName="defaultBasis" [options]="basisOptions()" />
+        </hum-form-field>
+        <hum-form-field [label]="'humano.orgSettings.defaultCalendar' | translate" controlId="ps-cal">
+          <hum-select formControlName="defaultPayrollCalendarId" [options]="calendarOptions()" />
+        </hum-form-field>
+      </div>
+      <a class="hum-set-link" routerLink="/payroll/pay-rules">
+        <lucide-icon name="file-text" [size]="16" />
+        <span>
+          <strong>{{ 'humano.settings.payroll.payRules' | translate }}</strong>
+          <span class="hum-kpi__hint">{{ 'humano.settings.payroll.payRulesHint' | translate }}</span>
+        </span>
+        <lucide-icon name="chevron-right" [size]="16" />
+      </a>
+    </section>
+
+    <div class="hum-set-actions">
+      @if (form.dirty) {
+        <span class="hum-kpi__hint">{{ 'humano.settings.unsaved' | translate }}</span>
+      }
+      <hum-button type="submit" variant="primary" icon="save" [loading]="saving()" [disabled]="!form.dirty">{{
+        'humano.action.save' | translate
+      }}</hum-button>
+    </div>
+  </form>
+
+  <!-- Calendars -->
+  <section class="hum-set-card" style="margin-top: var(--space-4)">
+    <header class="hum-set-card__head-row">
+      <div>
+        <h3>{{ 'humano.settings.payroll.calendars' | translate }}</h3>
+        <p>{{ 'humano.settings.payroll.calendarsHint' | translate }}</p>
+      </div>
+      <hum-button variant="secondary" size="sm" icon="plus" (click)="openCalendarForm()">{{
+        'humano.settings.payroll.newCalendar' | translate
+      }}</hum-button>
+    </header>
+    <ul class="hum-cal-list">
+      @for (c of calendars(); track c.id) {
+        <li>
+          <div class="hum-cal-list__head">
+            <span class="hum-records__icon"><lucide-icon name="calendar-days" [size]="16" /></span>
+            <strong>{{ c.name }}</strong>
+            <hum-badge tone="brand" [label]="c.frequency" [dot]="false" />
+            @if (settings()?.defaultPayrollCalendarId === c.id) {
+              <hum-badge tone="success" [label]="'humano.settings.payroll.default' | translate" />
+            }
+            <span class="hum-records__spacer"></span>
+            <span class="hum-kpi__hint">{{ 'humano.settings.payroll.periods' | translate: { count: c.periodCount } }}</span>
+            <hum-button variant="ghost" size="sm" (click)="deactivateTarget.set(c)">{{
+              'humano.settings.payroll.switchOff' | translate
+            }}</hum-button>
+          </div>
+          @if (c.upcomingPeriods.length) {
+            <div class="hum-cal-list__periods">
+              @for (p of c.upcomingPeriods.slice(0, 4); track p.id) {
+                <span class="hum-cal-period" [class.is-closed]="p.closed">
+                  <strong>{{ p.startDate | date: 'MMM y' }}</strong>
+                  <span>{{ p.startDate | date: 'd MMM' }} – {{ p.endDate | date: 'd MMM' }}</span>
+                  @if (p.paymentDate) {
+                    <span class="hum-kpi__hint"
+                      >{{ 'humano.settings.payroll.payday' | translate }} {{ p.paymentDate | date: 'd MMM' }}</span
+                    >
+                  }
+                </span>
+              }
+            </div>
+          }
+        </li>
+      } @empty {
+        <p class="hum-insights__note">{{ 'humano.settings.payroll.noCalendars' | translate }}</p>
+      }
+    </ul>
+  </section>
+} @else {
+  <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+}
+
+<hum-drawer
+  [open]="calendarFormOpen()"
+  [title]="'humano.settings.payroll.newCalendar' | translate"
+  hasFooter
+  (closed)="calendarFormOpen.set(false)"
+>
+  <form [formGroup]="calendarForm" style="display: grid; gap: var(--space-4)">
+    @if (calendarFormOpen()) {
+      <hum-form-field [label]="'humano.settings.payroll.calendarName' | translate" controlId="cal-name" required>
+        <hum-input inputId="cal-name" formControlName="name" placeholder="Weekly – hourly staff" />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.settings.payroll.frequency' | translate" controlId="cal-freq" required>
+        <hum-select formControlName="frequency" [options]="frequencyOptions" />
+      </hum-form-field>
+      <p class="hum-kpi__hint">{{ 'humano.settings.payroll.calendarTz' | translate: { tz: settings()?.timezone } }}</p>
+    }
+  </form>
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="calendarFormOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" [loading]="calendarSaving()" (click)="createCalendar()">{{
+      'humano.action.create' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<hum-dialog
+  [open]="deactivateTarget() !== null"
+  [title]="'humano.settings.payroll.switchOffTitle' | translate: { name: deactivateTarget()?.name }"
+  [description]="'humano.settings.payroll.switchOffBody' | translate"
+  hasFooter
+  (closed)="deactivateTarget.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="deactivateTarget.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" (click)="confirmDeactivate()">{{ 'humano.settings.payroll.switchOff' | translate }}</hum-button>
+  </div>
+</hum-dialog>

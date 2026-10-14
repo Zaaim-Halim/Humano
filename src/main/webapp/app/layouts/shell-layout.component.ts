@@ -1,11 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterOutlet } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { merge } from 'rxjs';
 
 import { Authority } from 'app/config/authority.constants';
+import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
+import { CompanyService } from 'app/core/company/company.service';
 import { CurrentEmployeeService } from 'app/features/employee';
 import { ThemeService } from 'app/core/theme/theme.service';
 import { LoginService } from 'app/login/login.service';
@@ -18,6 +20,7 @@ import {
   MenuComponent,
   MenuItem,
   NavGroup,
+  ShellTenant,
   ShellUser,
 } from 'app/shared/ui';
 
@@ -40,9 +43,10 @@ import { SHELL_NAV } from './shell-nav';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterOutlet, TranslatePipe, AppShellComponent, CommandPaletteComponent, IconButtonComponent, MenuComponent, AvatarComponent],
   template: `
-    <!-- TODO: wire [tenant] from CurrentTenantService (GET /api/tenant/me); omitted until data-wiring in Phase 7. -->
     <hum-app-shell
       [nav]="nav()"
+      [tenant]="tenant()"
+      (tenantClick)="openCompanySettings()"
       [user]="user()"
       [searchPlaceholder]="'humano.shell.search' | translate"
       [menuLabel]="'humano.shell.menu' | translate"
@@ -105,8 +109,21 @@ export default class ShellLayoutComponent {
   private readonly router = inject(Router);
   private readonly currentEmployee = inject(CurrentEmployeeService);
 
+  private readonly company = inject(CompanyService);
+
   private readonly account = this.accountService.trackCurrentAccount();
   protected readonly userMenuOpen = signal(false);
+
+  /** The company (Settings → Company) shown in the top bar; loaded once signed in. */
+  protected readonly tenant = computed<ShellTenant | undefined>(() => {
+    const p = this.company.profile();
+    return p ? { name: p.name, src: p.logo } : undefined;
+  });
+  private readonly canConfigure = computed(() => !!this.account()?.permissions?.includes(Permission.CONFIGURE_TENANT_SETTINGS));
+
+  private readonly loadCompany = effect(() => {
+    if (this.account()) untracked(() => this.company.load());
+  });
 
   /** Re-runs the label computeds when the language or loaded translations change. */
   private readonly i18nTick = toSignal(merge(this.translate.onLangChange, this.translate.onTranslationChange), { initialValue: null });
@@ -157,6 +174,11 @@ export default class ShellLayoutComponent {
 
   private readonly linkById = computed(() => new Map(this.visible().flatMap(g => g.items.map(it => [it.id, it.link] as const))));
 
+  /** The company chip opens company settings for people who may change them. */
+  protected openCompanySettings(): void {
+    if (this.canConfigure()) void this.router.navigate(['/settings', 'company']);
+  }
+
   protected onCommand(id: string): void {
     const link = this.linkById().get(id);
     if (link) {
@@ -168,6 +190,7 @@ export default class ShellLayoutComponent {
     this.userMenuOpen.set(false);
     switch (id) {
       case 'logout':
+        this.company.clear();
         this.loginService.logout();
         void this.router.navigate(['/login']);
         break;

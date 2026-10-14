@@ -1,4 +1,6 @@
-import { Pipe, PipeTransform } from '@angular/core';
+import { Pipe, PipeTransform, inject } from '@angular/core';
+
+import { CompanyService } from 'app/core/company/company.service';
 
 const formatters = new Map<string, Intl.NumberFormat>();
 
@@ -31,6 +33,9 @@ function formatter(currency: string | null | undefined, signed: boolean): Intl.N
  */
 @Pipe({ name: 'money' })
 export class MoneyPipe implements PipeTransform {
+  /** Amounts without their own currency use the company's default (Settings → Company). */
+  private readonly company = inject(CompanyService);
+
   transform(value: number | string | null | undefined, currency?: string | null, signed = false): string {
     if (value === null || value === undefined || value === '') {
       return '—';
@@ -39,7 +44,7 @@ export class MoneyPipe implements PipeTransform {
     if (Number.isNaN(n)) {
       return String(value);
     }
-    return formatter(currency, signed).format(n);
+    return formatter(currency || this.company.profile()?.currencyCode || null, signed).format(n);
   }
 }
 

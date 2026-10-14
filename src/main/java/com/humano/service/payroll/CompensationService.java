@@ -47,14 +47,17 @@ public class CompensationService {
     private final PositionRepository positionRepository;
     private final CurrencyRepository currencyRepository;
     private final AuditEventService auditEventService;
+    private final com.humano.repository.payroll.OrganizationSettingsRepository organizationSettingsRepository;
 
     public CompensationService(
         CompensationRepository compensationRepository,
         EmployeeRepository employeeRepository,
         PositionRepository positionRepository,
         CurrencyRepository currencyRepository,
-        AuditEventService auditEventService
+        AuditEventService auditEventService,
+        com.humano.repository.payroll.OrganizationSettingsRepository organizationSettingsRepository
     ) {
+        this.organizationSettingsRepository = organizationSettingsRepository;
         this.compensationRepository = compensationRepository;
         this.employeeRepository = employeeRepository;
         this.positionRepository = positionRepository;
@@ -448,7 +451,8 @@ public class CompensationService {
         return switch (compensation.getBasis()) {
             case MONTHLY -> compensation.getBaseAmount();
             case ANNUAL -> compensation.getBaseAmount().divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
-            case HOURLY -> compensation.getBaseAmount().multiply(BigDecimal.valueOf(160)); // Assuming 160 hours/month
+            // Hourly → monthly with the company's standard monthly hours (Settings → Payroll & time).
+            case HOURLY -> compensation.getBaseAmount().multiply(standardMonthlyHours());
             default -> compensation.getBaseAmount();
         };
     }
@@ -491,5 +495,14 @@ public class CompensationService {
             compensation.getEffectiveTo(),
             isActive
         );
+    }
+
+    private BigDecimal standardMonthlyHours() {
+        return organizationSettingsRepository
+            .findAll()
+            .stream()
+            .findFirst()
+            .map(com.humano.domain.payroll.OrganizationSettings::getStandardMonthlyHours)
+            .orElse(BigDecimal.valueOf(160));
     }
 }

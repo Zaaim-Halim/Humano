@@ -38,6 +38,27 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Page<User> findAllByIdNotNullAndActivatedIsTrue(Pageable pageable);
 
     /**
+     * Users matching a search term (login, email or full name; {@code term} is a lower-cased
+     * {@code %like%} pattern, or null for all) and optionally holding a role — server-side paging
+     * for the user administration screen.
+     */
+    @Query(
+        value = "SELECT u FROM User u WHERE " +
+        "(:term IS NULL OR LOWER(u.login) LIKE :term OR LOWER(u.email) LIKE :term " +
+        " OR LOWER(CONCAT(COALESCE(u.firstName, ''), ' ', COALESCE(u.lastName, ''))) LIKE :term) " +
+        "AND (:role IS NULL OR EXISTS (SELECT 1 FROM User u2 JOIN u2.authorities a WHERE u2 = u AND a.name = :role))",
+        countQuery = "SELECT COUNT(u) FROM User u WHERE " +
+        "(:term IS NULL OR LOWER(u.login) LIKE :term OR LOWER(u.email) LIKE :term " +
+        " OR LOWER(CONCAT(COALESCE(u.firstName, ''), ' ', COALESCE(u.lastName, ''))) LIKE :term) " +
+        "AND (:role IS NULL OR EXISTS (SELECT 1 FROM User u2 JOIN u2.authorities a WHERE u2 = u AND a.name = :role))"
+    )
+    Page<User> search(@Param("term") String term, @Param("role") String role, Pageable pageable);
+
+    /** How many users hold each role: rows of {@code [roleName, count]}. */
+    @Query("SELECT a.name, COUNT(u) FROM User u JOIN u.authorities a GROUP BY a.name")
+    List<Object[]> countByAuthority();
+
+    /**
      * P4.3 — Lookup the first activated user holding the named authority, ordered
      * by creation date. Used to resolve the tenant's primary contact email for
      * billing notifications, where the principal is "whoever was seeded as the

@@ -18,3 +18,11 @@ export interface PayrollCalendar {
   periodCount: number;
   upcomingPeriods: PayrollPeriodSummary[];
 }
+
+/** `POST /api/payroll/calendars`. */
+export interface CreatePayrollCalendarRequest {
+  name: string;
+  frequency: 'MONTHLY' | 'SEMIMONTHLY' | 'BIWEEKLY' | 'WEEKLY';
+  timezone: string;
+  active: boolean;
+}

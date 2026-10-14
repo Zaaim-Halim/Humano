@@ -250,6 +250,13 @@ const routes: Routes = [
         data: { permissions: [Permission.CONFIGURE_TENANT_SETTINGS] },
       },
       {
+        path: 'settings/:section',
+        title: 'humano.nav.settings',
+        loadComponent: () => import('./features/admin/settings/settings.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.CONFIGURE_TENANT_SETTINGS] },
+      },
+      {
         path: 'platform/tenants',
         title: 'humano.nav.tenants',
         loadComponent: () => import('./features/platform/tenant-management/tenant-management.component'),

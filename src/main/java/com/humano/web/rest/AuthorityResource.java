@@ -2,7 +2,9 @@ package com.humano.web.rest;
 
 import com.humano.domain.shared.Authority;
 import com.humano.repository.shared.AuthorityRepository;
+import com.humano.security.AuthorityPermissionService;
 import com.humano.security.annotation.RequireAdmin;
+import com.humano.service.admin.UserAccountService;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -30,12 +32,20 @@ public class AuthorityResource {
 
     private static final String ENTITY_NAME = "adminAuthority";
     private final AuthorityRepository authorityRepository;
+    private final AuthorityPermissionService authorityPermissionService;
+    private final UserAccountService userAccountService;
 
     @Value("${jhipster.clientApp.name}")
     private String applicationName;
 
-    public AuthorityResource(AuthorityRepository authorityRepository) {
+    public AuthorityResource(
+        AuthorityRepository authorityRepository,
+        AuthorityPermissionService authorityPermissionService,
+        UserAccountService userAccountService
+    ) {
         this.authorityRepository = authorityRepository;
+        this.authorityPermissionService = authorityPermissionService;
+        this.userAccountService = userAccountService;
     }
 
     /**
@@ -68,6 +78,31 @@ public class AuthorityResource {
     public List<Authority> getAllAuthorities() {
         LOG.debug("REST request to get all Authorities");
         return authorityRepository.findAll();
+    }
+
+    /** One role and the permissions it grants (for the roles &amp; permissions matrix). */
+    public record RolePermissions(String name, java.util.List<String> permissions, long userCount) {}
+
+    /**
+     * {@code GET  /authorities/overview} : every role with the permissions it grants, sorted —
+     * read-only, for the settings screen's roles &amp; permissions view.
+     */
+    @GetMapping("/overview")
+    @RequireAdmin
+    public java.util.List<RolePermissions> getOverview() {
+        java.util.Map<String, Long> holders = userAccountService.countUsersByRole();
+        return authorityRepository
+            .findAll()
+            .stream()
+            .map(a ->
+                new RolePermissions(
+                    a.getName(),
+                    authorityPermissionService.getPermissionsForAuthority(a.getName()).stream().sorted().toList(),
+                    holders.getOrDefault(a.getName(), 0L)
+                )
+            )
+            .sorted(java.util.Comparator.comparing(RolePermissions::name))
+            .toList();
     }
 
     /**

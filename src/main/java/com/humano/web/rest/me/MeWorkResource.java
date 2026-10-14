@@ -1,19 +1,25 @@
 package com.humano.web.rest.me;
 
+import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.domain.shared.User;
 import com.humano.dto.hr.requests.EmployeeTrainingSearchRequest;
 import com.humano.dto.hr.requests.PerformanceReviewSearchRequest;
 import com.humano.dto.hr.responses.EmployeeTrainingResponse;
 import com.humano.dto.hr.responses.PerformanceReviewResponse;
+import com.humano.dto.me.responses.CompanyProfile;
+import com.humano.dto.payroll.response.OrganizationSettingsResponse;
 import com.humano.dto.payroll.response.PayslipResponse;
 import com.humano.dto.payroll.response.SalaryHistoryResponse;
+import com.humano.dto.tenant.responses.TenantResponse;
 import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.PerformanceReviewService;
 import com.humano.service.hr.TrainingService;
 import com.humano.service.me.MeService;
 import com.humano.service.payroll.CompensationService;
+import com.humano.service.payroll.OrganizationSettingsService;
 import com.humano.service.payroll.PayslipService;
+import com.humano.service.tenant.TenantService;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.core.io.InputStreamResource;
@@ -42,19 +48,51 @@ public class MeWorkResource {
     private final PayslipService payslipService;
     private final PerformanceReviewService performanceReviewService;
     private final TrainingService trainingService;
+    private final OrganizationSettingsService organizationSettingsService;
+    private final TenantService tenantService;
+    private final TenantIdResolver tenantIdResolver;
 
     public MeWorkResource(
         MeService meService,
         CompensationService compensationService,
         PayslipService payslipService,
         PerformanceReviewService performanceReviewService,
-        TrainingService trainingService
+        TrainingService trainingService,
+        OrganizationSettingsService organizationSettingsService,
+        TenantService tenantService,
+        TenantIdResolver tenantIdResolver
     ) {
+        this.organizationSettingsService = organizationSettingsService;
+        this.tenantService = tenantService;
+        this.tenantIdResolver = tenantIdResolver;
         this.meService = meService;
         this.compensationService = compensationService;
         this.payslipService = payslipService;
         this.performanceReviewService = performanceReviewService;
         this.trainingService = trainingService;
+    }
+
+    /**
+     * {@code GET /api/me/company} : the company's name, timezone, currency and working-time policy
+     * — what every screen needs to reflect the company's settings. Any signed-in user.
+     */
+    @GetMapping("/company")
+    @RequireAuthenticated
+    public CompanyProfile company() {
+        OrganizationSettingsResponse s = organizationSettingsService.get();
+        TenantResponse tenant = tenantService.getTenantById(tenantIdResolver.requireCurrentTenantId());
+        return new CompanyProfile(
+            tenant.name(),
+            tenant.logo(),
+            s.timezone(),
+            s.defaultCurrencyId(),
+            s.defaultCurrencyCode(),
+            s.standardHoursPerDay(),
+            s.standardHoursPerWeek(),
+            s.standardMonthlyHours(),
+            s.defaultOvertimeMultiplier(),
+            s.defaultBasis()
+        );
     }
 
     /** {@code GET /api/me/compensation/history} : my salary history and current pay. */

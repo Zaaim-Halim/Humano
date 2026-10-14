@@ -1,5 +1,6 @@
 import { DOCUMENT, DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { CompanyService } from 'app/core/company/company.service';
 import { MeWorkService } from 'app/features/employee/services/me-work.service';
 import { MoneyPipe } from 'app/shared/util/format.pipes';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -30,6 +31,8 @@ export default class PayslipComponent {
 
   private readonly payslipService = inject(PayslipService);
   private readonly meWork = inject(MeWorkService);
+  /** The employer's name (Settings → Company) in the letterhead. */
+  protected readonly companyName = inject(CompanyService).name;
   private readonly toast = inject(ToastService);
   private readonly document = inject(DOCUMENT);
 

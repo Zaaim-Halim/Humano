@@ -1,0 +1,143 @@
+{
+  "humano": {
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Configure how Humano works for your company",
+      "saved": "Settings saved",
+      "unsaved": "You have unsaved changes",
+      "required": "Required",
+      "range": "Enter a value in the allowed range",
+      "section": {
+        "company": {
+          "title": "Company",
+          "hint": "Name, website, timezone, currency"
+        },
+        "payroll": {
+          "title": "Payroll & time",
+          "hint": "Working hours, overtime, calendars"
+        },
+        "lists": {
+          "title": "Lists",
+          "hint": "Choices used in forms"
+        },
+        "access": {
+          "title": "Users & access",
+          "hint": "Accounts, roles, permissions"
+        }
+      },
+      "company": {
+        "identity": "Company identity",
+        "identityHint": "How your company appears across Humano, payslips and documents.",
+        "name": "Company name",
+        "domain": "Website domain",
+        "domainHint": "Used for links and email suggestions, e.g. acme.com",
+        "domainError": "Enter a domain like acme.com",
+        "workspace": "Workspace address",
+        "workspaceHint": "Your sign-in organization; contact support to change it.",
+        "locale": "Time & money",
+        "localeHint": "Times are recorded and shown in this timezone; amounts default to this currency.",
+        "timezone": "Timezone",
+        "timezoneHint": "Clock-ins, schedules and payroll dates use this timezone.",
+        "currency": "Default currency",
+        "currencyHint": "Used for new compensations and payroll.",
+        "noCurrency": "Not set"
+      },
+      "payroll": {
+        "workingTime": "Working time",
+        "workingTimeHint": "A normal working day and week — used for timesheet targets, hourly pay and overtime.",
+        "monthlyHint": "A {{ n }} h month matches your weekly hours (× 52 ÷ 12).",
+        "overtimeHint": "Pay rate for overtime hours, e.g. 1.5 = time and a half.",
+        "payDefaults": "Pay defaults",
+        "payDefaultsHint": "What new compensations and pay runs start from.",
+        "noCalendar": "Not set",
+        "payRules": "Pay rules",
+        "payRulesHint": "Formulas for earnings, deductions and employer charges.",
+        "calendars": "Payroll calendars",
+        "calendarsHint": "How often people are paid and when; each calendar generates its pay periods.",
+        "newCalendar": "New calendar",
+        "calendarName": "Calendar name",
+        "frequency": "Pay frequency",
+        "calendarTz": "Periods follow the company timezone ({{ tz }}).",
+        "calendarCreated": "Calendar created",
+        "default": "Default",
+        "periods": "{{ count }} periods",
+        "payday": "Payday",
+        "noCalendars": "No active payroll calendar.",
+        "switchOff": "Switch off",
+        "switchOffTitle": "Switch off {{ name }}?",
+        "switchOffBody": "It stops generating pay periods and leaves this list. Runs already made are kept.",
+        "calendarOff": "Calendar switched off"
+      },
+      "lists": {
+        "add": "Add entry",
+        "addTitle": "New entry",
+        "editTitle": "Edit entry",
+        "search": "Search…",
+        "empty": "This list is empty.",
+        "hidden": "Hidden",
+        "name": "Name",
+        "code": "Code",
+        "codeHint": "Stable identifier used by integrations — letters, numbers and _ only.",
+        "codeError": "Use letters, numbers and _ only",
+        "notes": "Notes",
+        "offered": "Offered in forms",
+        "offeredHint": "Hidden entries stay on existing records but can't be picked anymore.",
+        "deleteTitle": "Delete {{ name }}?",
+        "deleteBody": "This removes it from the list. Entries still used by employees can't be deleted — switch them off instead.",
+        "deleted": "Entry deleted",
+        "inUse": "This entry is still in use — switch it off instead of deleting it.",
+        "employmentTypes": {
+          "title": "Employment types",
+          "hint": "Full time, part time, contractor… shown on profiles and contracts."
+        },
+        "jobLevels": {
+          "title": "Job levels",
+          "hint": "Seniority steps such as junior, mid, senior, lead."
+        },
+        "jobGrades": {
+          "title": "Job grades",
+          "hint": "Pay grades used for salary bands."
+        },
+        "employeeCategories": {
+          "title": "Employee categories",
+          "hint": "How people are classified, e.g. staff, management, contractor."
+        },
+        "maritalStatuses": {
+          "title": "Marital statuses",
+          "hint": "Options on personal details."
+        },
+        "terminationReasons": {
+          "title": "Termination reasons",
+          "hint": "Why employment ended — used when someone leaves."
+        }
+      },
+      "access": {
+        "users": "Users",
+        "roles": "Roles & permissions",
+        "searchUsers": "Find a user…",
+        "allRoles": "All roles",
+        "you": "You",
+        "canSignIn": "Can sign in",
+        "canSignInHint": "Switched-off accounts keep their data but can't sign in.",
+        "selfHint": "You can't switch off your own account.",
+        "editRoles": "Roles",
+        "noUsers": "No users match.",
+        "holders": "held by {{ n }}",
+        "perms": "{{ n }} permissions",
+        "effective": "{{ roles }} roles · {{ perms }} permissions in total",
+        "group": {
+          "core": "Core",
+          "people": "People & HR",
+          "time": "Time & leave",
+          "money": "Payroll & finance",
+          "oversight": "Oversight & IT",
+          "other": "Other"
+        },
+        "range": "{{ from }}–{{ to }} of {{ total }} users",
+        "pageOf": "Page {{ page }} of {{ pages }}",
+        "prev": "Previous page",
+        "next": "Next page"
+      }
+    }
+  }
+}

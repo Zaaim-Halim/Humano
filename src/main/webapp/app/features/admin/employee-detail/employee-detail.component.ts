@@ -8,6 +8,7 @@ import { Observable } from 'rxjs';
 import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
 import { normalizeHttpError } from 'app/core/api';
+import { CompanyService } from 'app/core/company/company.service';
 import { EmployeeProfile, EmployeeService } from 'app/features/employee';
 import { DocumentLibraryComponent } from 'app/features/employee/documents/document-library.component';
 import { CurrentEmployeeService } from 'app/features/employee';
@@ -103,6 +104,8 @@ export default class EmployeeDetailComponent {
   private readonly router = inject(Router);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
+  /** New salaries start from the company's currency and pay basis (Settings). */
+  private readonly company = inject(CompanyService);
   private readonly account = inject(AccountService);
 
   /** Gate the Edit action on the same permission the edit route requires. */
@@ -197,9 +200,9 @@ export default class EmployeeDetailComponent {
     } else {
       this.createForm.reset({
         positionId: this.identity().data?.positionId ?? '',
-        currencyId: '',
+        currencyId: this.company.profile()?.defaultCurrencyId ?? '',
         baseAmount: '',
-        basis: Basis.MONTHLY,
+        basis: (this.company.profile()?.defaultBasis as Basis | undefined) ?? Basis.MONTHLY,
         effectiveFrom: '',
         effectiveTo: '',
       });

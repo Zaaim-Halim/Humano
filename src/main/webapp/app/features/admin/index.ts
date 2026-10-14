@@ -12,6 +12,10 @@ export type { Department, CreateDepartmentRequest, UpdateDepartmentRequest } fro
 
 export { PositionService } from './services/position.service';
 export { JobLevelService } from './services/job-level.service';
+export { JobGradeService } from './services/job-grade.service';
+export { EmploymentTypeService } from './services/employment-type.service';
+export { EmployeeCategoryService } from './services/employee-category.service';
+export { MaritalStatusService } from './services/marital-status.service';
 export type { ReferenceData } from './models/reference-data.model';
 export type { Position, CreatePositionRequest, UpdatePositionRequest } from './models/position.model';
 

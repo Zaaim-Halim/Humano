@@ -27,16 +27,14 @@ import {
 
 import { CreateTimesheetRequest, Timesheet } from '../models/timesheet.model';
 import { Project } from '../models/project.model';
+import { CompanyService } from 'app/core/company/company.service';
+
 import { CurrentEmployeeService } from '../services/current-employee.service';
 import { ProjectService } from '../services/project.service';
 import { TimesheetService } from '../services/timesheet.service';
 import { MeWorkService } from '../services/me-work.service';
 import { TeamAttendanceComponent } from './team-attendance.component';
 import { TimeClockComponent } from './time-clock.component';
-
-/** Daily target used for the bar chart reference line and the weekly goal. */
-const DAILY_TARGET = 8;
-const WORK_DAYS = 5;
 
 /** Colours cycled across projects (stable by project order). */
 const PROJECT_COLORS = [
@@ -111,8 +109,10 @@ export default class TimesheetsComponent {
   protected readonly employeeId = this.currentEmployee.currentEmployeeId;
   protected readonly resolved = this.currentEmployee.resolved;
   protected readonly canViewTeam = this.account.hasPermission(Permission.VIEW_TIMESHEETS);
-  protected readonly dailyTarget = DAILY_TARGET;
-  protected readonly weeklyTarget = DAILY_TARGET * WORK_DAYS;
+  // Targets follow the company's working-time policy (Settings → Payroll & time).
+  private readonly company = inject(CompanyService);
+  protected readonly dailyTarget = this.company.hoursPerDay;
+  protected readonly weeklyTarget = this.company.hoursPerWeek;
 
   protected readonly tab = signal<'clock' | 'mine' | 'team' | 'attendance'>('clock');
   /** Team attendance is shown to managers (anyone with reports) and HR; probed on load. */
@@ -162,7 +162,7 @@ export default class TimesheetsComponent {
   });
   protected readonly myTotal = computed(() => this.myDays().reduce((sum, d) => sum + d.hours, 0));
   /** Bar scale: at least a 10h day so the target line sits below the top. */
-  protected readonly myScale = computed(() => Math.max(DAILY_TARGET + 2, ...this.myDays().map(d => d.hours)));
+  protected readonly myScale = computed(() => Math.max(this.dailyTarget() + 2, ...this.myDays().map(d => d.hours)));
   protected readonly myProjects = computed(() => {
     const totals = new Map<string, { name: string; hours: number; color: string }>();
     for (const e of this.mine() ?? []) {
@@ -211,7 +211,7 @@ export default class TimesheetsComponent {
       people: rows.length,
       total,
       average: rows.length ? total / rows.length : 0,
-      under: rows.filter(r => r.total < this.weeklyTarget * 0.9).length,
+      under: rows.filter(r => r.total < this.weeklyTarget() * 0.9).length,
     };
   });
 
@@ -250,7 +250,7 @@ export default class TimesheetsComponent {
 
   /** Heatmap shade: 0 → empty, the daily target → full brand. */
   protected heat(hours: number | undefined): number {
-    return hours ? Math.min(1, hours / DAILY_TARGET) : 0;
+    return hours ? Math.min(1, hours / this.dailyTarget()) : 0;
   }
 
   protected logFor(day: string): void {

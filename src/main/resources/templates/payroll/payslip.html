@@ -99,9 +99,16 @@
       .reporting td.label {
         color: #555;
       }
+      .employer {
+        font-size: 15px;
+        font-weight: bold;
+        letter-spacing: 0.02em;
+        margin-bottom: 4px;
+      }
     </style>
   </head>
   <body>
+    <div class="employer" th:if="${model.employerName}" th:text="${model.employerName}">Demo Company</div>
     <h1 th:text="|Payslip ${model.payslipNumber}|">Payslip PS-2025-08-001</h1>
 
     <table class="meta">

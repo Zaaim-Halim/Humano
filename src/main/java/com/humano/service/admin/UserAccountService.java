@@ -8,6 +8,7 @@ import com.humano.domain.shared.Authority;
 import com.humano.domain.shared.User;
 import com.humano.dto.admin.requests.CreateUserRequest;
 import com.humano.dto.admin.requests.UpdateUserRequest;
+import com.humano.dto.admin.responses.UserResponse;
 import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.PersistentTokenRepository;
 import com.humano.repository.shared.UserRepository;
@@ -172,9 +173,26 @@ public class UserAccountService {
             });
     }
 
+    /**
+     * One page of users with their roles, optionally narrowed by a search term (login, email or
+     * name) and a role. Mapped inside the transaction (the role collection is lazy); a page holds
+     * at most a few dozen users, so loading their roles stays cheap at any company size.
+     */
     @Transactional(value = "tenantTransactionManager", readOnly = true)
-    public Page<User> getAllManagedUsers(Pageable pageable) {
-        return userRepository.findAll(pageable);
+    public Page<UserResponse> getAllManagedUsers(String search, String role, Pageable pageable) {
+        String term = search == null || search.isBlank() ? null : "%" + search.trim().toLowerCase(java.util.Locale.ROOT) + "%";
+        String roleName = role == null || role.isBlank() ? null : role;
+        return userRepository.search(term, roleName, pageable).map(UserResponse::fromUser);
+    }
+
+    /** Number of users holding each role. */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public java.util.Map<String, Long> countUsersByRole() {
+        java.util.Map<String, Long> counts = new java.util.HashMap<>();
+        for (Object[] row : userRepository.countByAuthority()) {
+            counts.put((String) row[0], (Long) row[1]);
+        }
+        return counts;
     }
 
     @Transactional(value = "tenantTransactionManager", readOnly = true)

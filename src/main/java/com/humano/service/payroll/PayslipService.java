@@ -50,6 +50,9 @@ public class PayslipService {
     private final PayslipPdfGenerator pdfGenerator;
     private final StorageFactory storageFactory;
 
+    private final com.humano.service.tenant.TenantService tenantService;
+    private final com.humano.config.multitenancy.TenantIdResolver tenantIdResolver;
+
     public PayslipService(
         PayslipRepository payslipRepository,
         PayrollResultRepository resultRepository,
@@ -57,8 +60,12 @@ public class PayslipService {
         PayrollLineRepository lineRepository,
         EmployeeRepository employeeRepository,
         PayslipPdfGenerator pdfGenerator,
-        StorageFactory storageFactory
+        StorageFactory storageFactory,
+        com.humano.service.tenant.TenantService tenantService,
+        com.humano.config.multitenancy.TenantIdResolver tenantIdResolver
     ) {
+        this.tenantService = tenantService;
+        this.tenantIdResolver = tenantIdResolver;
         this.payslipRepository = payslipRepository;
         this.resultRepository = resultRepository;
         this.runRepository = runRepository;
@@ -440,7 +447,8 @@ public class PayslipService {
             result.getReportingNet(),
             result.getExchangeRate(),
             result.getExchangeRateDate(),
-            Instant.now().toString()
+            Instant.now().toString(),
+            employerName()
         );
     }
 
@@ -792,5 +800,15 @@ public class PayslipService {
             null, // payslipNumber - will be set separately if needed
             null // payslipUrl - will be set separately if needed
         );
+    }
+
+    /** The company name for the letterhead; the PDF still renders if it can't be resolved. */
+    private String employerName() {
+        try {
+            return tenantService.getTenantById(tenantIdResolver.requireCurrentTenantId()).name();
+        } catch (RuntimeException e) {
+            log.warn("Could not resolve the employer name for a payslip: {}", e.getMessage());
+            return null;
+        }
     }
 }
