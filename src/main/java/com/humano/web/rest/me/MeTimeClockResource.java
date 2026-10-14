@@ -2,10 +2,13 @@ package com.humano.web.rest.me;
 
 import com.humano.domain.shared.User;
 import com.humano.dto.me.requests.TimeClockRequest;
+import com.humano.dto.me.responses.TeamAttendance;
 import com.humano.dto.me.responses.TimeClockDay;
+import com.humano.security.SecurityExpressions;
 import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.me.MeService;
+import com.humano.service.me.TeamAttendanceService;
 import com.humano.service.me.TimeClockService;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
@@ -30,10 +33,19 @@ public class MeTimeClockResource {
 
     private final MeService meService;
     private final TimeClockService timeClockService;
+    private final TeamAttendanceService teamAttendanceService;
+    private final SecurityExpressions securityExpressions;
 
-    public MeTimeClockResource(MeService meService, TimeClockService timeClockService) {
+    public MeTimeClockResource(
+        MeService meService,
+        TimeClockService timeClockService,
+        TeamAttendanceService teamAttendanceService,
+        SecurityExpressions securityExpressions
+    ) {
         this.meService = meService;
         this.timeClockService = timeClockService;
+        this.teamAttendanceService = teamAttendanceService;
+        this.securityExpressions = securityExpressions;
     }
 
     /** {@code GET /api/me/attendance/today} : today's clock state and totals. */
@@ -78,6 +90,18 @@ public class MeTimeClockResource {
     @RequireAuthenticated
     public TimeClockDay clockOut(@Valid @RequestBody(required = false) TimeClockRequest body) {
         return timeClockService.clockOut(me(), body == null ? null : body.note());
+    }
+
+    /**
+     * {@code GET /api/me/attendance/team?date=} : that day's attendance for my reporting line, or
+     * for everyone with {@code VIEW_ATTENDANCE} (HR). Leave types only for people who manage leave.
+     */
+    @GetMapping("/team")
+    @RequireAuthenticated
+    public TeamAttendance team(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        boolean everyone = securityExpressions.hasAnyPermission("VIEW_ATTENDANCE", "MANAGE_ATTENDANCE");
+        boolean leaveTypes = securityExpressions.hasAnyPermission("VIEW_LEAVE_REQUESTS", "MANAGE_LEAVE_REQUESTS", "APPROVE_LEAVE");
+        return teamAttendanceService.forDay(me(), date, everyone, leaveTypes);
     }
 
     private UUID me() {

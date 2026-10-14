@@ -40,7 +40,14 @@ export const SHELL_NAV: ShellNavGroup[] = [
   {
     headingKey: 'humano.nav.groups.overview',
     items: [
-      { id: 'dashboard', labelKey: 'humano.nav.dashboard', icon: 'layout-grid', link: '/dashboard', keywords: 'home overview kpis' },
+      {
+        id: 'dashboard',
+        labelKey: 'humano.nav.dashboard',
+        icon: 'layout-grid',
+        link: '/dashboard',
+        keywords: 'home overview kpis',
+        permissions: [Permission.READ_EMPLOYEE],
+      },
       { id: 'portal', labelKey: 'humano.nav.portal', icon: 'user', link: '/me', keywords: 'me self service portal home my space' },
       // Everyone: requests routed to you as a manager or approver.
       {

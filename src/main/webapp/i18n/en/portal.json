@@ -1,22 +1,33 @@
 {
   "humano": {
     "portal": {
-      "greeting": "Hi, {{ name }} 👋",
+      "greeting": "Hi, {{ name }}",
       "subtitle": "Here's your space at a glance",
       "latestPayslip": "Latest payslip",
-      "payslipUnavailableTitle": "No payslip to show",
-      "payslipUnavailableBody": "Viewing your own payslips isn't available yet.",
-      "leaveBalance": "Leave balance",
-      "leaveBalanceUnavailableTitle": "Balance unavailable",
-      "leaveBalanceUnavailableBody": "Your leave balance isn't available yet.",
-      "tasks": "Your tasks",
-      "tasksUnavailableTitle": "Nothing to do",
-      "tasksUnavailableBody": "Onboarding tasks aren't available yet.",
+      "tasks": "To do",
       "actionProfile": "My profile",
       "actionLeave": "Request leave",
-      "actionTimesheet": "Log timesheet",
-      "actionAccount": "My account",
-      "actionDocuments": "My documents"
+      "actionDocuments": "My documents",
+      "quickActions": "Quick actions",
+      "actionClock": "Time clock",
+      "actionTree": "People tree",
+      "todoApprovals": "{{ count }} requests are waiting for your decision",
+      "todoClockIn": "You haven't clocked in today",
+      "todoOnBreak": "You're on a break since {{ time }}",
+      "todoLeavePending": "Your {{ type }} request from {{ date }} is awaiting approval",
+      "today": "Today",
+      "openClock": "Open time clock",
+      "allPay": "All pay",
+      "paidOn": "Paid {{ date }}",
+      "ytd": "{{ amount }} net paid this year",
+      "noPayslips": "No payslips yet.",
+      "timeOff": "Time off",
+      "takenThisYear": "Taken this year",
+      "pending": "Pending requests",
+      "nextLeave": "Next: {{ type }}",
+      "noLeavePlanned": "No time off planned.",
+      "teamToday": "Your team today",
+      "teamIn": "{{ in }} of {{ total }} clocked in"
     }
   }
 }

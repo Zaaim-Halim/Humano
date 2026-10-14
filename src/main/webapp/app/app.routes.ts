@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { Permission } from 'app/config/permission.constants';
+import { dashboardGuard } from 'app/core/auth/dashboard.guard';
 import { UserRouteAccessService } from 'app/core/auth/user-route-access.service';
 
 const placeholder = () => import('./layouts/placeholder-page.component');
@@ -84,7 +85,12 @@ const routes: Routes = [
         title: 'global.menu.account.sessions',
         loadComponent: () => import('./account/sessions/sessions.component'),
       },
-      { path: 'dashboard', title: 'humano.nav.dashboard', loadComponent: () => import('./features/admin/dashboard/dashboard.component') },
+      {
+        path: 'dashboard',
+        title: 'humano.nav.dashboard',
+        loadComponent: () => import('./features/admin/dashboard/dashboard.component'),
+        canActivate: [UserRouteAccessService, dashboardGuard],
+      },
       { path: 'me', title: 'humano.nav.portal', loadComponent: () => import('./features/employee/portal/portal.component') },
       {
         path: 'my-profile',

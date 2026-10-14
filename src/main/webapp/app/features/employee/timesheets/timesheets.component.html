@@ -5,16 +5,22 @@
     <hum-tabs [items]="tabs()" [value]="tab()" (valueChange)="setTab($event)" />
   }
 
-  <div class="hum-dir-toolbar" style="margin-top: var(--space-4)">
-    <div class="hum-segmented">
-      <hum-icon-button icon="chevron-left" size="sm" [label]="'humano.timesheets.prevWeek' | translate" (click)="shiftWeek(-1)" />
-      <hum-icon-button icon="chevron-right" size="sm" [label]="'humano.timesheets.nextWeek' | translate" (click)="shiftWeek(1)" />
+  @if (tab() === 'attendance') {
+    <div style="margin-top: var(--space-4)"><hum-team-attendance (scopeChange)="attendanceScope.set($event)" /></div>
+  }
+
+  @if (tab() !== 'attendance') {
+    <div class="hum-dir-toolbar" style="margin-top: var(--space-4)">
+      <div class="hum-segmented">
+        <hum-icon-button icon="chevron-left" size="sm" [label]="'humano.timesheets.prevWeek' | translate" (click)="shiftWeek(-1)" />
+        <hum-icon-button icon="chevron-right" size="sm" [label]="'humano.timesheets.nextWeek' | translate" (click)="shiftWeek(1)" />
+      </div>
+      <h2 class="hum-cal-title tabular-nums">{{ weekLabel() }}</h2>
+      @if (!isCurrentWeek()) {
+        <hum-button variant="ghost" size="sm" (click)="thisWeek()">{{ 'humano.timesheets.thisWeek' | translate }}</hum-button>
+      }
     </div>
-    <h2 class="hum-cal-title tabular-nums">{{ weekLabel() }}</h2>
-    @if (!isCurrentWeek()) {
-      <hum-button variant="ghost" size="sm" (click)="thisWeek()">{{ 'humano.timesheets.thisWeek' | translate }}</hum-button>
-    }
-  </div>
+  }
 
   @if (tab() === 'clock') {
     @if (resolved() && !employeeId()) {
@@ -159,7 +165,7 @@
         </section>
       </div>
     }
-  } @else {
+  } @else if (tab() === 'team') {
     <!-- Team week -->
     <section class="hum-dir-stats hum-dir-stats--even">
       <div class="hum-dir-stat">

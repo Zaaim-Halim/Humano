@@ -2,6 +2,7 @@ package com.humano.repository.hr;
 
 import com.humano.domain.hr.Attendance;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,6 +19,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, UUID>, JpaSpecificationExecutor<Attendance> {
     Page<Attendance> findByEmployeeId(UUID employeeId, Pageable pageable);
+
+    /** The given employees' attendance on one day, with their clock events (team view). */
+    @EntityGraph(attributePaths = "events")
+    List<Attendance> findByDateAndEmployeeIdIn(LocalDate date, Collection<UUID> employeeIds);
 
     Optional<Attendance> findFirstByEmployeeIdAndDate(UUID employeeId, LocalDate date);
 

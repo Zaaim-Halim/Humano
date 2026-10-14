@@ -69,6 +69,33 @@
       },
       "useClocked": "Use clocked time ({{ hours }} h)",
       "now": "now"
+    },
+    "teamAttendance": {
+      "tab": "Team attendance",
+      "prevDay": "Previous day",
+      "nextDay": "Next day",
+      "today": "Today",
+      "live": "Live",
+      "search": "Find a person…",
+      "filter": "Filter by status",
+      "summary": "{{ clocked }} of {{ people }} clocked in",
+      "average": "avg {{ worked }} worked",
+      "allTeams": "All teams",
+      "person": "Person",
+      "status": "Status",
+      "breakShort": "{{ time }} break",
+      "emptyTitle": "Nobody to show for this day",
+      "noMatch": "No one matches these filters.",
+      "presence": {
+        "WORKING": "Working",
+        "ON_BREAK": "On a break",
+        "DONE": "Clocked out",
+        "MISSING_CLOCK_OUT": "Missing clock-out",
+        "ON_LEAVE": "On leave",
+        "NOT_IN": "Not clocked in",
+        "ABSENT": "Absent",
+        "OFF": "Day off"
+      }
     }
   }
 }

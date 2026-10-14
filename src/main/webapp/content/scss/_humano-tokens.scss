@@ -170,9 +170,10 @@
   --text-link: var(--indigo-300);
 
   --brand: var(--indigo-500);
-  --brand-hover: var(--indigo-400);
-  --brand-active: var(--indigo-300);
-  --brand-fg: var(--slate-950);
+  /* Hover/pressed go darker, not lighter, so white text on brand stays readable. */
+  --brand-hover: var(--indigo-600);
+  --brand-active: var(--indigo-700);
+  --brand-fg: var(--slate-0);
   --brand-subtle: rgba(99, 102, 241, 0.12);
   --brand-muted: rgba(99, 102, 241, 0.2);
   --brand-text: var(--indigo-300);

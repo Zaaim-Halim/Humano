@@ -1,86 +1,152 @@
 <div class="hum-page">
-  @if (account(); as me) {
-    <hum-page-header
-      [title]="'humano.portal.greeting' | translate: { name: firstName() }"
-      [subtitle]="'humano.portal.subtitle' | translate"
-    />
+  <hum-page-header [title]="'humano.portal.greeting' | translate: { name: firstName() }" [subtitle]="(today | date: 'fullDate') ?? ''" />
 
-    <!-- Quick actions — each navigates to a real, accessible surface. -->
-    <div
-      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-5)"
-    >
-      @for (a of quickActions; track a.link) {
-        <a
-          [routerLink]="a.link"
-          class="hum-card hum-card--interactive"
-          style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: var(--space-2);
-            padding: var(--space-4);
-            text-align: center;
-            text-decoration: none;
-          "
-        >
-          <span
-            aria-hidden="true"
-            style="
-              width: 38px;
-              height: 38px;
-              border-radius: var(--radius-md);
-              background: var(--brand-subtle);
-              color: var(--brand);
-              display: inline-flex;
-              align-items: center;
-              justify-content: center;
-            "
-          >
-            <lucide-icon [name]="a.icon" [size]="18" />
-          </span>
-          <span style="font-size: var(--text-sm); font-weight: 500; color: var(--text-strong)">{{ a.labelKey | translate }}</span>
-        </a>
-      }
-    </div>
+  <nav class="hum-quick" [attr.aria-label]="'humano.portal.quickActions' | translate">
+    @for (a of quickActions; track a.link) {
+      <a class="hum-quick__item" [routerLink]="a.link">
+        <span class="hum-records__icon"><lucide-icon [name]="a.icon" [size]="18" /></span>
+        <span>{{ a.labelKey | translate }}</span>
+      </a>
+    }
+  </nav>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4)">
-      <!-- Latest payslip — no self-service payslip endpoint (payroll-restricted). -->
-      <hum-card [title]="'humano.portal.latestPayslip' | translate">
-        <hum-empty-state
-          icon="receipt"
-          [title]="'humano.portal.payslipUnavailableTitle' | translate"
-          [description]="'humano.portal.payslipUnavailableBody' | translate"
-        />
-      </hum-card>
-
-      <!-- Leave balance — no balance endpoint exists. -->
-      <hum-card [title]="'humano.portal.leaveBalance' | translate">
-        <hum-empty-state
-          icon="palmtree"
-          [title]="'humano.portal.leaveBalanceUnavailableTitle' | translate"
-          [description]="'humano.portal.leaveBalanceUnavailableBody' | translate"
-        />
-      </hum-card>
-    </div>
-
-    <!-- Tasks — no onboarding/tasks endpoint exists. -->
-    <div style="margin-top: var(--space-4)">
-      <hum-card [title]="'humano.portal.tasks' | translate">
-        <hum-empty-state
-          icon="check-check"
-          [title]="'humano.portal.tasksUnavailableTitle' | translate"
-          [description]="'humano.portal.tasksUnavailableBody' | translate"
-        />
-      </hum-card>
-    </div>
-  } @else {
-    <!-- Identity still resolving. -->
-    <hum-skeleton [height]="40" />
-    <div
-      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); margin-top: var(--space-5)"
-    >
-      <hum-skeleton [height]="160" />
-      <hum-skeleton [height]="160" />
-    </div>
+  @if (todos().length) {
+    <section class="hum-card hum-insights__card hum-todo">
+      <header class="hum-insights__head">
+        <span class="hum-records__icon"><lucide-icon name="list-checks" [size]="16" /></span>
+        <h3>{{ 'humano.portal.tasks' | translate }}</h3>
+        <span class="hum-records__count">{{ todos().length }}</span>
+      </header>
+      <ul>
+        @for (t of todos(); track t.text) {
+          <li>
+            <a [routerLink]="t.link" [attr.data-tone]="t.tone">
+              <lucide-icon [name]="t.icon" [size]="16" />
+              <span>{{ t.text }}</span>
+              <lucide-icon name="chevron-right" [size]="16" />
+            </a>
+          </li>
+        }
+      </ul>
+    </section>
   }
+
+  <div class="hum-dash-grid">
+    <!-- Today -->
+    <section class="hum-card hum-insights__card hum-clock-mini" [attr.data-state]="clock()?.state ?? 'LOADING'">
+      <header class="hum-insights__head">
+        <span class="hum-records__icon"><lucide-icon name="timer" [size]="16" /></span>
+        <h3>{{ 'humano.portal.today' | translate }}</h3>
+        <span class="hum-records__spacer"></span>
+        <a class="hum-linkbtn" routerLink="/timesheets">{{ 'humano.portal.openClock' | translate }}</a>
+      </header>
+      @if (clock(); as c) {
+        <div class="hum-clock-mini__row">
+          <span class="hum-clock__state"><span class="hum-clock__pulse"></span>{{ 'humano.timeclock.state.' + c.state | translate }}</span>
+          @if (c.state === 'NOT_STARTED') {
+            <button type="button" class="hum-btn hum-btn--primary hum-btn--sm" [disabled]="clockBusy()" (click)="clockIn()">
+              <lucide-icon name="log-in" [size]="14" />{{ 'humano.timeclock.clockIn' | translate }}
+            </button>
+          }
+        </div>
+        @if (c.checkIn) {
+          <div class="hum-clock-mini__totals">
+            <div>
+              <div class="hum-kpi__label">{{ 'humano.timeclock.worked' | translate }}</div>
+              <div class="hum-clock__mid tabular-nums">{{ duration(c.workedMinutes) }}</div>
+            </div>
+            <div>
+              <div class="hum-kpi__label">{{ 'humano.timeclock.inOut' | translate }}</div>
+              <div class="hum-clock__mid tabular-nums">
+                {{ hm(c.checkIn) }} → {{ c.checkOut ? hm(c.checkOut) : ('humano.timeclock.now' | translate) }}
+              </div>
+            </div>
+          </div>
+        }
+      } @else {
+        <hum-skeleton [height]="60" />
+      }
+    </section>
+
+    <!-- Pay -->
+    <section class="hum-card hum-insights__card">
+      <header class="hum-insights__head">
+        <span class="hum-records__icon"><lucide-icon name="receipt" [size]="16" /></span>
+        <h3>{{ 'humano.portal.latestPayslip' | translate }}</h3>
+        <span class="hum-records__spacer"></span>
+        <a class="hum-linkbtn" routerLink="/my-profile">{{ 'humano.portal.allPay' | translate }}</a>
+      </header>
+      @if (payslips() === null) {
+        <hum-skeleton [height]="80" />
+      } @else if (latestPayslip(); as p) {
+        <a class="hum-latest-slip" style="margin-top: 0" [routerLink]="['/my-payslips', p.id]">
+          <lucide-icon name="file-text" [size]="18" />
+          <span class="hum-latest-slip__text">
+            <strong>{{ p.periodStart | date: 'MMMM y' }}</strong>
+            <span>{{ 'humano.portal.paidOn' | translate: { date: (p.paymentDate | date: 'mediumDate') } }}</span>
+          </span>
+          <span class="hum-latest-slip__amount">{{ p.net | money: p.currencyCode }}</span>
+          <lucide-icon name="chevron-right" [size]="16" />
+        </a>
+        <div class="hum-kpi__hint" style="margin-top: var(--space-3)">
+          {{ 'humano.portal.ytd' | translate: { amount: (ytdNet() | money: p.currencyCode) } }}
+        </div>
+      } @else {
+        <p class="hum-insights__note">{{ 'humano.portal.noPayslips' | translate }}</p>
+      }
+    </section>
+
+    <!-- Time off -->
+    <section class="hum-card hum-insights__card">
+      <header class="hum-insights__head">
+        <span class="hum-records__icon"><lucide-icon name="palmtree" [size]="16" /></span>
+        <h3>{{ 'humano.portal.timeOff' | translate }}</h3>
+        <span class="hum-records__spacer"></span>
+        <a class="hum-linkbtn" routerLink="/leave/new">{{ 'humano.portal.actionLeave' | translate }}</a>
+      </header>
+      @if (leave() === null) {
+        <hum-skeleton [height]="80" />
+      } @else {
+        <div class="hum-clock-mini__totals">
+          <div>
+            <div class="hum-kpi__label">{{ 'humano.portal.takenThisYear' | translate }}</div>
+            <div class="hum-clock__mid tabular-nums">{{ 'humano.insights.leave.days' | translate: { count: leaveStats().taken } }}</div>
+          </div>
+          <div>
+            <div class="hum-kpi__label">{{ 'humano.portal.pending' | translate }}</div>
+            <div class="hum-clock__mid tabular-nums">{{ leaveStats().pending.length }}</div>
+          </div>
+        </div>
+        @if (leaveStats().next; as n) {
+          <div class="hum-next-leave">
+            <i [style.background]="leaveColor(n.leaveType)"></i>
+            {{ 'humano.portal.nextLeave' | translate: { type: ('humano.leave.type.' + n.leaveType | translate) } }}
+            <strong>{{ n.startDate | date: 'd MMM' }}{{ n.endDate !== n.startDate ? ' – ' + (n.endDate | date: 'd MMM') : '' }}</strong>
+          </div>
+        } @else {
+          <p class="hum-insights__note" style="margin-top: var(--space-3)">{{ 'humano.portal.noLeavePlanned' | translate }}</p>
+        }
+      }
+    </section>
+
+    <!-- Team (managers) -->
+    @if (team()?.scope === 'REPORTS') {
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="users" [size]="16" /></span>
+          <h3>{{ 'humano.portal.teamToday' | translate }}</h3>
+          <span class="hum-records__spacer"></span>
+          <a class="hum-linkbtn" routerLink="/timesheets">{{ 'humano.dashboard.open' | translate }}</a>
+        </header>
+        <div class="hum-kpi__hint">{{ 'humano.portal.teamIn' | translate: { in: teamIn().length, total: team()!.rows.length } }}</div>
+        <div class="hum-avatar-stack">
+          @for (r of team()!.rows.slice(0, 12); track r.employeeId) {
+            <span class="hum-avatar-stack__item" [attr.data-presence]="r.presence" [title]="r.name">
+              <hum-avatar [name]="r.name" [src]="r.imageUrl" size="sm" />
+            </span>
+          }
+        </div>
+      </section>
+    }
+  </div>
 </div>

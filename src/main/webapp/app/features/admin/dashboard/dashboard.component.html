@@ -1,91 +1,239 @@
 <div class="hum-page">
-  <hum-page-header [title]="'humano.dashboard.title' | translate" [subtitle]="'humano.dashboard.subtitle' | translate" />
+  <hum-page-header [title]="greeting()" [subtitle]="(today | date: 'fullDate') ?? ''" />
 
-  @if (!isAdmin) {
-    <hum-empty-state
-      icon="layout-grid"
-      [title]="'humano.dashboard.welcomeTitle' | translate"
-      [description]="'humano.dashboard.welcomeBody' | translate"
-    />
-  } @else {
-    <!-- KPI tiles — each resolves independently (concurrent skeletons) -->
-    <div
-      style="
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: var(--space-3);
-        margin-bottom: var(--space-5);
-      "
-    >
-      @for (
-        k of [
-          { s: headcount(), label: 'humano.dashboard.headcount', icon: 'users' },
-          { s: departments(), label: 'humano.dashboard.departments', icon: 'network' },
-          { s: pendingLeave(), label: 'humano.dashboard.pendingLeave', icon: 'check-check' },
-          { s: onLeaveToday(), label: 'humano.dashboard.onLeaveToday', icon: 'palmtree' },
-        ];
-        track k.label
-      ) {
-        @if (k.s.loading) {
-          <div class="hum-stat"><hum-skeleton [height]="44" /></div>
-        } @else if (k.s.error) {
-          <hum-stat-tile [label]="k.label | translate" value="—" [icon]="k.icon" />
-        } @else {
-          <hum-stat-tile [label]="k.label | translate" [value]="k.s.value ?? 0" [icon]="k.icon" />
-        }
+  <!-- Figures -->
+  <div class="hum-insights__kpis hum-dash-kpis">
+    <a class="hum-kpi hum-kpi--link" routerLink="/employees">
+      <div class="hum-kpi__label"><lucide-icon name="users" [size]="14" />{{ 'humano.dashboard.headcount' | translate }}</div>
+      @if (stats(); as s) {
+        <div class="hum-kpi__value">{{ s.total }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.dashboard.joined90' | translate: { count: s.joinedLast90Days } }}</div>
+      } @else {
+        <hum-skeleton [height]="40" />
       }
-    </div>
-
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-4)">
-      <!-- Recent joiners -->
-      <hum-card [title]="'humano.dashboard.recentJoiners' | translate" hasHeader>
-        <hum-button hum-card-actions variant="ghost" size="sm" (click)="goToEmployees()">{{
-          'humano.dashboard.viewAll' | translate
-        }}</hum-button>
-        @if (joinersLoading()) {
-          <hum-skeleton [height]="40" /><hum-skeleton [height]="40" /><hum-skeleton [height]="40" />
-        } @else if (joinersError(); as e) {
-          <hum-alert tone="danger" [title]="e"
-            ><hum-button variant="outline" size="sm" (click)="retryJoiners()">{{
-              'humano.action.retry' | translate
-            }}</hum-button></hum-alert
-          >
-        } @else if (joiners()?.length) {
-          <table class="hum-table">
-            <tbody>
-              @for (j of joiners(); track j.id) {
-                <tr
-                  style="cursor: pointer"
-                  tabindex="0"
-                  (click)="openEmployee(j.id)"
-                  (keydown.enter)="openEmployee(j.id)"
-                  (keydown.space)="openEmployee(j.id); $event.preventDefault()"
-                >
-                  <td>
-                    <div style="font-weight: 500">{{ name(j) }}</div>
-                    @if (j.jobTitle) {
-                      <div style="color: var(--text-muted); font-size: var(--text-xs)">{{ j.jobTitle }}</div>
-                    }
-                  </td>
-                  <td style="color: var(--text-muted)">{{ j.departmentName ?? '—' }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
+    </a>
+    @if (attendance() && attendance()!.scope !== 'NONE') {
+      <a class="hum-kpi hum-kpi--link" routerLink="/timesheets">
+        <div class="hum-kpi__label"><lucide-icon name="timer" [size]="14" />{{ 'humano.dashboard.clockedIn' | translate }}</div>
+        <div class="hum-kpi__value">
+          {{ clockedIn().now }}<small>/ {{ clockedIn().total }}</small>
+        </div>
+        <div class="hum-kpi__hint">
+          {{ (attendance()!.scope === 'ALL' ? 'humano.dashboard.company' : 'humano.dashboard.yourTeam') | translate }}
+        </div>
+      </a>
+    }
+    <a class="hum-kpi hum-kpi--link" routerLink="/leave">
+      <div class="hum-kpi__label"><lucide-icon name="palmtree" [size]="14" />{{ 'humano.dashboard.onLeaveToday' | translate }}</div>
+      <div class="hum-kpi__value">{{ upcomingLeave() === null ? '—' : onLeaveToday() }}</div>
+      <div class="hum-kpi__hint">
+        @if (pendingLeave() !== null) {
+          {{ 'humano.dashboard.pendingRequests' | translate: { count: pendingLeave() } }}
         } @else {
-          <hum-empty-state icon="users" [title]="'humano.dashboard.noJoiners' | translate" />
+          {{ 'humano.dashboard.approvedLeave' | translate }}
         }
-      </hum-card>
+      </div>
+    </a>
+    <a class="hum-kpi hum-kpi--link" [class.hum-kpi--hero]="(waitingOnMe() ?? 0) > 0" routerLink="/approvals">
+      <div class="hum-kpi__label"><lucide-icon name="inbox" [size]="14" />{{ 'humano.dashboard.waitingOnYou' | translate }}</div>
+      <div class="hum-kpi__value">{{ waitingOnMe() ?? '—' }}</div>
+      <div class="hum-kpi__hint">{{ 'humano.dashboard.approvalsHint' | translate }}</div>
+    </a>
+  </div>
 
-      <!-- Next pay run — endpoint absent -->
-      <hum-card [title]="'humano.dashboard.nextPayRun' | translate" hasHeader>
-        <!-- TODO: backend endpoint missing — no list/next payroll run; needs a calendar-scoped period lookup. -->
-        <hum-empty-state
-          icon="wallet"
-          [title]="'humano.dashboard.nextPayRun' | translate"
-          [description]="'humano.dashboard.nextPayRunTodo' | translate"
-        />
-      </hum-card>
-    </div>
-  }
+  <div class="hum-dash-grid">
+    <!-- Payroll -->
+    @if (canPayroll) {
+      <section class="hum-card hum-insights__card hum-dash-payroll">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="wallet" [size]="16" /></span>
+          <h3>{{ 'humano.dashboard.payroll' | translate }}</h3>
+          <span class="hum-records__spacer"></span>
+          <a class="hum-linkbtn" routerLink="/payroll/runs">{{ 'humano.dashboard.viewAll' | translate }}</a>
+        </header>
+        @if (runs() === null) {
+          <hum-skeleton [height]="140" />
+        } @else {
+          <div class="hum-dash-runs">
+            @if (inProgress(); as r) {
+              <a class="hum-dash-run is-current" [routerLink]="['/payroll/runs', r.id]">
+                <span class="hum-kpi__label">{{ 'humano.dashboard.inProgress' | translate }}</span>
+                <strong>{{ null | payPeriod: r.periodCode }}</strong>
+                <span class="hum-dash-stages">
+                  @for (s of stages; track s; let i = $index) {
+                    <span [class.is-done]="i <= stageIndex(r.status)" [title]="'humano.payrollRuns.stage.' + s | translate"></span>
+                  }
+                </span>
+                <span class="hum-kpi__hint"
+                  >{{ 'humano.payrollRuns.stage.' + r.status | translate }} ·
+                  {{ 'humano.dashboard.people' | translate: { count: r.employeeCount } }}</span
+                >
+              </a>
+            } @else {
+              <a class="hum-dash-run" routerLink="/payroll/runs">
+                <span class="hum-kpi__label">{{ 'humano.dashboard.nextRun' | translate }}</span>
+                <strong>{{ 'humano.dashboard.startRun' | translate }}</strong>
+                <span class="hum-kpi__hint">{{ 'humano.dashboard.startRunHint' | translate }}</span>
+              </a>
+            }
+            @if (lastPosted(); as r) {
+              <a class="hum-dash-run" [routerLink]="['/payroll/runs', r.id]">
+                <span class="hum-kpi__label">{{ 'humano.dashboard.lastPaid' | translate }}</span>
+                <strong>{{ r.totalNet | money: r.currencyCode }}</strong>
+                <span class="hum-kpi__hint"
+                  >{{ null | payPeriod: r.periodCode }} · {{ 'humano.dashboard.people' | translate: { count: r.employeeCount } }}</span
+                >
+              </a>
+            }
+          </div>
+          @if (trend().length > 1) {
+            <div class="hum-dash-trend" role="img" [attr.aria-label]="'humano.dashboard.netTrend' | translate">
+              @for (b of trend(); track b.run.id) {
+                <a
+                  class="hum-dash-trend__col"
+                  [routerLink]="['/payroll/runs', b.run.id]"
+                  [title]="(null | payPeriod: b.run.periodCode) + ' — ' + (b.run.totalNet | money: b.run.currencyCode)"
+                >
+                  <span class="hum-dash-trend__bar" [style.height.%]="b.pct" [class.is-open]="b.run.status !== 'POSTED'"></span>
+                  <span class="hum-dash-trend__label">{{ b.run.periodStart | date: 'MMM' }}</span>
+                </a>
+              }
+            </div>
+            <div class="hum-kpi__hint">{{ 'humano.dashboard.netTrend' | translate }}</div>
+          }
+        }
+      </section>
+    }
+
+    <!-- Attendance today -->
+    @if (attendance() && attendance()!.scope !== 'NONE' && presence().length) {
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="user-check" [size]="16" /></span>
+          <h3>{{ 'humano.dashboard.attendanceToday' | translate }}</h3>
+          <span class="hum-records__spacer"></span>
+          <a class="hum-linkbtn" routerLink="/timesheets">{{ 'humano.dashboard.open' | translate }}</a>
+        </header>
+        <div class="hum-stackbar">
+          @for (p of presence(); track p.presence) {
+            <span
+              [style.width.%]="p.pct"
+              [style.background]="p.color"
+              [title]="('humano.teamAttendance.presence.' + p.presence | translate) + ': ' + p.count"
+            ></span>
+          }
+        </div>
+        <ul class="hum-dash-legend">
+          @for (p of presence(); track p.presence) {
+            <li>
+              <i [style.background]="p.color"></i>{{ 'humano.teamAttendance.presence.' + p.presence | translate }}
+              <strong class="tabular-nums">{{ p.count }}</strong>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <!-- Departments -->
+    <section class="hum-card hum-insights__card">
+      <header class="hum-insights__head">
+        <span class="hum-records__icon"><lucide-icon name="layers" [size]="16" /></span>
+        <h3>{{ 'humano.dashboard.byDepartment' | translate }}</h3>
+        <span class="hum-records__spacer"></span>
+        <a class="hum-linkbtn" routerLink="/departments">{{ 'humano.dashboard.viewAll' | translate }}</a>
+      </header>
+      @if (stats()) {
+        <div class="hum-typebars">
+          @for (d of departments(); track d.id) {
+            <div class="hum-typebars__row">
+              <span class="hum-typebars__label">{{ d.name ?? ('humano.dashboard.noDepartment' | translate) }}</span>
+              <span class="hum-typebars__track"><span [style.width.%]="d.pct" style="background: var(--brand)"></span></span>
+              <span class="hum-typebars__value">{{ d.count }}</span>
+            </div>
+          }
+        </div>
+        @if (locations().length) {
+          <div class="hum-kpi__label" style="margin-top: var(--space-4)">{{ 'humano.dashboard.workLocation' | translate }}</div>
+          <div class="hum-stackbar" style="margin-top: var(--space-2)">
+            @for (l of locations(); track l.key) {
+              <span
+                [style.width.%]="l.pct"
+                [style.background]="l.color"
+                [title]="('humano.directory.location.' + l.key | translate) + ': ' + l.count"
+              ></span>
+            }
+          </div>
+          <ul class="hum-dash-legend">
+            @for (l of locations(); track l.key) {
+              <li>
+                <i [style.background]="l.color"></i>{{ 'humano.directory.location.' + l.key | translate }}
+                <strong class="tabular-nums">{{ l.count }}</strong>
+              </li>
+            }
+          </ul>
+        }
+      } @else {
+        <hum-skeleton [height]="180" />
+      }
+    </section>
+
+    <!-- Off soon -->
+    <section class="hum-card hum-insights__card">
+      <header class="hum-insights__head">
+        <span class="hum-records__icon"><lucide-icon name="calendar-days" [size]="16" /></span>
+        <h3>{{ 'humano.dashboard.offSoon' | translate }}</h3>
+        <span class="hum-records__spacer"></span>
+        <a class="hum-linkbtn" routerLink="/leave">{{ 'humano.dashboard.calendar' | translate }}</a>
+      </header>
+      @if (upcomingLeave() === null) {
+        <hum-skeleton [height]="160" />
+      } @else if (offSoon().length) {
+        <ul class="hum-dash-people">
+          @for (e of offSoon(); track e.id) {
+            <li>
+              <hum-avatar [name]="e.employeeName" [src]="e.imageUrl" size="sm" />
+              <span class="hum-person__text">
+                <span class="hum-person__name">{{ e.employeeName }}</span>
+                <span class="hum-person__sub">{{ e.departmentName ?? '' }}</span>
+              </span>
+              <span class="hum-dash-people__when">
+                <i [style.background]="leaveColor(e.leaveType)"></i>
+                {{ e.startDate | date: 'd MMM' }}{{ e.endDate !== e.startDate ? ' – ' + (e.endDate | date: 'd MMM') : '' }}
+              </span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="hum-insights__note">{{ 'humano.dashboard.nobodyOff' | translate }}</p>
+      }
+    </section>
+
+    <!-- Joiners -->
+    <section class="hum-card hum-insights__card">
+      <header class="hum-insights__head">
+        <span class="hum-records__icon"><lucide-icon name="user-plus" [size]="16" /></span>
+        <h3>{{ 'humano.dashboard.recentJoiners' | translate }}</h3>
+        <span class="hum-records__spacer"></span>
+        <a class="hum-linkbtn" routerLink="/employees">{{ 'humano.dashboard.viewAll' | translate }}</a>
+      </header>
+      @if (joiners() === null) {
+        <hum-skeleton [height]="160" />
+      } @else if (joiners()!.length) {
+        <ul class="hum-dash-people">
+          @for (e of joiners(); track e.id) {
+            <li>
+              <hum-avatar [name]="personName(e)" [src]="e.imageUrl" size="sm" />
+              <a class="hum-person__text" [routerLink]="['/employees', e.id]">
+                <span class="hum-person__name">{{ personName(e) }}</span>
+                <span class="hum-person__sub">{{ e.jobTitle ?? '' }}{{ e.departmentName ? ' · ' + e.departmentName : '' }}</span>
+              </a>
+              <span class="hum-dash-people__when">{{ tenure(e.startDate) }}</span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="hum-insights__note">{{ 'humano.dashboard.noJoiners' | translate }}</p>
+      }
+    </section>
+  </div>
 </div>

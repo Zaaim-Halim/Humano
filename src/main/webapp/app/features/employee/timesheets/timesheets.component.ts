@@ -30,6 +30,8 @@ import { Project } from '../models/project.model';
 import { CurrentEmployeeService } from '../services/current-employee.service';
 import { ProjectService } from '../services/project.service';
 import { TimesheetService } from '../services/timesheet.service';
+import { MeWorkService } from '../services/me-work.service';
+import { TeamAttendanceComponent } from './team-attendance.component';
 import { TimeClockComponent } from './time-clock.component';
 
 /** Daily target used for the bar chart reference line and the weekly goal. */
@@ -64,6 +66,8 @@ function weekStart(d: Date): Date {
  * - Project hours: Monday–Sunday bars against an 8h day, the week's
  *   total against 40h, a per-project split, each day's entries, and a quick log form (date,
  *   hours, project).
+ * - Team attendance (managers and HR): who is in, on a break, done, on leave, by day
+ *   (see TeamAttendanceComponent).
  * - Team week (`VIEW_TIMESHEETS`): a heatmap with one row per person and a cell per day shaded
  *   by hours, with weekly totals; under-/over-logged weeks are flagged.
  * Both views page by week; data is one search per week.
@@ -73,6 +77,7 @@ function weekStart(d: Date): Date {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TimeClockComponent,
+    TeamAttendanceComponent,
     ReactiveFormsModule,
     RouterLink,
     DatePipe,
@@ -101,6 +106,7 @@ export default class TimesheetsComponent {
   private readonly account = inject(AccountService);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
+  private readonly meWork = inject(MeWorkService);
 
   protected readonly employeeId = this.currentEmployee.currentEmployeeId;
   protected readonly resolved = this.currentEmployee.resolved;
@@ -108,10 +114,15 @@ export default class TimesheetsComponent {
   protected readonly dailyTarget = DAILY_TARGET;
   protected readonly weeklyTarget = DAILY_TARGET * WORK_DAYS;
 
-  protected readonly tab = signal<'clock' | 'mine' | 'team'>('clock');
+  protected readonly tab = signal<'clock' | 'mine' | 'team' | 'attendance'>('clock');
+  /** Team attendance is shown to managers (anyone with reports) and HR; probed on load. */
+  protected readonly attendanceScope = signal<'ALL' | 'REPORTS' | 'NONE'>('NONE');
   protected readonly tabs = computed<TabItem[]>(() => [
     { id: 'clock', label: this.label('humano.timeclock.tab'), icon: 'timer' },
     { id: 'mine', label: this.label('humano.timesheets.tabMine'), icon: 'folder-kanban' },
+    ...(this.attendanceScope() !== 'NONE'
+      ? [{ id: 'attendance', label: this.label('humano.teamAttendance.tab'), icon: 'user-check' }]
+      : []),
     ...(this.canViewTeam ? [{ id: 'team', label: this.label('humano.timesheets.tabTeam'), icon: 'users' }] : []),
   ]);
 
@@ -206,6 +217,7 @@ export default class TimesheetsComponent {
 
   constructor() {
     this.currentEmployee.resolve();
+    this.meWork.teamAttendance().subscribe({ next: t => this.attendanceScope.set(t.scope), error: () => undefined });
     this.projectService.query({ page: 0, size: 200, sort: ['name,asc'] }).subscribe({ next: res => this.projects.set(res.content) });
 
     effect(() => {
@@ -220,7 +232,7 @@ export default class TimesheetsComponent {
   }
 
   protected setTab(id: string | undefined): void {
-    if (id === 'clock' || id === 'mine' || id === 'team') this.tab.set(id);
+    if (id === 'clock' || id === 'mine' || id === 'team' || id === 'attendance') this.tab.set(id);
   }
 
   protected shiftWeek(delta: number): void {

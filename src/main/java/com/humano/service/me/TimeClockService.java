@@ -187,7 +187,7 @@ public class TimeClockService {
         return open;
     }
 
-    private TimeClockDay toDay(Attendance day, ZonedDateTime now) {
+    TimeClockDay toDay(Attendance day, ZonedDateTime now) {
         // Open days run until now (today) or until midnight (a forgotten clock-out on a past day).
         LocalTime end = day.getCheckOut() != null
             ? day.getCheckOut()
@@ -228,7 +228,7 @@ public class TimeClockService {
         return now.toLocalTime().truncatedTo(ChronoUnit.MINUTES);
     }
 
-    private ZonedDateTime now() {
+    ZonedDateTime now() {
         String tz = organizationSettingsService.get().timezone();
         ZoneId zone;
         try {

@@ -1,0 +1,136 @@
+<div class="hum-dir-toolbar">
+  <div class="hum-segmented">
+    <hum-icon-button icon="chevron-left" size="sm" [label]="'humano.teamAttendance.prevDay' | translate" (click)="shiftDay(-1)" />
+    <hum-icon-button
+      icon="chevron-right"
+      size="sm"
+      [label]="'humano.teamAttendance.nextDay' | translate"
+      [disabled]="isToday()"
+      (click)="shiftDay(1)"
+    />
+  </div>
+  <h2 class="hum-cal-title">{{ date() | date: 'fullDate' }}</h2>
+  @if (!isToday()) {
+    <hum-button variant="ghost" size="sm" (click)="goToday()">{{ 'humano.teamAttendance.today' | translate }}</hum-button>
+  } @else {
+    <span class="hum-live"><span class="hum-clock__pulse"></span>{{ 'humano.teamAttendance.live' | translate }}</span>
+  }
+  <div class="hum-dir-toolbar__search" style="margin-left: auto">
+    <hum-input
+      type="search"
+      icon="search"
+      [placeholder]="'humano.teamAttendance.search' | translate"
+      [ngModel]="query()"
+      (ngModelChange)="query.set($event)"
+    />
+  </div>
+</div>
+
+@if (error(); as e) {
+  <hum-alert tone="danger" [title]="e"
+    ><hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+  >
+} @else if (data(); as d) {
+  @if (!d.rows.length) {
+    <hum-empty-state icon="users" [title]="'humano.teamAttendance.emptyTitle' | translate" />
+  } @else {
+    <!-- Presence counts (also filters) -->
+    <div class="hum-presence-chips" role="group" [attr.aria-label]="'humano.teamAttendance.filter' | translate">
+      @for (c of chips(); track c.presence) {
+        <button
+          type="button"
+          class="hum-presence-chip"
+          [attr.data-tone]="presenceStyle(c.presence).tone"
+          [class.is-active]="presenceFilter() === c.presence"
+          [attr.aria-pressed]="presenceFilter() === c.presence"
+          (click)="togglePresence(c.presence)"
+        >
+          <lucide-icon [name]="presenceStyle(c.presence).icon" [size]="16" />
+          <span class="hum-presence-chip__count tabular-nums">{{ c.count }}</span>
+          <span>{{ 'humano.teamAttendance.presence.' + c.presence | translate }}</span>
+        </button>
+      }
+      <span class="hum-records__spacer"></span>
+      <span class="hum-kpi__hint">
+        {{ 'humano.teamAttendance.summary' | translate: { clocked: stats().clocked, people: stats().people } }}
+        @if (stats().clocked) {
+          · {{ 'humano.teamAttendance.average' | translate: { worked: duration(stats().averageWorked) } }}
+        }
+      </span>
+    </div>
+
+    @if (d.scope === 'ALL' && units().length > 1) {
+      <div class="hum-chip-row">
+        <button type="button" class="hum-chip" [class.is-active]="!unitFilter()" (click)="unitFilter.set('')">
+          {{ 'humano.teamAttendance.allTeams' | translate }}
+        </button>
+        @for (u of units(); track u) {
+          <button type="button" class="hum-chip" [class.is-active]="unitFilter() === u" (click)="unitFilter.set(u)">{{ u }}</button>
+        }
+      </div>
+    }
+
+    <section class="hum-card hum-team-att">
+      <div class="hum-team-att__row hum-team-att__row--head">
+        <span>{{ 'humano.teamAttendance.person' | translate }}</span>
+        <span>{{ 'humano.teamAttendance.status' | translate }}</span>
+        <span class="hum-team-att__scale">
+          @for (h of scale().hours; track h) {
+            <span [style.left.%]="pos(h * 60)">{{ h }}h</span>
+          }
+        </span>
+        <span>{{ 'humano.timeclock.inOut' | translate }}</span>
+        <span class="hum-team-att__num">{{ 'humano.timeclock.worked' | translate }}</span>
+      </div>
+      @for (r of rows(); track r.employeeId) {
+        <div class="hum-team-att__row" [class.is-alert]="r.presence === 'MISSING_CLOCK_OUT' || r.presence === 'ABSENT'">
+          <a class="hum-person" [routerLink]="personLink(r.employeeId)">
+            <hum-avatar [name]="r.name" [src]="r.imageUrl" size="sm" />
+            <span class="hum-person__text">
+              <span class="hum-person__name">{{ r.name }}</span>
+              <span class="hum-person__sub">{{ r.jobTitle ?? '—' }}{{ r.unitName ? ' · ' + r.unitName : '' }}</span>
+            </span>
+          </a>
+          <span>
+            <hum-badge [tone]="presenceStyle(r.presence).tone" [label]="presenceLabel(r)" />
+            @if (r.day?.status === 'WORK_FROM_HOME') {
+              <hum-badge tone="info" [label]="'humano.timeclock.remoteShort' | translate" [dot]="false" />
+            }
+          </span>
+          <span class="hum-clock-week__track" [attr.aria-hidden]="true">
+            @for (s of segments(r); track $index) {
+              <span
+                class="hum-clock-track__seg"
+                [class.is-break]="s.kind === 'break'"
+                [class.is-open]="s.open"
+                [style.left.%]="pos(s.from)"
+                [style.width.%]="pos(s.to) - pos(s.from)"
+              ></span>
+            }
+          </span>
+          <span class="tabular-nums">
+            @if (r.day?.checkIn) {
+              {{ hm(r.day!.checkIn) }} – {{ r.day!.checkOut ? hm(r.day!.checkOut) : ('humano.timeclock.now' | translate) }}
+            } @else {
+              —
+            }
+          </span>
+          <span class="hum-team-att__num tabular-nums">
+            @if (r.day?.checkIn) {
+              <strong>{{ duration(r.day!.workedMinutes) }}</strong>
+              @if (r.day!.breakMinutes) {
+                <span class="hum-kpi__hint">{{
+                  'humano.teamAttendance.breakShort' | translate: { time: duration(r.day!.breakMinutes) }
+                }}</span>
+              }
+            }
+          </span>
+        </div>
+      } @empty {
+        <p class="hum-insights__note" style="padding: var(--space-4)">{{ 'humano.teamAttendance.noMatch' | translate }}</p>
+      }
+    </section>
+  }
+} @else {
+  <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+}

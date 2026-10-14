@@ -10,25 +10,12 @@ import { AlertComponent, BadgeComponent, ButtonComponent, CheckboxComponent, Ske
 
 import { ClockEvent, ClockEventType, TimeClockDay } from '../models/time-clock.model';
 import { MeWorkService } from '../services/me-work.service';
+import { ClockSegment, clockDuration, clockScale, clockSegments, hm } from './clock-timeline';
 
 const WEEKLY_TARGET_MIN = 40 * 60;
 
 function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-/** "HH:mm[:ss]" → minutes after midnight. */
-function minutes(time: string | null): number | null {
-  if (!time) return null;
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + m;
-}
-
-interface Segment {
-  kind: 'work' | 'break';
-  from: number;
-  to: number;
-  open: boolean;
 }
 
 /**
@@ -103,17 +90,9 @@ export class TimeClockComponent {
   protected readonly nowLabel = computed(() => new Date(this.tick()).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }));
 
   /** Shared time scale for the timelines: 07:00–19:00, widened to fit the data. */
-  protected readonly scale = computed(() => {
-    let lo = 7 * 60;
-    let hi = 19 * 60;
-    for (const d of [...(this.days() ?? []), ...(this.today() ? [this.today()!] : [])]) {
-      const a = minutes(d.checkIn);
-      const b = minutes(d.checkOut) ?? (d.state === 'NOT_STARTED' ? null : this.nowMinutes());
-      if (a !== null) lo = Math.min(lo, Math.floor(a / 60) * 60);
-      if (b !== null) hi = Math.max(hi, Math.ceil(b / 60) * 60);
-    }
-    return { lo, hi, hours: Array.from({ length: (hi - lo) / 60 + 1 }, (_, i) => lo / 60 + i) };
-  });
+  protected readonly scale = computed(() =>
+    clockScale([...(this.days() ?? []), ...(this.today() ? [this.today()!] : [])], this.nowMinutes()),
+  );
 
   protected readonly todaySegments = computed(() => (this.today() ? this.segments(this.today()!, true) : []));
 
@@ -173,17 +152,8 @@ export class TimeClockComponent {
     });
   }
 
-  /** "7 h 45 min". */
-  protected duration(total: number): string {
-    const h = Math.floor(total / 60);
-    const m = total % 60;
-    return h ? `${h} h ${String(m).padStart(2, '0')} min` : `${m} min`;
-  }
-
-  /** "08:42" from "08:42:00". */
-  protected hm(time: string | null): string {
-    return time ? time.slice(0, 5) : '—';
-  }
+  protected readonly duration = clockDuration;
+  protected readonly hm = hm;
 
   /** Position on the shared scale, in %. */
   protected pos(min: number): number {
@@ -226,7 +196,7 @@ export class TimeClockComponent {
       next: d => {
         this.busy.set(false);
         this.setToday(d);
-        this.toast.success(this.t(messageKey, { time: this.hm(this.lastEventTime(d)) }));
+        this.toast.success(this.t(messageKey, { time: hm(this.lastEventTime(d)) }));
         this.loadWeek(this.week());
       },
       error: (err: unknown) => {
@@ -263,29 +233,8 @@ export class TimeClockComponent {
     return now.getHours() * 60 + now.getMinutes();
   }
 
-  /** Work and break spans of a day (an open day runs to now when it is today). */
-  private segments(d: TimeClockDay, live: boolean): Segment[] {
-    const start = minutes(d.checkIn);
-    if (start === null) return [];
-    const end = minutes(d.checkOut) ?? (live ? this.nowMinutes() : start);
-    const out: Segment[] = [];
-    let cursor = start;
-    let breakFrom: number | null = null;
-    for (const e of d.events) {
-      const t = minutes(e.time)!;
-      if (e.action === 'BREAK_START') {
-        if (t > cursor) out.push({ kind: 'work', from: cursor, to: t, open: false });
-        breakFrom = t;
-      } else if (e.action === 'BREAK_END' && breakFrom !== null) {
-        out.push({ kind: 'break', from: breakFrom, to: t, open: false });
-        cursor = t;
-        breakFrom = null;
-      }
-    }
-    const open = !d.checkOut && live;
-    if (breakFrom !== null) out.push({ kind: 'break', from: breakFrom, to: Math.max(breakFrom, end), open });
-    else if (end > cursor) out.push({ kind: 'work', from: cursor, to: end, open });
-    return out;
+  private segments(d: TimeClockDay, live: boolean): ClockSegment[] {
+    return clockSegments(d, live, this.nowMinutes());
   }
 
   private t(key: string, params?: Record<string, unknown>): string {

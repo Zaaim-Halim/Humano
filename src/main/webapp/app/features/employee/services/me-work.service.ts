@@ -10,7 +10,7 @@ import { Payslip } from 'app/features/admin/models/payslip.model';
 
 import { EmployeeTraining } from '../models/employee-training.model';
 import { PerformanceReview } from '../models/performance-review.model';
-import { TimeClockDay, TimeClockRequest } from '../models/time-clock.model';
+import { TeamAttendance, TimeClockDay, TimeClockRequest } from '../models/time-clock.model';
 
 /** The signed-in employee's own pay, payslips, reviews, trainings and time clock — `/api/me/**`. */
 @Injectable({ providedIn: 'root' })
@@ -50,6 +50,11 @@ export class MeWorkService {
 
   clockDays(from: string, to: string): Observable<TimeClockDay[]> {
     return this.http.get<TimeClockDay[]>(`${this.url}/attendance`, { params: createRequestOption({ from, to }) });
+  }
+
+  /** That day's attendance for my reporting line (or everyone, for HR). */
+  teamAttendance(date?: string): Observable<TeamAttendance> {
+    return this.http.get<TeamAttendance>(`${this.url}/attendance/team`, { params: createRequestOption(date ? { date } : {}) });
   }
 
   clockIn(body: TimeClockRequest = {}): Observable<TimeClockDay> {

@@ -1,128 +1,213 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
-import { TranslatePipe } from '@ngx-translate/core';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { LucideAngularModule } from 'lucide-angular';
 
-import { Page, normalizeHttpError } from 'app/core/api';
-import { Authority } from 'app/config/authority.constants';
+import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
-import { SimpleEmployeeProfile, EmployeeService, LeaveRequestService, LeaveStatus, personName } from 'app/features/employee';
+import { EmployeeService, LEAVE_TYPE_COLOR, LeaveRequestService, LeaveStatus } from 'app/features/employee';
+import { EmployeeDirectoryStats, SimpleEmployeeProfile, personName } from 'app/features/employee/models/employee.model';
+import { LeaveCalendarEntry } from 'app/features/employee/models/leave-request.model';
+import { TeamAttendance, TeamPresence } from 'app/features/employee/models/time-clock.model';
+import { CurrentEmployeeService } from 'app/features/employee/services/current-employee.service';
+import { MeWorkService } from 'app/features/employee/services/me-work.service';
+import { ApprovalService } from 'app/features/manager';
+import { AvatarComponent, PageHeaderComponent, SkeletonComponent } from 'app/shared/ui';
+import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
 
-import { DepartmentService } from '../index';
-import {
-  AlertComponent,
-  ButtonComponent,
-  CardComponent,
-  EmptyStateComponent,
-  PageHeaderComponent,
-  SkeletonComponent,
-  StatTileComponent,
-} from 'app/shared/ui';
+import { PayrollRun, PayrollRunService, RunStatus } from '../index';
 
-interface Kpi {
-  value: number | null;
-  loading: boolean;
-  error: boolean;
+function iso(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-const kpiIdle = (): Kpi => ({ value: null, loading: true, error: false });
+
+const PRESENCE_ORDER: TeamPresence[] = ['WORKING', 'ON_BREAK', 'DONE', 'ON_LEAVE', 'NOT_IN', 'MISSING_CLOCK_OUT', 'ABSENT', 'OFF'];
+const PRESENCE_COLOR: Record<TeamPresence, string> = {
+  WORKING: 'var(--success-solid)',
+  ON_BREAK: 'var(--warning-solid)',
+  DONE: 'var(--brand)',
+  ON_LEAVE: 'var(--info-solid)',
+  NOT_IN: 'var(--slate-400)',
+  MISSING_CLOCK_OUT: 'var(--danger-solid)',
+  ABSENT: 'var(--danger-solid)',
+  OFF: 'var(--slate-300)',
+};
+const LOCATION_COLOR: Record<string, string> = {
+  ONSITE: 'var(--brand)',
+  HYBRID: 'var(--violet-500)',
+  REMOTE: 'var(--info-solid)',
+  UNSPECIFIED: 'var(--slate-300)',
+};
 
 /**
- * HR / Admin Dashboard (hero screen) — the landing surface. The spec's
- * aggregate `GET /api/admin/dashboard` does not exist, so each KPI is assembled
- * from a real list endpoint's `totalElements` (parallel fetch, per-tile skeleton),
- * plus a recent-joiners feed. Role-aware: non-admins get a welcome instead of
- * admin data (their portal endpoints are absent — Tier 3).
+ * Dashboard — the organization at a glance for HR, payroll and managers (people with directory
+ * access; everyone else is sent to My space by the route guard).
  *
- * TODO: backend — headcount sparkline needs a time series, and "next pay run"
- * needs a calendar-scoped period lookup; neither endpoint exists. Omitted (no
- * fabricated KPIs), shown as a TODO card.
+ * - Figures: headcount (and joiners in the last 90 days), clocked in now, on leave today,
+ *   pending leave, approvals waiting on you.
+ * - Payroll: the last posted run, the run in progress (or a prompt to start one) and net pay
+ *   over the last runs.
+ * - People: headcount by department and by work location.
+ * - Today: attendance by presence (links to Team attendance), who is off in the next two weeks,
+ *   and recent joiners.
+ *
+ * Every block loads independently and only when the viewer has the matching permission.
  */
 @Component({
   selector: 'hum-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    DatePipe,
+    RouterLink,
     TranslatePipe,
+    LucideAngularModule,
+    MoneyPipe,
+    PayPeriodPipe,
     PageHeaderComponent,
-    StatTileComponent,
-    CardComponent,
-    ButtonComponent,
-    AlertComponent,
-    EmptyStateComponent,
+    AvatarComponent,
     SkeletonComponent,
   ],
   templateUrl: './dashboard.component.html',
 })
 export default class DashboardComponent {
+  private readonly account = inject(AccountService);
   private readonly employeeService = inject(EmployeeService);
-  private readonly departmentService = inject(DepartmentService);
   private readonly leaveService = inject(LeaveRequestService);
-  private readonly accountService = inject(AccountService);
-  private readonly router = inject(Router);
+  private readonly runService = inject(PayrollRunService);
+  private readonly meWork = inject(MeWorkService);
+  private readonly approvals = inject(ApprovalService);
+  private readonly currentEmployee = inject(CurrentEmployeeService);
+  private readonly translate = inject(TranslateService);
 
-  protected readonly isAdmin = this.accountService.hasAnyAuthority(Authority.ADMIN);
-  protected readonly today = new Date().toISOString().slice(0, 10);
+  protected readonly canPayroll = this.account.hasPermission(Permission.VIEW_PAYROLL_RUN);
+  protected readonly canLeave = this.account.hasPermission(Permission.VIEW_LEAVE_REQUESTS);
 
-  protected readonly headcount = signal<Kpi>(kpiIdle());
-  protected readonly departments = signal<Kpi>(kpiIdle());
-  protected readonly pendingLeave = signal<Kpi>(kpiIdle());
-  protected readonly onLeaveToday = signal<Kpi>(kpiIdle());
+  protected readonly greeting = computed(() => {
+    const h = new Date().getHours();
+    const name = this.account.trackCurrentAccount()()?.firstName ?? '';
+    return this.t(h < 12 ? 'humano.dashboard.morning' : h < 18 ? 'humano.dashboard.afternoon' : 'humano.dashboard.evening', { name });
+  });
+  protected readonly today = new Date();
 
-  protected readonly name = personName;
+  // People
+  protected readonly stats = signal<EmployeeDirectoryStats | null>(null);
+  protected readonly departments = computed(() => {
+    const list = (this.stats()?.byDepartment ?? []).filter(d => d.count > 0).slice(0, 7);
+    const max = Math.max(1, ...list.map(d => d.count));
+    return list.map(d => ({ ...d, pct: (d.count / max) * 100 }));
+  });
+  protected readonly locations = computed(() => {
+    const s = this.stats();
+    if (!s) return [];
+    const total = Math.max(1, s.total);
+    return Object.entries(s.byWorkLocation)
+      .filter(([, n]) => n > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([key, count]) => ({ key, count, pct: (count / total) * 100, color: LOCATION_COLOR[key] ?? 'var(--slate-400)' }));
+  });
   protected readonly joiners = signal<SimpleEmployeeProfile[] | null>(null);
-  protected readonly joinersLoading = signal(true);
-  protected readonly joinersError = signal<string | null>(null);
+  protected readonly personName = personName;
+
+  // Leave
+  protected readonly pendingLeave = signal<number | null>(null);
+  protected readonly upcomingLeave = signal<LeaveCalendarEntry[] | null>(null);
+  protected readonly onLeaveToday = computed(
+    () => (this.upcomingLeave() ?? []).filter(e => e.status === LeaveStatus.APPROVED && e.startDate <= iso(this.today)).length,
+  );
+  /** Next two weeks, one entry per person (their next absence). */
+  protected readonly offSoon = computed(() => {
+    const seen = new Set<string>();
+    return (this.upcomingLeave() ?? [])
+      .filter(e => e.status === LeaveStatus.APPROVED)
+      .sort((a, b) => a.startDate.localeCompare(b.startDate))
+      .filter(e => !seen.has(e.employeeId) && seen.add(e.employeeId))
+      .slice(0, 6);
+  });
+  protected readonly leaveColor = (t: string | null): string => (t ? (LEAVE_TYPE_COLOR[t] ?? 'var(--info-solid)') : 'var(--slate-400)');
+
+  // Attendance
+  protected readonly attendance = signal<TeamAttendance | null>(null);
+  protected readonly presence = computed(() => {
+    const rows = this.attendance()?.rows ?? [];
+    const counts = new Map<TeamPresence, number>();
+    for (const r of rows) counts.set(r.presence, (counts.get(r.presence) ?? 0) + 1);
+    const total = Math.max(1, rows.length);
+    return PRESENCE_ORDER.filter(p => counts.has(p)).map(p => ({
+      presence: p,
+      count: counts.get(p)!,
+      pct: (counts.get(p)! / total) * 100,
+      color: PRESENCE_COLOR[p],
+    }));
+  });
+  protected readonly clockedIn = computed(() => {
+    const rows = this.attendance()?.rows ?? [];
+    return { now: rows.filter(r => r.presence === 'WORKING' || r.presence === 'ON_BREAK').length, total: rows.length };
+  });
+
+  // Approvals
+  protected readonly waitingOnMe = signal<number | null>(null);
+
+  // Payroll
+  protected readonly runs = signal<PayrollRun[] | null>(null);
+  protected readonly lastPosted = computed(() => (this.runs() ?? []).find(r => r.status === RunStatus.POSTED) ?? null);
+  protected readonly inProgress = computed(() => (this.runs() ?? []).find(r => r.status !== RunStatus.POSTED) ?? null);
+  protected readonly trend = computed(() => {
+    const list = [...(this.runs() ?? [])].reverse().slice(-6);
+    const max = Math.max(1, ...list.map(r => r.totalNet));
+    return list.map(r => ({ run: r, pct: (r.totalNet / max) * 100 }));
+  });
+  protected readonly stages = [RunStatus.DRAFT, RunStatus.CALCULATED, RunStatus.APPROVED, RunStatus.POSTED];
 
   constructor() {
-    if (this.isAdmin) {
-      this.loadKpis();
-      this.loadJoiners();
+    this.currentEmployee.resolve();
+    this.employeeService.stats().subscribe({ next: s => this.stats.set(s), error: () => this.stats.set(null) });
+    this.employeeService.query({ page: 0, size: 6, sort: ['startDate,desc'] }).subscribe({
+      next: page => this.joiners.set(page.content),
+      error: () => this.joiners.set([]),
+    });
+    const in14 = new Date(this.today.getFullYear(), this.today.getMonth(), this.today.getDate() + 14);
+    this.leaveService.calendar(iso(this.today), iso(in14)).subscribe({
+      next: e => this.upcomingLeave.set(e),
+      error: () => this.upcomingLeave.set([]),
+    });
+    if (this.canLeave) {
+      this.leaveService.search({ status: LeaveStatus.PENDING }, { page: 0, size: 1 }).subscribe({
+        next: p => this.pendingLeave.set(p.totalElements),
+        error: () => this.pendingLeave.set(null),
+      });
     }
-  }
-
-  private loadKpis(): void {
-    // Each KPI is one list call read for its total — fired in parallel, each tile
-    // resolves independently (concurrent skeletons).
-    this.count(this.headcount, this.employeeService.query({ size: 1 }));
-    this.count(this.departments, this.departmentService.query({ size: 1 }));
-    this.count(this.pendingLeave, this.leaveService.search({ status: LeaveStatus.PENDING }, { size: 1 }));
-    this.count(
-      this.onLeaveToday,
-      this.leaveService.search({ status: LeaveStatus.APPROVED, startDateTo: this.today, endDateFrom: this.today }, { size: 1 }),
-    );
-  }
-
-  private count(target: ReturnType<typeof signal<Kpi>>, call: Observable<Page<unknown>>): void {
-    call.pipe(map(p => p.totalElements)).subscribe({
-      next: total => target.set({ value: total, loading: false, error: false }),
-      error: () => target.set({ value: null, loading: false, error: true }),
+    this.meWork.teamAttendance().subscribe({ next: a => this.attendance.set(a), error: () => this.attendance.set(null) });
+    if (this.canPayroll) {
+      this.runService.list({ page: 0, size: 12 }).subscribe({ next: p => this.runs.set(p.content), error: () => this.runs.set([]) });
+    }
+    effect(() => {
+      const me = this.currentEmployee.currentEmployeeId();
+      if (me) {
+        untracked(() =>
+          this.approvals
+            .pendingForApprover(me)
+            .subscribe({ next: list => this.waitingOnMe.set(list.length), error: () => this.waitingOnMe.set(null) }),
+        );
+      }
     });
   }
 
-  private loadJoiners(): void {
-    this.joinersLoading.set(true);
-    this.joinersError.set(null);
-    this.employeeService.query({ size: 5, sort: ['startDate,desc'] }).subscribe({
-      next: page => {
-        this.joiners.set(page.content);
-        this.joinersLoading.set(false);
-      },
-      error: (err: unknown) => {
-        this.joinersError.set(normalizeHttpError(err));
-        this.joinersLoading.set(false);
-      },
-    });
+  protected stageIndex(status: RunStatus): number {
+    return this.stages.indexOf(status);
   }
 
-  protected retryJoiners(): void {
-    this.loadJoiners();
+  protected tenure(startDate: string | null): string {
+    if (!startDate) return '';
+    const days = Math.round((Date.now() - new Date(`${startDate}T00:00:00`).getTime()) / 86_400_000);
+    if (days < 0) return this.t('humano.dashboard.startsIn', { days: -days });
+    if (days === 0) return this.t('humano.dashboard.startsToday');
+    return days < 60
+      ? this.t('humano.dashboard.joinedDays', { days })
+      : this.t('humano.dashboard.joinedMonths', { months: Math.round(days / 30) });
   }
 
-  protected goToEmployees(): void {
-    void this.router.navigate(['/employees']);
-  }
-
-  protected openEmployee(id: string): void {
-    void this.router.navigate(['/employees', id]);
+  private t(key: string, params?: Record<string, unknown>): string {
+    return String(this.translate.instant(key, params));
   }
 }
