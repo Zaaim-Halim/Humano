@@ -16,7 +16,15 @@
     }
   </div>
 
-  @if (tab() === 'mine') {
+  @if (tab() === 'clock') {
+    @if (resolved() && !employeeId()) {
+      <hum-alert tone="info" [title]="'humano.timesheets.noProfileTitle' | translate">{{
+        'humano.timesheets.noProfileBody' | translate
+      }}</hum-alert>
+    } @else {
+      <hum-time-clock [week]="week()" (clocked)="clocked.set($event)" />
+    }
+  } @else if (tab() === 'mine') {
     @if (resolved() && !employeeId()) {
       <hum-alert tone="info" [title]="'humano.timesheets.noProfileTitle' | translate">{{
         'humano.timesheets.noProfileBody' | translate
@@ -117,6 +125,11 @@
                 placeholder="8"
               />
             </hum-form-field>
+            @if (clockedForForm(); as hours) {
+              <button type="button" class="hum-linkbtn" (click)="useClocked(hours)">
+                <lucide-icon name="timer" [size]="14" />{{ 'humano.timeclock.useClocked' | translate: { hours: hours } }}
+              </button>
+            }
             <hum-form-field [label]="'humano.timesheets.project' | translate" controlId="ts-project">
               <hum-select formControlName="projectId" [options]="projectOptions()" />
             </hum-form-field>

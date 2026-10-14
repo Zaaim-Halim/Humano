@@ -196,15 +196,13 @@
       [title]="'humano.directory.emptyTitle' | translate"
       [description]="'humano.directory.emptyDescription' | translate"
     >
-      @if (hasFilters()) {
-        <hum-button hum-empty-action variant="secondary" (click)="clearFilters()">{{
-          'humano.action.clearFilters' | translate
-        }}</hum-button>
-      } @else if (canCreateEmployee) {
-        <hum-button hum-empty-action variant="primary" icon="plus" (click)="addEmployee()">{{
-          'humano.directory.addEmployee' | translate
-        }}</hum-button>
-      }
+      <ng-container hum-empty-action>
+        @if (hasFilters()) {
+          <hum-button variant="secondary" (click)="clearFilters()">{{ 'humano.action.clearFilters' | translate }}</hum-button>
+        } @else if (canCreateEmployee) {
+          <hum-button variant="primary" icon="plus" (click)="addEmployee()">{{ 'humano.directory.addEmployee' | translate }}</hum-button>
+        }
+      </ng-container>
     </hum-empty-state>
   } @else {
     @if (view() === 'grid') {

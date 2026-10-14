@@ -84,8 +84,9 @@ const SEARCHABLE = '.hum-orgnode, .hum-orgchart__member';
  * - The canvas grows with its content (no fixed height); full screen fills the screen.
  * - Ctrl/⌘ + wheel (and trackpad pinch) zooms toward the pointer; dragging the background pans.
  * - Keyboard when the canvas is focused: `+` / `-` zoom, `0` fit, `1` actual size.
- * - Whenever `roots` or `expandDepth` change the first root card is centred, so wide charts
- *   open on their top node instead of on empty canvas.
+ * - Whenever `roots` or `expandDepth` change the first root card — or the `focusId` node, with
+ *   the `revealIds` branches opened to reach it — is centred, so wide charts open on what matters
+ *   instead of on empty canvas.
  * - Search box (top-left): matches node cards and team members by their text, dims the rest,
  *   and jumps between matches (Enter / Shift+Enter, Esc clears). `searchActive` fires when a
  *   query starts or clears so the page can expand collapsed branches while searching.
@@ -133,7 +134,13 @@ const SEARCHABLE = '.hum-orgnode, .hum-orgchart__member';
             aria-selected="false"
             [attr.aria-expanded]="childCount(n) ? isExpanded(n, depth) : null"
           >
-            <div class="hum-orgnode" [class.hum-orgnode--root]="depth === 0" [attr.data-tone]="nodeTone()?.(n) ?? null">
+            <div
+              class="hum-orgnode"
+              [class.hum-orgnode--root]="depth === 0"
+              [class.is-focus]="n.id === focusId()"
+              [attr.data-node-id]="n.id"
+              [attr.data-tone]="nodeTone()?.(n) ?? null"
+            >
               @if (nodeDef(); as def) {
                 <ng-container *ngTemplateOutlet="def.template; context: { $implicit: n, depth: depth }" />
               }
@@ -164,7 +171,7 @@ const SEARCHABLE = '.hum-orgnode, .hum-orgchart__member';
             <li class="hum-orgchart__item">
               <ul class="hum-orgchart__team" role="group" [style.--hum-team-cols]="members.length > 6 ? 2 : 1">
                 @for (m of members; track m.id) {
-                  <li role="treeitem" aria-selected="false">
+                  <li role="treeitem" aria-selected="false" [class.is-focus]="m.id === focusId()" [attr.data-node-id]="m.id">
                     <ng-container *ngTemplateOutlet="def.template; context: { $implicit: m, depth: depth }" />
                   </li>
                 }
@@ -226,6 +233,10 @@ export class OrgChartComponent {
   readonly toggleLabel = input<(node: any) => string>(n => String(childCountOf(n)));
   /** Optional accent tone per node (`brand` | `info` | `success` | `warning`). */
   readonly nodeTone = input<((node: any) => string | null) | null>(null);
+  /** Nodes to open regardless of `expandDepth` — e.g. the path down to a focused node. */
+  readonly revealIds = input<readonly string[]>([]);
+  /** Node to highlight and centre on (instead of the first root). */
+  readonly focusId = input<string | null>(null);
   /** Show the search box; turn off when the page already filters the tree itself. */
   readonly searchable = input(true);
   /** Placeholder (and accessible name) of the search box. */
@@ -265,12 +276,14 @@ export class OrgChartComponent {
     effect(() => {
       this.expandDepth();
       this.roots();
-      untracked(() => this.overrides.set(new Map()));
+      const reveal = this.revealIds();
+      untracked(() => this.overrides.set(new Map(reveal.map(id => [id, true]))));
     });
     afterRenderEffect(() => {
       this.roots();
       this.expandDepth();
-      untracked(() => this.centerRoot());
+      this.focusId();
+      untracked(() => this.centerOnFocus());
     });
     afterRenderEffect(() => {
       // Re-run whenever the rendered tree changes: expanding branches renders new matches.
@@ -507,13 +520,21 @@ export class OrgChartComponent {
     return { w: right - left, h: bottom - top };
   }
 
-  private centerRoot(): void {
+  /** Centre the focused node (horizontally in the canvas, vertically in the page), else the first root. */
+  private centerOnFocus(): void {
     const el = this.viewport().nativeElement;
-    const root = el.querySelector<HTMLElement>('.hum-orgnode--root');
-    if (!root) return;
-    const box = root.getBoundingClientRect();
+    const focus = this.focusId();
+    const target =
+      (focus ? el.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(focus)}"]`) : null) ??
+      el.querySelector<HTMLElement>('.hum-orgnode--root');
+    if (!target) return;
+    const box = target.getBoundingClientRect();
     const view = el.getBoundingClientRect();
     el.scrollLeft += box.left + box.width / 2 - (view.left + view.width / 2);
-    el.scrollTop = 0;
+    if (focus && target.getAttribute('data-node-id') === focus) {
+      target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+    } else {
+      el.scrollTop = 0;
+    }
   }
 }

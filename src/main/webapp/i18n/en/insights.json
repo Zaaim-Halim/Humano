@@ -1,0 +1,69 @@
+{
+  "humano": {
+    "insights": {
+      "pay": {
+        "base": "Base pay",
+        "perYear": "{{ amount }} a year",
+        "growth": "Growth since joining",
+        "changesCount": "{{ count }} salary changes",
+        "lastChange": "Last change",
+        "since": "Since {{ date }}",
+        "ytdNet": "Net paid this year",
+        "ytdHint": "Across {{ count }} payslips",
+        "progression": "Salary progression",
+        "noChanges": "No salary changes recorded yet.",
+        "from": "from {{ amount }}",
+        "start": "Start",
+        "payslips": "Recent payslips",
+        "net": "Net",
+        "gross": "Gross",
+        "deductions": "Deductions",
+        "latest": "Latest payslip",
+        "noPayslips": "No payslips yet.",
+        "basis": {
+          "MONTHLY": "Monthly",
+          "ANNUAL": "Annual",
+          "HOURLY": "Hourly"
+        }
+      },
+      "leave": {
+        "taken": "Time off taken",
+        "sick": "Sick days",
+        "upcoming": "Upcoming",
+        "pending": "Pending requests",
+        "awaiting": "Awaiting a decision",
+        "thisYear": "This year",
+        "days": "{{ count }} d",
+        "nextFrom": "Next from {{ date }}",
+        "nothingPlanned": "Nothing planned",
+        "calendar": "Time off calendar",
+        "requests": "All requests",
+        "ongoing": "On leave now",
+        "upcomingBadge": "Upcoming",
+        "mon": "Mon",
+        "wed": "Wed",
+        "fri": "Fri"
+      },
+      "perf": {
+        "latest": "Latest rating",
+        "average": "Average rating",
+        "reviewsCount": "{{ count }} reviews",
+        "learning": "Trainings completed",
+        "learningHint": "{{ planned }} planned",
+        "latestReview": "Latest review",
+        "reviewedBy": "Reviewed by {{ name }}",
+        "trend": "Rating trend",
+        "history": "Earlier reviews",
+        "trainings": "Learning",
+        "completed": "Completed {{ date }}",
+        "rating": {
+          "1": "Unsatisfactory",
+          "2": "Needs improvement",
+          "3": "Meets expectations",
+          "4": "Exceeds expectations",
+          "5": "Outstanding"
+        }
+      }
+    }
+  }
+}

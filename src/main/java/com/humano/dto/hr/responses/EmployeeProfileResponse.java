@@ -12,6 +12,10 @@ import java.util.UUID;
  */
 public record EmployeeProfileResponse(
     UUID id,
+    String firstName,
+    String lastName,
+    String email,
+    String imageUrl,
     String jobTitle,
     String phone,
     LocalDate startDate,
@@ -26,7 +30,8 @@ public record EmployeeProfileResponse(
     UUID unitId,
     String unitName,
     UUID managerId,
-    String managerInfo,
+    String managerName,
+    String managerJobTitle,
     Set<String> authorities,
     // Personal / employment details (nested)
     EmployeePersonalDetails personalDetails,

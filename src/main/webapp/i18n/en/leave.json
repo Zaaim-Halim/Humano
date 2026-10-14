@@ -34,7 +34,8 @@
       "status": {
         "PENDING": "Pending",
         "APPROVED": "Approved",
-        "REJECTED": "Rejected"
+        "REJECTED": "Rejected",
+        "CANCELED": "Canceled"
       },
       "type": {
         "VACATION": "Vacation",
@@ -57,7 +58,10 @@
       "approve": "Approve",
       "reject": "Reject",
       "approved": "Leave approved",
-      "rejected": "Leave rejected"
+      "rejected": "Leave rejected",
+      "timeOff": "Time off",
+      "scope": "Show",
+      "scopeAll": "Everyone"
     }
   }
 }

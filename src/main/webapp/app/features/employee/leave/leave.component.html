@@ -121,10 +121,25 @@
           </div>
           <h2 class="hum-cal-title">{{ monthLabel() }}</h2>
           <hum-button variant="ghost" size="sm" (click)="thisMonth()">{{ 'humano.leave.today' | translate }}</hum-button>
+          @if (myDepartment()) {
+            <div class="hum-segmented" role="group" [attr.aria-label]="'humano.leave.scope' | translate">
+              <hum-button size="sm" [variant]="scope() === 'all' ? 'secondary' : 'ghost'" (click)="scope.set('all')">{{
+                'humano.leave.scopeAll' | translate
+              }}</hum-button>
+              <hum-button size="sm" [variant]="scope() === 'department' ? 'secondary' : 'ghost'" (click)="scope.set('department')">{{
+                myDepartment()
+              }}</hum-button>
+            </div>
+          }
           <div class="hum-legend" style="margin-left: auto">
             @for (t of types; track t) {
               <span class="hum-legend__item"
                 ><span class="hum-legend__dot" [style.background]="typeColor(t)"></span>{{ 'humano.leave.type.' + t | translate }}</span
+              >
+            }
+            @if (!canViewAll) {
+              <span class="hum-legend__item"
+                ><span class="hum-legend__dot" [style.background]="typeColor(null)"></span>{{ 'humano.leave.timeOff' | translate }}</span
               >
             }
             <span class="hum-legend__item"
@@ -158,8 +173,8 @@
             </div>
             @for (row of calendarRows(); track row.id) {
               <div class="hum-cal__row">
-                <a class="hum-cal__name" [routerLink]="['/employees', row.id]">
-                  <hum-avatar [name]="row.name" size="xs" />
+                <a class="hum-cal__name" [routerLink]="personLink(row.id)">
+                  <hum-avatar [name]="row.name" [src]="row.imageUrl" size="xs" />
                   <span>{{ row.name }}</span>
                 </a>
                 <div class="hum-cal__track">
@@ -176,17 +191,18 @@
                       [class.is-pending]="b.request.status === 'PENDING'"
                       [style.grid-column]="b.start + ' / span ' + b.span"
                       [style.--hum-accent]="typeColor(b.request.leaveType)"
+                      [class.is-readonly]="!canViewAll"
                       [title]="
-                        ('humano.leave.type.' + b.request.leaveType | translate) +
+                        typeLabel(b.request.leaveType) +
                         ' · ' +
                         (b.request.startDate | date: 'mediumDate') +
                         ' – ' +
                         (b.request.endDate | date: 'mediumDate')
                       "
-                      (click)="open(b.request)"
+                      (click)="openEntry(b.request)"
                     >
                       @if (b.span > 2) {
-                        <span>{{ 'humano.leave.type.' + b.request.leaveType | translate }}</span>
+                        <span>{{ typeLabel(b.request.leaveType) }}</span>
                       }
                     </button>
                   }

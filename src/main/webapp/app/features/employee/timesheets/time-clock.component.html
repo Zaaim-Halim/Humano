@@ -1,0 +1,170 @@
+<div class="hum-clock-layout">
+  <!-- Today -->
+  <section class="hum-card hum-clock" [attr.data-state]="today()?.state ?? 'LOADING'">
+    @if (todayError(); as e) {
+      <hum-alert tone="danger" [title]="e"
+        ><hum-button variant="outline" size="sm" (click)="loadToday()">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+      >
+    } @else if (today(); as d) {
+      <header class="hum-clock__head">
+        <div>
+          <div class="hum-clock__date">{{ d.date | date: 'fullDate' }}</div>
+          <div class="hum-clock__now tabular-nums">{{ nowLabel() }}</div>
+        </div>
+        <span class="hum-clock__state">
+          <span class="hum-clock__pulse"></span>
+          {{ 'humano.timeclock.state.' + d.state | translate }}
+          @if (openBreak(); as b) {
+            · {{ 'humano.timeclock.since' | translate: { time: hm(b.time) } }}
+          }
+        </span>
+      </header>
+
+      <div class="hum-clock__totals">
+        <div>
+          <div class="hum-kpi__label"><lucide-icon name="timer" [size]="14" />{{ 'humano.timeclock.worked' | translate }}</div>
+          <div class="hum-clock__big tabular-nums">{{ duration(liveWorked()) }}</div>
+        </div>
+        <div>
+          <div class="hum-kpi__label"><lucide-icon name="coffee" [size]="14" />{{ 'humano.timeclock.breaks' | translate }}</div>
+          <div class="hum-clock__mid tabular-nums">{{ duration(liveBreak()) }}</div>
+        </div>
+        <div>
+          <div class="hum-kpi__label"><lucide-icon name="log-in" [size]="14" />{{ 'humano.timeclock.inOut' | translate }}</div>
+          <div class="hum-clock__mid tabular-nums">
+            {{ hm(d.checkIn) }} → {{ d.checkIn && !d.checkOut ? ('humano.timeclock.now' | translate) : hm(d.checkOut) }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions for the current state -->
+      <div class="hum-clock__actions">
+        @switch (d.state) {
+          @case ('NOT_STARTED') {
+            <hum-button variant="primary" icon="log-in" [loading]="busy()" (click)="clockIn()">{{
+              'humano.timeclock.clockIn' | translate
+            }}</hum-button>
+            <hum-checkbox [ngModel]="remote()" (ngModelChange)="remote.set($event)" [label]="'humano.timeclock.remote' | translate" />
+          }
+          @case ('WORKING') {
+            @for (b of breakTypes; track b.type) {
+              <hum-button variant="secondary" [icon]="b.icon" [disabled]="busy()" (click)="startBreak(b.type)">{{
+                b.key | translate
+              }}</hum-button>
+            }
+            <span class="hum-records__spacer"></span>
+            <hum-button variant="secondary" icon="log-out" [loading]="busy()" (click)="clockOut()">{{
+              'humano.timeclock.clockOut' | translate
+            }}</hum-button>
+          }
+          @case ('ON_BREAK') {
+            <hum-button variant="primary" icon="play" [loading]="busy()" (click)="endBreak()">{{
+              'humano.timeclock.endBreak' | translate
+            }}</hum-button>
+            <span class="hum-records__spacer"></span>
+            <hum-button variant="ghost" icon="log-out" [disabled]="busy()" (click)="clockOut()">{{
+              'humano.timeclock.clockOut' | translate
+            }}</hum-button>
+          }
+          @case ('DONE') {
+            <p class="hum-clock__done">
+              <lucide-icon name="circle-check" [size]="16" />{{
+                'humano.timeclock.doneAt' | translate: { time: hm(d.checkOut), worked: duration(d.workedMinutes) }
+              }}
+            </p>
+          }
+        }
+      </div>
+
+      <!-- Today's timeline -->
+      @if (todaySegments().length) {
+        <div class="hum-clock-track" aria-hidden="true">
+          @for (s of todaySegments(); track $index) {
+            <span
+              class="hum-clock-track__seg"
+              [class.is-break]="s.kind === 'break'"
+              [class.is-open]="s.open"
+              [style.left.%]="pos(s.from)"
+              [style.width.%]="pos(s.to) - pos(s.from)"
+            ></span>
+          }
+        </div>
+        <div class="hum-clock-hours" aria-hidden="true">
+          @for (h of scale().hours; track h) {
+            <span [style.left.%]="pos(h * 60)">{{ h }}h</span>
+          }
+        </div>
+      }
+      @if (d.events.length) {
+        <ol class="hum-clock-events">
+          @for (e of d.events; track $index) {
+            <li [attr.data-action]="e.action">
+              <lucide-icon [name]="eventIcon(e)" [size]="14" />
+              <span class="tabular-nums">{{ hm(e.time) }}</span>
+              <span>{{ eventLabel(e) }}</span>
+              @if (e.description) {
+                <span class="hum-clock-events__note">“{{ e.description }}”</span>
+              }
+            </li>
+          }
+        </ol>
+      }
+    } @else {
+      <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+    }
+  </section>
+
+  <!-- Week -->
+  <section class="hum-card hum-insights__card">
+    <header class="hum-insights__head">
+      <span class="hum-records__icon"><lucide-icon name="calendar-days" [size]="16" /></span>
+      <h3>{{ 'humano.timeclock.week' | translate }}</h3>
+      <span class="hum-records__spacer"></span>
+      <span class="hum-legend"><i style="background: var(--brand)"></i>{{ 'humano.timeclock.worked' | translate }}</span>
+      <span class="hum-legend"><i class="is-pending"></i>{{ 'humano.timeclock.breaks' | translate }}</span>
+    </header>
+    <div class="hum-clock-weektotal">
+      <span class="hum-clock__mid tabular-nums">{{ duration(weekTotal()) }}</span>
+      <span class="hum-kpi__hint">{{ 'humano.timeclock.ofTarget' | translate: { target: weekTarget / 60 } }}</span>
+      <span class="hum-meter" style="flex: 1" [style.--hum-accent]="weekTotal() >= weekTarget ? 'var(--success-solid)' : 'var(--brand)'">
+        <span [style.width.%]="weekTotal() >= weekTarget ? 100 : (weekTotal() / weekTarget) * 100"></span>
+      </span>
+    </div>
+    @if (days() === null) {
+      <hum-skeleton-row /><hum-skeleton-row />
+    } @else {
+      <ul class="hum-clock-week">
+        @for (r of weekRows(); track r.iso) {
+          <li [class.is-weekend]="r.weekend" [class.is-today]="r.isToday">
+            <span class="hum-clock-week__day">
+              <strong>{{ r.date | date: 'EEE' }}</strong>
+              <span>{{ r.date | date: 'd MMM' }}</span>
+            </span>
+            <span class="hum-clock-week__track">
+              @for (s of r.segments; track $index) {
+                <span
+                  class="hum-clock-track__seg"
+                  [class.is-break]="s.kind === 'break'"
+                  [class.is-open]="s.open"
+                  [style.left.%]="pos(s.from)"
+                  [style.width.%]="pos(s.to) - pos(s.from)"
+                ></span>
+              }
+            </span>
+            <span class="hum-clock-week__times tabular-nums">
+              @if (r.day?.checkIn) {
+                {{ hm(r.day!.checkIn) }} – {{ r.day!.checkOut ? hm(r.day!.checkOut) : ('humano.timeclock.now' | translate) }}
+                @if (r.day!.status === 'WORK_FROM_HOME') {
+                  <hum-badge tone="info" [label]="'humano.timeclock.remoteShort' | translate" [dot]="false" />
+                }
+              } @else {
+                <span class="hum-kpi__hint">—</span>
+              }
+            </span>
+            <span class="hum-clock-week__total tabular-nums">{{ r.worked ? duration(r.worked) : '' }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>

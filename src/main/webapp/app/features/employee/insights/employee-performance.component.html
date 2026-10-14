@@ -1,0 +1,144 @@
+@if (reviews() === null) {
+  <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+} @else if (error(); as e) {
+  <hum-alert tone="danger" [title]="e"
+    ><hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+  >
+} @else if (reviews()!.length || trainings().length) {
+  <div class="hum-insights">
+    <div class="hum-insights__kpis">
+      <div class="hum-kpi hum-kpi--hero">
+        <div class="hum-kpi__label"><lucide-icon name="star" [size]="14" />{{ 'humano.insights.perf.latest' | translate }}</div>
+        <div class="hum-kpi__value">
+          {{ latest()?.rating ?? '—' }}<small>/5</small>
+          @if (stats().delta; as d) {
+            <span class="hum-delta" [class.is-up]="d > 0">{{ d > 0 ? '+' : '' }}{{ d }}</span>
+          }
+        </div>
+        <div class="hum-kpi__hint">{{ ratingLabel(latest()?.rating ?? null) }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="chart-line" [size]="14" />{{ 'humano.insights.perf.average' | translate }}</div>
+        <div class="hum-kpi__value">{{ stats().average === null ? '—' : (stats().average | number: '1.1-1') }}<small>/5</small></div>
+        <div class="hum-kpi__hint">{{ 'humano.insights.perf.reviewsCount' | translate: { count: stats().count } }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="graduation-cap" [size]="14" />{{ 'humano.insights.perf.learning' | translate }}</div>
+        <div class="hum-kpi__value">{{ stats().completed }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.insights.perf.learningHint' | translate: { planned: stats().planned } }}</div>
+      </div>
+    </div>
+
+    <div class="hum-insights__grid">
+      @if (latest(); as r) {
+        <section class="hum-card hum-insights__card">
+          <header class="hum-insights__head">
+            <span class="hum-records__icon"><lucide-icon name="message-square-quote" [size]="16" /></span>
+            <h3>{{ 'humano.insights.perf.latestReview' | translate }}</h3>
+            <span class="hum-records__spacer"></span>
+            <time class="hum-vline__date">{{ r.reviewDate | date: 'mediumDate' }}</time>
+          </header>
+          <div class="hum-review">
+            <div class="hum-stars" [attr.aria-label]="r.rating + '/5'">
+              @for (s of stars; track s) {
+                <lucide-icon name="star" [size]="20" [class.is-on]="s <= (r.rating ?? 0)" />
+              }
+              <span class="hum-stars__label">{{ ratingLabel(r.rating) }}</span>
+            </div>
+            @if (r.comments) {
+              <blockquote class="hum-review__quote">{{ r.comments }}</blockquote>
+            }
+            @if (r.reviewerName) {
+              <div class="hum-review__by">
+                <hum-avatar [name]="r.reviewerName" size="sm" />
+                <span>{{ 'humano.insights.perf.reviewedBy' | translate: { name: r.reviewerName } }}</span>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      @if (trend().length > 1) {
+        <section class="hum-card hum-insights__card">
+          <header class="hum-insights__head">
+            <span class="hum-records__icon"><lucide-icon name="chart-line" [size]="16" /></span>
+            <h3>{{ 'humano.insights.perf.trend' | translate }}</h3>
+          </header>
+          <hum-trend-chart [points]="trend()" [min]="1" [max]="5" [label]="'humano.insights.perf.trend' | translate" />
+        </section>
+      }
+    </div>
+
+    @if (earlier().length) {
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="history" [size]="16" /></span>
+          <h3>{{ 'humano.insights.perf.history' | translate }}</h3>
+          <span class="hum-records__count">{{ earlier().length }}</span>
+        </header>
+        <ul class="hum-vline">
+          @for (r of earlier(); track r.id) {
+            <li class="hum-vline__item">
+              <span class="hum-vline__dot" [class.is-up]="(r.rating ?? 0) >= 4"></span>
+              <div class="hum-vline__body">
+                <div class="hum-vline__title">
+                  <span class="hum-stars hum-stars--sm">
+                    @for (s of stars; track s) {
+                      <lucide-icon name="star" [size]="13" [class.is-on]="s <= (r.rating ?? 0)" />
+                    }
+                  </span>
+                  {{ ratingLabel(r.rating) }}
+                </div>
+                @if (r.comments) {
+                  <div class="hum-vline__meta">{{ r.comments }}</div>
+                }
+                @if (r.reviewerName) {
+                  <div class="hum-vline__meta">{{ 'humano.insights.perf.reviewedBy' | translate: { name: r.reviewerName } }}</div>
+                }
+              </div>
+              <time class="hum-vline__date">{{ r.reviewDate | date: 'mediumDate' }}</time>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (trainings().length) {
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="graduation-cap" [size]="16" /></span>
+          <h3>{{ 'humano.insights.perf.trainings' | translate }}</h3>
+          <span class="hum-records__count">{{ trainings().length }}</span>
+        </header>
+        <ul class="hum-records__list">
+          @for (t of trainings(); track t.id) {
+            <li class="hum-record" [class.is-muted]="t.status === 'CANCELLED'">
+              <span class="hum-record__icon"><lucide-icon name="book-open" [size]="16" /></span>
+              <div class="hum-record__body">
+                <div class="hum-record__title">
+                  <span>{{ t.trainingName ?? '—' }}</span>
+                  <hum-badge [status]="t.status" />
+                </div>
+                @if (t.description) {
+                  <div class="hum-record__subtitle">{{ t.description }}</div>
+                }
+                @if (t.feedback) {
+                  <div class="hum-record__facts">
+                    <span><lucide-icon name="message-circle" [size]="12" />“{{ t.feedback }}”</span>
+                  </div>
+                }
+              </div>
+              @if (t.completionDate) {
+                <div class="hum-record__aside">
+                  {{ 'humano.insights.perf.completed' | translate: { date: (t.completionDate | date: 'mediumDate') } }}
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+} @else {
+  <hum-empty-state icon="star" [title]="'humano.employee360.noPerformance' | translate" />
+}

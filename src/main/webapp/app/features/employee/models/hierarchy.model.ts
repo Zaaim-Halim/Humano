@@ -96,9 +96,11 @@ export interface OrganizationalUnitHierarchyResponse {
 }
 
 /**
- * HierarchyAncestorsResponse — envelope for ancestor chain response
- * Contains the root-to-leaf chain for either people or org-unit hierarchies
+ * HierarchyAncestorsResponse — the root-to-leaf chain (top first, the leaf itself last).
+ * `employeeChain` is set for the people hierarchy, `unitChain` for the org-unit one.
  */
 export interface HierarchyAncestorsResponse {
-  ancestors: (EmployeeRef | OrganizationalUnitRef)[];
+  leafId: string;
+  employeeChain: EmployeeTreeNode[] | null;
+  unitChain: OrganizationalUnitTreeNode[] | null;
 }

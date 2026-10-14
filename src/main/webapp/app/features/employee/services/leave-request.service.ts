@@ -4,7 +4,13 @@ import { Observable } from 'rxjs';
 import { Page, PageRequest, RestResourceService } from 'app/core/api';
 import { createRequestOption } from 'app/core/request/request-util';
 
-import { CreateLeaveRequest, LeaveRequest, LeaveRequestSearchRequest, ProcessLeaveRequest } from '../models/leave-request.model';
+import {
+  CreateLeaveRequest,
+  LeaveCalendarEntry,
+  LeaveRequest,
+  LeaveRequestSearchRequest,
+  ProcessLeaveRequest,
+} from '../models/leave-request.model';
 
 /**
  * Leave requests — `/api/hr/leave-requests`. Standard create/list/find/delete;
@@ -28,6 +34,11 @@ export class LeaveRequestService extends RestResourceService<LeaveRequest, Leave
   }
 
   /** `GET /api/hr/leave-requests/employee/{employeeId}/search` — one employee's history. */
+  /** `GET /api/hr/leave-requests/calendar` — who is off when (any signed-in employee). */
+  calendar(from: string, to: string): Observable<LeaveCalendarEntry[]> {
+    return this.http.get<LeaveCalendarEntry[]>(`${this.resourceUrl}/calendar`, { params: createRequestOption({ from, to }) });
+  }
+
   searchByEmployee(employeeId: string, criteria: LeaveRequestSearchRequest, req?: PageRequest): Observable<Page<LeaveRequest>> {
     return this.http.get<Page<LeaveRequest>>(`${this.resourceUrl}/employee/${encodeURIComponent(employeeId)}/search`, {
       params: createRequestOption({ ...criteria, ...req }),

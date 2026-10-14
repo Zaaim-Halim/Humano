@@ -2,7 +2,7 @@
   "humano": {
     "timesheets": {
       "title": "Timesheets",
-      "subtitle": "Hours worked, by week and by project",
+      "subtitle": "Clock in and out, take breaks, and log your hours by project",
       "logTitle": "Log hours",
       "date": "Date",
       "hours": "Hours",
@@ -12,7 +12,7 @@
       "project": "Project",
       "noProfileTitle": "Logging not available yet",
       "noProfileBody": "Your account isn't linked to an employee profile yet, so timesheets can't be logged from here.",
-      "tabMine": "My week",
+      "tabMine": "Project hours",
       "tabTeam": "Team week",
       "prevWeek": "Previous week",
       "nextWeek": "Next week",
@@ -32,6 +32,43 @@
       "teamEmptyTitle": "No time logged this week",
       "teamEmptyBody": "Entries appear here as people log their hours.",
       "total": "Total"
+    },
+    "timeclock": {
+      "tab": "Time clock",
+      "clockIn": "Clock in",
+      "clockOut": "Clock out",
+      "endBreak": "End break",
+      "remote": "Working from home",
+      "remoteShort": "Remote",
+      "lunch": "Lunch break",
+      "shortBreak": "Short break",
+      "meetingBreak": "Away – meeting",
+      "worked": "Worked",
+      "breaks": "Breaks",
+      "inOut": "In → out",
+      "week": "This week",
+      "ofTarget": "of {{ target }} h",
+      "since": "since {{ time }}",
+      "doneAt": "Clocked out at {{ time }} — {{ worked }} worked today.",
+      "clockedIn": "Clocked in at {{ time }}",
+      "clockedOut": "Clocked out at {{ time }}",
+      "breakStarted": "Break started at {{ time }}",
+      "breakEnded": "Back at {{ time }}",
+      "state": {
+        "NOT_STARTED": "Not clocked in",
+        "WORKING": "Working",
+        "ON_BREAK": "On a break",
+        "DONE": "Done for today",
+        "LOADING": ""
+      },
+      "event": {
+        "in": "Clocked in",
+        "out": "Clocked out",
+        "breakStart": "{{ kind }} started",
+        "breakEnd": "{{ kind }} ended"
+      },
+      "useClocked": "Use clocked time ({{ hours }} h)",
+      "now": "now"
     }
   }
 }

@@ -1,152 +1,89 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { TranslatePipe } from '@ngx-translate/core';
+import { RouterLink } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { LucideAngularModule } from 'lucide-angular';
 
-import { AccountService } from 'app/core/auth/account.service';
-import {
-  AvatarComponent,
-  BadgeComponent,
-  ButtonComponent,
-  CardComponent,
-  EmptyStateComponent,
-  PageHeaderComponent,
-  SkeletonRowComponent,
-} from 'app/shared/ui';
+import { ButtonComponent, EmptyStateComponent, SkeletonRowComponent, TabItem, TabsComponent } from 'app/shared/ui';
 
 import {
   CollectionColumn,
   CollectionField,
   CollectionService,
   EmployeeCollectionComponent,
+  RecordView,
 } from '../collection/employee-collection.component';
+import { EmployeeLeaveComponent } from '../insights/employee-leave.component';
+import { EmployeePayComponent } from '../insights/employee-pay.component';
+import { EmployeePerformanceComponent } from '../insights/employee-performance.component';
+import { EmployeeHeroComponent } from '../profile/employee-hero.component';
+import { EmployeeOverviewComponent } from '../profile/employee-overview.component';
 import { CurrentEmployeeService } from '../services/current-employee.service';
 import { MeAddressService, MeEmergencyContactService } from '../services/me-collection.service';
 
-/** One read-only label/value pair; `value` is already display-ready. */
-interface Field {
-  labelKey: string;
-  value: string | null;
-}
+type MyProfileTab = 'overview' | 'pay' | 'leave' | 'performance' | 'details';
 
 /** A self-maintained collection rendered under the read-only cards. */
 interface EditableCollection {
   headingKey: string;
+  itemKey: string;
+  icon: string;
+  present: (row: any) => RecordView; // eslint-disable-line @typescript-eslint/no-explicit-any
   service: CollectionService;
   columns: CollectionColumn[];
   fields: CollectionField[];
 }
 
 /**
- * My profile — the employee's own record.
+ * My profile — the employee's own record, laid out like the HR employee page.
  *
- * <p>Reads the profile {@link CurrentEmployeeService} already holds from
- * `GET /api/me/employee` (security-context scoped, so it is always the caller's own
- * record), plus name/email from `GET /api/account` since those live on the user
- * rather than the employee row.
- *
- * <p>The employment and identification cards are read-only — those fields are written
- * through the HR-gated `/api/hr/**` endpoints, so the page names who to ask instead of
- * offering inputs that would 403. Addresses and emergency contacts *are* editable here,
- * through the self-scoped `/api/me/**` endpoints that derive the owner from the security
- * context (see `MeProfileResource`).
- *
- * <p>Government identification is masked until explicitly revealed — it is the
- * caller's own data, but it should not sit on screen by default.
+ * <p>The profile comes from {@link CurrentEmployeeService} (`GET /api/me/employee`, always the
+ * caller's own record). Tabs:
+ * - Overview: the shared header (with photo upload) and overview cards; government ids masked
+ *   until revealed. Read-only — those fields are HR-written.
+ * - Pay, Time off, Performance: the shared insight components reading self-scoped data
+ *   (`/api/me/compensation`, `/api/me/payslips`, `/api/me/performance-reviews`, own leave).
+ * - My details: addresses and emergency contacts, editable through `/api/me/**`.
  */
 @Component({
   selector: 'hum-my-profile',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    RouterLink,
     TranslatePipe,
-    PageHeaderComponent,
-    CardComponent,
-    AvatarComponent,
-    BadgeComponent,
+    LucideAngularModule,
     ButtonComponent,
     EmptyStateComponent,
     SkeletonRowComponent,
+    TabsComponent,
     EmployeeCollectionComponent,
+    EmployeeHeroComponent,
+    EmployeeOverviewComponent,
+    EmployeePayComponent,
+    EmployeeLeaveComponent,
+    EmployeePerformanceComponent,
   ],
   templateUrl: './my-profile.component.html',
 })
 export default class MyProfileComponent {
+  private readonly translate = inject(TranslateService);
   private readonly currentEmployee = inject(CurrentEmployeeService);
-  private readonly accountService = inject(AccountService);
 
-  protected readonly account = this.accountService.trackCurrentAccount();
   protected readonly profile = this.currentEmployee.currentEmployee;
   protected readonly resolved = this.currentEmployee.resolved;
 
-  protected readonly revealIds = signal(false);
+  protected readonly tab = signal<MyProfileTab>('overview');
+  protected readonly tabs = computed<TabItem[]>(() => [
+    { id: 'overview', label: this.t('humano.employee360.tabOverview'), icon: 'layout-grid' },
+    { id: 'pay', label: this.t('humano.employee360.tabCompensation'), icon: 'wallet' },
+    { id: 'leave', label: this.t('humano.employee360.tabLeaves'), icon: 'palmtree' },
+    { id: 'performance', label: this.t('humano.employee360.tabPerformance'), icon: 'star' },
+    { id: 'details', label: this.t('humano.myProfile.detailsTab'), icon: 'folder' },
+  ]);
 
-  /** "First Last", falling back to the login — the employee row carries no name. */
-  protected readonly fullName = computed(() => {
-    const a = this.account();
-    const name = `${a?.firstName ?? ''} ${a?.lastName ?? ''}`.trim();
-    return name || (a?.login ?? '');
-  });
-
-  protected readonly employment = computed<Field[]>(() => {
+  protected onImageChanged(imageUrl: string | null): void {
     const p = this.profile();
-    if (!p) return [];
-    const d = p.personalDetails;
-    return [
-      { labelKey: 'humano.myProfile.employeeNumber', value: d.employeeNumber ?? null },
-      { labelKey: 'humano.myProfile.position', value: p.positionName },
-      { labelKey: 'humano.myProfile.department', value: p.departmentName },
-      { labelKey: 'humano.myProfile.unit', value: p.unitName },
-      { labelKey: 'humano.myProfile.manager', value: p.managerInfo },
-      { labelKey: 'humano.myProfile.employmentType', value: p.employmentType?.name ?? null },
-      { labelKey: 'humano.myProfile.grade', value: p.grade?.name ?? null },
-      { labelKey: 'humano.myProfile.level', value: p.level?.name ?? null },
-      { labelKey: 'humano.myProfile.category', value: p.category?.name ?? null },
-      { labelKey: 'humano.myProfile.startDate', value: p.startDate },
-      { labelKey: 'humano.myProfile.endDate', value: p.endDate },
-      { labelKey: 'humano.myProfile.probationEnd', value: d.probationEndDate ?? null },
-      { labelKey: 'humano.myProfile.confirmationDate', value: d.confirmationDate ?? null },
-      { labelKey: 'humano.myProfile.workLocation', value: d.workLocation ?? null },
-      { labelKey: 'humano.myProfile.fte', value: d.fte === null || d.fte === undefined ? null : String(d.fte) },
-    ];
-  });
-
-  protected readonly personal = computed<Field[]>(() => {
-    const p = this.profile();
-    if (!p) return [];
-    const d = p.personalDetails;
-    return [
-      { labelKey: 'humano.myProfile.email', value: this.account()?.email ?? null },
-      { labelKey: 'humano.myProfile.phone', value: p.phone },
-      { labelKey: 'humano.myProfile.workPhone', value: d.workPhone ?? null },
-      { labelKey: 'humano.myProfile.birthDate', value: d.birthDate ?? null },
-      { labelKey: 'humano.myProfile.placeOfBirth', value: d.placeOfBirth ?? null },
-      { labelKey: 'humano.myProfile.gender', value: d.gender ?? null },
-      { labelKey: 'humano.myProfile.nationality', value: p.nationality?.name ?? null },
-      { labelKey: 'humano.myProfile.maritalStatus', value: p.maritalStatus?.name ?? null },
-      { labelKey: 'humano.myProfile.country', value: p.countryName },
-    ];
-  });
-
-  /** Government ids, masked to their last four characters unless revealed. */
-  protected readonly governmentIds = computed<Field[]>(() => {
-    const g = this.profile()?.governmentIds;
-    if (!g) return [];
-    const show = this.revealIds();
-    const mask = (v: string | null | undefined): string | null => {
-      if (!v) return null;
-      return show ? v : `•••• ${v.slice(-4)}`;
-    };
-    return [
-      { labelKey: 'humano.myProfile.nationalId', value: mask(g.nationalId) },
-      { labelKey: 'humano.myProfile.passportNumber', value: mask(g.passportNumber) },
-      { labelKey: 'humano.myProfile.taxNumber', value: mask(g.taxNumber) },
-      { labelKey: 'humano.myProfile.socialSecurityNumber', value: mask(g.socialSecurityNumber) },
-    ];
-  });
-
-  /** True when the profile carries no government id at all — then the card is pointless. */
-  protected readonly hasGovernmentIds = computed(() => {
-    const g = this.profile()?.governmentIds;
-    return !!g && !!(g.nationalId ?? g.passportNumber ?? g.taxNumber ?? g.socialSecurityNumber);
-  });
+    if (p) this.currentEmployee.currentEmployee.set({ ...p, imageUrl });
+  }
 
   /**
    * The two collections an employee maintains themselves, via `/api/me/**`. Kept to
@@ -156,44 +93,62 @@ export default class MyProfileComponent {
   protected readonly editable: EditableCollection[] = [
     {
       headingKey: 'humano.myProfile.addressesTitle',
+      itemKey: 'humano.records.section.addresses.item',
+      icon: 'map-pin',
       service: inject(MeAddressService),
-      columns: [
-        { key: 'type', label: 'Type' },
-        { key: 'street', label: 'Street' },
-        { key: 'city', label: 'City' },
-        { key: 'postalCode', label: 'Postal code' },
-        { key: 'primary', label: 'Primary' },
-      ],
+      columns: [{ key: 'street', label: 'humano.records.field.street' }],
       fields: [
-        { key: 'type', label: 'Type (e.g. HOME)' },
-        { key: 'street', label: 'Street' },
-        { key: 'building', label: 'Building' },
-        { key: 'apartment', label: 'Apartment' },
-        { key: 'city', label: 'City' },
-        { key: 'state', label: 'State' },
-        { key: 'postalCode', label: 'Postal code' },
-        { key: 'primary', label: 'Primary address', type: 'checkbox' },
+        {
+          key: 'type',
+          label: 'humano.records.field.type',
+          type: 'select',
+          options: ['', 'Home', 'Work', 'Mailing', 'Temporary'].map(v => ({ value: v, label: v || '—' })),
+        },
+        { key: 'street', label: 'humano.records.field.street' },
+        { key: 'building', label: 'humano.records.field.building' },
+        { key: 'apartment', label: 'humano.records.field.apartment' },
+        { key: 'city', label: 'humano.records.field.city' },
+        { key: 'state', label: 'humano.records.field.state' },
+        { key: 'postalCode', label: 'humano.records.field.postalCode' },
+        { key: 'primary', label: 'humano.records.field.primaryAddress', type: 'checkbox' },
       ],
+      present: (a: Record<string, string | boolean | null>) => ({
+        icon: a['type'] === 'Work' ? 'building-2' : 'house',
+        title: [a['street'], a['building'], a['apartment']].filter(Boolean).join(', ') || String(a['city'] ?? '—'),
+        subtitle: [a['city'], [a['state'], a['postalCode']].filter(Boolean).join(' ')].filter(Boolean).join(', '),
+        facts: [{ icon: 'tag', text: a['type'] as string | null }],
+        badges: a['primary'] ? [{ label: String(this.translate.instant('humano.records.primary')), tone: 'brand' as const }] : [],
+      }),
     },
     {
       headingKey: 'humano.myProfile.emergencyContactsTitle',
+      itemKey: 'humano.records.section.contacts.item',
+      icon: 'heart-handshake',
       service: inject(MeEmergencyContactService),
-      columns: [
-        { key: 'name', label: 'Name' },
-        { key: 'relationship', label: 'Relationship' },
-        { key: 'phone', label: 'Phone' },
-      ],
+      columns: [{ key: 'name', label: 'humano.records.field.name' }],
       fields: [
-        { key: 'name', label: 'Name', required: true },
-        { key: 'relationship', label: 'Relationship' },
-        { key: 'phone', label: 'Phone' },
-        { key: 'email', label: 'Email' },
+        { key: 'name', label: 'humano.records.field.name', required: true },
+        { key: 'relationship', label: 'humano.records.field.relationship' },
+        { key: 'phone', label: 'humano.records.field.phone', type: 'tel' },
+        { key: 'email', label: 'humano.records.field.email', type: 'email' },
       ],
+      present: (c: Record<string, string | null>) => ({
+        title: c['name'] ?? '—',
+        subtitle: c['relationship'],
+        facts: [
+          { icon: 'phone', text: c['phone'] },
+          { icon: 'mail', text: c['email'] },
+        ],
+      }),
     },
   ];
 
   constructor() {
     this.currentEmployee.resolve();
+  }
+
+  private t(key: string): string {
+    return String(this.translate.instant(key));
   }
 
   protected retry(): void {

@@ -4,7 +4,7 @@
 // Enums
 export { EmployeeStatus } from './models/enums/employee-status.enum';
 export { WorkLocationType } from './models/enums/work-location-type.enum';
-export { LeaveType } from './models/enums/leave-type.enum';
+export { LEAVE_TYPE_COLOR, LEAVE_TYPE_ICON, LeaveType } from './models/enums/leave-type.enum';
 export { LeaveStatus } from './models/enums/leave-status.enum';
 export { AttendanceStatus } from './models/enums/attendance-status.enum';
 export { OvertimeType } from './models/enums/overtime-type.enum';

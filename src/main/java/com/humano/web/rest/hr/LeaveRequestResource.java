@@ -3,24 +3,33 @@ package com.humano.web.rest.hr;
 import com.humano.dto.hr.requests.CreateLeaveRequest;
 import com.humano.dto.hr.requests.LeaveRequestSearchRequest;
 import com.humano.dto.hr.requests.ProcessLeaveRequest;
+import com.humano.dto.hr.responses.LeaveCalendarEntry;
 import com.humano.dto.hr.responses.LeaveRequestResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.SecurityExpressions;
+import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.LeaveRequestService;
+import com.humano.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.PaginationUtil;
@@ -39,9 +48,11 @@ public class LeaveRequestResource {
     private String applicationName;
 
     private final LeaveRequestService leaveRequestService;
+    private final SecurityExpressions securityExpressions;
 
-    public LeaveRequestResource(LeaveRequestService leaveRequestService) {
+    public LeaveRequestResource(LeaveRequestService leaveRequestService, SecurityExpressions securityExpressions) {
         this.leaveRequestService = leaveRequestService;
+        this.securityExpressions = securityExpressions;
     }
 
     /**
@@ -116,6 +127,13 @@ public class LeaveRequestResource {
         LOG.debug("REST request to get LeaveRequest: {}", id);
 
         LeaveRequestResponse result = leaveRequestService.getLeaveRequestById(id);
+        // Someone else's request is only visible to people who manage leave; others get a 404.
+        if (
+            !securityExpressions.isCurrentUser(result.employeeId()) &&
+            !securityExpressions.hasAnyPermission("VIEW_LEAVE_REQUESTS", "MANAGE_LEAVE_REQUESTS", "APPROVE_LEAVE")
+        ) {
+            throw EntityNotFoundException.create("LeaveRequest", id);
+        }
 
         return ResponseEntity.ok(result);
     }
@@ -139,6 +157,24 @@ public class LeaveRequestResource {
     }
 
     /**
+     * {@code GET  /leave-requests/calendar?from=&to=} : who is off when, for every signed-in
+     * employee to plan around. No reasons or approvers; colleagues' leave types are hidden from
+     * people who don't manage leave.
+     */
+    @GetMapping("/calendar")
+    @RequireAuthenticated
+    public ResponseEntity<List<LeaveCalendarEntry>> getCalendar(
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        if (to.isBefore(from) || from.plusDays(400).isBefore(to)) {
+            throw new BadRequestAlertException("Choose a range of at most 400 days", "leaveRequest", "invalidrange");
+        }
+        boolean managesLeave = securityExpressions.hasAnyPermission("VIEW_LEAVE_REQUESTS", "MANAGE_LEAVE_REQUESTS", "APPROVE_LEAVE");
+        return ResponseEntity.ok(leaveRequestService.getCalendar(from, to, id -> managesLeave || securityExpressions.isCurrentUser(id)));
+    }
+
+    /**
      * {@code GET  /leave-requests/employee/{employeeId}/search} : Search leave requests for a specific employee with criteria.
      *
      * @param employeeId the ID of the employee
@@ -147,7 +183,11 @@ public class LeaveRequestResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of leave requests in body
      */
     @GetMapping("/employee/{employeeId}/search")
-    @RequireHrStaffOrEmployee
+    // One's own leave, or anyone's for people who manage leave (HR, managers, approvers).
+    @PreAuthorize(
+        "@securityExpressions.isCurrentUser(#employeeId) or " +
+        "@securityExpressions.hasAnyPermission('VIEW_LEAVE_REQUESTS', 'MANAGE_LEAVE_REQUESTS', 'APPROVE_LEAVE')"
+    )
     public ResponseEntity<Page<LeaveRequestResponse>> searchLeaveRequestsByEmployee(
         @PathVariable UUID employeeId,
         LeaveRequestSearchRequest searchRequest,

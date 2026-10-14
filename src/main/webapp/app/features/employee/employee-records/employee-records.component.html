@@ -1,14 +1,35 @@
-<div style="display: grid; gap: var(--space-6)">
-  @for (cfg of configs; track cfg.heading) {
-    <section class="hum-card" style="padding: var(--space-4)">
-      <hum-employee-collection
-        [heading]="cfg.heading"
-        [employeeId]="employeeId()"
-        [service]="cfg.service"
-        [columns]="cfg.columns"
-        [fields]="cfg.fields"
-        [canManage]="canManage()"
-      />
-    </section>
+<nav class="hum-records-jump" [attr.aria-label]="'humano.records.jumpTo' | translate">
+  @for (g of groups(); track g.id) {
+    @for (s of g.sections; track s.id) {
+      <button type="button" class="hum-records-jump__chip" [class.is-empty]="counts()[s.id] === 0" (click)="jump(s.id)">
+        <lucide-icon [name]="s.icon" [size]="14" />
+        {{ 'humano.records.section.' + s.id + '.title' | translate }}
+        <span class="hum-records-jump__count">{{ counts()[s.id] ?? '·' }}</span>
+      </button>
+    }
   }
-</div>
+</nav>
+
+@for (g of groups(); track g.id) {
+  <section class="hum-records-group">
+    <h2 class="hum-records-group__title">{{ 'humano.records.groups.' + g.id | translate }}</h2>
+    <div class="hum-records-grid">
+      @for (s of g.sections; track s.id) {
+        <section class="hum-card hum-records" [id]="'records-' + s.id">
+          <hum-employee-collection
+            [heading]="'humano.records.section.' + s.id + '.title' | translate"
+            [itemLabel]="'humano.records.section.' + s.id + '.item' | translate"
+            [icon]="s.icon"
+            [employeeId]="employeeId()"
+            [service]="s.service"
+            [columns]="s.columns"
+            [fields]="s.fields"
+            [present]="s.present"
+            [canManage]="canManage()"
+            (count)="setCount(s.id, $event)"
+          />
+        </section>
+      }
+    </div>
+  </section>
+}

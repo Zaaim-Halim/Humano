@@ -17,7 +17,8 @@
       "expand": "Expand",
       "collapse": "Collapse",
       "clear": "Clear",
-      "close": "Close"
+      "close": "Close",
+      "edit": "Edit"
     }
   }
 }

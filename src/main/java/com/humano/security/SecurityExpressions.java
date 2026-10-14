@@ -1,12 +1,12 @@
 package com.humano.security;
 
+import java.util.Collection;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-
-import java.util.Collection;
 
 /**
  * Utility class for Spring Security expressions in method-level security annotations.
@@ -28,6 +28,11 @@ public class SecurityExpressions {
      * @param permission the permission to check for
      * @return true if the user has the permission, false otherwise
      */
+    /** True when the signed-in user is the given user / employee (they share ids). */
+    public boolean isCurrentUser(UUID id) {
+        return id != null && SecurityUtils.getCurrentUserId().map(id::equals).orElse(false);
+    }
+
     public boolean hasPermission(String permission) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {

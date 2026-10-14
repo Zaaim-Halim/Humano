@@ -65,7 +65,8 @@ export interface SimpleEmployeeProfile {
 export interface EmployeeDirectoryStats {
   total: number;
   /** Count per EmployeeStatus name. */
-  byStatus: Record<string, number>;
+  /** Count per status; statuses with nobody are absent. */
+  byStatus: Partial<Record<string, number>>;
   /** Largest first; `id` null = no department. */
   byDepartment: { id: string | null; name: string | null; count: number }[];
   /** Count per WorkLocationType name (`UNSPECIFIED` when unset). */
@@ -82,6 +83,10 @@ export function personName(e: Pick<SimpleEmployeeProfile, 'id' | 'firstName' | '
 /** Full profile — `GET /api/hr/employees/{id}`. Dates are ISO-8601 strings. */
 export interface EmployeeProfile extends AuditFields {
   id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  imageUrl: string | null;
   jobTitle: string | null;
   phone: string | null;
   startDate: string | null;
@@ -96,7 +101,8 @@ export interface EmployeeProfile extends AuditFields {
   unitId: string | null;
   unitName: string | null;
   managerId: string | null;
-  managerInfo: string | null;
+  managerName: string | null;
+  managerJobTitle: string | null;
   /** Granted role/authority names (includes the base EMPLOYEE role). */
   authorities: string[];
   // Personal / employment details (nested).

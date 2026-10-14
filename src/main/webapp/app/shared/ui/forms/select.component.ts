@@ -27,7 +27,8 @@ export interface SelectOption {
     >
       @if (options(); as opts) {
         @for (o of opts; track o.value) {
-          <option [value]="o.value">{{ o.label }}</option>
+          <!-- [selected] too: the select's own [value] is applied before its options exist. -->
+          <option [value]="o.value" [selected]="o.value === value()">{{ o.label }}</option>
         }
       } @else {
         <ng-content />

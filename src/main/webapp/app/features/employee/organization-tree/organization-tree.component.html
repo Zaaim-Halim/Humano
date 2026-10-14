@@ -90,7 +90,7 @@
         <section>
           <h3 class="hum-section-title">{{ 'humano.organizationTree.manager' | translate }}</h3>
           @if (u.manager; as m) {
-            <a class="hum-orgchart__member" [routerLink]="['/employees', m.id]">
+            <a class="hum-orgchart__member" [routerLink]="personLink(m.id)">
               <hum-avatar [name]="m.fullName" [src]="m.imageUrl" />
               <span class="hum-orgchart__member-text">
                 <span class="hum-orgnode__name">{{ m.fullName }}</span>
@@ -153,7 +153,7 @@
                 </div>
               }
               @for (p of g.people; track p.id) {
-                <a class="hum-orgchart__member" [routerLink]="['/employees', p.id]">
+                <a class="hum-orgchart__member" [routerLink]="personLink(p.id)">
                   <hum-avatar [name]="p.fullName" [src]="p.imageUrl" size="sm" />
                   <span class="hum-orgchart__member-text">
                     <span class="hum-orgnode__name">{{ p.fullName }}</span>
@@ -165,14 +165,15 @@
           }
         </section>
       </div>
-      <div hum-drawer-footer style="display: flex; justify-content: flex-end; gap: var(--space-2)">
-        @if (u.children?.length) {
-          <hum-button variant="outline" (click)="focusOn(u)"
-            ><lucide-icon name="scan" [size]="14" />{{ 'humano.organizationTree.focus' | translate }}</hum-button
-          >
-        }
-        <hum-button variant="ghost" (click)="selected.set(null)">{{ 'humano.action.close' | translate }}</hum-button>
-      </div>
     }
+    <!-- Footer outside the @if: a projected slot must be the only root of its block. -->
+    <div hum-drawer-footer style="display: flex; justify-content: flex-end; gap: var(--space-2)">
+      @if (selected()?.children?.length) {
+        <hum-button variant="outline" (click)="focusOn(selected()!)"
+          ><lucide-icon name="scan" [size]="14" />{{ 'humano.organizationTree.focus' | translate }}</hum-button
+        >
+      }
+      <hum-button variant="ghost" (click)="selected.set(null)">{{ 'humano.action.close' | translate }}</hum-button>
+    </div>
   </hum-drawer>
 </div>

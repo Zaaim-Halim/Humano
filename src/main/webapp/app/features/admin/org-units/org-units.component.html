@@ -26,11 +26,11 @@
       [title]="'humano.orgUnits.emptyTitle' | translate"
       [description]="'humano.orgUnits.emptyBody' | translate"
     >
-      @if (canManage) {
-        <hum-button hum-empty-action variant="primary" icon="plus" (click)="openCreate()">{{
-          'humano.orgUnits.create' | translate
-        }}</hum-button>
-      }
+      <ng-container hum-empty-action>
+        @if (canManage) {
+          <hum-button variant="primary" icon="plus" (click)="openCreate()">{{ 'humano.orgUnits.create' | translate }}</hum-button>
+        }
+      </ng-container>
     </hum-empty-state>
   } @else {
     <section class="hum-dir-stats hum-dir-stats--even">
@@ -156,7 +156,7 @@
         [title]="'humano.orgUnits.noMatch' | translate"
         [description]="'humano.orgUnits.noMatchBody' | translate"
       >
-        <hum-button hum-empty-action variant="secondary" (click)="query.set('')">{{ 'humano.action.clearFilters' | translate }}</hum-button>
+        <hum-button variant="secondary" (click)="query.set('')">{{ 'humano.action.clearFilters' | translate }}</hum-button>
       </hum-empty-state>
     }
   }

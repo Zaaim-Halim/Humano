@@ -65,7 +65,15 @@
       "social": "counts toward social security",
       "addRule": "Add rule",
       "noEnd": "no end date",
-      "noRulesComputed": "No rules — this component is calculated by the payroll engine itself (e.g. salary from compensation, income tax from brackets)."
+      "engine": {
+        "BASIC": "Calculated by the payroll engine from each employee's compensation — no formula needed.",
+        "BONUS": "Paid from bonus awards recorded for the period — no formula needed.",
+        "OT": "Paid from approved overtime records — add a rule only for a custom overtime formula.",
+        "TAX_PIT": "Calculated from the income-tax brackets of the employee's country — no formula needed.",
+        "ALLOWANCE": "Paid from payroll inputs recorded for the period — add a rule for a computed allowance.",
+        "DEDUCTION": "Taken from deduction records — add a rule for a computed deduction.",
+        "EMPLOYER_CHARGE": "No employer charge is computed yet — add a rule to calculate one."
+      }
     }
   }
 }

@@ -144,14 +144,12 @@ const routes: Routes = [
         title: 'humano.nav.peopleTree',
         loadComponent: () => import('./features/employee/people-tree/people-tree.component').then(m => m.PeopleTreeComponent),
         canActivate: [UserRouteAccessService],
-        data: { permissions: [Permission.READ_EMPLOYEE] },
       },
       {
         path: 'people-tree/:employeeId',
         title: 'humano.nav.peopleTree',
         loadComponent: () => import('./features/employee/people-tree/people-tree.component').then(m => m.PeopleTreeComponent),
         canActivate: [UserRouteAccessService],
-        data: { permissions: [Permission.READ_EMPLOYEE] },
       },
       {
         path: 'organization-tree',
@@ -159,7 +157,6 @@ const routes: Routes = [
         loadComponent: () =>
           import('./features/employee/organization-tree/organization-tree.component').then(m => m.OrganizationTreeComponent),
         canActivate: [UserRouteAccessService],
-        data: { permissions: [Permission.VIEW_ORGANIZATIONAL_UNITS] },
       },
       {
         path: 'organization-tree/:unitId',
@@ -167,7 +164,6 @@ const routes: Routes = [
         loadComponent: () =>
           import('./features/employee/organization-tree/organization-tree.component').then(m => m.OrganizationTreeComponent),
         canActivate: [UserRouteAccessService],
-        data: { permissions: [Permission.VIEW_ORGANIZATIONAL_UNITS] },
       },
       {
         path: 'org',
@@ -217,6 +213,14 @@ const routes: Routes = [
         loadComponent: () => import('./features/admin/payslip/payslip.component'),
         canActivate: [UserRouteAccessService],
         data: { permissions: [Permission.VIEW_PAYSLIPS] },
+      },
+      {
+        // Self-service payslip (own payslips only, enforced by /api/me/payslips/{id}).
+        path: 'my-payslips/:id',
+        title: 'humano.nav.payslips',
+        loadComponent: () => import('./features/admin/payslip/payslip.component'),
+        canActivate: [UserRouteAccessService],
+        data: { self: true },
       },
       {
         path: 'approvals',

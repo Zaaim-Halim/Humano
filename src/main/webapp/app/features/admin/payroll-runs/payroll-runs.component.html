@@ -26,11 +26,11 @@
       [title]="'humano.payrollRuns.emptyTitle' | translate"
       [description]="'humano.payrollRuns.emptyBody' | translate"
     >
-      @if (canCreate) {
-        <hum-button hum-empty-action variant="primary" icon="play" (click)="openNewRun()">{{
-          'humano.payrollRuns.newRun' | translate
-        }}</hum-button>
-      }
+      <ng-container hum-empty-action>
+        @if (canCreate) {
+          <hum-button variant="primary" icon="play" (click)="openNewRun()">{{ 'humano.payrollRuns.newRun' | translate }}</hum-button>
+        }
+      </ng-container>
     </hum-empty-state>
   } @else {
     @if (latest(); as l) {

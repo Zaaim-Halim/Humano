@@ -41,7 +41,9 @@
       "taxNumber": "Tax number",
       "socialSecurityNumber": "Social security number",
       "noProfileTitle": "No employee profile",
-      "noProfileBody": "Your account isn't linked to an employee record, so there's nothing to show here. HR can create one for you."
+      "noProfileBody": "Your account isn't linked to an employee record, so there's nothing to show here. HR can create one for you.",
+      "accountSettings": "Account settings",
+      "detailsTab": "My details"
     }
   }
 }

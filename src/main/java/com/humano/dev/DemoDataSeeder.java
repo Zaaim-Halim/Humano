@@ -4,6 +4,8 @@ import com.humano.domain.enumeration.CountryCode;
 import com.humano.domain.enumeration.CurrencyCode;
 import com.humano.domain.enumeration.hr.AttendanceStatus;
 import com.humano.domain.enumeration.hr.EmployeeStatus;
+import com.humano.domain.enumeration.hr.EventAction;
+import com.humano.domain.enumeration.hr.EventType;
 import com.humano.domain.enumeration.hr.ExpenseClaimStatus;
 import com.humano.domain.enumeration.hr.Gender;
 import com.humano.domain.enumeration.hr.LeaveStatus;
@@ -17,8 +19,21 @@ import com.humano.domain.enumeration.payroll.Measurement;
 import com.humano.domain.enumeration.payroll.PayComponentCode;
 import com.humano.domain.enumeration.payroll.RunStatus;
 import com.humano.domain.enumeration.payroll.TaxCode;
+import com.humano.domain.hr.Attendance;
+import com.humano.domain.hr.AttendanceEvent;
 import com.humano.domain.hr.Department;
+import com.humano.domain.hr.EmployeeAsset;
+import com.humano.domain.hr.EmployeeBankAccount;
+import com.humano.domain.hr.EmployeeCertification;
+import com.humano.domain.hr.EmployeeEducation;
+import com.humano.domain.hr.EmployeeExperience;
+import com.humano.domain.hr.EmployeeLanguage;
+import com.humano.domain.hr.EmployeeLicense;
+import com.humano.domain.hr.LeaveRequest;
 import com.humano.domain.hr.OrganizationalUnit;
+import com.humano.domain.hr.PerformanceReview;
+import com.humano.domain.hr.WorkPermit;
+import com.humano.domain.payroll.Compensation;
 import com.humano.domain.payroll.PayComponent;
 import com.humano.domain.payroll.PayrollPeriod;
 import com.humano.domain.shared.AbstractReferenceData;
@@ -95,6 +110,7 @@ import com.humano.service.payroll.TaxCalculationService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -347,6 +363,33 @@ public class DemoDataSeeder {
             section("payroll", this::seedPayroll);
         }
         section("payroll history", this::seedPayrollHistory);
+        if (
+            inTx(() ->
+                entityManager
+                    .createQuery("select count(c) from Compensation c where c.effectiveTo is not null", Long.class)
+                    .getSingleResult()
+            ) ==
+            0
+        ) {
+            section("employment history", this::seedEmploymentHistory);
+        }
+        if (
+            inTx(() ->
+                entityManager
+                    .createQuery("select count(r) from PerformanceReview r where r.reviewDate < :d", Long.class)
+                    .setParameter("d", today.withDayOfYear(1))
+                    .getSingleResult()
+            ) ==
+            0
+        ) {
+            section("review history", this::seedReviewHistory);
+        }
+        if (inTx(() -> entityManager.createQuery("select count(e) from AttendanceEvent e", Long.class).getSingleResult()) == 0) {
+            section("attendance events", this::seedAttendanceEvents);
+        }
+        if (inTx(() -> entityManager.createQuery("select count(l) from EmployeeLanguage l", Long.class).getSingleResult()) == 0) {
+            section("background records", this::seedBackgroundRecords);
+        }
         log.info("[demo-data] done: {} employees in the demo company", people.size());
     }
 
@@ -1259,6 +1302,382 @@ public class DemoDataSeeder {
                 )
             );
         }
+    }
+
+    // ---------------------------------------------------------------- employment history
+
+    /** Past review comments by rating (index 0 = rating 2 … index 3 = rating 5). */
+    private static final String[][] PAST_REVIEW_COMMENTS = {
+        {
+            "Met some goals; prioritization under pressure and estimating work are the focus for next half.",
+            "Below expectations this half; we agreed a clear plan with weekly check-ins.",
+        },
+        {
+            "Settling in well; ramping up on the team's systems and ways of working.",
+            "Met most goals; communication with stakeholders is the main area to develop.",
+        },
+        {
+            "Solid half: delivered the agreed goals and supports teammates readily.",
+            "Strong ownership of a key project; next step is broader influence across teams.",
+        },
+        {
+            "Outstanding half — exceeded goals and mentored newer colleagues.",
+            "Exceptional impact; led the most important delivery of the half end to end.",
+        },
+    };
+
+    /**
+     * Salary history (a raise every January since joining, sometimes a promotion) and 18 months
+     * of past time off. The current salary is unchanged — it
+     * just starts on the latest raise date — so payroll already calculated stays consistent.
+     */
+    private void seedEmploymentHistory() {
+        LocalDate thisYear = today.withDayOfYear(1);
+        inTx(() -> {
+            for (Employee e : employeeRepository.findAll()) {
+                LocalDate start = e.getStartDate();
+                if (start == null) {
+                    continue;
+                }
+                Employee ref = entityManager.getReference(Employee.class, e.getId());
+
+                // Salary: walk back from the current amount, one raise per January after the start year.
+                List<Compensation> current = entityManager
+                    .createQuery("select c from Compensation c where c.employee.id = :id order by c.effectiveFrom", Compensation.class)
+                    .setParameter("id", e.getId())
+                    .getResultList();
+                if (current.size() == 1 && start.getYear() < thisYear.getYear()) {
+                    Compensation now = current.get(0);
+                    List<LocalDate> raises = new ArrayList<>();
+                    for (int y = start.getYear() + 1; y <= thisYear.getYear(); y++) {
+                        raises.add(LocalDate.of(y, 1, 1));
+                    }
+                    BigDecimal amount = now.getBaseAmount();
+                    LocalDate to = null;
+                    now.setEffectiveFrom(raises.get(raises.size() - 1));
+                    for (int i = raises.size() - 1; i >= 0; i--) {
+                        LocalDate from = i == 0 ? start : raises.get(i - 1);
+                        to = raises.get(i).minusDays(1);
+                        double pct = random.nextInt(6) == 0 ? 0.10 + random.nextInt(6) / 100.0 : 0.03 + random.nextInt(4) / 100.0;
+                        amount = amount
+                            .divide(BigDecimal.valueOf(1 + pct), 0, RoundingMode.HALF_UP)
+                            .divide(BigDecimal.valueOf(50), 0, RoundingMode.HALF_UP)
+                            .multiply(BigDecimal.valueOf(50));
+                        Compensation past = new Compensation();
+                        past.setEmployee(ref);
+                        past.setPosition(now.getPosition());
+                        past.setCurrency(now.getCurrency());
+                        past.setBasis(now.getBasis());
+                        past.setBaseAmount(amount);
+                        past.setEffectiveFrom(from);
+                        past.setEffectiveTo(to);
+                        entityManager.persist(past);
+                    }
+                }
+
+                Employee reviewer = e.getManager();
+
+                // Time off: a few past requests between 18 and 2 months ago, never before joining.
+                LocalDate earliest = start.isAfter(today.minusMonths(18)) ? start : today.minusMonths(18);
+                LocalDate cursor = earliest.plusWeeks(2 + random.nextInt(8));
+                while (cursor.isBefore(today.minusMonths(2))) {
+                    LocalDate first = cursor.with(DayOfWeek.MONDAY).plusWeeks(1);
+                    LeaveType type = random.nextInt(4) == 0
+                        ? LeaveType.SICK
+                        : (random.nextInt(12) == 0 ? LeaveType.UNPAID : LeaveType.VACATION);
+                    int days = type == LeaveType.SICK ? 1 + random.nextInt(3) : 2 + random.nextInt(4);
+                    LeaveRequest leave = new LeaveRequest();
+                    leave.setEmployee(ref);
+                    leave.setLeaveType(type);
+                    leave.setStartDate(first);
+                    leave.setEndDate(first.plusDays(days - 1L));
+                    leave.setDaysCount(days);
+                    leave.setReason(type == LeaveType.SICK ? pickOne(SICK_REASONS) : pickOne(VACATION_REASONS));
+                    boolean rejected = type != LeaveType.SICK && random.nextInt(10) == 0;
+                    leave.setStatus(rejected ? LeaveStatus.REJECTED : LeaveStatus.APPROVED);
+                    leave.setApprover(reviewer);
+                    if (rejected) {
+                        leave.setApproverComments("Overlaps with a release week — please pick other dates.");
+                    }
+                    entityManager.persist(leave);
+                    cursor = first.plusWeeks(6 + random.nextInt(14));
+                }
+            }
+            return null;
+        });
+    }
+
+    /** Half-yearly reviews (end of June and December) from the first full half after joining. */
+    private void seedReviewHistory() {
+        inTx(() -> {
+            for (Employee e : employeeRepository.findAll()) {
+                LocalDate start = e.getStartDate();
+                if (start == null) {
+                    continue;
+                }
+                Employee ref = entityManager.getReference(Employee.class, e.getId());
+                Employee reviewer = e.getManager();
+                if (reviewer != null) {
+                    int rating = 3 + random.nextInt(2);
+                    LocalDate due = start.plusMonths(5).withDayOfMonth(1);
+                    due = due.getMonthValue() <= 6 ? LocalDate.of(due.getYear(), 6, 30) : LocalDate.of(due.getYear(), 12, 31);
+                    while (due.isBefore(today.minusMonths(4))) {
+                        if (!due.equals(LocalDate.of(today.getYear(), 6, 30))) {
+                            rating = Math.max(2, Math.min(5, rating + random.nextInt(3) - 1));
+                            PerformanceReview review = new PerformanceReview();
+                            review.setEmployee(ref);
+                            review.setReviewer(reviewer);
+                            review.setReviewDate(due);
+                            review.setRating(rating);
+                            review.setComments(pickOne(PAST_REVIEW_COMMENTS[rating - 2]));
+                            entityManager.persist(review);
+                        }
+                        due = due.getMonthValue() == 6 ? LocalDate.of(due.getYear(), 12, 31) : LocalDate.of(due.getYear() + 1, 6, 30);
+                    }
+                }
+            }
+            return null;
+        });
+    }
+
+    // ---------------------------------------------------------------- attendance events
+
+    /**
+     * Clock events for seeded attendance days (check-in, a lunch break, check-out), and the
+     * demo company's timezone, so the time clock and attendance views show realistic days.
+     */
+    private void seedAttendanceEvents() {
+        inTx(() -> {
+            entityManager
+                .createQuery("update OrganizationSettings s set s.timezone = 'Europe/Paris' where s.timezone = 'UTC'")
+                .executeUpdate();
+            List<Attendance> days = entityManager
+                .createQuery("select a from Attendance a where a.checkIn is not null and a.checkOut is not null", Attendance.class)
+                .getResultList();
+            for (Attendance a : days) {
+                event(a, EventType.CHECK_IN, EventAction.CHECK_IN, a.getCheckIn());
+                LocalTime lunch = LocalTime.of(12, 0).plusMinutes(random.nextInt(60));
+                event(a, EventType.LUNCH_BREAK, EventAction.BREAK_START, lunch);
+                event(a, EventType.LUNCH_BREAK, EventAction.BREAK_END, lunch.plusMinutes(30 + random.nextInt(31)));
+                if (random.nextInt(3) == 0) {
+                    LocalTime coffee = LocalTime.of(15, 30).plusMinutes(random.nextInt(30));
+                    event(a, EventType.OTHER, EventAction.BREAK_START, coffee);
+                    event(a, EventType.OTHER, EventAction.BREAK_END, coffee.plusMinutes(10 + random.nextInt(10)));
+                }
+                event(a, EventType.CHECK_OUT, EventAction.CHECK_OUT, a.getCheckOut());
+            }
+            return null;
+        });
+    }
+
+    private void event(Attendance a, EventType type, EventAction action, LocalTime time) {
+        AttendanceEvent e = new AttendanceEvent();
+        e.setAttendance(a);
+        e.setEventType(type);
+        e.setEventAction(action);
+        e.setEventTime(time);
+        entityManager.persist(e);
+    }
+
+    // ---------------------------------------------------------------- background records
+
+    /** Department → (degree, field of study, certification + issuer, prior employers). */
+    private static final Map<String, String[][]> BACKGROUND = Map.of(
+        "Engineering",
+        new String[][] {
+            { "B.S.", "Computer Science" },
+            { "AWS Certified Solutions Architect", "Amazon Web Services" },
+            { "Stripe", "Shopify", "Atlassian", "Twilio", "Datadog" },
+        },
+        "Finance",
+        new String[][] {
+            { "B.B.A.", "Accounting" },
+            { "Certified Public Accountant (CPA)", "AICPA" },
+            { "Deloitte", "KPMG", "PwC", "Intuit" },
+        },
+        "People & Culture",
+        new String[][] {
+            { "B.A.", "Psychology" },
+            { "SHRM Certified Professional", "SHRM" },
+            { "Workday", "Gusto", "BambooHR", "Lattice" },
+        },
+        "Sales",
+        new String[][] {
+            { "B.A.", "Business Administration" },
+            { "Certified Sales Professional", "NASP" },
+            { "Salesforce", "HubSpot", "Oracle", "Zendesk" },
+        },
+        "Operations",
+        new String[][] {
+            { "B.S.", "Operations Management" },
+            { "Project Management Professional (PMP)", "PMI" },
+            { "FedEx", "Flexport", "Uber", "Instacart" },
+        },
+        "IT",
+        new String[][] {
+            { "B.S.", "Information Systems" },
+            { "CompTIA Security+", "CompTIA" },
+            { "Cisco", "Dell Technologies", "Okta", "CDW" },
+        },
+        "Executive Office",
+        new String[][] {
+            { "M.B.A.", "Business Administration" },
+            { "Certified Director", "National Association of Corporate Directors" },
+            { "McKinsey & Company", "Google", "Microsoft", "Bain & Company" },
+        }
+    );
+
+    private static final String[] UNIVERSITIES = {
+        "University of Washington",
+        "University of California, Berkeley",
+        "University of Texas at Austin",
+        "New York University",
+        "University of Michigan",
+        "Georgia Institute of Technology",
+        "Boston University",
+        "Arizona State University",
+    };
+    private static final String[] BANKS = { "Chase", "Bank of America", "Wells Fargo", "Citibank", "U.S. Bank" };
+    private static final String[] SECOND_LANGUAGES = {
+        "Spanish",
+        "French",
+        "German",
+        "Mandarin",
+        "Portuguese",
+        "Japanese",
+        "Hindi",
+        "Arabic",
+    };
+    private static final String[] LEVELS = { "Basic", "Intermediate", "Professional", "Fluent" };
+
+    /** Education, past jobs, languages, certifications, bank accounts, equipment, licences and permits. */
+    private void seedBackgroundRecords() {
+        inTx(() -> {
+            int n = 0;
+            for (Employee e : employeeRepository.findAll()) {
+                n++;
+                Employee ref = entityManager.getReference(Employee.class, e.getId());
+                String department = e.getDepartment() == null ? "Operations" : e.getDepartment().getName();
+                String[][] bg = BACKGROUND.getOrDefault(department, BACKGROUND.get("Operations"));
+                LocalDate start = e.getStartDate() == null ? LocalDate.now().minusYears(1) : e.getStartDate();
+                LocalDate birth = e.getBirthDate() == null ? LocalDate.of(1990, 1, 1) : e.getBirthDate();
+                String fullName = e.getFirstName() + " " + e.getLastName();
+                String title = e.getJobTitle() == null ? "Specialist" : e.getJobTitle();
+
+                EmployeeEducation edu = new EmployeeEducation();
+                edu.setEmployee(ref);
+                edu.setInstitution(pickOne(UNIVERSITIES));
+                edu.setDegree(bg[0][0]);
+                edu.setFieldOfStudy(bg[0][1]);
+                edu.setGraduationDate(LocalDate.of(birth.getYear() + 22, 5, 15 + random.nextInt(10)));
+                entityManager.persist(edu);
+
+                // One or two previous jobs, back to back, ending shortly before joining.
+                LocalDate end = start.minusWeeks(2 + random.nextInt(6));
+                int jobs = 1 + random.nextInt(2);
+                for (int j = 0; j < jobs; j++) {
+                    LocalDate from = end.minusMonths(18 + random.nextInt(36));
+                    EmployeeExperience exp = new EmployeeExperience();
+                    exp.setEmployee(ref);
+                    exp.setCompany(pickOne(bg[2]));
+                    exp.setPosition(j == 0 ? title : "Associate " + title.replaceFirst("^(Senior|Staff|Lead|Principal) ", ""));
+                    exp.setStartDate(from);
+                    exp.setEndDate(end);
+                    entityManager.persist(exp);
+                    end = from.minusWeeks(1 + random.nextInt(8));
+                }
+
+                EmployeeLanguage english = new EmployeeLanguage();
+                english.setEmployee(ref);
+                english.setLanguage("English");
+                english.setReading("Native");
+                english.setWriting("Native");
+                english.setSpeaking("Native");
+                entityManager.persist(english);
+                if (random.nextInt(3) > 0) {
+                    String level = pickOne(LEVELS);
+                    EmployeeLanguage other = new EmployeeLanguage();
+                    other.setEmployee(ref);
+                    other.setLanguage(pickOne(SECOND_LANGUAGES));
+                    other.setReading(level);
+                    other.setWriting(level.equals("Fluent") ? "Professional" : level);
+                    other.setSpeaking(level);
+                    entityManager.persist(other);
+                }
+
+                if (random.nextInt(2) == 0) {
+                    LocalDate issued = start.minusMonths(random.nextInt(30));
+                    EmployeeCertification cert = new EmployeeCertification();
+                    cert.setEmployee(ref);
+                    cert.setName(bg[1][0]);
+                    cert.setIssuer(bg[1][1]);
+                    cert.setIssueDate(issued);
+                    // Some expire soon or have already expired, so renewals show up.
+                    cert.setExpiryDate(issued.plusYears(3));
+                    cert.setVerified(random.nextInt(4) > 0);
+                    entityManager.persist(cert);
+                }
+
+                EmployeeBankAccount bank = new EmployeeBankAccount();
+                bank.setEmployee(ref);
+                bank.setBankName(pickOne(BANKS));
+                bank.setIban(
+                    String.format("US%02d%04d%010d", random.nextInt(100), random.nextInt(10000), (long) (random.nextDouble() * 1e10))
+                );
+                bank.setSwift("CHASUS33");
+                bank.setAccountHolder(fullName);
+                bank.setCurrency(CurrencyCode.USD);
+                bank.setPrimary(true);
+                entityManager.persist(bank);
+
+                LocalDate issuedOn = start.plusDays(1);
+                EmployeeAsset laptop = new EmployeeAsset();
+                laptop.setEmployee(ref);
+                laptop.setType("Laptop");
+                laptop.setIdentifier(
+                    (department.equals("Engineering") ? "MacBook Pro 16\" · " : "MacBook Air 13\" · ") + "LT-" + (1000 + n)
+                );
+                laptop.setAssignedDate(issuedOn);
+                entityManager.persist(laptop);
+                EmployeeAsset badge = new EmployeeAsset();
+                badge.setEmployee(ref);
+                badge.setType("Access card");
+                badge.setIdentifier("BADGE-" + (5000 + n));
+                badge.setAssignedDate(issuedOn);
+                entityManager.persist(badge);
+                if (department.equals("Sales") || department.equals("Executive Office") || random.nextInt(5) == 0) {
+                    EmployeeAsset phone = new EmployeeAsset();
+                    phone.setEmployee(ref);
+                    phone.setType("Phone");
+                    phone.setIdentifier("iPhone 15 · PH-" + (300 + n));
+                    phone.setAssignedDate(issuedOn);
+                    entityManager.persist(phone);
+                }
+
+                if (department.equals("Sales") || department.equals("Operations")) {
+                    EmployeeLicense licence = new EmployeeLicense();
+                    licence.setEmployee(ref);
+                    licence.setName("Driver's license (Class D)");
+                    licence.setIssuer("Department of Licensing");
+                    licence.setIssueDate(start.minusYears(2 + random.nextInt(4)));
+                    licence.setExpiryDate(licence.getIssueDate().plusYears(6));
+                    licence.setVerified(true);
+                    entityManager.persist(licence);
+                }
+
+                if (n % 9 == 0) {
+                    WorkPermit permit = new WorkPermit();
+                    permit.setEmployee(ref);
+                    permit.setVisaType(n % 2 == 0 ? "H-1B" : "L-1");
+                    permit.setPermitNumber("EAC" + (2_400_000_000L + random.nextInt(99_999_999)));
+                    permit.setIssueDate(start.minusMonths(2));
+                    permit.setExpiryDate(start.minusMonths(2).plusYears(3));
+                    permit.setSponsor("Demo Company Inc.");
+                    entityManager.persist(permit);
+                }
+            }
+            return null;
+        });
     }
 
     // ---------------------------------------------------------------- time

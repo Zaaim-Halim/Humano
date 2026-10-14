@@ -1,29 +1,24 @@
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
+import { Router, RouterLink } from '@angular/router';
+import { LucideAngularModule } from 'lucide-angular';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable } from 'rxjs';
 
 import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
 import { normalizeHttpError } from 'app/core/api';
-import {
-  EmployeeDocument,
-  EmployeeDocumentService,
-  EmployeeProfile,
-  EmployeeService,
-  LeaveRequest,
-  LeaveRequestService,
-  PerformanceReview,
-  PerformanceReviewService,
-} from 'app/features/employee';
+import { EmployeeDocument, EmployeeDocumentService, EmployeeProfile, EmployeeService } from 'app/features/employee';
+import { CurrentEmployeeService } from 'app/features/employee';
+import { EmployeeHeroComponent } from 'app/features/employee/profile/employee-hero.component';
+import { EmployeeOverviewComponent } from 'app/features/employee/profile/employee-overview.component';
 import { EmployeeRecordsComponent } from 'app/features/employee/employee-records/employee-records.component';
+import { EmployeeLeaveComponent } from 'app/features/employee/insights/employee-leave.component';
+import { EmployeePayComponent } from 'app/features/employee/insights/employee-pay.component';
+import { EmployeePerformanceComponent } from 'app/features/employee/insights/employee-performance.component';
 import {
   AlertComponent,
-  AvatarComponent,
-  BadgeComponent,
   ButtonComponent,
   DialogComponent,
   DrawerComponent,
@@ -74,12 +69,10 @@ const idle = <T>(): TabState<T> => ({ data: null, loading: false, error: null })
   selector: 'hum-employee-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    MoneyPipe,
-    PayPeriodPipe,
+    RouterLink,
+    LucideAngularModule,
     ReactiveFormsModule,
     TranslatePipe,
-    AvatarComponent,
-    BadgeComponent,
     ButtonComponent,
     IconButtonComponent,
     TabsComponent,
@@ -92,6 +85,11 @@ const idle = <T>(): TabState<T> => ({ data: null, loading: false, error: null })
     SelectComponent,
     FormFieldComponent,
     EmployeeRecordsComponent,
+    EmployeeHeroComponent,
+    EmployeeOverviewComponent,
+    EmployeePayComponent,
+    EmployeeLeaveComponent,
+    EmployeePerformanceComponent,
   ],
   templateUrl: './employee-detail.component.html',
 })
@@ -99,14 +97,13 @@ export default class EmployeeDetailComponent {
   /** Employee id from the route (`/employees/:id`). */
   readonly id = input.required<string>();
 
+  private readonly currentEmployee = inject(CurrentEmployeeService);
   private readonly fb = inject(FormBuilder);
   private readonly employeeService = inject(EmployeeService);
   private readonly compensationService = inject(CompensationService);
   private readonly positionService = inject(PositionService);
   private readonly currencyService = inject(CurrencyService);
-  private readonly leaveService = inject(LeaveRequestService);
   private readonly documentService = inject(EmployeeDocumentService);
-  private readonly performanceService = inject(PerformanceReviewService);
   private readonly router = inject(Router);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
@@ -135,10 +132,10 @@ export default class EmployeeDetailComponent {
   // Identity.
   protected readonly identity = signal<TabState<EmployeeProfile>>(idle());
   // Lazy tabs.
-  protected readonly compensation = signal<TabState<SalaryHistory>>(idle());
-  protected readonly leaves = signal<TabState<LeaveRequest[]>>(idle());
   protected readonly documents = signal<TabState<EmployeeDocument[]>>(idle());
-  protected readonly performance = signal<TabState<PerformanceReview[]>>(idle());
+  /** Salary history as last loaded by the pay tab; bump `compReload` to refresh it. */
+  protected readonly compHistory = signal<SalaryHistory | null>(null);
+  protected readonly compReload = signal(0);
 
   /** Gate the compensation editor on the compensation write permission. */
   protected readonly canManageCompensation = this.account.hasPermission(Permission.MANAGE_COMPENSATION);
@@ -147,7 +144,7 @@ export default class EmployeeDetailComponent {
   // (a second active compensation would conflict on the backend).
   protected readonly compFormOpen = signal(false);
   protected readonly compSaving = signal(false);
-  protected readonly compMode = computed<'create' | 'adjust'>(() => (this.compensation().data?.currentCompensation ? 'adjust' : 'create'));
+  protected readonly compMode = computed<'create' | 'adjust'>(() => (this.compHistory()?.currentCompensation ? 'adjust' : 'create'));
 
   private readonly positions = signal<Position[]>([]);
   private readonly currencies = signal<Currency[]>([]);
@@ -185,12 +182,12 @@ export default class EmployeeDetailComponent {
   private readonly loadedKeys = new Set<string>();
 
   protected readonly tabs = computed<TabItem[]>(() => [
-    { id: 'overview', label: this.translate.instant('humano.employee360.tabOverview') },
-    { id: 'compensation', label: this.translate.instant('humano.employee360.tabCompensation') },
-    { id: 'leaves', label: this.translate.instant('humano.employee360.tabLeaves') },
-    { id: 'documents', label: this.translate.instant('humano.employee360.tabDocuments') },
-    { id: 'performance', label: this.translate.instant('humano.employee360.tabPerformance') },
-    { id: 'records', label: this.translate.instant('humano.employee360.tabRecords') },
+    { id: 'overview', label: this.translate.instant('humano.employee360.tabOverview'), icon: 'layout-grid' },
+    { id: 'compensation', label: this.translate.instant('humano.employee360.tabCompensation'), icon: 'wallet' },
+    { id: 'leaves', label: this.translate.instant('humano.employee360.tabLeaves'), icon: 'palmtree' },
+    { id: 'documents', label: this.translate.instant('humano.employee360.tabDocuments'), icon: 'file-text' },
+    { id: 'performance', label: this.translate.instant('humano.employee360.tabPerformance'), icon: 'star' },
+    { id: 'records', label: this.translate.instant('humano.employee360.tabRecords'), icon: 'folder' },
   ]);
 
   constructor() {
@@ -216,10 +213,8 @@ export default class EmployeeDetailComponent {
 
   private loadIdentity(id: string): void {
     this.loadedKeys.clear();
-    this.compensation.set(idle());
-    this.leaves.set(idle());
+    this.compHistory.set(null);
     this.documents.set(idle());
-    this.performance.set(idle());
     this.identity.set({ data: null, loading: true, error: null });
     this.employeeService.find(id).subscribe({
       next: data => this.identity.set({ data, loading: false, error: null }),
@@ -241,32 +236,11 @@ export default class EmployeeDetailComponent {
 
   private loadTab(id: string, tab: TabId): void {
     switch (tab) {
-      case 'compensation':
-        this.compensation.set({ data: null, loading: true, error: null });
-        this.compensationService.history(id).subscribe({
-          next: data => this.compensation.set({ data, loading: false, error: null }),
-          error: (err: unknown) => this.compensation.set({ data: null, loading: false, error: normalizeHttpError(err) }),
-        });
-        break;
-      case 'leaves':
-        this.leaves.set({ data: null, loading: true, error: null });
-        this.leaveService.searchByEmployee(id, {}, { size: 50, sort: ['startDate,desc'] }).subscribe({
-          next: page => this.leaves.set({ data: page.content, loading: false, error: null }),
-          error: (err: unknown) => this.leaves.set({ data: null, loading: false, error: normalizeHttpError(err) }),
-        });
-        break;
       case 'documents':
         this.documents.set({ data: null, loading: true, error: null });
         this.documentService.forEmployee(id).subscribe({
           next: data => this.documents.set({ data, loading: false, error: null }),
           error: (err: unknown) => this.documents.set({ data: null, loading: false, error: normalizeHttpError(err) }),
-        });
-        break;
-      case 'performance':
-        this.performance.set({ data: null, loading: true, error: null });
-        this.performanceService.search({ employeeId: id }, { size: 50, sort: ['reviewDate,desc'] }).subscribe({
-          next: page => this.performance.set({ data: page.content, loading: false, error: null }),
-          error: (err: unknown) => this.performance.set({ data: null, loading: false, error: normalizeHttpError(err) }),
         });
         break;
     }
@@ -408,7 +382,7 @@ export default class EmployeeDetailComponent {
         this.toast.success(this.translate.instant('humano.compensationEditor.saved'));
         this.compFormOpen.set(false);
         this.compSaving.set(false);
-        this.retryTab('compensation');
+        this.compReload.update(n => n + 1);
       },
       error: (err: unknown) => {
         this.toast.danger(normalizeHttpError(err));
@@ -425,6 +399,15 @@ export default class EmployeeDetailComponent {
 
   private loadCurrencies(): void {
     this.currencyService.list().subscribe({ next: res => this.currencies.set(res) });
+  }
+
+  /** Can change this person's photo: HR with update rights, or the person themselves. */
+  protected canChangePhoto(e: EmployeeProfile): boolean {
+    return this.canEdit || this.currentEmployee.currentEmployeeId() === e.id;
+  }
+
+  protected onImageChanged(imageUrl: string | null): void {
+    this.identity.update(st => (st.data ? { ...st, data: { ...st.data, imageUrl } } : st));
   }
 
   protected back(): void {

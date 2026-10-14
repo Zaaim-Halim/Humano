@@ -1,0 +1,151 @@
+@if (loading() && !history()) {
+  <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+} @else if (error(); as e) {
+  <hum-alert tone="danger" [title]="e"
+    ><hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+  >
+} @else if (current(); as cur) {
+  <div class="hum-insights">
+    @if (canManage()) {
+      <div class="hum-insights__toolbar">
+        <hum-button variant="secondary" size="sm" icon="pencil" (click)="edit.emit()">{{
+          'humano.compensationEditor.adjustCta' | translate
+        }}</hum-button>
+      </div>
+    }
+    <!-- Headline -->
+    <div class="hum-insights__kpis">
+      <div class="hum-kpi hum-kpi--hero">
+        <div class="hum-kpi__label"><lucide-icon name="wallet" [size]="14" />{{ 'humano.insights.pay.base' | translate }}</div>
+        <div class="hum-kpi__value">{{ cur.baseAmount | money: cur.currencyCode }}</div>
+        <div class="hum-kpi__hint">
+          {{ basisLabel(cur.basis) }}
+          @if (cur.basis !== 'ANNUAL' && yearly()) {
+            · {{ 'humano.insights.pay.perYear' | translate: { amount: (yearly() | money: cur.currencyCode) } }}
+          }
+        </div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="trending-up" [size]="14" />{{ 'humano.insights.pay.growth' | translate }}</div>
+        <div class="hum-kpi__value" [class.is-positive]="(history()?.totalGrowthPercentage ?? 0) > 0">
+          {{ pct(history()?.totalGrowthPercentage) }}
+        </div>
+        <div class="hum-kpi__hint">{{ 'humano.insights.pay.changesCount' | translate: { count: changes().length } }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label">
+          <lucide-icon name="calendar-clock" [size]="14" />{{ 'humano.insights.pay.lastChange' | translate }}
+        </div>
+        @if (lastChange(); as lc) {
+          <div class="hum-kpi__value">{{ pct(lc.changePercentage) }}</div>
+          <div class="hum-kpi__hint">{{ lc.effectiveFrom | date: 'mediumDate' }}</div>
+        } @else {
+          <div class="hum-kpi__value">—</div>
+          <div class="hum-kpi__hint">{{ 'humano.insights.pay.since' | translate: { date: (cur.effectiveFrom | date: 'mediumDate') } }}</div>
+        }
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="piggy-bank" [size]="14" />{{ 'humano.insights.pay.ytdNet' | translate }}</div>
+        <div class="hum-kpi__value">{{ ytd().count ? (ytd().net | money: currency()) : '—' }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.insights.pay.ytdHint' | translate: { count: ytd().count } }}</div>
+      </div>
+    </div>
+
+    <div class="hum-insights__grid">
+      <!-- Salary progression -->
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="chart-line" [size]="16" /></span>
+          <h3>{{ 'humano.insights.pay.progression' | translate }}</h3>
+        </header>
+        @if (salaryPoints().length > 1) {
+          <hum-trend-chart [points]="salaryPoints()" [step]="true" [label]="'humano.insights.pay.progression' | translate" />
+        } @else {
+          <p class="hum-insights__note">{{ 'humano.insights.pay.noChanges' | translate }}</p>
+        }
+        @if (changes().length) {
+          <ul class="hum-vline">
+            @for (c of changes(); track c.compensationId) {
+              <li class="hum-vline__item">
+                <span class="hum-vline__dot" [class.is-up]="(c.changePercentage ?? 0) > 0"></span>
+                <div class="hum-vline__body">
+                  <div class="hum-vline__title">
+                    {{ c.newAmount | money: c.currencyCode }}
+                    <span class="hum-delta" [class.is-up]="(c.changePercentage ?? 0) > 0">{{ pct(c.changePercentage) }}</span>
+                  </div>
+                  <div class="hum-vline__meta">
+                    {{ 'humano.insights.pay.from' | translate: { amount: (c.previousAmount | money: c.currencyCode) } }}
+                    @if (c.reason) {
+                      · {{ c.reason }}
+                    }
+                  </div>
+                </div>
+                <time class="hum-vline__date">{{ c.effectiveFrom | date: 'mediumDate' }}</time>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      <!-- Payslips -->
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="receipt" [size]="16" /></span>
+          <h3>{{ 'humano.insights.pay.payslips' | translate }}</h3>
+          <span class="hum-records__spacer"></span>
+          <span class="hum-legend"><i style="background: var(--brand)"></i>{{ 'humano.insights.pay.net' | translate }}</span>
+          <span class="hum-legend"><i style="background: var(--slate-300)"></i>{{ 'humano.insights.pay.deductions' | translate }}</span>
+        </header>
+        @if (payBars().length) {
+          <div class="hum-paybars" role="list">
+            @for (b of payBars(); track b.payslip.id) {
+              <a
+                class="hum-paybars__col"
+                role="listitem"
+                [routerLink]="payslipLink(b.payslip.id)"
+                [title]="
+                  b.month +
+                  ' — ' +
+                  ('humano.insights.pay.net' | translate) +
+                  ' ' +
+                  (b.payslip.net | money: b.payslip.currencyCode) +
+                  ', ' +
+                  ('humano.insights.pay.gross' | translate) +
+                  ' ' +
+                  (b.payslip.gross | money: b.payslip.currencyCode)
+                "
+              >
+                <span class="hum-paybars__stack">
+                  <span class="hum-paybars__ded" [style.height.%]="b.deductions"></span>
+                  <span class="hum-paybars__net" [style.height.%]="b.net"></span>
+                </span>
+                <span class="hum-paybars__label">{{ b.month }}</span>
+              </a>
+            }
+          </div>
+          @if (payslips()[0]; as latest) {
+            <a class="hum-latest-slip" [routerLink]="payslipLink(latest.id)">
+              <lucide-icon name="file-text" [size]="16" />
+              <span class="hum-latest-slip__text">
+                <strong>{{ 'humano.insights.pay.latest' | translate }}</strong>
+                <span>{{ latest.periodStart | date: 'MMMM y' }} · {{ latest.number }}</span>
+              </span>
+              <span class="hum-latest-slip__amount">{{ latest.net | money: latest.currencyCode }}</span>
+              <lucide-icon name="chevron-right" [size]="16" />
+            </a>
+          }
+        } @else {
+          <p class="hum-insights__note">{{ 'humano.insights.pay.noPayslips' | translate }}</p>
+        }
+      </section>
+    </div>
+  </div>
+} @else {
+  <hum-empty-state icon="wallet" [title]="'humano.employee360.noCompensation' | translate">
+    <ng-container hum-empty-action>
+      @if (canManage()) {
+        <hum-button variant="primary" icon="plus" (click)="edit.emit()">{{ 'humano.compensationEditor.createCta' | translate }}</hum-button>
+      }
+    </ng-container>
+  </hum-empty-state>
+}

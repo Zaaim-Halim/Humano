@@ -7,6 +7,7 @@ import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.requests.CreateLeaveRequest;
 import com.humano.dto.hr.requests.LeaveRequestSearchRequest;
 import com.humano.dto.hr.requests.ProcessLeaveRequest;
+import com.humano.dto.hr.responses.LeaveCalendarEntry;
 import com.humano.dto.hr.responses.LeaveRequestResponse;
 import com.humano.repository.hr.LeaveRequestRepository;
 import com.humano.repository.hr.specification.LeaveRequestSpecification;
@@ -14,12 +15,16 @@ import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.workflow.ApprovalWorkflowOrchestratorService;
 import com.humano.web.rest.errors.BadRequestAlertException;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -240,6 +245,50 @@ public class LeaveRequestService {
         );
 
         return searchLeaveRequests(modifiedRequest, pageable);
+    }
+
+    /**
+     * Approved and pending absences overlapping {@code from}–{@code to}, for the shared team
+     * calendar. {@code showTypeOf} decides per employee whether the leave type is revealed.
+     */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public List<LeaveCalendarEntry> getCalendar(LocalDate from, LocalDate to, java.util.function.Predicate<UUID> showTypeOf) {
+        Specification<LeaveRequest> overlapping = LeaveRequestSpecification.withCriteria(
+            null,
+            null,
+            null,
+            null,
+            null,
+            to,
+            from,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        );
+        return leaveRequestRepository
+            .findAll(overlapping, PageRequest.of(0, 2000, Sort.by("startDate")))
+            .stream()
+            .filter(r -> r.getStatus() == LeaveStatus.APPROVED || r.getStatus() == LeaveStatus.PENDING)
+            .map(r -> {
+                Employee e = r.getEmployee();
+                return new LeaveCalendarEntry(
+                    r.getId(),
+                    e.getId(),
+                    e.getFirstName() + " " + e.getLastName(),
+                    e.getImageUrl(),
+                    e.getDepartment() == null ? null : e.getDepartment().getName(),
+                    r.getStartDate(),
+                    r.getEndDate(),
+                    r.getDaysCount(),
+                    r.getStatus(),
+                    showTypeOf.test(e.getId()) ? r.getLeaveType() : null
+                );
+            })
+            .toList();
     }
 
     private LeaveRequestResponse mapToResponse(LeaveRequest leaveRequest) {

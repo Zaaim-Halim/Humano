@@ -46,6 +46,18 @@ export class EmployeeService extends RestResourceService<
     );
   }
 
+  /** `PUT /api/hr/employees/{id}/photo` — upload a profile photo (JPEG/PNG/WebP, ≤ 2 MB). */
+  uploadPhoto(id: string, file: File): Observable<{ imageUrl: string }> {
+    const body = new FormData();
+    body.append('file', file);
+    return this.http.put<{ imageUrl: string }>(`${this.resourceUrl}/${encodeURIComponent(id)}/photo`, body);
+  }
+
+  /** `DELETE /api/hr/employees/{id}/photo` — remove the profile photo. */
+  removePhoto(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.resourceUrl}/${encodeURIComponent(id)}/photo`);
+  }
+
   /** `GET /api/hr/employees/stats` — headcount by status, department and work location. */
   stats(): Observable<EmployeeDirectoryStats> {
     return this.http.get<EmployeeDirectoryStats>(`${this.resourceUrl}/stats`);

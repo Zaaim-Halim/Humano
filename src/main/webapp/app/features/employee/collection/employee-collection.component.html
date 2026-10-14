@@ -1,46 +1,82 @@
-<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3)">
-  <h3 style="margin: 0; font-size: var(--text-base); font-weight: 600">{{ heading() }}</h3>
-  @if (canManage()) {
-    <hum-button variant="primary" size="sm" icon="plus" (click)="openCreate()">Add</hum-button>
+<header class="hum-records__head">
+  <span class="hum-records__icon" aria-hidden="true"><lucide-icon [name]="icon()" [size]="16" /></span>
+  <h3 class="hum-records__title">{{ heading() }}</h3>
+  @if (!loading() && !error()) {
+    <span class="hum-records__count">{{ rows().length }}</span>
   }
-</div>
+  <span class="hum-records__spacer"></span>
+  @if (canManage() && rows().length) {
+    <hum-button variant="ghost" size="sm" icon="plus" (click)="openCreate()">{{ 'humano.records.add' | translate }}</hum-button>
+  }
+</header>
 
 @if (loading()) {
-  <hum-skeleton-row /><hum-skeleton-row />
+  <hum-skeleton-row />
 } @else if (error(); as e) {
-  <hum-alert tone="danger" [title]="e"><hum-button variant="outline" size="sm" (click)="load()">Retry</hum-button></hum-alert>
+  <hum-alert tone="danger" [title]="e"
+    ><hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+  >
 } @else if (rows().length === 0) {
-  <hum-empty-state icon="inbox" [title]="'Nothing yet'" />
+  @if (canManage()) {
+    <button type="button" class="hum-records__empty" (click)="openCreate()">
+      <lucide-icon name="plus" [size]="14" />
+      {{ 'humano.records.emptyAdd' | translate: { item: (itemLabel() ?? heading()).toLowerCase() } }}
+    </button>
+  } @else {
+    <p class="hum-records__empty is-static">{{ 'humano.records.empty' | translate }}</p>
+  }
 } @else {
-  <table class="hum-table">
-    <thead>
-      <tr>
-        @for (c of columns(); track c.key) {
-          <th>{{ c.label }}</th>
-        }
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (row of rows(); track row.id) {
-        <tr>
-          @for (c of columns(); track c.key) {
-            <td>{{ cell(row, c.key) }}</td>
-          }
-          <td style="text-align: right; white-space: nowrap">
-            @if (canManage()) {
-              <hum-icon-button icon="pencil" label="Edit" (click)="openEdit(row)" />
-              <hum-icon-button icon="trash-2" variant="ghost" label="Delete" (click)="deleteTarget.set(row)" />
+  <ul class="hum-records__list">
+    @for (item of views(); track item.row.id) {
+      <li class="hum-record" [class.is-muted]="item.view.muted">
+        <span class="hum-record__icon" aria-hidden="true"><lucide-icon [name]="item.view.icon ?? icon()" [size]="16" /></span>
+        <div class="hum-record__body">
+          <div class="hum-record__title">
+            <span>{{ item.view.title }}</span>
+            @for (b of item.view.badges ?? []; track b.label) {
+              <hum-badge [tone]="b.tone" [label]="b.label" />
             }
-          </td>
-        </tr>
-      }
-    </tbody>
-  </table>
+          </div>
+          @if (item.view.subtitle) {
+            <div class="hum-record__subtitle">{{ item.view.subtitle }}</div>
+          }
+          @if (item.view.facts?.length) {
+            <div class="hum-record__facts">
+              @for (f of item.view.facts; track $index) {
+                @if (f.text) {
+                  <span><lucide-icon [name]="f.icon" [size]="12" />{{ f.text }}</span>
+                }
+              }
+            </div>
+          }
+        </div>
+        @if (item.view.aside) {
+          <div class="hum-record__aside">{{ item.view.aside }}</div>
+        }
+        @if (canManage()) {
+          <div class="hum-record__actions">
+            <hum-icon-button icon="pencil" size="sm" [label]="'humano.action.edit' | translate" (click)="openEdit(item.row)" />
+            <hum-icon-button
+              icon="trash-2"
+              size="sm"
+              variant="ghost"
+              [label]="'humano.action.delete' | translate"
+              (click)="deleteTarget.set(item.row)"
+            />
+          </div>
+        }
+      </li>
+    }
+  </ul>
 }
 
 <!-- Add / edit -->
-<hum-drawer [open]="formOpen()" [title]="editing() ? 'Edit ' + heading() : 'Add ' + heading()" hasFooter (closed)="formOpen.set(false)">
+<hum-drawer
+  [open]="formOpen()"
+  [title]="(editing() ? 'humano.records.editTitle' : 'humano.records.addTitle') | translate: { item: itemLabel() ?? heading() }"
+  hasFooter
+  (closed)="formOpen.set(false)"
+>
   <!--
     Only bind the controls once the drawer is open, i.e. once `buildForm` has created them.
     Projected content is instantiated with this component's view even though the drawer keeps
@@ -51,20 +87,28 @@
     @for (f of formOpen() ? fields() : []; track f.key) {
       @switch (f.type) {
         @case ('textarea') {
-          <hum-form-field [label]="f.label" [controlId]="f.key">
+          <hum-form-field [label]="f.label | translate" [controlId]="f.key">
             <hum-textarea [formControlName]="f.key" />
           </hum-form-field>
         }
         @case ('checkbox') {
-          <hum-checkbox [formControlName]="f.key" [label]="f.label" />
+          <hum-checkbox [formControlName]="f.key" [label]="f.label | translate" />
         }
         @case ('select') {
-          <hum-form-field [label]="f.label" [controlId]="f.key" [error]="invalid(f.key) ? 'Required' : undefined">
+          <hum-form-field
+            [label]="f.label | translate"
+            [controlId]="f.key"
+            [error]="invalid(f.key) ? ('humano.records.required' | translate) : undefined"
+          >
             <hum-select [formControlName]="f.key" [options]="f.options ?? []" [invalid]="invalid(f.key)" />
           </hum-form-field>
         }
         @default {
-          <hum-form-field [label]="f.label" [controlId]="f.key" [error]="invalid(f.key) ? 'Required' : undefined">
+          <hum-form-field
+            [label]="f.label | translate"
+            [controlId]="f.key"
+            [error]="invalid(f.key) ? ('humano.records.required' | translate) : undefined"
+          >
             <hum-input [inputId]="f.key" [type]="f.type ?? 'text'" [formControlName]="f.key" [invalid]="invalid(f.key)" />
           </hum-form-field>
         }
@@ -72,21 +116,23 @@
     }
   </form>
   <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
-    <hum-button variant="secondary" (click)="formOpen.set(false)">Cancel</hum-button>
-    <hum-button variant="primary" [loading]="saving()" [disabled]="form.invalid" (click)="save()">Save</hum-button>
+    <hum-button variant="secondary" (click)="formOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" [loading]="saving()" [disabled]="form.invalid" (click)="save()">{{
+      'humano.action.save' | translate
+    }}</hum-button>
   </div>
 </hum-drawer>
 
 <!-- Delete confirm -->
 <hum-dialog
   [open]="deleteTarget() !== null"
-  [title]="'Delete record'"
-  [description]="'This cannot be undone.'"
+  [title]="'humano.records.deleteTitle' | translate: { item: (itemLabel() ?? heading()).toLowerCase() }"
+  [description]="'humano.records.deleteBody' | translate"
   hasFooter
   (closed)="deleteTarget.set(null)"
 >
   <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
-    <hum-button variant="secondary" (click)="deleteTarget.set(null)">Cancel</hum-button>
-    <hum-button variant="destructive" [loading]="deleting()" (click)="confirmDelete()">Delete</hum-button>
+    <hum-button variant="secondary" (click)="deleteTarget.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" [loading]="deleting()" (click)="confirmDelete()">{{ 'humano.action.delete' | translate }}</hum-button>
   </div>
 </hum-dialog>

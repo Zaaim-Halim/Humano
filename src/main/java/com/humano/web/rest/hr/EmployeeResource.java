@@ -8,21 +8,34 @@ import com.humano.dto.hr.responses.EmployeeDirectoryStatsResponse;
 import com.humano.dto.hr.responses.EmployeeProfileResponse;
 import com.humano.dto.hr.responses.SimpleEmployeeProfileResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.SecurityUtils;
+import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.hr.EmployeePhotoService;
 import com.humano.service.hr.EmployeeProfileService;
+import com.humano.service.storage.FileService;
 import jakarta.validation.Valid;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
 import tech.jhipster.web.util.PaginationUtil;
@@ -62,9 +75,11 @@ public class EmployeeResource {
     private String applicationName;
 
     private final EmployeeProfileService employeeProfileService;
+    private final EmployeePhotoService employeePhotoService;
 
-    public EmployeeResource(EmployeeProfileService employeeProfileService) {
+    public EmployeeResource(EmployeeProfileService employeeProfileService, EmployeePhotoService employeePhotoService) {
         this.employeeProfileService = employeeProfileService;
+        this.employeePhotoService = employeePhotoService;
     }
 
     /**
@@ -101,6 +116,43 @@ public class EmployeeResource {
     @RequirePermission(PermissionsConstants.CREATE_EMPLOYEE)
     public ResponseEntity<List<String>> getAssignableRoles() {
         return ResponseEntity.ok(employeeProfileService.getAssignableRoles());
+    }
+
+    /**
+     * {@code PUT  /employees/:id/photo} : Upload a profile photo (JPEG, PNG or WebP, up to 2 MB).
+     * Allowed for HR with update rights, or for the employee themselves.
+     *
+     * @return the new image URL
+     */
+    @PutMapping(value = "/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@securityExpressions.hasPermission('UPDATE_EMPLOYEE') or @securityExpressions.isCurrentUser(#id)")
+    public ResponseEntity<Map<String, String>> uploadPhoto(@PathVariable UUID id, @RequestPart("file") MultipartFile file)
+        throws IOException {
+        LOG.debug("REST request to upload photo for Employee {}", id);
+        String imageUrl = employeePhotoService.upload(id, file, SecurityUtils.getCurrentUserId().orElse(null));
+        return ResponseEntity.ok(Map.of("imageUrl", imageUrl));
+    }
+
+    /** {@code DELETE  /employees/:id/photo} : Remove the profile photo. Same access as upload. */
+    @DeleteMapping("/{id}/photo")
+    @PreAuthorize("@securityExpressions.hasPermission('UPDATE_EMPLOYEE') or @securityExpressions.isCurrentUser(#id)")
+    public ResponseEntity<Void> removePhoto(@PathVariable UUID id) {
+        employeePhotoService.remove(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * {@code GET  /employees/:id/photo/:fileId} : The profile photo, for any signed-in employee —
+     * photos are shown across the directory, org charts and approvals.
+     */
+    @GetMapping("/{id}/photo/{fileId}")
+    @RequireHrStaffOrEmployee
+    public ResponseEntity<Resource> photo(@PathVariable UUID id, @PathVariable UUID fileId) throws IOException {
+        FileService.FileDownload file = employeePhotoService.download(id, fileId);
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(file.contentType()))
+            .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePrivate())
+            .body(new InputStreamResource(file.content()));
     }
 
     /**

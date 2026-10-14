@@ -640,6 +640,10 @@ public class EmployeeProfileService {
     private EmployeeProfileResponse mapToEmployeeProfileResponse(Employee employee) {
         return new EmployeeProfileResponse(
             employee.getId(),
+            employee.getFirstName(),
+            employee.getLastName(),
+            employee.getEmail(),
+            employee.getImageUrl(),
             employee.getJobTitle(),
             employee.getPhone(),
             employee.getStartDate(),
@@ -654,9 +658,8 @@ public class EmployeeProfileService {
             employee.getUnit().getId(),
             employee.getUnit().getName(),
             Optional.ofNullable(employee.getManager()).map(Employee::getId).orElse(null),
-            Optional.ofNullable(employee.getManager())
-                .map(manager -> manager.getJobTitle() + " - " + manager.getPosition().getName())
-                .orElse(null),
+            Optional.ofNullable(employee.getManager()).map(m -> joinName(m.getFirstName(), m.getLastName())).orElse(null),
+            Optional.ofNullable(employee.getManager()).map(Employee::getJobTitle).orElse(null),
             Optional.ofNullable(employee.getAuthorities())
                 .orElseGet(Set::of)
                 .stream()

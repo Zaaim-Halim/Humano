@@ -1,3 +1,5 @@
+import { Permission } from 'app/config/permission.constants';
+import { AccountService } from 'app/core/auth/account.service';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -79,6 +81,10 @@ function walk(node: OrganizationalUnitTreeNode, visit: (n: OrganizationalUnitTre
   templateUrl: './organization-tree.component.html',
 })
 export class OrganizationTreeComponent implements OnInit {
+  /** HR opens the person's profile; everyone else sees them in context in the people tree. */
+  private readonly canOpenProfiles = inject(AccountService).hasPermission(Permission.READ_EMPLOYEE);
+  protected readonly personLink = (id: string): string[] => (this.canOpenProfiles ? ['/employees', id] : ['/people-tree', id]);
+
   /** Root unit id when embedded; the route param wins for the routed page. */
   readonly rootUnitId = input<string>();
 

@@ -1,15 +1,19 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { LucideAngularModule } from 'lucide-angular';
 import { Observable } from 'rxjs';
+
+import { BadgeTone } from 'app/config/status-map';
 
 import { normalizeHttpError } from 'app/core/api';
 import {
   AlertComponent,
+  BadgeComponent,
   ButtonComponent,
   CheckboxComponent,
   DialogComponent,
   DrawerComponent,
-  EmptyStateComponent,
   FormFieldComponent,
   IconButtonComponent,
   InputComponent,
@@ -20,7 +24,7 @@ import {
   ToastService,
 } from 'app/shared/ui';
 
-export type CollectionFieldType = 'text' | 'textarea' | 'number' | 'date' | 'checkbox' | 'select';
+export type CollectionFieldType = 'text' | 'email' | 'tel' | 'textarea' | 'number' | 'date' | 'checkbox' | 'select';
 
 /** Column shown in the list. */
 export interface CollectionColumn {
@@ -35,6 +39,23 @@ export interface CollectionField {
   type?: CollectionFieldType;
   options?: SelectOption[];
   required?: boolean;
+}
+
+/**
+ * How one record is shown as a card: a title with badges, a subtitle, small icon facts, and an
+ * aside (typically a date or range) on the right. Without a `present` function the card is built
+ * from `columns` — first column as the title, the rest as facts.
+ */
+export interface RecordView {
+  title: string;
+  subtitle?: string | null;
+  /** Leading icon; defaults to the section icon. */
+  icon?: string;
+  facts?: { icon: string; text: string | null | undefined }[];
+  badges?: { label: string; tone: BadgeTone }[];
+  aside?: string | null;
+  /** Dims the card (e.g. a returned asset, an ended contract). */
+  muted?: boolean;
 }
 
 export interface CollectionRecord {
@@ -58,20 +79,22 @@ export interface CollectionService {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
- * Generic CRUD manager for an employee-owned collection (addresses, certifications, …): a table
- * with add/edit/delete driven entirely by the `columns` + `fields` config and a `service`. The
- * drawer form is built dynamically from `fields`; on submit the form value (plus `employeeId` on
- * create) is the request body.
+ * Generic CRUD manager for an employee-owned collection (addresses, certifications, …): a card
+ * list with add/edit/delete driven by the `columns` + `fields` config (labels may be i18n keys)
+ * and a `service`; `present` turns a record into a card. The drawer form is built dynamically
+ * from `fields`; on submit the form value (plus `employeeId` on create) is the request body.
  */
 @Component({
   selector: 'hum-employee-collection',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
+    TranslatePipe,
+    LucideAngularModule,
+    BadgeComponent,
     ButtonComponent,
     IconButtonComponent,
     AlertComponent,
-    EmptyStateComponent,
     SkeletonRowComponent,
     DrawerComponent,
     DialogComponent,
@@ -90,8 +113,16 @@ export class EmployeeCollectionComponent {
   readonly columns = input.required<CollectionColumn[]>();
   readonly fields = input.required<CollectionField[]>();
   readonly canManage = input(true);
+  /** Section icon (header and default card icon). */
+  readonly icon = input('folder');
+  /** Singular name for "Add …" / "Edit …" (already translated); defaults to the heading. */
+  readonly itemLabel = input<string | null>(null);
+  readonly present = input<((row: any) => RecordView) | null>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  /** Number of records, emitted after every load. */
+  readonly count = output<number>();
 
   private readonly toast = inject(ToastService);
+  private readonly translate = inject(TranslateService);
 
   protected readonly rows = signal<CollectionRecord[]>([]);
   protected readonly loading = signal(false);
@@ -104,6 +135,11 @@ export class EmployeeCollectionComponent {
   protected readonly deleting = signal(false);
 
   protected form = new FormGroup<Record<string, FormControl>>({});
+
+  protected readonly views = computed(() => {
+    const present = this.present();
+    return this.rows().map(row => ({ row, view: present ? present(row) : this.fallbackView(row) }));
+  });
 
   constructor() {
     effect(() => {
@@ -121,6 +157,20 @@ export class EmployeeCollectionComponent {
     return String(v);
   }
 
+  private fallbackView(row: CollectionRecord): RecordView {
+    const [first, ...rest] = this.columns();
+    return {
+      title: first ? this.cell(row, first.key) : '—',
+      facts: rest
+        .filter(c => row[c.key] !== null && row[c.key] !== undefined && row[c.key] !== '')
+        .map(c => ({ icon: 'dot', text: `${this.t(c.label)}: ${this.cell(row, c.key)}` })),
+    };
+  }
+
+  private t(key: string, params?: Record<string, unknown>): string {
+    return String(this.translate.instant(key, params));
+  }
+
   protected load(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -130,6 +180,7 @@ export class EmployeeCollectionComponent {
         next: data => {
           this.rows.set(data);
           this.loading.set(false);
+          this.count.emit(data.length);
         },
         error: (e: unknown) => {
           this.error.set(normalizeHttpError(e));
@@ -188,7 +239,7 @@ export class EmployeeCollectionComponent {
     const request$ = editing ? this.service().update(editing.id, body) : this.service().create({ ...body, employeeId: this.employeeId() });
     request$.subscribe({
       next: () => {
-        this.toast.success(editing ? 'Updated' : 'Added');
+        this.toast.success(this.t(editing ? 'humano.records.updated' : 'humano.records.added'));
         this.formOpen.set(false);
         this.saving.set(false);
         this.load();
@@ -208,7 +259,7 @@ export class EmployeeCollectionComponent {
       .delete(target.id)
       .subscribe({
         next: () => {
-          this.toast.success('Deleted');
+          this.toast.success(this.t('humano.records.deleted'));
           this.deleting.set(false);
           this.deleteTarget.set(null);
           this.load();

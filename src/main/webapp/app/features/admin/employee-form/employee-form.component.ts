@@ -363,7 +363,9 @@ export default class EmployeeFormComponent implements OnInit {
             unitId: p.unitId ?? '',
             managerId: p.managerId ?? '',
           });
-          this.managerInitial.set(p.managerId ? { value: p.managerId, label: p.managerInfo ?? p.managerId } : null);
+          this.managerInitial.set(
+            p.managerId ? { value: p.managerId, label: p.managerName ?? p.managerId, sublabel: p.managerJobTitle } : null,
+          );
           this.selectedRoles.set(new Set(p.authorities));
           this.loading.set(false);
         },

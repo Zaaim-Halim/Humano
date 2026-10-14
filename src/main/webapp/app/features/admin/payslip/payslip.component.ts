@@ -1,6 +1,7 @@
 import { DOCUMENT, DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
+import { MeWorkService } from 'app/features/employee/services/me-work.service';
+import { MoneyPipe } from 'app/shared/util/format.pipes';
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { normalizeHttpError } from 'app/core/api';
@@ -18,14 +19,17 @@ import { Payslip, PayslipService } from '../index';
 @Component({
   selector: 'hum-payslip',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MoneyPipe, PayPeriodPipe, DatePipe, TranslatePipe, ButtonComponent, AlertComponent, EmptyStateComponent, SkeletonRowComponent],
+  imports: [MoneyPipe, DatePipe, TranslatePipe, ButtonComponent, AlertComponent, EmptyStateComponent, SkeletonRowComponent],
   templateUrl: './payslip.component.html',
 })
 export default class PayslipComponent {
   /** Payslip id from the route (`/payroll/payslips/:id`). */
   readonly id = input.required<string>();
+  /** Route data on `/my-payslips/:id`: read through the self-service `/api/me/payslips` endpoints. */
+  readonly self = input(false);
 
   private readonly payslipService = inject(PayslipService);
+  private readonly meWork = inject(MeWorkService);
   private readonly toast = inject(ToastService);
   private readonly document = inject(DOCUMENT);
 
@@ -48,7 +52,7 @@ export default class PayslipComponent {
     this.loading.set(true);
     this.error.set(null);
     this.ytd.set(null);
-    this.payslipService.find(id).subscribe({
+    (this.self() ? this.meWork.payslip(id) : this.payslipService.find(id)).subscribe({
       next: p => {
         this.payslip.set(p);
         this.loading.set(false);
@@ -65,7 +69,7 @@ export default class PayslipComponent {
     const year = Number((p.paymentDate ?? p.periodEnd ?? '').slice(0, 4));
     if (!p.employeeId || !year) return;
     // YTD is supplementary; its failure must not break the payslip view.
-    this.payslipService.ytdForEmployee(p.employeeId, year).subscribe({
+    (this.self() ? this.meWork.payslipYtd(year) : this.payslipService.ytdForEmployee(p.employeeId, year)).subscribe({
       next: data => this.ytd.set(data),
       error: () => this.ytd.set(null),
     });
@@ -78,7 +82,7 @@ export default class PayslipComponent {
   protected downloadPdf(): void {
     const p = this.payslip();
     if (!p) return;
-    this.payslipService.downloadPdf(p.id).subscribe({
+    (this.self() ? this.meWork.payslipPdf(p.id) : this.payslipService.downloadPdf(p.id)).subscribe({
       next: res => {
         const blob = res.body;
         if (!blob) return;

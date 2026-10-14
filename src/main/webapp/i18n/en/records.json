@@ -1,0 +1,147 @@
+{
+  "humano": {
+    "records": {
+      "add": "Add",
+      "added": "Added",
+      "updated": "Saved",
+      "deleted": "Deleted",
+      "required": "Required",
+      "empty": "Nothing recorded yet.",
+      "emptyAdd": "Add {{ item }}",
+      "addTitle": "Add {{ item }}",
+      "editTitle": "Edit {{ item }}",
+      "deleteTitle": "Delete this {{ item }}?",
+      "deleteBody": "This removes it from the employee's record. It cannot be undone.",
+      "groups": {
+        "personal": "Personal & contact",
+        "employment": "Employment",
+        "qualifications": "Skills & qualifications"
+      },
+      "jumpTo": "Jump to section",
+      "primary": "Primary",
+      "verified": "Verified",
+      "unverified": "Not verified",
+      "expired": "Expired",
+      "expiresSoon": "Expires soon",
+      "returned": "Returned",
+      "current": "Current",
+      "active": "Active",
+      "ended": "Ended",
+      "present": "Present",
+      "since": "Since {{ date }}",
+      "until": "Until {{ date }}",
+      "expires": "Expires {{ date }}",
+      "graduated": "Graduated {{ date }}",
+      "assigned": "Assigned {{ date }}",
+      "returnedOn": "Returned {{ date }}",
+      "issued": "Issued {{ date }}",
+      "signed": "Signed {{ date }}",
+      "hoursWeek": "{{ hours }} h/week",
+      "sponsor": "Sponsored by {{ name }}",
+      "skillReading": "Reading",
+      "skillWriting": "Writing",
+      "skillSpeaking": "Speaking",
+      "section": {
+        "addresses": {
+          "title": "Addresses",
+          "item": "address"
+        },
+        "contacts": {
+          "title": "Emergency contacts",
+          "item": "emergency contact"
+        },
+        "bank": {
+          "title": "Bank accounts",
+          "item": "bank account"
+        },
+        "contracts": {
+          "title": "Employment contracts",
+          "item": "contract"
+        },
+        "permits": {
+          "title": "Work permits",
+          "item": "work permit"
+        },
+        "assets": {
+          "title": "Equipment",
+          "item": "equipment"
+        },
+        "education": {
+          "title": "Education",
+          "item": "education"
+        },
+        "experience": {
+          "title": "Previous experience",
+          "item": "previous job"
+        },
+        "certifications": {
+          "title": "Certifications",
+          "item": "certification"
+        },
+        "licenses": {
+          "title": "Licenses",
+          "item": "license"
+        },
+        "languages": {
+          "title": "Languages",
+          "item": "language"
+        }
+      },
+      "field": {
+        "type": "Type",
+        "street": "Street",
+        "building": "Building",
+        "apartment": "Apartment",
+        "city": "City",
+        "state": "State / region",
+        "postalCode": "Postal code",
+        "country": "Country",
+        "primaryAddress": "Primary address",
+        "name": "Name",
+        "relationship": "Relationship",
+        "phone": "Phone",
+        "email": "Email",
+        "bankName": "Bank",
+        "iban": "Account number / IBAN",
+        "swift": "SWIFT / BIC",
+        "accountHolder": "Account holder",
+        "currency": "Currency",
+        "primaryAccount": "Primary account (salary is paid here)",
+        "contractNumber": "Contract number",
+        "startDate": "Start date",
+        "endDate": "End date",
+        "contractType": "Contract type",
+        "position": "Position",
+        "department": "Department",
+        "workingHours": "Hours per week",
+        "signedDate": "Signed on",
+        "status": "Status",
+        "visaType": "Visa type",
+        "permitNumber": "Permit number",
+        "issueDate": "Issued on",
+        "expiryDate": "Expires on",
+        "sponsor": "Sponsor",
+        "assetType": "Equipment type",
+        "identifier": "Model / serial / tag",
+        "assignedDate": "Assigned on",
+        "returnedDate": "Returned on",
+        "institution": "School / university",
+        "degree": "Degree",
+        "fieldOfStudy": "Field of study",
+        "graduationDate": "Graduated on",
+        "company": "Company",
+        "jobTitle": "Job title",
+        "issuer": "Issued by",
+        "verifiedCheck": "Verified by HR",
+        "language": "Language",
+        "reading": "Reading",
+        "writing": "Writing",
+        "speaking": "Speaking"
+      },
+      "option": {
+        "select": "Select…",
+        "none": "Not set"
+      }
+    }
+  }
+}

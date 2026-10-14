@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
@@ -29,6 +30,7 @@ import { Project } from '../models/project.model';
 import { CurrentEmployeeService } from '../services/current-employee.service';
 import { ProjectService } from '../services/project.service';
 import { TimesheetService } from '../services/timesheet.service';
+import { TimeClockComponent } from './time-clock.component';
 
 /** Daily target used for the bar chart reference line and the weekly goal. */
 const DAILY_TARGET = 8;
@@ -55,9 +57,11 @@ function weekStart(d: Date): Date {
 }
 
 /**
- * Timesheets — log and review worked hours by week.
+ * Timesheets — clock in/out and log project hours, by week.
  *
- * - My week (anyone with an employee record): Monday–Sunday bars against an 8h day, the week's
+ * - Time clock (anyone with an employee record): clock in/out and breaks, stamped by the server
+ *   (see TimeClockComponent).
+ * - Project hours: Monday–Sunday bars against an 8h day, the week's
  *   total against 40h, a per-project split, each day's entries, and a quick log form (date,
  *   hours, project).
  * - Team week (`VIEW_TIMESHEETS`): a heatmap with one row per person and a cell per day shaded
@@ -68,6 +72,7 @@ function weekStart(d: Date): Date {
   selector: 'hum-timesheets',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    TimeClockComponent,
     ReactiveFormsModule,
     RouterLink,
     DatePipe,
@@ -103,9 +108,10 @@ export default class TimesheetsComponent {
   protected readonly dailyTarget = DAILY_TARGET;
   protected readonly weeklyTarget = DAILY_TARGET * WORK_DAYS;
 
-  protected readonly tab = signal<'mine' | 'team'>('mine');
+  protected readonly tab = signal<'clock' | 'mine' | 'team'>('clock');
   protected readonly tabs = computed<TabItem[]>(() => [
-    { id: 'mine', label: this.label('humano.timesheets.tabMine'), icon: 'user' },
+    { id: 'clock', label: this.label('humano.timeclock.tab'), icon: 'timer' },
+    { id: 'mine', label: this.label('humano.timesheets.tabMine'), icon: 'folder-kanban' },
     ...(this.canViewTeam ? [{ id: 'team', label: this.label('humano.timesheets.tabTeam'), icon: 'users' }] : []),
   ]);
 
@@ -169,6 +175,11 @@ export default class TimesheetsComponent {
   });
   protected readonly submitting = signal(false);
 
+  /** Hours clocked per day this week (from the time clock), to prefill project hours. */
+  protected readonly clocked = signal<Record<string, number>>({});
+  private readonly formDate = toSignal(this.form.controls.date.valueChanges, { initialValue: this.form.controls.date.value });
+  protected readonly clockedForForm = computed(() => this.clocked()[this.formDate()] || null);
+
   // ---------------------------------------------------------------- team week
   protected readonly team = signal<Timesheet[] | null>(null);
   protected readonly teamError = signal<string | null>(null);
@@ -209,7 +220,7 @@ export default class TimesheetsComponent {
   }
 
   protected setTab(id: string | undefined): void {
-    if (id === 'mine' || id === 'team') this.tab.set(id);
+    if (id === 'clock' || id === 'mine' || id === 'team') this.tab.set(id);
   }
 
   protected shiftWeek(delta: number): void {
@@ -232,6 +243,10 @@ export default class TimesheetsComponent {
 
   protected logFor(day: string): void {
     this.form.patchValue({ date: day });
+  }
+
+  protected useClocked(hours: number): void {
+    this.form.patchValue({ hoursWorked: String(hours) });
   }
 
   protected invalid(control: string): boolean {

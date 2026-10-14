@@ -317,6 +317,10 @@ export default class PayRuleEditorComponent {
     });
   }
 
+  protected kindIcon(kind: string): string {
+    return kind === 'EARNING' ? 'trending-up' : kind === 'DEDUCTION' ? 'trending-down' : 'building-2';
+  }
+
   /** Open the editor with a component preselected. */
   protected addRuleFor(componentId: string): void {
     this.form.controls.payComponentId.setValue(componentId);

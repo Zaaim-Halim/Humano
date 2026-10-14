@@ -30,20 +30,12 @@ import {
 import { PluralPipe } from 'app/shared/util/format.pipes';
 
 import { LeaveStatus } from '../models/enums/leave-status.enum';
-import { LeaveType } from '../models/enums/leave-type.enum';
-import { LeaveRequest } from '../models/leave-request.model';
+import { LEAVE_TYPE_COLOR, LeaveType } from '../models/enums/leave-type.enum';
+import { LeaveCalendarEntry, LeaveRequest } from '../models/leave-request.model';
 import { CurrentEmployeeService } from '../services/current-employee.service';
 import { LeaveRequestService } from '../services/leave-request.service';
 
 type Tab = 'mine' | 'calendar' | 'requests';
-
-/** Calendar bar colour per leave type. */
-const TYPE_COLOR: Record<string, string> = {
-  VACATION: 'var(--brand)',
-  SICK: 'var(--danger-solid)',
-  MATERNITY: 'var(--violet-500)',
-  UNPAID: 'var(--slate-400)',
-};
 
 function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -58,7 +50,8 @@ function parseIso(value: string): Date {
  *
  * - My leave (anyone with an employee record): this year's taken / pending / upcoming days and
  *   the person's requests as a timeline; "Request leave" opens the request form.
- * - Team calendar (`VIEW_LEAVE_REQUESTS`): a month grid with one row per person on leave and a
+ * - Team calendar (everyone, via `/leave-requests/calendar`; filter to your department): a month
+ *   grid with one row per person on leave and a
  *   bar per request, coloured by type (pending ones hatched); today is marked.
  * - Requests (`VIEW_LEAVE_REQUESTS`): status chips, type filter and name search; a request opens
  *   a panel where approvers (`APPROVE_LEAVE` / `MANAGE_LEAVE_REQUESTS`) approve or reject it.
@@ -107,15 +100,17 @@ export default class LeaveComponent {
   protected readonly tab = signal<Tab>(this.canViewAll ? 'calendar' : 'mine');
   protected readonly tabs = computed<TabItem[]>(() => [
     ...(this.me() ? [{ id: 'mine', label: this.label('humano.leave.tabMine'), icon: 'user' }] : []),
+    // Everyone sees the team calendar (to plan around colleagues); only leave managers see requests.
+    { id: 'calendar', label: this.label('humano.leave.tabCalendar'), icon: 'calendar' },
     ...(this.canViewAll
-      ? [
-          { id: 'calendar', label: this.label('humano.leave.tabCalendar'), icon: 'calendar' },
-          { id: 'requests', label: this.label('humano.leave.tabRequests'), icon: 'inbox', count: this.overview()?.pending ?? undefined },
-        ]
+      ? [{ id: 'requests', label: this.label('humano.leave.tabRequests'), icon: 'inbox', count: this.overview()?.pending ?? undefined }]
       : []),
   ]);
 
-  protected readonly typeColor = (type: string): string => TYPE_COLOR[type] ?? 'var(--info-solid)';
+  /** Colour per leave type; a hidden type (a colleague's leave, for non-HR) is neutral. */
+  protected readonly typeColor = (type: string | null): string =>
+    type ? (LEAVE_TYPE_COLOR[type] ?? 'var(--info-solid)') : 'var(--slate-400)';
+  protected readonly typeLabel = (type: string | null): string => this.label(type ? `humano.leave.type.${type}` : 'humano.leave.timeOff');
   protected readonly types = Object.values(LeaveType);
   protected readonly today = iso(new Date());
 
@@ -137,9 +132,12 @@ export default class LeaveComponent {
     };
   });
 
-  // ---------------------------------------------------------------- calendar (HR)
+  // ---------------------------------------------------------------- team calendar (everyone)
   protected readonly month = signal(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-  protected readonly monthRequests = signal<LeaveRequest[] | null>(null);
+  protected readonly monthRequests = signal<LeaveCalendarEntry[] | null>(null);
+  /** Everyone, or only the viewer's department. */
+  protected readonly scope = signal<'all' | 'department'>('all');
+  protected readonly myDepartment = computed(() => this.currentEmployee.currentEmployee()?.departmentName ?? null);
   protected readonly calendarError = signal<string | null>(null);
   protected readonly days = computed(() => {
     const m = this.month();
@@ -156,17 +154,21 @@ export default class LeaveComponent {
   });
   /** One row per person with leave this month; bars clipped to the month. */
   protected readonly calendarRows = computed(() => {
-    const list = (this.monthRequests() ?? []).filter(r => r.status !== LeaveStatus.REJECTED && r.status !== LeaveStatus.CANCELED);
+    const dept = this.scope() === 'department' ? this.myDepartment() : null;
+    const list = (this.monthRequests() ?? []).filter(r => !dept || r.departmentName === dept);
     const days = this.days();
     const first = days[0].iso;
     const last = days[days.length - 1].iso;
-    const rows = new Map<string, { id: string; name: string; bars: { request: LeaveRequest; start: number; span: number }[] }>();
+    const rows = new Map<
+      string,
+      { id: string; name: string; imageUrl: string | null; bars: { request: LeaveCalendarEntry; start: number; span: number }[] }
+    >();
     for (const r of list) {
       const startIso = r.startDate < first ? first : r.startDate;
       const endIso = r.endDate > last ? last : r.endDate;
       const start = parseIso(startIso).getDate();
       const span = parseIso(endIso).getDate() - start + 1;
-      const row = rows.get(r.employeeId) ?? { id: r.employeeId, name: r.employeeName ?? '—', bars: [] };
+      const row = rows.get(r.employeeId) ?? { id: r.employeeId, name: r.employeeName ?? '—', imageUrl: r.imageUrl, bars: [] };
       row.bars.push({ request: r, start, span });
       rows.set(r.employeeId, row);
     }
@@ -210,7 +212,7 @@ export default class LeaveComponent {
     // Calendar follows the month; requests follow the filters.
     effect(() => {
       this.month();
-      if (this.canViewAll) untracked(() => this.loadMonth());
+      untracked(() => this.loadMonth());
     });
     effect(() => {
       this.statusFilter();
@@ -234,6 +236,20 @@ export default class LeaveComponent {
 
   protected newRequest(): void {
     void this.router.navigate(['/leave/new']);
+  }
+
+  /** A calendar bar: leave managers open the full request; others only see the tooltip. */
+  protected openEntry(entry: LeaveCalendarEntry): void {
+    if (!this.canViewAll) return;
+    this.leaveService.find(entry.id).subscribe({
+      next: request => this.open(request),
+      error: (err: unknown) => this.toast.danger(normalizeHttpError(err)),
+    });
+  }
+
+  /** HR opens the person's profile; everyone else sees them in the people tree. */
+  protected personLink(id: string): string[] {
+    return this.account.hasPermission(Permission.READ_EMPLOYEE) ? ['/employees', id] : ['/people-tree', id];
   }
 
   protected open(request: LeaveRequest): void {
@@ -277,8 +293,9 @@ export default class LeaveComponent {
     const first = this.days()[0].iso;
     const last = this.days()[this.days().length - 1].iso;
     this.calendarError.set(null);
-    this.leaveService.search({ startDateTo: last, endDateFrom: first }, { page: 0, size: 500, sort: ['startDate,asc'] }).subscribe({
-      next: page => this.monthRequests.set(page.content),
+    this.monthRequests.set(null);
+    this.leaveService.calendar(first, last).subscribe({
+      next: entries => this.monthRequests.set(entries),
       error: (err: unknown) => this.calendarError.set(normalizeHttpError(err)),
     });
   }

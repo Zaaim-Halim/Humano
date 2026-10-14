@@ -48,6 +48,16 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             // app_user table in master at v1). Regular requests follow header/subdomain
             // resolution as before.
             String tenantId = isPlatform ? properties.getPlatformTenant() : tenantResolver.resolveTenant(request);
+            // Plain browser requests (an <img> photo, a download link) can't send X-Tenant-ID. When
+            // nothing in the request names a tenant, fall back to the tenant this signed-in session
+            // is already pinned to — it can only ever be used against that tenant (see below).
+            if (!isPlatform && TenantContext.MASTER.equals(tenantId)) {
+                HttpSession session = request.getSession(false);
+                Object sessionTenant = session != null ? session.getAttribute(TenantContext.SESSION_TENANT_ATTRIBUTE) : null;
+                if (sessionTenant instanceof String pinned && !pinned.isBlank()) {
+                    tenantId = pinned;
+                }
+            }
             TenantContext.setCurrentTenant(tenantId);
             // Every log line for the rest of this request carries [tenant=<subdomain>].
             // The matching TaskDecorator in AsyncConfiguration propagates this to @Async workers.

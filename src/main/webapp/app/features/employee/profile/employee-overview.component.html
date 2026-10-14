@@ -1,0 +1,198 @@
+@if (employee(); as emp) {
+  <div class="hum-emp-grid">
+    <section class="hum-emp-card">
+      <h3 class="hum-emp-card__title">
+        <span class="hum-emp-card__icon"><lucide-icon name="briefcase" [size]="16" /></span
+        >{{ 'humano.employee360.jobSection' | translate }}
+      </h3>
+      <dl class="hum-emp-list">
+        <div>
+          <dt><lucide-icon name="badge-check" [size]="14" />{{ 'humano.employee.position' | translate }}</dt>
+          <dd>{{ emp.positionName ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="bar-chart-3" [size]="14" />{{ 'humano.employee360.levelGrade' | translate }}</dt>
+          <dd>{{ emp.level?.name ?? '—' }}{{ emp.grade ? ' · ' + emp.grade.name : '' }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="file-signature" [size]="14" />{{ 'humano.directory.employmentType' | translate }}</dt>
+          <dd>{{ emp.employmentType?.name ?? '—' }}{{ emp.personalDetails.fte ? ' · ' + emp.personalDetails.fte * 100 + '%' : '' }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="layers" [size]="14" />{{ 'humano.employee.department' | translate }}</dt>
+          <dd>{{ emp.departmentName ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="network" [size]="14" />{{ 'humano.employee.unit' | translate }}</dt>
+          <dd>{{ emp.unitName ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="user-check" [size]="14" />{{ 'humano.employee.manager' | translate }}</dt>
+          <dd>
+            @if (emp.managerId) {
+              <a class="hum-person" [routerLink]="['/employees', emp.managerId]">
+                <hum-avatar [name]="emp.managerName ?? ''" size="xs" />
+                <span class="hum-person__text">
+                  <span class="hum-person__name">{{ emp.managerName }}</span>
+                  <span class="hum-person__sub">{{ emp.managerJobTitle }}</span>
+                </span>
+              </a>
+            } @else {
+              —
+            }
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="hum-emp-card">
+      <h3 class="hum-emp-card__title">
+        <span class="hum-emp-card__icon"><lucide-icon name="calendar" [size]="16" /></span
+        >{{ 'humano.employee360.timelineSection' | translate }}
+      </h3>
+      <ol class="hum-emp-timeline">
+        <li [class.is-done]="!!emp.startDate">
+          <span class="hum-emp-timeline__label">{{ 'humano.employee.startDate' | translate }}</span>
+          <span class="hum-emp-timeline__value">{{
+            emp.startDate ? (emp.startDate | date: 'mediumDate') + ' · ' + since(emp.startDate) : '—'
+          }}</span>
+        </li>
+        <li [class.is-done]="!!emp.personalDetails.probationEndDate">
+          <span class="hum-emp-timeline__label">{{ 'humano.employee360.probationEnd' | translate }}</span>
+          <span class="hum-emp-timeline__value">{{
+            emp.personalDetails.probationEndDate ? (emp.personalDetails.probationEndDate | date: 'mediumDate') : '—'
+          }}</span>
+        </li>
+        <li [class.is-done]="!!emp.personalDetails.confirmationDate">
+          <span class="hum-emp-timeline__label">{{ 'humano.employee360.confirmation' | translate }}</span>
+          <span class="hum-emp-timeline__value">{{
+            emp.personalDetails.confirmationDate ? (emp.personalDetails.confirmationDate | date: 'mediumDate') : '—'
+          }}</span>
+        </li>
+        <li [class.is-done]="!!emp.endDate" [class.is-end]="!!emp.endDate">
+          <span class="hum-emp-timeline__label">{{ 'humano.employee.endDate' | translate }}</span>
+          <span class="hum-emp-timeline__value">{{
+            emp.endDate ? (emp.endDate | date: 'mediumDate') : ('humano.employee360.ongoing' | translate)
+          }}</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="hum-emp-card">
+      <h3 class="hum-emp-card__title">
+        <span class="hum-emp-card__icon"><lucide-icon name="user" [size]="16" /></span
+        >{{ 'humano.employee360.personalSection' | translate }}
+      </h3>
+      <dl class="hum-emp-list">
+        <div>
+          <dt><lucide-icon name="cake" [size]="14" />{{ 'humano.employee360.birthDate' | translate }}</dt>
+          <dd>
+            {{
+              emp.personalDetails.birthDate
+                ? (emp.personalDetails.birthDate | date: 'mediumDate') +
+                  ' · ' +
+                  ('humano.employee360.age' | translate: { age: age(emp.personalDetails.birthDate) })
+                : '—'
+            }}
+          </dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="users" [size]="14" />{{ 'humano.employee360.gender' | translate }}</dt>
+          <dd>
+            {{ emp.personalDetails.gender ? ('humano.employee360.genderValue.' + emp.personalDetails.gender | translate) : '—' }}
+          </dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="flag" [size]="14" />{{ 'humano.employee360.nationality' | translate }}</dt>
+          <dd>{{ emp.nationality?.name ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="heart" [size]="14" />{{ 'humano.employee360.maritalStatus' | translate }}</dt>
+          <dd>{{ emp.maritalStatus?.name ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="map-pin" [size]="14" />{{ 'humano.employee360.placeOfBirth' | translate }}</dt>
+          <dd>{{ emp.personalDetails.placeOfBirth ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="globe" [size]="14" />{{ 'humano.employee.country' | translate }}</dt>
+          <dd>{{ emp.countryName ?? '—' }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="hum-emp-card">
+      <h3 class="hum-emp-card__title">
+        <span class="hum-emp-card__icon"><lucide-icon name="phone" [size]="16" /></span
+        >{{ 'humano.employee360.contactSection' | translate }}
+      </h3>
+      <dl class="hum-emp-list">
+        <div>
+          <dt><lucide-icon name="mail" [size]="14" />{{ 'humano.directory.email' | translate }}</dt>
+          <dd>
+            @if (emp.email) {
+              <a [href]="'mailto:' + emp.email">{{ emp.email }}</a>
+            } @else {
+              —
+            }
+          </dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="smartphone" [size]="14" />{{ 'humano.directory.phone' | translate }}</dt>
+          <dd class="tabular-nums">{{ emp.phone ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="phone" [size]="14" />{{ 'humano.employee360.workPhone' | translate }}</dt>
+          <dd class="tabular-nums">{{ emp.personalDetails.workPhone ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="building-2" [size]="14" />{{ 'humano.directory.colLocation' | translate }}</dt>
+          <dd>
+            {{ emp.personalDetails.workLocation ? ('humano.directory.location.' + emp.personalDetails.workLocation | translate) : '—' }}
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="hum-emp-card">
+      <h3 class="hum-emp-card__title">
+        <span class="hum-emp-card__icon"><lucide-icon name="shield-check" [size]="16" /></span
+        >{{ 'humano.employee360.idsSection' | translate }}
+        @if (revealable()) {
+          <hum-button
+            class="hum-emp-card__action"
+            variant="ghost"
+            size="sm"
+            [icon]="revealed() ? 'eye-off' : 'eye'"
+            (click)="revealed.set(!revealed())"
+          >
+            {{ (revealed() ? 'humano.myProfile.hideIds' : 'humano.myProfile.showIds') | translate }}
+          </hum-button>
+        }
+      </h3>
+      <dl class="hum-emp-list">
+        <div>
+          <dt><lucide-icon name="id-card" [size]="14" />{{ 'humano.employee360.nationalId' | translate }}</dt>
+          <dd class="tabular-nums">{{ mask(emp.governmentIds.nationalId) }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="book-open" [size]="14" />{{ 'humano.employee360.passport' | translate }}</dt>
+          <dd class="tabular-nums">{{ mask(emp.governmentIds.passportNumber) }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="landmark" [size]="14" />{{ 'humano.employee360.taxNumber' | translate }}</dt>
+          <dd class="tabular-nums">{{ mask(emp.governmentIds.taxNumber) }}</dd>
+        </div>
+        <div>
+          <dt><lucide-icon name="shield" [size]="14" />{{ 'humano.employee360.ssn' | translate }}</dt>
+          <dd class="tabular-nums">{{ mask(emp.governmentIds.socialSecurityNumber) }}</dd>
+        </div>
+      </dl>
+      <p class="hum-emp-card__note">
+        <lucide-icon name="lock" [size]="12" />{{
+          (revealed() ? 'humano.myProfile.governmentIdsHint' : 'humano.employee360.maskedNote') | translate
+        }}
+      </p>
+    </section>
+  </div>
+}

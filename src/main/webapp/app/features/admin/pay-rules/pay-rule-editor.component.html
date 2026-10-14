@@ -1,14 +1,14 @@
 <div class="hum-page">
   <hum-page-header [title]="'humano.payRules.title' | translate" [subtitle]="'humano.payRules.subtitle' | translate" hasActions>
-    @if (view() === 'rules') {
-      <hum-button hum-page-actions variant="primary" icon="plus" (click)="view.set('new')">{{
-        'humano.payRules.newRule' | translate
-      }}</hum-button>
-    } @else {
-      <hum-button hum-page-actions variant="ghost" icon="arrow-left" (click)="view.set('rules')">{{
-        'humano.payRules.backToRules' | translate
-      }}</hum-button>
-    }
+    <ng-container hum-page-actions>
+      @if (view() === 'rules') {
+        <hum-button variant="primary" icon="plus" (click)="view.set('new')">{{ 'humano.payRules.newRule' | translate }}</hum-button>
+      } @else {
+        <hum-button variant="ghost" icon="arrow-left" (click)="view.set('rules')">{{
+          'humano.payRules.backToRules' | translate
+        }}</hum-button>
+      }
+    </ng-container>
   </hum-page-header>
 
   @if (loading()) {
@@ -39,63 +39,72 @@
       </hum-alert>
     } @else {
       @for (g of ruleGroups(); track g.kind) {
-        <h3 class="hum-section-title" style="margin-top: var(--space-5)">{{ 'humano.payRules.kind.' + g.kind | translate }}</h3>
-        <div class="hum-rule-groups">
+        <section class="hum-rule-section">
+          <header class="hum-rule-section__head">
+            <span class="hum-rule-section__icon" [attr.data-kind]="g.kind"><lucide-icon [name]="kindIcon(g.kind)" [size]="16" /></span>
+            <h3 class="hum-rule-section__title">{{ 'humano.payRules.kind.' + g.kind | translate }}</h3>
+            <span class="hum-rule-section__count">{{ g.components.length }}</span>
+          </header>
           @for (item of g.components; track item.component.id) {
-            <section class="hum-rule-card">
-              <header class="hum-rule-card__head">
-                <div>
-                  <div class="hum-rule-card__name">{{ item.component.name }}</div>
-                  <div class="hum-rule-card__meta">
-                    <code>{{ item.component.code }}</code>
-                    @if (item.component.taxable) {
-                      <span>· {{ 'humano.payRules.taxable' | translate }}</span>
-                    }
-                    @if (item.component.contributesToSocial) {
-                      <span>· {{ 'humano.payRules.social' | translate }}</span>
-                    }
-                  </div>
+            <div class="hum-rule-row">
+              <div class="hum-rule-row__component">
+                <div class="hum-rule-card__name">{{ item.component.name }}</div>
+                <div class="hum-rule-card__meta">
+                  <code>{{ item.component.code }}</code>
+                  @if (item.component.taxable) {
+                    <span class="hum-rule-tag">{{ 'humano.payRules.taxable' | translate }}</span>
+                  }
+                  @if (item.component.contributesToSocial) {
+                    <span class="hum-rule-tag">{{ 'humano.payRules.social' | translate }}</span>
+                  }
                 </div>
+              </div>
+              <div class="hum-rule-row__rules">
+                @for (r of item.rules; track r.id) {
+                  <div class="hum-rule" [class.is-inactive]="!r.active">
+                    <div class="hum-rule__body">
+                      <code class="hum-rule__formula">{{ r.formula }}</code>
+                      @if (r.description) {
+                        <span class="hum-rule__desc">{{ r.description }}</span>
+                      }
+                      <span class="hum-rule__meta">
+                        <lucide-icon name="calendar" [size]="12" />
+                        {{
+                          'humano.payRules.effectiveRange'
+                            | translate: { from: r.effectiveFrom ?? '—', to: r.effectiveTo ?? ('humano.payRules.noEnd' | translate) }
+                        }}
+                        @if (r.priority !== null) {
+                          · {{ 'humano.payRules.priorityBadge' | translate: { value: r.priority } }}
+                        }
+                      </span>
+                    </div>
+                    <span class="hum-rule__status">
+                      <hum-badge
+                        [tone]="r.active ? 'success' : 'neutral'"
+                        [label]="(r.active ? 'humano.payRules.active' : 'humano.payRules.inactive') | translate"
+                      />
+                      <hum-switch
+                        [checked]="r.active"
+                        [disabled]="togglingId() !== null"
+                        [ariaLabel]="(r.active ? 'humano.payRules.disableRule' : 'humano.payRules.enableRule') | translate"
+                        (checkedChange)="toggleActive(r, $event)"
+                      />
+                    </span>
+                  </div>
+                } @empty {
+                  <p class="hum-rule-row__engine">
+                    <lucide-icon name="cpu" [size]="14" />{{ 'humano.payRules.engine.' + item.component.code | translate }}
+                  </p>
+                }
+              </div>
+              <div class="hum-rule-row__action">
                 <hum-button variant="ghost" size="sm" icon="plus" (click)="addRuleFor(item.component.id)">{{
                   'humano.payRules.addRule' | translate
                 }}</hum-button>
-              </header>
-              @for (r of item.rules; track r.id) {
-                <div class="hum-rule" [class.is-inactive]="!r.active">
-                  <div class="hum-rule__body">
-                    <code class="hum-rule__formula">{{ r.formula }}</code>
-                    @if (r.description) {
-                      <span class="hum-rule__desc">{{ r.description }}</span>
-                    }
-                    <span class="hum-rule__meta">
-                      {{
-                        'humano.payRules.effectiveRange'
-                          | translate: { from: r.effectiveFrom ?? '—', to: r.effectiveTo ?? ('humano.payRules.noEnd' | translate) }
-                      }}
-                      @if (r.priority !== null) {
-                        · {{ 'humano.payRules.priorityBadge' | translate: { value: r.priority } }}
-                      }
-                    </span>
-                  </div>
-                  <span class="hum-rule__status">
-                    <hum-badge
-                      [tone]="r.active ? 'success' : 'neutral'"
-                      [label]="(r.active ? 'humano.payRules.active' : 'humano.payRules.inactive') | translate"
-                    />
-                    <hum-switch
-                      [checked]="r.active"
-                      [disabled]="togglingId() !== null"
-                      [ariaLabel]="(r.active ? 'humano.payRules.disableRule' : 'humano.payRules.enableRule') | translate"
-                      (checkedChange)="toggleActive(r, $event)"
-                    />
-                  </span>
-                </div>
-              } @empty {
-                <p class="hum-rule-card__empty">{{ 'humano.payRules.noRulesComputed' | translate }}</p>
-              }
-            </section>
+              </div>
+            </div>
           }
-        </div>
+        </section>
       }
     }
   } @else {

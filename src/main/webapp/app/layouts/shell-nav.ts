@@ -61,7 +61,7 @@ export const SHELL_NAV: ShellNavGroup[] = [
   },
   {
     headingKey: 'humano.nav.groups.people',
-    permissions: [Permission.READ_EMPLOYEE, Permission.VIEW_ORGANIZATIONAL_UNITS, Permission.VIEW_POSITIONS, Permission.VIEW_DEPARTMENTS],
+    // No group gate: the people and organization trees are open to everyone; other items gate themselves.
     items: [
       {
         id: 'employees',
@@ -77,7 +77,6 @@ export const SHELL_NAV: ShellNavGroup[] = [
         icon: 'git-fork',
         link: '/people-tree',
         keywords: 'reporting hierarchy managers org chart subordinates',
-        permissions: [Permission.READ_EMPLOYEE],
       },
       {
         id: 'org',
@@ -101,7 +100,6 @@ export const SHELL_NAV: ShellNavGroup[] = [
         icon: 'list-tree',
         link: '/organization-tree',
         keywords: 'org chart units departments sectors hierarchy structure',
-        permissions: [Permission.VIEW_ORGANIZATIONAL_UNITS],
       },
       {
         id: 'positions',

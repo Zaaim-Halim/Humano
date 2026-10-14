@@ -1,0 +1,148 @@
+@if (requests() === null) {
+  <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+} @else if (error(); as e) {
+  <hum-alert tone="danger" [title]="e"
+    ><hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+  >
+} @else if (requests()!.length) {
+  <div class="hum-insights">
+    <div class="hum-insights__kpis">
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="palmtree" [size]="14" />{{ 'humano.insights.leave.taken' | translate }}</div>
+        <div class="hum-kpi__value">{{ 'humano.insights.leave.days' | translate: { count: stats().taken } }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.insights.leave.thisYear' | translate }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="thermometer" [size]="14" />{{ 'humano.insights.leave.sick' | translate }}</div>
+        <div class="hum-kpi__value">{{ 'humano.insights.leave.days' | translate: { count: stats().sick } }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.insights.leave.thisYear' | translate }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label">
+          <lucide-icon name="calendar-clock" [size]="14" />{{ 'humano.insights.leave.upcoming' | translate }}
+        </div>
+        <div class="hum-kpi__value">{{ 'humano.insights.leave.days' | translate: { count: stats().upcomingDays } }}</div>
+        <div class="hum-kpi__hint">
+          @if (stats().nextStart; as next) {
+            {{ 'humano.insights.leave.nextFrom' | translate: { date: (next | date: 'mediumDate') } }}
+          } @else {
+            {{ 'humano.insights.leave.nothingPlanned' | translate }}
+          }
+        </div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="hourglass" [size]="14" />{{ 'humano.insights.leave.pending' | translate }}</div>
+        <div class="hum-kpi__value">{{ stats().pending }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.insights.leave.awaiting' | translate }}</div>
+      </div>
+    </div>
+
+    <!-- Calendar heatmap -->
+    <section class="hum-card hum-insights__card">
+      <header class="hum-insights__head">
+        <span class="hum-records__icon"><lucide-icon name="calendar-days" [size]="16" /></span>
+        <h3>{{ 'humano.insights.leave.calendar' | translate }}</h3>
+        <span class="hum-records__spacer"></span>
+        @for (t of ['VACATION', 'SICK', 'MATERNITY', 'UNPAID']; track t) {
+          <span class="hum-legend"><i [style.background]="typeColor(t)"></i>{{ 'humano.leave.type.' + t | translate }}</span>
+        }
+        <span class="hum-legend"><i class="is-pending"></i>{{ 'humano.leave.status.PENDING' | translate }}</span>
+      </header>
+      <div class="hum-leavecal" role="img" [attr.aria-label]="'humano.insights.leave.calendar' | translate">
+        <div class="hum-leavecal__days" aria-hidden="true">
+          <span></span><span>{{ 'humano.insights.leave.mon' | translate }}</span
+          ><span></span><span>{{ 'humano.insights.leave.wed' | translate }}</span
+          ><span></span><span>{{ 'humano.insights.leave.fri' | translate }}</span>
+        </div>
+        <div class="hum-leavecal__weeks">
+          @for (w of calendar(); track $index) {
+            <div class="hum-leavecal__week">
+              <span class="hum-leavecal__month">{{ w.month }}</span>
+              @for (c of w.cells; track c.date) {
+                <span
+                  class="hum-leavecal__cell"
+                  [class.is-today]="c.today"
+                  [class.is-future]="c.future"
+                  [class.is-pending]="c.pending"
+                  [style.--cell-color]="c.type ? typeColor(c.type) : null"
+                  [class.is-off]="!!c.type"
+                  [title]="c.title + (c.type ? ' — ' + ('humano.leave.type.' + c.type | translate) : '')"
+                ></span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+      @if (byType().length) {
+        <div class="hum-typebars">
+          @for (t of byType(); track t.type) {
+            <div class="hum-typebars__row">
+              <span class="hum-typebars__label"
+                ><lucide-icon [name]="typeIcon(t.type)" [size]="14" [style.color]="typeColor(t.type)" />{{
+                  'humano.leave.type.' + t.type | translate
+                }}</span
+              >
+              <span class="hum-typebars__track"><span [style.width.%]="t.pct" [style.background]="typeColor(t.type)"></span></span>
+              <span class="hum-typebars__value">{{ 'humano.insights.leave.days' | translate: { count: t.days } }}</span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- Requests -->
+    <section class="hum-card hum-insights__card">
+      <header class="hum-insights__head">
+        <span class="hum-records__icon"><lucide-icon name="list" [size]="16" /></span>
+        <h3>{{ 'humano.insights.leave.requests' | translate }}</h3>
+        <span class="hum-records__count">{{ requests()!.length }}</span>
+      </header>
+      <ul class="hum-leavelist">
+        @for (r of requests(); track r.id) {
+          <li class="hum-leavelist__item" [class.is-muted]="r.status === 'REJECTED' || r.status === 'CANCELED'">
+            <span
+              class="hum-leavelist__icon"
+              [style.color]="typeColor(r.leaveType)"
+              [style.background]="'color-mix(in srgb, ' + typeColor(r.leaveType) + ' 14%, transparent)'"
+            >
+              <lucide-icon [name]="typeIcon(r.leaveType)" [size]="16" />
+            </span>
+            <div class="hum-leavelist__body">
+              <div class="hum-record__title">
+                <span>{{ 'humano.leave.type.' + r.leaveType | translate }}</span>
+                <hum-badge [status]="r.status" />
+                @if (isOngoing(r)) {
+                  <hum-badge tone="info" [label]="'humano.insights.leave.ongoing' | translate" />
+                } @else if (isUpcoming(r) && r.status === 'APPROVED') {
+                  <hum-badge tone="brand" [label]="'humano.insights.leave.upcomingBadge' | translate" />
+                }
+              </div>
+              <div class="hum-record__subtitle">
+                {{ r.startDate | date: 'mediumDate' }}
+                @if (r.endDate !== r.startDate) {
+                  – {{ r.endDate | date: 'mediumDate' }}
+                }
+                · {{ 'humano.insights.leave.days' | translate: { count: r.daysCount ?? 0 } }}
+              </div>
+              @if (r.reason) {
+                <p class="hum-leavelist__reason">{{ r.reason }}</p>
+              }
+              @if (r.approverName || r.approverComments) {
+                <div class="hum-record__facts">
+                  @if (r.approverName) {
+                    <span><lucide-icon name="user-check" [size]="12" />{{ r.approverName }}</span>
+                  }
+                  @if (r.approverComments) {
+                    <span><lucide-icon name="message-circle" [size]="12" />“{{ r.approverComments }}”</span>
+                  }
+                </div>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
+} @else {
+  <hum-empty-state icon="palmtree" [title]="'humano.employee360.noLeaves' | translate" />
+}

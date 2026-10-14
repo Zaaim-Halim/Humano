@@ -57,3 +57,20 @@ export interface LeaveRequestSearchRequest {
   createdDateFrom?: string;
   createdDateTo?: string;
 }
+
+/**
+ * `LeaveCalendarEntry` — one absence on the shared team calendar. No reason or approver;
+ * `leaveType` is null when the viewer may not see it (a colleague's leave, for non-HR).
+ */
+export interface LeaveCalendarEntry {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  imageUrl: string | null;
+  departmentName: string | null;
+  startDate: string;
+  endDate: string;
+  daysCount: number | null;
+  status: LeaveStatus;
+  leaveType: LeaveType | null;
+}

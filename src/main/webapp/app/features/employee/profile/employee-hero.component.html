@@ -1,0 +1,64 @@
+@if (employee(); as emp) {
+  <header class="hum-emp-hero">
+    <div class="hum-emp-hero__banner"></div>
+    <div class="hum-emp-hero__body">
+      <div class="hum-emp-hero__photo">
+        <hum-avatar [name]="fullName(emp)" [src]="emp.imageUrl" size="xl" />
+        @if (canChangePhoto()) {
+          <label class="hum-emp-hero__camera" [class.is-busy]="photoBusy()" [title]="'humano.employee360.changePhoto' | translate">
+            <lucide-icon [name]="photoBusy() ? 'loader-circle' : 'camera'" [size]="14" [class.hum-spin]="photoBusy()" />
+            <span class="sr-only">{{ 'humano.employee360.changePhoto' | translate }}</span>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              class="sr-only"
+              [disabled]="photoBusy()"
+              (change)="onPhotoSelected($event)"
+            />
+          </label>
+          @if (emp.imageUrl) {
+            <button type="button" class="hum-emp-hero__remove" [disabled]="photoBusy()" (click)="removePhoto()">
+              {{ 'humano.employee360.removePhoto' | translate }}
+            </button>
+          }
+        }
+      </div>
+      <div class="hum-emp-hero__id">
+        <div class="hum-emp-hero__name-row">
+          <h1 class="hum-emp-hero__name">{{ fullName(emp) }}</h1>
+          <hum-badge [status]="emp.status" />
+        </div>
+        <div class="hum-emp-hero__title">{{ emp.jobTitle ?? emp.positionName ?? '—' }}</div>
+        <ul class="hum-emp-facts">
+          @if (emp.departmentName) {
+            <li><lucide-icon name="layers" [size]="14" />{{ emp.departmentName }}</li>
+          }
+          @if (emp.personalDetails.workLocation) {
+            <li>
+              <lucide-icon name="map-pin" [size]="14" />{{ 'humano.directory.location.' + emp.personalDetails.workLocation | translate }}
+            </li>
+          }
+          @if (emp.email) {
+            <li>
+              <lucide-icon name="mail" [size]="14" /><a [href]="'mailto:' + emp.email">{{ emp.email }}</a>
+            </li>
+          }
+          @if (emp.phone) {
+            <li>
+              <lucide-icon name="phone" [size]="14" /><a [href]="'tel:' + emp.phone">{{ emp.phone }}</a>
+            </li>
+          }
+          @if (emp.personalDetails.employeeNumber) {
+            <li><lucide-icon name="hash" [size]="14" />{{ emp.personalDetails.employeeNumber }}</li>
+          }
+          @if (emp.startDate) {
+            <li>
+              <lucide-icon name="calendar" [size]="14" />{{ 'humano.employee360.withUsFor' | translate: { tenure: since(emp.startDate) } }}
+            </li>
+          }
+        </ul>
+      </div>
+      <div class="hum-emp-hero__actions"><ng-content /></div>
+    </div>
+  </header>
+}
