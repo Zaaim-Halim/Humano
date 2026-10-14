@@ -3,34 +3,118 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { ApplicationConfigService } from 'app/core/config/application-config.service';
+import { Page } from 'app/core/api';
+import { createRequestOption } from 'app/core/request/request-util';
 
 import { Invoice } from '../models/invoice.model';
-import { Subscription } from '../models/subscription.model';
+import { Coupon, CreateCouponRequest, FeatureRequest, PlanComparison, PlanFeatureCell, PlanFeatureDef } from '../models/platform.model';
+import { CreateSubscriptionPlanRequest, SubscriptionPlan, UpdateSubscriptionPlanRequest } from '../models/subscription-plan.model';
+import { Subscription, UpdateSubscriptionRequest } from '../models/subscription.model';
 
 /**
- * Platform/superadmin billing — `/api/platform/billing` (`@RequireAdmin`). These
- * are cross-tenant reads with no tenant-ownership check, so they power the
- * superadmin per-tenant billing drill-in from Tenant Management.
- *
- * Only the by-tenant reads are exposed here (the surface that consumes them).
- * Per-tenant *payment* detail is intentionally absent: the tenant-scoped
- * `/api/billing/payments/by-invoice/{id}` enforces `verifyTenantOwnership`, so a
- * superadmin viewing another tenant's invoice is denied; the only cross-tenant
- * payments endpoint (`/payments`) is unfiltered. Invoices already carry a
- * `paymentCount`, which the drill-in surfaces instead.
+ * Platform (SaaS owner) billing — `/api/platform/billing`. Cross-customer reads (subscriptions,
+ * invoices, coupons) and every billing write: plans, coupons, subscription changes, invoice
+ * status. These records are shared by all customers, so only the platform realm can change them;
+ * customers only read their own billing on `/api/billing/**`.
  */
 @Injectable({ providedIn: 'root' })
 export class PlatformBillingService {
   private readonly http = inject(HttpClient);
-  private readonly resourceUrl = inject(ApplicationConfigService).getEndpointFor('api/platform/billing');
+  private readonly config = inject(ApplicationConfigService);
+  private readonly url = this.config.getEndpointFor('api/platform/billing');
 
-  /** `GET /api/platform/billing/subscriptions/by-tenant/{tenantId}` — the tenant's current subscription. */
-  subscriptionByTenant(tenantId: string): Observable<Subscription> {
-    return this.http.get<Subscription>(`${this.resourceUrl}/subscriptions/by-tenant/${encodeURIComponent(tenantId)}`);
+  // ---- Reads
+  subscriptions(size = 1000): Observable<Page<Subscription>> {
+    return this.http.get<Page<Subscription>>(`${this.url}/subscriptions`, { params: createRequestOption({ size }) });
   }
 
-  /** `GET /api/platform/billing/invoices/by-tenant/{tenantId}` — the tenant's invoices (unpaged). */
+  subscriptionByTenant(tenantId: string): Observable<Subscription> {
+    return this.http.get<Subscription>(`${this.url}/subscriptions/by-tenant/${encodeURIComponent(tenantId)}`);
+  }
+
+  invoices(size = 1000): Observable<Page<Invoice>> {
+    return this.http.get<Page<Invoice>>(`${this.url}/invoices`, { params: createRequestOption({ size, sort: 'issueDate,desc' }) });
+  }
+
   invoicesByTenant(tenantId: string): Observable<Invoice[]> {
-    return this.http.get<Invoice[]>(`${this.resourceUrl}/invoices/by-tenant/${encodeURIComponent(tenantId)}`);
+    return this.http.get<Invoice[]>(`${this.url}/invoices/by-tenant/${encodeURIComponent(tenantId)}`);
+  }
+
+  coupons(size = 200): Observable<Page<Coupon>> {
+    return this.http.get<Page<Coupon>>(`${this.url}/coupons`, { params: createRequestOption({ size }) });
+  }
+
+  // ---- Plans
+  createPlan(body: CreateSubscriptionPlanRequest): Observable<SubscriptionPlan> {
+    return this.http.post<SubscriptionPlan>(`${this.url}/plans`, body);
+  }
+
+  updatePlan(id: string, body: UpdateSubscriptionPlanRequest): Observable<SubscriptionPlan> {
+    return this.http.put<SubscriptionPlan>(`${this.url}/plans/${encodeURIComponent(id)}`, body);
+  }
+
+  setPlanActive(id: string, active: boolean): Observable<SubscriptionPlan> {
+    return this.http.post<SubscriptionPlan>(`${this.url}/plans/${encodeURIComponent(id)}/${active ? 'activate' : 'deactivate'}`, {});
+  }
+
+  // ---- Plan features
+  /** `GET /api/billing/plans/comparison` (readable by any signed-in user). */
+  comparison(): Observable<PlanComparison> {
+    return this.http.get<PlanComparison>(this.config.getEndpointFor('api/billing/plans/comparison'));
+  }
+
+  createFeature(body: FeatureRequest): Observable<PlanFeatureDef> {
+    return this.http.post<PlanFeatureDef>(`${this.url}/features`, body);
+  }
+
+  updateFeature(id: string, body: FeatureRequest): Observable<PlanFeatureDef> {
+    return this.http.put<PlanFeatureDef>(`${this.url}/features/${encodeURIComponent(id)}`, body);
+  }
+
+  deleteFeature(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.url}/features/${encodeURIComponent(id)}`);
+  }
+
+  /** Replaces what a plan includes. */
+  setPlanFeatures(planId: string, items: PlanFeatureCell[]): Observable<void> {
+    return this.http.put<void>(`${this.url}/plans/${encodeURIComponent(planId)}/features`, items);
+  }
+
+  // ---- Coupons
+  createCoupon(body: CreateCouponRequest): Observable<Coupon> {
+    return this.http.post<Coupon>(`${this.url}/coupons`, body);
+  }
+
+  deactivateCoupon(id: string): Observable<Coupon> {
+    return this.http.post<Coupon>(`${this.url}/coupons/${encodeURIComponent(id)}/deactivate`, {});
+  }
+
+  deleteCoupon(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.url}/coupons/${encodeURIComponent(id)}`);
+  }
+
+  // ---- Subscriptions
+  updateSubscription(id: string, body: UpdateSubscriptionRequest): Observable<Subscription> {
+    return this.http.put<Subscription>(`${this.url}/subscriptions/${encodeURIComponent(id)}`, body);
+  }
+
+  cancelSubscription(id: string, immediate: boolean): Observable<Subscription> {
+    return this.http.post<Subscription>(`${this.url}/subscriptions/${encodeURIComponent(id)}/cancel`, null, {
+      params: createRequestOption({ immediate }),
+    });
+  }
+
+  // ---- Invoices
+  markInvoicePaid(id: string): Observable<Invoice> {
+    return this.http.post<Invoice>(`${this.url}/invoices/${encodeURIComponent(id)}/pay`, {});
+  }
+
+  markInvoiceOverdue(id: string): Observable<Invoice> {
+    return this.http.post<Invoice>(`${this.url}/invoices/${encodeURIComponent(id)}/mark-overdue`, {});
+  }
+
+  /** Unpaid invoices only; kept on record as CANCELLED. */
+  voidInvoice(id: string): Observable<Invoice> {
+    return this.http.post<Invoice>(`${this.url}/invoices/${encodeURIComponent(id)}/void`, {});
   }
 }

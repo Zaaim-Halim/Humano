@@ -32,8 +32,9 @@ public interface TenantRepository extends JpaRepository<Tenant, UUID>, JpaSpecif
     /**
      * Projection-only query for tenant fan-out tasks. Returns just the subdomain
      * strings so a 10k-tenant fleet doesn't pull full {@link Tenant} entities
-     * (with logo, address, billing fields) into memory just to iterate.
+     * (with logo, address, billing fields) into memory just to iterate. Tenants without a
+     * database (deprovisioned, or never provisioned) have nothing to run against and are skipped.
      */
-    @Query("SELECT t.subdomain FROM Tenant t WHERE t.status = :status ORDER BY t.subdomain")
+    @Query("SELECT t.subdomain FROM Tenant t WHERE t.status = :status AND t.databaseConfig IS NOT NULL ORDER BY t.subdomain")
     List<String> findSubdomainsByStatus(@Param("status") TenantStatus status);
 }

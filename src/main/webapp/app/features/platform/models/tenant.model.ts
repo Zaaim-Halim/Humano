@@ -12,6 +12,10 @@ export interface Tenant extends AuditFields {
   /** IANA/Java TimeZone id. */
   timezone: string | null;
   status: TenantStatus;
+  /** Where provisioning got to (COMPLETED once the workspace is ready). */
+  provisioningStep: string | null;
+  /** ISO 3166 alpha-2. */
+  country: string | null;
   bookingPolicies: string | null;
   hrPolicies: string | null;
   subscriptionPlanId: string | null;

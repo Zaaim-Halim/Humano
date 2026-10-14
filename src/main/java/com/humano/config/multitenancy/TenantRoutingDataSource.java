@@ -29,6 +29,13 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
             return (DataSource) getResolvedDefaultDataSource();
         }
 
+        // Statically configured targets (the platform tenant, `default`) are not rows in the
+        // master tenant table, so they must not go through the provider's tenant lookup.
+        DataSource configured = getResolvedDataSources().get(tenantId);
+        if (configured != null) {
+            return configured;
+        }
+
         // Dynamically get or create tenant data source
         // This handles databases on same or different servers
         if (tenantDataSourceProvider != null) {

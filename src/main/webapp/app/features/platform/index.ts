@@ -17,16 +17,18 @@ export type { UpdateCurrentTenantRequest } from './models/current-tenant.model';
 
 // Billing
 export { InvoiceService } from './services/invoice.service';
-export type { Invoice, CreateInvoiceRequest } from './models/invoice.model';
+export type { Invoice } from './models/invoice.model';
 
 export { SubscriptionPlanService } from './services/subscription-plan.service';
 export type { SubscriptionPlan, CreateSubscriptionPlanRequest, UpdateSubscriptionPlanRequest } from './models/subscription-plan.model';
 
 export { SubscriptionService } from './services/subscription.service';
-export type { Subscription, CreateSubscriptionRequest, UpdateSubscriptionRequest } from './models/subscription.model';
+export type { Subscription, UpdateSubscriptionRequest } from './models/subscription.model';
 
 // Self-service billing
 export { MeBillingService } from './services/me-billing.service';
 
-// Platform/superadmin cross-tenant billing (per-tenant drill-in)
+// Owner console: cross-customer billing (reads + all billing writes), KPIs and team
 export { PlatformBillingService } from './services/platform-billing.service';
+export { PlatformConsoleService } from './services/platform-console.service';
+export * from './models/platform.model';

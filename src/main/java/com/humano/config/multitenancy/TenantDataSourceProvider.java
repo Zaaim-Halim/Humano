@@ -7,6 +7,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import jakarta.annotation.PreDestroy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.sql.DataSource;
@@ -124,6 +125,16 @@ public class TenantDataSourceProvider {
             LOG.info("Evicting DataSource for tenant: {}", tenantId);
             dataSource.close();
         }
+    }
+
+    /**
+     * Closes every tenant pool when the application context stops. Without this each restart (a
+     * devtools reload in development, a redeploy) left the previous pools' connections open until
+     * the database ran out of connections.
+     */
+    @PreDestroy
+    public void closeAll() {
+        tenantDataSources.keySet().forEach(this::evictDataSource);
     }
 
     /**

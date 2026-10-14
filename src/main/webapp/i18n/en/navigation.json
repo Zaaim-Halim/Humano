@@ -6,8 +6,7 @@
         "people": "People",
         "timeLeave": "Time & Leave",
         "payroll": "Payroll",
-        "settings": "Settings",
-        "platform": "Platform"
+        "settings": "Settings"
       },
       "dashboard": "Dashboard",
       "portal": "My space",
@@ -24,8 +23,6 @@
       "payslips": "Payslips",
       "approvals": "Approvals",
       "settings": "Workspace",
-      "tenants": "Tenants",
-      "billing": "Billing",
       "myDocuments": "My documents"
     },
     "shell": {

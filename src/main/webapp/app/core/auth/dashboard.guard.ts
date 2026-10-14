@@ -14,7 +14,10 @@ import { AccountService } from './account.service';
 export const dashboardGuard: CanActivateFn = () => {
   const account = inject(AccountService);
   const router = inject(Router);
-  return account
-    .identity()
-    .pipe(map(a => (!a || a.permissions?.includes(Permission.READ_EMPLOYEE) ? true : router.createUrlTree(['/me']))));
+  return account.identity().pipe(
+    map(a => {
+      if (a && account.isPlatformUser()) return router.createUrlTree(['/platform']);
+      return !a || a.permissions?.includes(Permission.READ_EMPLOYEE) ? true : router.createUrlTree(['/me']);
+    }),
+  );
 };

@@ -146,7 +146,7 @@ public class TenantInitializationService {
     /**
      * Backfill the role/permission catalog for an <em>already-provisioned</em> tenant, plus —
      * for the platform tenant only — grant {@link AuthoritiesConstants#PLATFORM_OWNER} to
-     * existing platform admins. Idempotent and <strong>additive only</strong> (never removes a
+     * existing platform admins. Idempotent and, for business tenants, <strong>additive only</strong> (never removes a
      * role/permission/grant), so it is safe to run on every boot.
      * <p>
      * Why this exists: tenants provisioned before the catalog/seeder unification hold only the
@@ -154,6 +154,7 @@ public class TenantInitializationService {
      * against an empty catalog and the new platform gates would 403 the platform admin. Run
      * after the tenant's schema migration so the {@code authority}/{@code permission} tables
      * exist (see {@code StartupTenantMigrator}).
+     * The platform tenant is the exception: business roles not held by anyone are pruned there.
      */
     public void backfillRolesAndPermissions(Tenant tenant) {
         String previousTenant = TenantContext.getCurrentTenant();
@@ -166,6 +167,9 @@ public class TenantInitializationService {
                 // any access decision on its own.
                 Map<String, Authority> roles = seedAuthorities(rolePermissions.keySet());
                 seedPermissions(rolePermissions, roles);
+                if (isPlatformTenant(tenant)) {
+                    pruneBusinessCatalog(rolePermissions);
+                }
 
                 // (2) The sharp edge — a user-authority grant — strictly bounded to the platform
                 // tenant. If the platformTenant property were ever misconfigured to a business
@@ -193,6 +197,18 @@ public class TenantInitializationService {
                 TenantContext.clear();
             }
         }
+    }
+
+    /**
+     * Backfill the platform tenant's catalog (business + platform roles). The platform tenant is a
+     * statically configured database, not a row in the master tenant table, so the per-tenant
+     * startup loop never reaches it; without this its role catalog stays empty and no one can hold
+     * a platform permission. Idempotent.
+     */
+    public void backfillPlatformTenant() {
+        Tenant platform = new Tenant();
+        platform.setSubdomain(multiTenantProperties.getPlatformTenant());
+        backfillRolesAndPermissions(platform);
     }
 
     /**
@@ -227,11 +243,37 @@ public class TenantInitializationService {
      * ({@link PlatformRolePermissions}) when this is the platform tenant.
      */
     private Map<String, Set<String>> effectiveRolePermissions(Tenant tenant) {
-        Map<String, Set<String>> mapping = new LinkedHashMap<>(DefaultRolePermissions.rolePermissions());
         if (isPlatformTenant(tenant)) {
-            mapping.putAll(PlatformRolePermissions.rolePermissions());
+            // The SaaS owner realm has no HR workspace: only the platform roles, plus a bare base
+            // role (no business permissions) for every signed-in account.
+            Map<String, Set<String>> mapping = new LinkedHashMap<>(PlatformRolePermissions.rolePermissions());
+            mapping.put(AuthoritiesConstants.USER, Set.of());
+            return mapping;
         }
-        return mapping;
+        return new LinkedHashMap<>(DefaultRolePermissions.rolePermissions());
+    }
+
+    /**
+     * Platform tenant only: drop business (HR) roles and permissions seeded there by earlier
+     * versions, so no platform account can ever hold a tenant-workspace permission. Roles still
+     * held by a user are kept (and logged) rather than silently revoked.
+     */
+    private void pruneBusinessCatalog(Map<String, Set<String>> rolePermissions) {
+        Set<String> held = new LinkedHashSet<>();
+        userRepository.findAll().forEach(u -> u.getAuthorities().forEach(a -> held.add(a.getName())));
+        for (Authority role : authorityRepository.findAll()) {
+            Set<String> allowed = rolePermissions.get(role.getName());
+            if (allowed == null) {
+                if (held.contains(role.getName())) {
+                    LOG.warn("Platform tenant: business role '{}' is still held by a user; not removed", role.getName());
+                    continue;
+                }
+                role.getPermissions().clear();
+                authorityRepository.delete(role);
+            } else if (role.getPermissions().removeIf(p -> !allowed.contains(p.getName()))) {
+                authorityRepository.save(role);
+            }
+        }
     }
 
     private boolean isPlatformTenant(Tenant tenant) {

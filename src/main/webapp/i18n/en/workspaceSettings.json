@@ -23,6 +23,10 @@
         "access": {
           "title": "Users & access",
           "hint": "Accounts, roles, permissions"
+        },
+        "billing": {
+          "title": "Plan & billing",
+          "hint": "Your subscription and invoices"
         }
       },
       "company": {
@@ -137,6 +141,19 @@
         "pageOf": "Page {{ page }} of {{ pages }}",
         "prev": "Previous page",
         "next": "Next page"
+      },
+      "billing": {
+        "planTitle": "Your plan",
+        "planHint": "Your Humano subscription. To change plan or payment details, contact Humano support.",
+        "perMonth": "per month",
+        "perYear": "per year",
+        "renews": "Renews {{ date }}",
+        "trialEnds": "Trial ends {{ date }}",
+        "noSubscription": "No subscription yet.",
+        "invoicesTitle": "Invoices",
+        "invoicesHint": "What Humano has billed your company.",
+        "due": "{{ amount }} due",
+        "noInvoices": "No invoices yet."
       }
     }
   }

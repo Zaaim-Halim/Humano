@@ -639,52 +639,10 @@ public final class PermissionsConstants {
     // ==================== BILLING PERMISSIONS ====================
 
     /**
-     * Permission to create invoices.
-     * <p>Typically granted to: {@link AuthoritiesConstants#BILLING_ADMIN}, {@link AuthoritiesConstants#BILLING_SPECIALIST}</p>
-     */
-    public static final String CREATE_INVOICE = "CREATE_INVOICE";
-
-    /**
      * Permission to view invoices.
      * <p>Typically granted to: {@link AuthoritiesConstants#BILLING_ADMIN}, {@link AuthoritiesConstants#BILLING_SPECIALIST}, {@link AuthoritiesConstants#FINANCE_MANAGER}</p>
      */
     public static final String VIEW_INVOICE = "VIEW_INVOICE";
-
-    /**
-     * Permission to update invoices.
-     * <p>Typically granted to: {@link AuthoritiesConstants#BILLING_ADMIN}, {@link AuthoritiesConstants#BILLING_SPECIALIST}</p>
-     */
-    public static final String UPDATE_INVOICE = "UPDATE_INVOICE";
-
-    /**
-     * Permission to delete or void invoices.
-     * <p>Typically granted to: {@link AuthoritiesConstants#BILLING_ADMIN}</p>
-     */
-    public static final String DELETE_INVOICE = "DELETE_INVOICE";
-
-    /**
-     * Permission to manage subscription plans.
-     * <p>Typically granted to: {@link AuthoritiesConstants#BILLING_ADMIN}</p>
-     */
-    public static final String MANAGE_SUBSCRIPTION_PLANS = "MANAGE_SUBSCRIPTION_PLANS";
-
-    /**
-     * Permission to manage features for subscription tiers.
-     * <p>Typically granted to: {@link AuthoritiesConstants#BILLING_ADMIN}</p>
-     */
-    public static final String MANAGE_FEATURES = "MANAGE_FEATURES";
-
-    /**
-     * Permission to manage coupons and discounts.
-     * <p>Typically granted to: {@link AuthoritiesConstants#BILLING_ADMIN}, {@link AuthoritiesConstants#BILLING_SPECIALIST}</p>
-     */
-    public static final String MANAGE_COUPONS = "MANAGE_COUPONS";
-
-    /**
-     * Permission to process payments.
-     * <p>Typically granted to: {@link AuthoritiesConstants#BILLING_SPECIALIST}, {@link AuthoritiesConstants#BILLING_ADMIN}</p>
-     */
-    public static final String PROCESS_PAYMENTS = "PROCESS_PAYMENTS";
 
     /**
      * Permission to manage subscriptions.
@@ -945,6 +903,12 @@ public final class PermissionsConstants {
      * <p>Typically granted to: {@link AuthoritiesConstants#PLATFORM_OWNER}, {@link AuthoritiesConstants#PLATFORM_ADMIN}</p>
      */
     public static final String VIEW_PLATFORM_METRICS = "VIEW_PLATFORM_METRICS";
+
+    /**
+     * Permission to invite, re-role, deactivate and remove the platform's own staff accounts.
+     * <p>Typically granted to: {@link AuthoritiesConstants#PLATFORM_OWNER}</p>
+     */
+    public static final String MANAGE_PLATFORM_USERS = "MANAGE_PLATFORM_USERS";
 
     private PermissionsConstants() {}
 }

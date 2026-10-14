@@ -32,7 +32,8 @@ public final class PlatformRolePermissions {
                 PermissionsConstants.VIEW_PLATFORM_BILLING,
                 PermissionsConstants.MANAGE_PLATFORM_BILLING,
                 PermissionsConstants.IMPERSONATE_TENANT,
-                PermissionsConstants.VIEW_PLATFORM_METRICS
+                PermissionsConstants.VIEW_PLATFORM_METRICS,
+                PermissionsConstants.MANAGE_PLATFORM_USERS
             )
         );
 

@@ -29,7 +29,8 @@ export class CurrentEmployeeService {
 
   private readonly http = inject(HttpClient);
   private readonly config = inject(ApplicationConfigService);
-  private readonly account = inject(AccountService).trackCurrentAccount();
+  private readonly accountService = inject(AccountService);
+  private readonly account = this.accountService.trackCurrentAccount();
   private inFlight = false;
   /** Login the cached id belongs to, so a second user in the same tab can't inherit it. */
   private resolvedFor: string | null = null;
@@ -56,6 +57,11 @@ export class CurrentEmployeeService {
    */
   resolve(force = false): void {
     if (this.inFlight || (this.resolved() && !force)) return;
+    if (this.accountService.isPlatformUser()) {
+      // Platform (SaaS owner) accounts are never employees.
+      this.resolved.set(true);
+      return;
+    }
     this.inFlight = true;
     this.http.get<EmployeeProfile>(this.config.getEndpointFor('api/me/employee')).subscribe({
       next: employee => {

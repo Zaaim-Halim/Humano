@@ -31,7 +31,7 @@ import { AccountManagementService, Session } from './account-management.service'
 
 type Tab = 'profile' | 'security' | 'preferences';
 
-/** Minimum password length for new passwords (stricter than the server floor of 4). */
+/** Minimum password length (the server's `Constants.PASSWORD_MIN_LENGTH`). */
 const PASSWORD_MIN = 8;
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
@@ -116,6 +116,8 @@ export default class AccountComponent {
   protected readonly theme = inject(ThemeService);
 
   protected readonly account = this.accountService.trackCurrentAccount();
+  /** Platform (console) accounts have no employee profile. */
+  protected readonly isPlatform = computed(() => !!this.account() && this.accountService.isPlatformUser());
   protected readonly roleLabel = humanizeCode;
   protected readonly passwordMin = PASSWORD_MIN;
 
@@ -200,7 +202,9 @@ export default class AccountComponent {
   protected setTab(id: string | undefined): void {
     if (id === 'profile' || id === 'security' || id === 'preferences') {
       this.tab.set(id);
-      history.replaceState(history.state, '', `/account/${id}`);
+      // Same page under the console (`/platform/account/…`) and the workspace (`/account/…`).
+      const base = location.pathname.startsWith('/platform/') ? '/platform/account' : '/account';
+      history.replaceState(history.state, '', `${base}/${id}`);
     }
   }
 

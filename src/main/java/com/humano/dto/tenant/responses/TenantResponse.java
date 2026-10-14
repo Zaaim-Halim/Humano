@@ -1,5 +1,7 @@
 package com.humano.dto.tenant.responses;
 
+import com.humano.domain.enumeration.CountryCode;
+import com.humano.domain.enumeration.tenant.ProvisioningStep;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import java.time.Instant;
 import java.util.TimeZone;
@@ -16,6 +18,8 @@ public record TenantResponse(
     String logo,
     TimeZone timezone,
     TenantStatus status,
+    ProvisioningStep provisioningStep,
+    CountryCode country,
     String bookingPolicies,
     String hrPolicies,
     UUID subscriptionPlanId,

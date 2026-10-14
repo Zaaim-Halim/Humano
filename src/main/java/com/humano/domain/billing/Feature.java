@@ -1,5 +1,6 @@
 package com.humano.domain.billing;
 
+import com.humano.domain.enumeration.billing.FeatureLimitType;
 import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -21,10 +22,14 @@ import org.hibernate.annotations.UuidGenerator;
  *   <li><b>code</b>: Unique programmatic identifier used for feature detection in code.</li>
  *   <li><b>category</b>: Grouping category for UI organization (e.g., "HR", "Payroll", "Reporting").</li>
  *   <li><b>active</b>: Whether this feature is currently available for inclusion in plans.</li>
+ *   <li><b>limitType</b>: {@code BOOLEAN} (a plan has it or not) or {@code QUANTITY} (a plan sets a
+ *   limit, e.g. 25 employees; no limit = unlimited).</li>
+ *   <li><b>unit</b>: What a quantity counts (e.g. "employees", "GB").</li>
+ *   <li><b>sortOrder</b>: Display order within its category.</li>
  * </ul>
  * <p>
- * Features are associated with subscription plans to define what capabilities are included
- * in each plan tier, controlling tenant access to system functionality.
+ * This is the catalog of what can be offered; {@link PlanFeature} says what each plan includes and
+ * at which limit, which is what explains the price differences between plans.
  */
 @Entity
 @Table(name = "billing_feature")
@@ -86,6 +91,41 @@ public class Feature extends AbstractAuditingEntity<UUID> {
     @Column(name = "active", nullable = false)
     @NotNull(message = "Active status is required")
     private boolean active = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "limit_type", nullable = false, length = 20)
+    private FeatureLimitType limitType = FeatureLimitType.BOOLEAN;
+
+    @Column(name = "unit", length = 50)
+    @Size(max = 50, message = "Unit cannot exceed 50 characters")
+    private String unit;
+
+    @Column(name = "sort_order", nullable = false)
+    private int sortOrder;
+
+    public FeatureLimitType getLimitType() {
+        return limitType;
+    }
+
+    public void setLimitType(FeatureLimitType limitType) {
+        this.limitType = limitType;
+    }
+
+    public String getUnit() {
+        return unit;
+    }
+
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
+    public int getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(int sortOrder) {
+        this.sortOrder = sortOrder;
+    }
 
     @Override
     public UUID getId() {

@@ -10,9 +10,8 @@ import { Permission } from 'app/config/permission.constants';
  * Labels are i18n keys (resolved by the consumer, since the design-system
  * components take already-translated strings) — see `i18n/en/navigation.json`.
  * Permission gating mirrors the backend `@RequirePermission` checks, so a hidden
- * item is also a forbidden endpoint. The platform group is gated on platform
- * permissions, which only exist in the platform tenant — so it no longer shows
- * to ordinary tenant admins.
+ * item is also a forbidden endpoint. Platform (SaaS owner) accounts never see this
+ * navigation: they have their own console (`features/platform/console`).
  */
 export interface ShellNavItem {
   id: string;
@@ -166,28 +165,6 @@ export const SHELL_NAV: ShellNavGroup[] = [
         link: '/settings',
         keywords: 'configuration preferences admin',
         permissions: [Permission.SYSTEM_CONFIGURATION],
-      },
-    ],
-  },
-  {
-    headingKey: 'humano.nav.groups.platform',
-    permissions: [Permission.VIEW_PLATFORM_TENANTS, Permission.VIEW_PLATFORM_BILLING],
-    items: [
-      {
-        id: 'tenants',
-        labelKey: 'humano.nav.tenants',
-        icon: 'building-2',
-        link: '/platform/tenants',
-        keywords: 'tenants superadmin platform',
-        permissions: [Permission.VIEW_PLATFORM_TENANTS],
-      },
-      {
-        id: 'billing',
-        labelKey: 'humano.nav.billing',
-        icon: 'credit-card',
-        link: '/platform/billing',
-        keywords: 'billing invoices subscription plan payment',
-        permissions: [Permission.VIEW_PLATFORM_BILLING],
       },
     ],
   },

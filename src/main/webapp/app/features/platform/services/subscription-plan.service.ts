@@ -7,9 +7,12 @@ import { ApplicationConfigService } from 'app/core/config/application-config.ser
 import { createRequestOption } from 'app/core/request/request-util';
 
 import { SubscriptionType } from '../models/enums/subscription-type.enum';
-import { CreateSubscriptionPlanRequest, SubscriptionPlan, UpdateSubscriptionPlanRequest } from '../models/subscription-plan.model';
+import { SubscriptionPlan } from '../models/subscription-plan.model';
 
-/** Subscription plans — `/api/billing/plans` (paged list, active/by-type lookups, CRUD, (de)activate). */
+/**
+ * Subscription plans (read-only) — `/api/billing/plans`. Plans are managed from the owner console
+ * (`PlatformBillingService`).
+ */
 @Injectable({ providedIn: 'root' })
 export class SubscriptionPlanService {
   private readonly http = inject(HttpClient);
@@ -33,25 +36,5 @@ export class SubscriptionPlanService {
   /** `GET /api/billing/plans/{id}`. */
   find(id: string): Observable<SubscriptionPlan> {
     return this.http.get<SubscriptionPlan>(`${this.resourceUrl}/${encodeURIComponent(id)}`);
-  }
-
-  /** `POST /api/billing/plans`. */
-  create(body: CreateSubscriptionPlanRequest): Observable<SubscriptionPlan> {
-    return this.http.post<SubscriptionPlan>(this.resourceUrl, body);
-  }
-
-  /** `PUT /api/billing/plans/{id}`. */
-  update(id: string, body: UpdateSubscriptionPlanRequest): Observable<SubscriptionPlan> {
-    return this.http.put<SubscriptionPlan>(`${this.resourceUrl}/${encodeURIComponent(id)}`, body);
-  }
-
-  /** `POST /api/billing/plans/{id}/activate`. */
-  activate(id: string): Observable<SubscriptionPlan> {
-    return this.http.post<SubscriptionPlan>(`${this.resourceUrl}/${encodeURIComponent(id)}/activate`, {});
-  }
-
-  /** `POST /api/billing/plans/{id}/deactivate`. */
-  deactivate(id: string): Observable<SubscriptionPlan> {
-    return this.http.post<SubscriptionPlan>(`${this.resourceUrl}/${encodeURIComponent(id)}/deactivate`, {});
   }
 }

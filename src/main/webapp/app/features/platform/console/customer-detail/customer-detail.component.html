@@ -1,0 +1,375 @@
+<div class="hum-page">
+  <div style="margin-bottom: var(--space-3)">
+    <hum-button variant="ghost" size="sm" icon="arrow-left" routerLink="/platform/customers">{{
+      'humano.console.customer.back' | translate
+    }}</hum-button>
+  </div>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (tenant(); as t) {
+    <!-- Identity -->
+    <header class="hum-con-hero">
+      <hum-avatar [name]="t.name" [src]="t.logo" size="xl" square />
+      <div class="hum-con-hero__text">
+        <h1>{{ t.name }}</h1>
+        <p class="hum-con-hero__meta">
+          <span><lucide-icon name="globe" [size]="14" />{{ t.subdomain }}</span>
+          @if (t.domain) {
+            <span><lucide-icon name="link" [size]="14" />{{ t.domain }}</span>
+          }
+          @if (t.country) {
+            <span><lucide-icon name="map-pin" [size]="14" />{{ countryName(t.country) }}</span>
+          }
+          @if (t.timezone) {
+            <span><lucide-icon name="clock" [size]="14" />{{ t.timezone }}</span>
+          }
+          <span
+            ><lucide-icon name="calendar" [size]="14" />{{
+              'humano.console.customer.since' | translate: { date: (t.createdDate | date: 'mediumDate') }
+            }}</span
+          >
+        </p>
+        <div class="hum-con-hero__badges">
+          <hum-badge [status]="t.status" />
+          @if (subscription(); as s) {
+            <hum-badge [status]="s.status" [dot]="false" />
+          }
+        </div>
+      </div>
+      @if (canSuspend() && (t.status === 'ACTIVE' || t.status === 'SUSPENDED')) {
+        <hum-button
+          [variant]="t.status === 'SUSPENDED' ? 'primary' : 'outline'"
+          [icon]="t.status === 'SUSPENDED' ? 'play' : 'pause'"
+          (click)="confirmSuspend.set(true)"
+          >{{
+            (t.status === 'SUSPENDED' ? 'humano.console.customer.reactivate' : 'humano.console.customer.suspend') | translate
+          }}</hum-button
+        >
+      }
+    </header>
+
+    @if (t.status === 'SUSPENDED') {
+      <hum-alert tone="warning" [title]="'humano.console.customer.suspendedTitle' | translate">{{
+        'humano.console.customer.suspendedBody' | translate
+      }}</hum-alert>
+    }
+
+    <!-- Money -->
+    <div class="hum-insights__kpis hum-dash-kpis" style="margin-top: var(--space-4)">
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="layers" [size]="14" />{{ 'humano.console.customer.plan' | translate }}</div>
+        <div class="hum-kpi__value">{{ subscription()?.subscriptionPlanName ?? t.subscriptionPlanName ?? '—' }}</div>
+        @if (subscription()?.billingCycle; as c) {
+          <div class="hum-kpi__hint">{{ 'humano.console.cycle.' + c | translate }}</div>
+        }
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="trending-up" [size]="14" />{{ 'humano.console.kpi.mrr' | translate }}</div>
+        <div class="hum-kpi__value">{{ mrr() | money: currency() }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.customer.arr' | translate: { amount: (mrr() * 12 | money: currency()) } }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="banknote" [size]="14" />{{ 'humano.console.customer.lifetime' | translate }}</div>
+        <div class="hum-kpi__value">{{ lifetime() | money: currency() }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.customer.invoicesN' | translate: { n: invoices().length } }}</div>
+      </div>
+      <div class="hum-kpi" [class.hum-kpi--warn]="openInvoices().length > 0">
+        <div class="hum-kpi__label"><lucide-icon name="receipt" [size]="14" />{{ 'humano.console.kpi.outstanding' | translate }}</div>
+        <div class="hum-kpi__value">{{ outstanding() | money: currency() }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.customer.openN' | translate: { n: openInvoices().length } }}</div>
+      </div>
+    </div>
+
+    <div class="hum-con-detail">
+      <!-- Subscription -->
+      <section class="hum-set-card">
+        <header class="hum-set-card__head-row">
+          <div>
+            <h3>{{ 'humano.console.customer.subscription' | translate }}</h3>
+            <p>{{ 'humano.console.customer.subscriptionHint' | translate }}</p>
+          </div>
+          @if (subscription() && canManageBilling() && subscription()!.status !== 'CANCELLED' && subscription()!.status !== 'EXPIRED') {
+            <div style="display: flex; gap: var(--space-2)">
+              <hum-button variant="secondary" size="sm" icon="repeat" (click)="openChangePlan()">{{
+                'humano.console.customer.changePlan' | translate
+              }}</hum-button>
+              <hum-button variant="ghost" size="sm" icon="circle-x" (click)="confirmCancel.set(true)">{{
+                'humano.console.customer.cancel' | translate
+              }}</hum-button>
+            </div>
+          }
+        </header>
+        @if (subscription(); as s) {
+          <dl class="hum-con-facts">
+            <div>
+              <dt>{{ 'humano.console.customer.status' | translate }}</dt>
+              <dd><hum-badge [status]="s.status" /></dd>
+            </div>
+            <div>
+              <dt>{{ 'humano.console.customer.started' | translate }}</dt>
+              <dd>{{ s.startDate | date: 'mediumDate' }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'humano.console.customer.period' | translate }}</dt>
+              <dd>{{ s.currentPeriodStart | date: 'mediumDate' }} – {{ s.currentPeriodEnd | date: 'mediumDate' }}</dd>
+            </div>
+            @if (s.trialEnd) {
+              <div>
+                <dt>{{ 'humano.console.customer.trialEnds' | translate }}</dt>
+                <dd>{{ s.trialEnd | date: 'mediumDate' }}</dd>
+              </div>
+            }
+            @if (s.endDate) {
+              <div>
+                <dt>{{ 'humano.console.customer.ended' | translate }}</dt>
+                <dd>{{ s.endDate | date: 'mediumDate' }}</dd>
+              </div>
+            }
+            <div>
+              <dt>{{ 'humano.console.customer.autoRenew' | translate }}</dt>
+              <dd>
+                {{ (s.autoRenew ? 'humano.console.yes' : 'humano.console.no') | translate }}
+                @if (s.cancelAtPeriodEnd) {
+                  · {{ 'humano.console.customer.endsAtPeriodEnd' | translate }}
+                }
+              </dd>
+            </div>
+          </dl>
+        } @else {
+          <p class="hum-insights__note">{{ 'humano.console.customer.noSubscription' | translate }}</p>
+        }
+      </section>
+
+      <!-- Workspace -->
+      <section class="hum-set-card">
+        <header>
+          <h3>{{ 'humano.console.customer.workspace' | translate }}</h3>
+          <p>{{ 'humano.console.customer.workspaceHint' | translate }}</p>
+        </header>
+        <dl class="hum-con-facts">
+          <div>
+            <dt>{{ 'humano.console.customer.provisioning' | translate }}</dt>
+            <dd>{{ t.provisioningStep ? ('humano.console.provisioning.' + t.provisioningStep | translate) : '—' }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'humano.console.customer.organizations' | translate }}</dt>
+            <dd class="tabular-nums">{{ t.organizationCount }}</dd>
+          </div>
+          @for (p of poolEntries(); track p[0]) {
+            <div>
+              <dt>{{ p[0] }}</dt>
+              <dd class="tabular-nums">{{ p[1] }}</dd>
+            </div>
+          }
+        </dl>
+        @if (!poolEntries().length) {
+          <p class="hum-kpi__hint">{{ 'humano.console.customer.noPool' | translate }}</p>
+        }
+      </section>
+    </div>
+
+    <!-- Invoices -->
+    <section class="hum-set-card" style="margin-top: var(--space-4)">
+      <header class="hum-set-card__head-row">
+        <div>
+          <h3>{{ 'humano.console.customer.invoices' | translate }}</h3>
+          <p>{{ 'humano.console.customer.invoicesHint' | translate }}</p>
+        </div>
+      </header>
+      @if (sortedInvoices().length) {
+        <div class="hum-con-table-wrap">
+          <table class="hum-con-table">
+            <thead>
+              <tr>
+                <th>{{ 'humano.console.invoices.number' | translate }}</th>
+                <th>{{ 'humano.console.invoices.issued' | translate }}</th>
+                <th>{{ 'humano.console.invoices.due' | translate }}</th>
+                <th class="is-num">{{ 'humano.console.invoices.total' | translate }}</th>
+                <th>{{ 'humano.console.invoices.status' | translate }}</th>
+                @if (canManageBilling()) {
+                  <th></th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (i of sortedInvoices(); track i.id) {
+                <tr>
+                  <td class="tabular-nums">{{ i.invoiceNumber }}</td>
+                  <td>{{ i.issueDate | date: 'mediumDate' }}</td>
+                  <td>{{ i.dueDate | date: 'mediumDate' }}</td>
+                  <td class="is-num tabular-nums">{{ i.totalAmount | money: currency() }}</td>
+                  <td>
+                    <hum-badge [status]="i.status" />
+                    @if (i.paidDate) {
+                      <span class="hum-kpi__hint"> {{ i.paidDate | date: 'mediumDate' }}</span>
+                    }
+                  </td>
+                  @if (canManageBilling()) {
+                    <td class="is-actions">
+                      @if (i.status === 'PENDING' || i.status === 'OVERDUE') {
+                        <hum-button variant="ghost" size="sm" icon="check" (click)="invoiceAction.set({ invoice: i, action: 'pay' })">{{
+                          'humano.console.invoices.markPaid' | translate
+                        }}</hum-button>
+                        @if (i.status === 'PENDING') {
+                          <hum-button
+                            variant="ghost"
+                            size="sm"
+                            icon="clock-alert"
+                            (click)="invoiceAction.set({ invoice: i, action: 'overdue' })"
+                            >{{ 'humano.console.invoices.markOverdue' | translate }}</hum-button
+                          >
+                        }
+                        <hum-button variant="ghost" size="sm" icon="ban" (click)="invoiceAction.set({ invoice: i, action: 'void' })">{{
+                          'humano.console.invoices.void' | translate
+                        }}</hum-button>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="hum-insights__note">{{ 'humano.console.customer.noInvoices' | translate }}</p>
+      }
+    </section>
+
+    <!-- Danger zone -->
+    @if (canDeprovision() && t.status !== 'DEACTIVATED' && t.status !== 'DELETED') {
+      <section class="hum-set-card hum-con-danger">
+        <header class="hum-set-card__head-row">
+          <div>
+            <h3>{{ 'humano.console.customer.dangerTitle' | translate }}</h3>
+            <p>{{ 'humano.console.customer.dangerBody' | translate }}</p>
+          </div>
+          <hum-button variant="destructive" icon="trash-2" (click)="confirmDeprovision.set(true)">{{
+            'humano.console.customer.deprovision' | translate
+          }}</hum-button>
+        </header>
+      </section>
+    }
+
+    <!-- Suspend / reactivate -->
+    <hum-dialog
+      [open]="confirmSuspend()"
+      [title]="
+        (t.status === 'SUSPENDED' ? 'humano.console.customer.reactivateTitle' : 'humano.console.customer.suspendTitle')
+          | translate: { name: t.name }
+      "
+      [description]="
+        (t.status === 'SUSPENDED' ? 'humano.console.customer.reactivateBody' : 'humano.console.customer.suspendBody') | translate
+      "
+      hasFooter
+      (closed)="confirmSuspend.set(false)"
+    >
+      <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="secondary" (click)="confirmSuspend.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+        <hum-button [variant]="t.status === 'SUSPENDED' ? 'primary' : 'destructive'" [loading]="busy()" (click)="toggleSuspension()">{{
+          (t.status === 'SUSPENDED' ? 'humano.console.customer.reactivate' : 'humano.console.customer.suspend') | translate
+        }}</hum-button>
+      </div>
+    </hum-dialog>
+
+    <!-- Deprovision -->
+    <hum-dialog
+      [open]="confirmDeprovision()"
+      [title]="'humano.console.customer.deprovisionTitle' | translate: { name: t.name }"
+      [description]="'humano.console.customer.deprovisionBody' | translate"
+      hasFooter
+      (closed)="confirmDeprovision.set(false)"
+    >
+      <hum-form-field [label]="'humano.console.customer.typeToConfirm' | translate: { value: t.subdomain }" controlId="deprov-confirm">
+        <hum-input
+          inputId="deprov-confirm"
+          [ngModel]="deprovisionText()"
+          (ngModelChange)="deprovisionText.set($event)"
+          [placeholder]="t.subdomain ?? ''"
+        />
+      </hum-form-field>
+      <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="secondary" (click)="confirmDeprovision.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+        <hum-button
+          variant="destructive"
+          [loading]="busy()"
+          [disabled]="deprovisionText().trim() !== t.subdomain"
+          (click)="deprovision()"
+          >{{ 'humano.console.customer.deprovision' | translate }}</hum-button
+        >
+      </div>
+    </hum-dialog>
+
+    <!-- Change plan -->
+    <hum-drawer
+      [open]="changePlanOpen()"
+      [title]="'humano.console.customer.changePlanTitle' | translate: { name: t.name }"
+      hasFooter
+      (closed)="changePlanOpen.set(false)"
+    >
+      <div style="display: grid; gap: var(--space-4)">
+        <hum-form-field [label]="'humano.console.customer.plan' | translate" controlId="cp-plan">
+          <hum-select [options]="planOptions()" [ngModel]="draftPlan()" (ngModelChange)="draftPlan.set($event)" />
+        </hum-form-field>
+        <hum-form-field
+          [label]="'humano.console.customer.cycle' | translate"
+          controlId="cp-cycle"
+          [hint]="'humano.console.customer.cycleHint' | translate"
+        >
+          <hum-select [options]="cycleOptions()" [ngModel]="draftCycle()" (ngModelChange)="draftCycle.set($event)" />
+        </hum-form-field>
+        <p class="hum-kpi__hint">{{ 'humano.console.customer.changePlanHint' | translate }}</p>
+      </div>
+      <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="secondary" (click)="changePlanOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+        <hum-button variant="primary" [loading]="busy()" (click)="savePlan()">{{ 'humano.action.save' | translate }}</hum-button>
+      </div>
+    </hum-drawer>
+
+    <!-- Cancel subscription -->
+    <hum-dialog
+      [open]="confirmCancel()"
+      [title]="'humano.console.customer.cancelTitle' | translate: { name: t.name }"
+      [description]="'humano.console.customer.cancelBody' | translate"
+      hasFooter
+      (closed)="confirmCancel.set(false)"
+    >
+      <div hum-dialog-footer style="display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="secondary" (click)="confirmCancel.set(false)">{{ 'humano.console.customer.keep' | translate }}</hum-button>
+        <hum-button variant="outline" [loading]="busy()" (click)="cancelSubscription(false)">{{
+          'humano.console.customer.cancelAtEnd' | translate
+        }}</hum-button>
+        <hum-button variant="destructive" [loading]="busy()" (click)="cancelSubscription(true)">{{
+          'humano.console.customer.cancelNow' | translate
+        }}</hum-button>
+      </div>
+    </hum-dialog>
+
+    <!-- Invoice action -->
+    <hum-dialog
+      [open]="invoiceAction() !== null"
+      [title]="
+        invoiceAction()
+          ? ('humano.console.invoices.confirm.' + invoiceAction()!.action | translate: { number: invoiceAction()!.invoice.invoiceNumber })
+          : ''
+      "
+      [description]="invoiceAction() ? ('humano.console.invoices.confirmBody.' + invoiceAction()!.action | translate) : ''"
+      hasFooter
+      (closed)="invoiceAction.set(null)"
+    >
+      <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="secondary" (click)="invoiceAction.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+        <hum-button
+          [variant]="invoiceAction()?.action === 'void' ? 'destructive' : 'primary'"
+          [loading]="busy()"
+          (click)="applyInvoiceAction()"
+          >{{ 'humano.console.invoices.confirmAction.' + (invoiceAction()?.action ?? 'pay') | translate }}</hum-button
+        >
+      </div>
+    </hum-dialog>
+  } @else {
+    <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+  }
+</div>

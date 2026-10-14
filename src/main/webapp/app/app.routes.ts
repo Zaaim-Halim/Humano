@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { Permission } from 'app/config/permission.constants';
 import { dashboardGuard } from 'app/core/auth/dashboard.guard';
+import { platformGuard, workspaceGuard } from 'app/core/auth/platform.guard';
 import { UserRouteAccessService } from 'app/core/auth/user-route-access.service';
 
 const placeholder = () => import('./layouts/placeholder-page.component');
@@ -64,9 +65,42 @@ const routes: Routes = [
     ],
   },
   {
+    // The SaaS owner console: its own shell, only for platform accounts.
+    path: 'platform',
+    loadComponent: () => import('./features/platform/console/platform-shell.component'),
+    canActivate: [UserRouteAccessService, platformGuard],
+    children: [
+      {
+        path: '',
+        title: 'humano.console.nav.overview',
+        loadComponent: () => import('./features/platform/console/overview/overview.component'),
+      },
+      {
+        path: 'customers',
+        title: 'humano.console.nav.customers',
+        loadComponent: () => import('./features/platform/console/customers/customers.component'),
+      },
+      {
+        path: 'customers/:id',
+        title: 'humano.console.nav.customers',
+        loadComponent: () => import('./features/platform/console/customer-detail/customer-detail.component'),
+      },
+      { path: 'billing', pathMatch: 'full', redirectTo: 'billing/invoices' },
+      {
+        path: 'billing/:tab',
+        title: 'humano.console.nav.billing',
+        loadComponent: () => import('./features/platform/console/billing/console-billing.component'),
+      },
+      { path: 'team', title: 'humano.console.nav.team', loadComponent: () => import('./features/platform/console/team/team.component') },
+      { path: 'account', pathMatch: 'full', redirectTo: 'account/profile' },
+      { path: 'account/:section', title: 'humano.account.title', loadComponent: () => import('./account/account.component') },
+      { path: '**', redirectTo: '' },
+    ],
+  },
+  {
     path: '',
     loadComponent: () => import('./layouts/shell-layout.component'),
-    canActivate: [UserRouteAccessService],
+    canActivate: [UserRouteAccessService, workspaceGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       { path: 'accessdenied', title: 'error.title', loadComponent: () => import('./layouts/access-denied.component') },
@@ -248,20 +282,6 @@ const routes: Routes = [
         loadComponent: () => import('./features/admin/settings/settings.component'),
         canActivate: [UserRouteAccessService],
         data: { permissions: [Permission.CONFIGURE_TENANT_SETTINGS] },
-      },
-      {
-        path: 'platform/tenants',
-        title: 'humano.nav.tenants',
-        loadComponent: () => import('./features/platform/tenant-management/tenant-management.component'),
-        canActivate: [UserRouteAccessService],
-        data: { permissions: [Permission.VIEW_PLATFORM_TENANTS] },
-      },
-      {
-        path: 'platform/billing',
-        title: 'humano.nav.billing',
-        loadComponent: () => import('./features/platform/billing/billing.component'),
-        canActivate: [UserRouteAccessService],
-        data: { permissions: [Permission.VIEW_PLATFORM_BILLING] },
       },
       { path: '**', title: 'error.notFound.title', loadComponent: () => import('./layouts/not-found.component') },
     ],

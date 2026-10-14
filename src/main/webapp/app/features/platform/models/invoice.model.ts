@@ -12,21 +12,11 @@ export interface Invoice extends AuditFields {
   amount: number;
   taxAmount: number | null;
   totalAmount: number;
+  /** ISO 4217 code of every amount on the invoice. */
+  currency: string;
   status: InvoiceStatus;
   issueDate: string | null;
   dueDate: string | null;
   paidDate: string | null;
   paymentCount: number;
-}
-
-export interface CreateInvoiceRequest {
-  tenantId: string;
-  subscriptionId: string;
-  invoiceNumber: string;
-  amount: number;
-  taxAmount?: number;
-  /** ISO instant. */
-  dueDate: string;
-  /** Optional coupon code applied before tax. */
-  couponCode?: string;
 }

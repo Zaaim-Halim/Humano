@@ -1,0 +1,102 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.console.customers.title' | translate" [subtitle]="'humano.console.customers.subtitle' | translate" />
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (rows() === null) {
+    <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+  } @else {
+    <div class="hum-con-toolbar">
+      <div class="hum-con-chips" role="tablist">
+        @for (f of filters; track f) {
+          <button
+            type="button"
+            role="tab"
+            class="hum-con-chip"
+            [class.is-on]="filter() === f"
+            [attr.aria-selected]="filter() === f"
+            (click)="filter.set(f)"
+          >
+            {{ 'humano.console.customers.filter.' + f | translate }}
+            <span class="tabular-nums">{{ counts()[f] }}</span>
+          </button>
+        }
+      </div>
+      <span class="hum-records__spacer"></span>
+      <div style="width: 280px; max-width: 100%">
+        <hum-input
+          type="search"
+          icon="search"
+          [placeholder]="'humano.console.customers.search' | translate"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+        />
+      </div>
+    </div>
+
+    @if (visible().length) {
+      <hum-data-table
+        [columns]="columns()"
+        [rows]="visible()"
+        rowKey="id"
+        [clickableRows]="true"
+        [manualSort]="true"
+        [initialSort]="sort()"
+        (rowClick)="open($any($event))"
+        (sortChange)="sort.set($event)"
+      />
+      <div class="hum-pager">
+        <span class="tabular-nums">{{ 'humano.console.customers.footer' | translate: { n: visible().length } }}</span>
+        <span class="hum-records__spacer"></span>
+        <strong class="tabular-nums">{{
+          'humano.console.customers.footerMrr' | translate: { amount: (totalMrr() | money: currency()) }
+        }}</strong>
+      </div>
+    } @else {
+      <hum-empty-state icon="building-2" [title]="'humano.console.customers.empty' | translate" />
+    }
+  }
+</div>
+
+<ng-template #customerCell let-row>
+  <span class="hum-person">
+    <hum-avatar [name]="row.name" size="sm" square />
+    <span class="hum-person__text">
+      <span class="hum-person__name">{{ row.name }}</span>
+      <span class="hum-person__sub"
+        >{{ row.subdomain }}
+        @if (row.country) {
+          · {{ countryName(row.country) }}
+        }
+      </span>
+    </span>
+  </span>
+</ng-template>
+<ng-template #planCell let-row>
+  @if (row.plan) {
+    <span class="hum-person__text">
+      <span>{{ row.plan }}</span>
+      @if (row.cycle) {
+        <span class="hum-person__sub">{{ 'humano.console.cycle.' + row.cycle | translate }}</span>
+      }
+    </span>
+  } @else {
+    <span class="hum-kpi__hint">—</span>
+  }
+</ng-template>
+<ng-template #moneyCell let-row>
+  <span class="tabular-nums" [class.hum-kpi__hint]="!row.mrr">{{ row.mrr | money: currency() }}</span>
+</ng-template>
+<ng-template #subCell let-row>
+  @if (row.subscriptionStatus) {
+    <hum-badge [status]="row.subscriptionStatus" />
+  } @else {
+    <span class="hum-kpi__hint">—</span>
+  }
+</ng-template>
+<ng-template #statusCell let-row><hum-badge [status]="row.status" /></ng-template>
+<ng-template #dateCell let-row
+  ><span class="tabular-nums">{{ row.since | date: 'mediumDate' }}</span></ng-template
+>

@@ -34,5 +34,17 @@ X-Tenant-ID: demo
   - `payroll.admin@demo.humano` (ROLE_PAYROLL_ADMIN)
   - `finance.manager@demo.humano`, `manager@demo.humano`, `employee@demo.humano`, …
 
+### Platform owner console
+
+The SaaS owner signs in to the **platform** realm, not a company:
+
+- **Organization:** `default` (the `humano.multitenancy.platform-tenant` setting)
+- **Login:** `owner@humano.app` / `Passw0rd!` (`ROLE_PLATFORM_OWNER`)
+
+They land on the owner console (`/platform`): KPIs and reports, customers, invoices, plans, coupons
+and the platform team. `PlatformDemoSeeder` adds the plan catalog, a dozen _sample customers_
+(master-database rows only — no workspace database, so nobody can sign in to them) with a year of
+subscriptions and invoices, and a few coupons, so the console has realistic numbers.
+
 The full list of created logins is printed on startup as `[dev-seed] created …@demo.humano (role …)`
 lines, followed by a `DEV DEMO LOGINS` summary block.

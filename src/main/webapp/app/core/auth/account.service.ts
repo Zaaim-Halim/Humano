@@ -1,3 +1,4 @@
+import { PLATFORM_ROLES } from 'app/config/authority.constants';
 import { Injectable, Signal, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -35,6 +36,11 @@ export class AccountService {
 
   trackCurrentAccount(): Signal<Account | null> {
     return this.userIdentity.asReadonly();
+  }
+
+  /** Signed in to the platform (SaaS owner) console rather than a company workspace. */
+  isPlatformUser(): boolean {
+    return this.hasAnyAuthority(PLATFORM_ROLES);
   }
 
   hasAnyAuthority(authorities: string[] | string): boolean {

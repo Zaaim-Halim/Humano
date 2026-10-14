@@ -1,5 +1,6 @@
 package com.humano.dto.tenant.requests;
 
+import com.humano.config.Constants;
 import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.billing.PaymentMethodType;
 import jakarta.validation.constraints.*;
@@ -43,7 +44,11 @@ public record TenantOnboardingRequest(
     @NotBlank(message = "Admin email is required") @Email(message = "Admin email must be a valid email address") String adminEmail,
 
     @NotBlank(message = "Admin password is required")
-    @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
+    @Size(
+        min = Constants.PASSWORD_MIN_LENGTH,
+        max = Constants.PASSWORD_MAX_LENGTH,
+        message = "Password must be between 8 and 100 characters"
+    )
     String adminPassword,
 
     // ===== Subscription Information =====

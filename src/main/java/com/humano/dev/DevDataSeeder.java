@@ -1,5 +1,6 @@
 package com.humano.dev;
 
+import com.humano.config.multitenancy.MultiTenantProperties;
 import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.CountryCode;
@@ -14,6 +15,7 @@ import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.UserRepository;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.security.AuthoritiesConstants;
+import com.humano.service.multitenancy.TenantInitializationService;
 import com.humano.service.multitenancy.TenantProvisioningService;
 import java.math.BigDecimal;
 import java.util.LinkedHashSet;
@@ -69,6 +71,8 @@ public class DevDataSeeder implements ApplicationRunner {
 
     /** Shared password for every seeded demo login. Dev only. */
     static final String PASSWORD = "Passw0rd!";
+    /** The platform (SaaS owner) console login, in the platform tenant. */
+    static final String OWNER_LOGIN = "owner@humano.app";
 
     private static final String EMAIL_DOMAIN = "demo.humano";
 
@@ -82,6 +86,9 @@ public class DevDataSeeder implements ApplicationRunner {
     private final TransactionTemplate tenantTx;
     private final DemoDataSeeder demoDataSeeder;
     private final boolean seedDemoData;
+    private final TenantInitializationService initializationService;
+    private final PlatformDemoSeeder platformDemoSeeder;
+    private final MultiTenantProperties multiTenantProperties;
 
     public DevDataSeeder(
         TenantRepository tenantRepository,
@@ -93,9 +100,15 @@ public class DevDataSeeder implements ApplicationRunner {
         @Qualifier("masterTransactionManager") PlatformTransactionManager masterTransactionManager,
         @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager,
         DemoDataSeeder demoDataSeeder,
+        TenantInitializationService initializationService,
+        MultiTenantProperties multiTenantProperties,
+        PlatformDemoSeeder platformDemoSeeder,
         @Value("${humano.dev.seed.demo-data:true}") boolean seedDemoData
     ) {
         this.demoDataSeeder = demoDataSeeder;
+        this.initializationService = initializationService;
+        this.platformDemoSeeder = platformDemoSeeder;
+        this.multiTenantProperties = multiTenantProperties;
         this.seedDemoData = seedDemoData;
         this.tenantRepository = tenantRepository;
         this.provisioningService = provisioningService;
@@ -110,6 +123,11 @@ public class DevDataSeeder implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         try {
+            seedPlatformOwner();
+        } catch (Exception e) {
+            log.error("Platform owner seeding failed (non-fatal): {}", e.getMessage(), e);
+        }
+        try {
             Tenant tenant = ensureDemoTenant();
             if (tenant == null) {
                 return; // provisioning failed; already logged
@@ -117,6 +135,11 @@ public class DevDataSeeder implements ApplicationRunner {
             seedUsers(tenant);
             if (seedDemoData) {
                 seedDemoCompany(tenant);
+                try {
+                    platformDemoSeeder.seed(SUBDOMAIN);
+                } catch (Exception e) {
+                    log.error("Platform demo seeding failed (non-fatal): {}", e.getMessage(), e);
+                }
             }
             logCredentials();
         } catch (Exception e) {
@@ -234,6 +257,43 @@ public class DevDataSeeder implements ApplicationRunner {
     }
 
     /** Runs inside a per-user tenant transaction so the looked-up authorities are managed. */
+    /**
+     * The SaaS owner's console login ({@value #OWNER_LOGIN}, organization = the platform tenant):
+     * seeds the platform role catalog, then one {@code ROLE_PLATFORM_OWNER} user. Idempotent.
+     */
+    private void seedPlatformOwner() {
+        initializationService.backfillPlatformTenant();
+        String previous = TenantContext.getCurrentTenant();
+        TenantContext.setCurrentTenant(multiTenantProperties.getPlatformTenant());
+        try {
+            tenantTx.executeWithoutResult(status -> {
+                if (userRepository.findOneByLogin(OWNER_LOGIN).isPresent()) {
+                    return;
+                }
+                User owner = new User();
+                owner.setLogin(OWNER_LOGIN);
+                owner.setEmail(OWNER_LOGIN);
+                owner.setFirstName("Platform");
+                owner.setLastName("Owner");
+                owner.setPassword(passwordEncoder.encode(PASSWORD));
+                owner.setActivated(true);
+                owner.setLangKey("en");
+                Set<Authority> grants = new LinkedHashSet<>();
+                authorityRepository.findById(AuthoritiesConstants.PLATFORM_OWNER).ifPresent(grants::add);
+                authorityRepository.findById(AuthoritiesConstants.USER).ifPresent(grants::add);
+                owner.setAuthorities(grants);
+                userRepository.save(owner);
+                log.info(
+                    "[dev-seed] created platform owner {} (organization '{}')",
+                    OWNER_LOGIN,
+                    multiTenantProperties.getPlatformTenant()
+                );
+            });
+        } finally {
+            restoreTenant(previous);
+        }
+    }
+
     private void createUserForRole(String roleName) {
         String login = emailForRole(roleName);
         if (userRepository.findOneByLogin(login).isPresent()) {
@@ -266,6 +326,7 @@ public class DevDataSeeder implements ApplicationRunner {
             "  Password : {}   (same for every login below)\n" +
             "  Logins   : <role>@{}  e.g. admin@{}, hr.manager@{}, payroll.admin@{}\n" +
             "  (one login per role; see the [dev-seed] 'created …' lines above for the full list)\n" +
+            "  Platform : owner@humano.app  (organization: {}) — the SaaS owner console\n" +
             "==================================================================",
             SUBDOMAIN,
             SUBDOMAIN,
@@ -273,7 +334,8 @@ public class DevDataSeeder implements ApplicationRunner {
             EMAIL_DOMAIN,
             EMAIL_DOMAIN,
             EMAIL_DOMAIN,
-            EMAIL_DOMAIN
+            EMAIL_DOMAIN,
+            multiTenantProperties.getPlatformTenant()
         );
     }
 

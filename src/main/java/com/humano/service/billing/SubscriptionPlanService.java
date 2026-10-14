@@ -210,7 +210,7 @@ public class SubscriptionPlanService {
             subscriptionPlan.getDisplayName(),
             subscriptionPlan.isActive(),
             subscriptionPlan.getBasePrice(),
-            subscriptionPlan.getFeatures().size(),
+            (int) subscriptionPlan.getFeatures().stream().filter(f -> f.isIncluded()).count(),
             subscriptionPlan.getCreatedBy(),
             subscriptionPlan.getCreatedDate(),
             subscriptionPlan.getLastModifiedBy(),

@@ -22,16 +22,6 @@ export interface Subscription extends AuditFields {
   trialEnd: string | null;
 }
 
-export interface CreateSubscriptionRequest {
-  tenantId: string;
-  subscriptionPlanId: string;
-  billingCycle: BillingCycle;
-  autoRenew?: boolean;
-  /** ISO instant. */
-  trialEnd?: string;
-  couponCode?: string;
-}
-
 export interface UpdateSubscriptionRequest {
   subscriptionPlanId?: string;
   billingCycle?: BillingCycle;

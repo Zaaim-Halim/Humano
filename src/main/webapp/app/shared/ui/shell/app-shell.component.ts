@@ -16,6 +16,8 @@ export interface NavItem {
   badge?: string | number;
   /** Router link; when set the item renders as a routerLink with active state. */
   link?: string | unknown[];
+  /** Active only on this exact URL (for a section root such as an overview), not its children. */
+  exact?: boolean;
 }
 
 export interface NavGroup {
@@ -73,6 +75,7 @@ export interface ShellTenant {
                   class="hum-side__item"
                   [routerLink]="it.link"
                   routerLinkActive
+                  [routerLinkActiveOptions]="{ exact: !!it.exact }"
                   #rla="routerLinkActive"
                   [attr.aria-current]="rla.isActive ? 'page' : null"
                 >

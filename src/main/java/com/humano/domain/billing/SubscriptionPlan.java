@@ -25,7 +25,7 @@ import org.hibernate.annotations.UuidGenerator;
  *   <li><b>displayName</b>: Human-readable name for the plan used in the UI and marketing.</li>
  *   <li><b>active</b>: Whether this plan is currently available for new subscriptions.</li>
  *   <li><b>basePrice</b>: Optional refined base price that may replace the standard price.</li>
- *   <li><b>features</b>: Set of features included in this plan.</li>
+ *   <li><b>features</b>: What the plan includes from the feature catalog, with limits.</li>
  * </ul>
  * <p>
  * Subscription plans serve as templates for creating subscriptions when tenants sign up,
@@ -97,9 +97,8 @@ public class SubscriptionPlan extends AbstractAuditingEntity<UUID> {
      * Defines the capabilities and modules available to subscribers of this plan.
      * Features determine what functionality tenants can access in the HR and payroll system.
      */
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "subscription_plan_id")
-    private Set<Feature> features = new HashSet<>();
+    @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<PlanFeature> features = new HashSet<>();
 
     @Override
     public UUID getId() {
@@ -175,27 +174,13 @@ public class SubscriptionPlan extends AbstractAuditingEntity<UUID> {
         this.basePrice = basePrice;
     }
 
-    public Set<Feature> getFeatures() {
+    /** What this plan includes, one entry per catalog feature. */
+    public Set<PlanFeature> getFeatures() {
         return features;
     }
 
-    public SubscriptionPlan features(Set<Feature> features) {
+    public void setFeatures(Set<PlanFeature> features) {
         this.features = features;
-        return this;
-    }
-
-    public void setFeatures(Set<Feature> features) {
-        this.features = features;
-    }
-
-    public SubscriptionPlan addFeature(Feature feature) {
-        this.features.add(feature);
-        return this;
-    }
-
-    public SubscriptionPlan removeFeature(Feature feature) {
-        this.features.remove(feature);
-        return this;
     }
 
     @Override

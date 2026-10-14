@@ -10,6 +10,7 @@ import com.humano.repository.billing.InvoiceRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.errors.EntityNotFoundException;
+import com.humano.web.rest.errors.BadRequestAlertException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -175,6 +176,10 @@ public class InvoiceService {
         return invoiceRepository
             .findById(id)
             .map(invoice -> {
+                if (invoice.getStatus() == InvoiceStatus.PAID) {
+                    return mapToResponse(invoice); // idempotent
+                }
+                requireOpen(invoice, "mark as paid");
                 invoice.setStatus(InvoiceStatus.PAID);
                 invoice.setPaidDate(Instant.now());
                 return mapToResponse(invoiceRepository.save(invoice));
@@ -195,6 +200,7 @@ public class InvoiceService {
         return invoiceRepository
             .findById(id)
             .map(invoice -> {
+                requireOpen(invoice, "mark as overdue");
                 invoice.setStatus(InvoiceStatus.OVERDUE);
                 return mapToResponse(invoiceRepository.save(invoice));
             })
@@ -202,19 +208,30 @@ public class InvoiceService {
     }
 
     /**
-     * Delete an invoice by ID.
+     * Void an unpaid invoice: it is no longer owed but stays on record as {@code CANCELLED}.
+     * Paid invoices are never voided or deleted — refund the payment instead.
      *
-     * @param id the ID of the invoice to delete
+     * @param id the ID of the invoice to void
+     * @return the voided invoice
      */
     @Transactional
-    public void deleteInvoice(UUID id) {
-        log.debug("Request to delete Invoice: {}", id);
+    public InvoiceResponse voidInvoice(UUID id) {
+        log.debug("Request to void Invoice: {}", id);
+        Invoice invoice = invoiceRepository.findById(id).orElseThrow(() -> EntityNotFoundException.create("Invoice", id));
+        requireOpen(invoice, "void");
+        invoice.setStatus(InvoiceStatus.CANCELLED);
+        return mapToResponse(invoiceRepository.save(invoice));
+    }
 
-        if (!invoiceRepository.existsById(id)) {
-            throw EntityNotFoundException.create("Invoice", id);
+    /** Only an open invoice (pending or overdue) can change state. */
+    private static void requireOpen(Invoice invoice, String action) {
+        if (invoice.getStatus() != InvoiceStatus.PENDING && invoice.getStatus() != InvoiceStatus.OVERDUE) {
+            throw new BadRequestAlertException(
+                "Cannot " + action + " an invoice that is " + invoice.getStatus().name().toLowerCase(),
+                "invoice",
+                "invoicenotopen"
+            );
         }
-        invoiceRepository.deleteById(id);
-        log.info("Deleted invoice with ID: {}", id);
     }
 
     private InvoiceResponse mapToResponse(Invoice invoice) {
@@ -227,6 +244,7 @@ public class InvoiceService {
             invoice.getAmount(),
             invoice.getTaxAmount(),
             invoice.getTotalAmount(),
+            invoice.getCurrency(),
             invoice.getStatus(),
             invoice.getIssueDate(),
             invoice.getDueDate(),

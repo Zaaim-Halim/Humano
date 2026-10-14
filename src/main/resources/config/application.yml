@@ -257,6 +257,8 @@ humano:
   # STRIPE_SECRET_KEY (sk_live_... or sk_test_...) and STRIPE_WEBHOOK_SECRET
   # (whsec_...) — the webhook endpoint refuses requests when the latter is empty.
   billing:
+    # Currency the platform bills customers in (plan prices, invoices, MRR on the owner console).
+    currency: ${BILLING_CURRENCY:USD}
     stripe:
       secret-key: ${STRIPE_SECRET_KEY:}
       webhook-secret: ${STRIPE_WEBHOOK_SECRET:}

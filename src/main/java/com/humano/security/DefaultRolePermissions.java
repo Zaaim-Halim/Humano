@@ -320,20 +320,17 @@ public final class DefaultRolePermissions {
         grant(PermissionsConstants.MANAGE_COST_CENTERS, AuthoritiesConstants.FINANCE_MANAGER);
 
         // ---- Billing ----
-        grant(PermissionsConstants.CREATE_INVOICE, AuthoritiesConstants.BILLING_ADMIN, AuthoritiesConstants.BILLING_SPECIALIST);
+        // A customer only sees its own subscription, invoices and payments, and may cancel its
+        // subscription or retry a failed payment. Plans, coupons, features, invoicing and payment
+        // processing are shared across all customers and belong to the platform realm
+        // (PlatformRolePermissions / MANAGE_PLATFORM_BILLING) — never grant them here.
         grant(
             PermissionsConstants.VIEW_INVOICE,
             AuthoritiesConstants.BILLING_ADMIN,
             AuthoritiesConstants.BILLING_SPECIALIST,
             AuthoritiesConstants.FINANCE_MANAGER
         );
-        grant(PermissionsConstants.UPDATE_INVOICE, AuthoritiesConstants.BILLING_ADMIN, AuthoritiesConstants.BILLING_SPECIALIST);
-        grant(PermissionsConstants.DELETE_INVOICE, AuthoritiesConstants.BILLING_ADMIN);
-        grant(PermissionsConstants.MANAGE_SUBSCRIPTION_PLANS, AuthoritiesConstants.BILLING_ADMIN);
-        grant(PermissionsConstants.MANAGE_FEATURES, AuthoritiesConstants.BILLING_ADMIN);
-        grant(PermissionsConstants.MANAGE_COUPONS, AuthoritiesConstants.BILLING_ADMIN, AuthoritiesConstants.BILLING_SPECIALIST);
-        grant(PermissionsConstants.PROCESS_PAYMENTS, AuthoritiesConstants.BILLING_SPECIALIST, AuthoritiesConstants.BILLING_ADMIN);
-        grant(PermissionsConstants.MANAGE_SUBSCRIPTIONS, AuthoritiesConstants.BILLING_ADMIN, AuthoritiesConstants.BILLING_SPECIALIST);
+        grant(PermissionsConstants.MANAGE_SUBSCRIPTIONS, AuthoritiesConstants.BILLING_ADMIN);
 
         // ---- Tenant management (within a tenant) ----
         grant(PermissionsConstants.CREATE_TENANT, AuthoritiesConstants.TENANT_ADMIN);

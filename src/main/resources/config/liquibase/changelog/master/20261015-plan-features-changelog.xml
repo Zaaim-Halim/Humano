@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!--
+        Plan features become a catalog (billing_feature: what can be offered — name, category, kind,
+        unit, display order) plus what each plan includes (billing_plan_feature: included or not, a
+        limit such as 25 employees, an optional note such as "Email & chat"). A feature used to belong
+        to a single plan, which could not express the same feature at different limits per plan; the
+        table was empty, so the old link column is simply dropped.
+    -->
+    <changeSet id="20261015-plan-features-catalog" author="halimzaaim">
+        <dropForeignKeyConstraint baseTableName="billing_feature" constraintName="FK_BILLING_FEATURE_ON_SUBSCRIPTION_PLAN"/>
+        <dropColumn tableName="billing_feature" columnName="subscription_plan_id"/>
+        <addColumn tableName="billing_feature">
+            <column name="limit_type" type="VARCHAR(20)" defaultValue="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit" type="VARCHAR(50)"/>
+            <column name="sort_order" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="20261015-plan-features-matrix" author="halimzaaim">
+        <createTable tableName="billing_plan_feature">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_billing_plan_feature"/>
+            </column>
+            <column name="subscription_plan_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="feature_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="included" type="${booleanType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="limit_value" type="INT"/>
+            <column name="note" type="VARCHAR(100)"/>
+        </createTable>
+        <addUniqueConstraint tableName="billing_plan_feature" columnNames="subscription_plan_id, feature_id" constraintName="uc_billing_plan_feature"/>
+        <addForeignKeyConstraint baseTableName="billing_plan_feature" baseColumnNames="subscription_plan_id" constraintName="fk_plan_feature_plan"
+                                 referencedTableName="billing_subscription_plan" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="billing_plan_feature" baseColumnNames="feature_id" constraintName="fk_plan_feature_feature"
+                                 referencedTableName="billing_feature" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

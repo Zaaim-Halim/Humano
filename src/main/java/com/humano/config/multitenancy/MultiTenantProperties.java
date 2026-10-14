@@ -170,6 +170,31 @@ public class MultiTenantProperties {
         this.prepStmtCacheSqlLimit = prepStmtCacheSqlLimit;
     }
 
+    /** Names no company may register: the platform realm, the master database and infrastructure hosts. */
+    private static final java.util.Set<String> RESERVED_SUBDOMAINS = java.util.Set.of(
+        "master",
+        "default",
+        "platform",
+        "console",
+        "admin",
+        "api",
+        "app",
+        "www",
+        "mail",
+        "status",
+        "support"
+    );
+
+    /**
+     * Whether a company may not use this subdomain — it would collide with the platform tenant (whose
+     * database would then be treated as a customer's) or with infrastructure names.
+     */
+    public boolean isReservedSubdomain(String subdomain) {
+        if (subdomain == null) return false;
+        String s = subdomain.trim().toLowerCase(java.util.Locale.ROOT);
+        return RESERVED_SUBDOMAINS.contains(s) || s.equalsIgnoreCase(getPlatformTenant());
+    }
+
     public String getPlatformTenant() {
         return platformTenant;
     }

@@ -8,11 +8,12 @@ import { AccountService } from 'app/core/auth/account.service';
 import { PageHeaderComponent } from 'app/shared/ui';
 
 import { AccessSettingsComponent } from './sections/access-settings.component';
+import { BillingSettingsComponent } from './sections/billing-settings.component';
 import { CompanySettingsComponent } from './sections/company-settings.component';
 import { ListsSettingsComponent } from './sections/lists-settings.component';
 import { PayrollSettingsComponent } from './sections/payroll-settings.component';
 
-type SectionId = 'company' | 'payroll' | 'lists' | 'access';
+type SectionId = 'company' | 'payroll' | 'lists' | 'access' | 'billing';
 
 interface Section {
   id: SectionId;
@@ -26,6 +27,7 @@ const SECTIONS: Section[] = [
   { id: 'payroll', icon: 'wallet' },
   { id: 'lists', icon: 'list' },
   { id: 'access', icon: 'shield-check', adminOnly: true },
+  { id: 'billing', icon: 'credit-card', adminOnly: true },
 ];
 
 /**
@@ -51,6 +53,7 @@ const SECTIONS: Section[] = [
     PayrollSettingsComponent,
     ListsSettingsComponent,
     AccessSettingsComponent,
+    BillingSettingsComponent,
   ],
   templateUrl: './settings.component.html',
 })

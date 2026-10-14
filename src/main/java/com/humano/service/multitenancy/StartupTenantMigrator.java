@@ -50,6 +50,11 @@ public class StartupTenantMigrator {
 
     @EventListener(ApplicationReadyEvent.class)
     public void migrateAllActiveTenants() {
+        try {
+            initializationService.backfillPlatformTenant();
+        } catch (Exception e) {
+            LOG.error("Role/permission backfill failed for the platform tenant", e);
+        }
         List<Tenant> tenants = tenantRepository.findByStatus(TenantStatus.ACTIVE);
         if (tenants.isEmpty()) {
             LOG.info("Startup tenant migration: no ACTIVE tenants to migrate");

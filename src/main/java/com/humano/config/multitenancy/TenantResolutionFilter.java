@@ -31,10 +31,12 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
 
     private final TenantResolver tenantResolver;
     private final MultiTenantProperties properties;
+    private final TenantAccessGuard accessGuard;
 
-    public TenantResolutionFilter(TenantResolver tenantResolver, MultiTenantProperties properties) {
+    public TenantResolutionFilter(TenantResolver tenantResolver, MultiTenantProperties properties, TenantAccessGuard accessGuard) {
         this.tenantResolver = tenantResolver;
         this.properties = properties;
+        this.accessGuard = accessGuard;
     }
 
     @Override
@@ -84,6 +86,24 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                     "Missing tenant: provide X-Tenant-ID header or use a tenant subdomain"
                 );
                 return;
+            }
+
+            // A suspended / deactivated customer is locked out, signed-in sessions included.
+            if (
+                !isPlatform &&
+                !TenantContext.MASTER.equals(tenantId) &&
+                path.startsWith("/api/") &&
+                !tenantId.equals(properties.getPlatformTenant())
+            ) {
+                var locked = accessGuard.lockedStatus(tenantId);
+                if (locked != null) {
+                    writeError(
+                        response,
+                        HttpServletResponse.SC_FORBIDDEN,
+                        "This workspace is " + locked.name().toLowerCase() + ". Contact support."
+                    );
+                    return;
+                }
             }
 
             // Pin sessions to the tenant they authenticated against. If a previously

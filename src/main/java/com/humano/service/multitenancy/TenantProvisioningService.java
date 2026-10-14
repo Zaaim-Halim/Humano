@@ -1,6 +1,7 @@
 package com.humano.service.multitenancy;
 
 import com.humano.config.multitenancy.MultiTenantProperties;
+import com.humano.config.multitenancy.TenantAccessGuard;
 import com.humano.config.multitenancy.TenantPasswordCipher;
 import com.humano.domain.enumeration.tenant.ProvisioningStep;
 import com.humano.domain.enumeration.tenant.TenantStatus;
@@ -36,6 +37,7 @@ public class TenantProvisioningService {
     private static final Logger LOG = LoggerFactory.getLogger(TenantProvisioningService.class);
 
     private final TenantRepository tenantRepository;
+    private final TenantAccessGuard accessGuard;
     private final TenantDatabaseConfigRepository databaseConfigRepository;
     private final TenantDatabaseManager databaseManager;
     private final TenantMigrationService migrationService;
@@ -54,8 +56,10 @@ public class TenantProvisioningService {
         DatabaseServerSelector serverSelector,
         MultiTenantProperties properties,
         TenantPasswordCipher passwordCipher,
-        @Qualifier("masterTransactionManager") PlatformTransactionManager masterTransactionManager
+        @Qualifier("masterTransactionManager") PlatformTransactionManager masterTransactionManager,
+        TenantAccessGuard accessGuard
     ) {
+        this.accessGuard = accessGuard;
         this.tenantRepository = tenantRepository;
         this.databaseConfigRepository = databaseConfigRepository;
         this.databaseManager = databaseManager;
@@ -93,6 +97,9 @@ public class TenantProvisioningService {
      */
     public Tenant provisionTenant(TenantRegistrationDTO registrationDTO) {
         String subdomain = registrationDTO.getSubdomain().toLowerCase();
+        if (properties.isReservedSubdomain(subdomain)) {
+            throw new TenantProvisioningException("Subdomain '" + subdomain + "' is reserved");
+        }
         LOG.info("Starting provisioning for tenant: {}", subdomain);
 
         // Step 1: resolve OR create the master tenant row. Committed independently.
@@ -249,6 +256,7 @@ public class TenantProvisioningService {
             tenant.setStatus(TenantStatus.DEACTIVATED);
             tenant.setDatabaseConfig(null);
             tenantRepository.save(tenant);
+            accessGuard.evict(tenant.getSubdomain());
 
             LOG.info("Successfully deprovisioned tenant: {}", tenant.getSubdomain());
         } catch (Exception e) {
@@ -271,6 +279,7 @@ public class TenantProvisioningService {
         LOG.info("Suspending tenant: {}", tenant.getSubdomain());
         tenant.setStatus(TenantStatus.SUSPENDED);
         tenantRepository.save(tenant);
+        accessGuard.evict(tenant.getSubdomain());
     }
 
     /**
@@ -291,6 +300,7 @@ public class TenantProvisioningService {
         LOG.info("Activating tenant: {}", tenant.getSubdomain());
         tenant.setStatus(TenantStatus.ACTIVE);
         tenantRepository.save(tenant);
+        accessGuard.evict(tenant.getSubdomain());
     }
 
     private Tenant createTenantRecord(TenantRegistrationDTO dto) {

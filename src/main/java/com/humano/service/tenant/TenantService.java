@@ -1,5 +1,6 @@
 package com.humano.service.tenant;
 
+import com.humano.config.multitenancy.MultiTenantProperties;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
@@ -28,9 +29,15 @@ public class TenantService {
     private static final Logger log = LoggerFactory.getLogger(TenantService.class);
 
     private final TenantRepository tenantRepository;
+    private final MultiTenantProperties multiTenantProperties;
     private final SubscriptionPlanRepository subscriptionPlanRepository;
 
-    public TenantService(TenantRepository tenantRepository, SubscriptionPlanRepository subscriptionPlanRepository) {
+    public TenantService(
+        TenantRepository tenantRepository,
+        SubscriptionPlanRepository subscriptionPlanRepository,
+        MultiTenantProperties multiTenantProperties
+    ) {
+        this.multiTenantProperties = multiTenantProperties;
         this.tenantRepository = tenantRepository;
         this.subscriptionPlanRepository = subscriptionPlanRepository;
     }
@@ -211,7 +218,7 @@ public class TenantService {
     @Transactional(readOnly = true)
     public boolean isSubdomainAvailable(String subdomain) {
         log.debug("Request to check subdomain availability: {}", subdomain);
-        return !tenantRepository.existsBySubdomain(subdomain);
+        return !multiTenantProperties.isReservedSubdomain(subdomain) && !tenantRepository.existsBySubdomain(subdomain);
     }
 
     /**
@@ -229,6 +236,8 @@ public class TenantService {
             tenant.getLogo(),
             tenant.getTimezone(),
             tenant.getStatus(),
+            tenant.getProvisioningStep(),
+            tenant.getCountry(),
             tenant.getBookingPolicies(),
             tenant.getHrPolicies(),
             tenant.getSubscriptionPlan().getId(),

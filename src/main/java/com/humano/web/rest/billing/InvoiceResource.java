@@ -49,50 +49,6 @@ public class InvoiceResource {
         return ResponseEntity.ok(invoice);
     }
 
-    @PostMapping
-    @RequirePermission(PermissionsConstants.CREATE_INVOICE)
-    public ResponseEntity<InvoiceResponse> create(@Valid @RequestBody CreateInvoiceRequest request) {
-        LOG.debug("REST request to create Invoice: {}", request);
-        UUID currentTenantId = tenantIdResolver.requireCurrentTenantId();
-        CreateInvoiceRequest safe = new CreateInvoiceRequest(
-            currentTenantId,
-            request.subscriptionId(),
-            request.invoiceNumber(),
-            request.amount(),
-            request.taxAmount(),
-            request.dueDate(),
-            request.couponCode()
-        );
-        InvoiceResponse created = invoiceService.createInvoice(safe);
-        return ResponseEntity.created(URI.create("/api/billing/invoices/" + created.id())).body(created);
-    }
-
-    /**
-     * Mark an invoice as paid. The roadmap calls this {@code POST .../pay} for client
-     * ergonomics even though the underlying service operation is "mark paid".
-     */
-    @PostMapping("/{id}/pay")
-    @RequirePermission(PermissionsConstants.UPDATE_INVOICE)
-    public ResponseEntity<InvoiceResponse> markPaid(@PathVariable UUID id) {
-        verifyTenantOwnership(invoiceService.getInvoiceById(id));
-        return ResponseEntity.ok(invoiceService.markAsPaid(id));
-    }
-
-    @PostMapping("/{id}/mark-overdue")
-    @RequirePermission(PermissionsConstants.UPDATE_INVOICE)
-    public ResponseEntity<InvoiceResponse> markOverdue(@PathVariable UUID id) {
-        verifyTenantOwnership(invoiceService.getInvoiceById(id));
-        return ResponseEntity.ok(invoiceService.markAsOverdue(id));
-    }
-
-    @DeleteMapping("/{id}")
-    @RequirePermission(PermissionsConstants.DELETE_INVOICE)
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        verifyTenantOwnership(invoiceService.getInvoiceById(id));
-        invoiceService.deleteInvoice(id);
-        return ResponseEntity.noContent().build();
-    }
-
     private void verifyTenantOwnership(InvoiceResponse invoice) {
         UUID currentTenantId = tenantIdResolver.requireCurrentTenantId();
         if (!currentTenantId.equals(invoice.tenantId())) {

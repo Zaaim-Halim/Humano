@@ -23,9 +23,11 @@
           }
         </div>
       </div>
-      <hum-button variant="secondary" size="sm" icon="id-card" routerLink="/my-profile">{{
-        'humano.account.viewProfile' | translate
-      }}</hum-button>
+      @if (!isPlatform()) {
+        <hum-button variant="secondary" size="sm" icon="id-card" routerLink="/my-profile">{{
+          'humano.account.viewProfile' | translate
+        }}</hum-button>
+      }
     </header>
 
     <hum-tabs [items]="tabs()" [value]="tab()" (valueChange)="setTab($event)" />
@@ -84,33 +86,35 @@
             </form>
           </section>
 
-          <section class="hum-set-card">
-            <header>
-              <h3>{{ 'humano.account.photoTitle' | translate }}</h3>
-              <p>{{ (canUploadPhoto() ? 'humano.account.photoHint' : 'humano.account.photoNoProfile') | translate }}</p>
-            </header>
-            @if (canUploadPhoto()) {
-              <div class="hum-acct-photo">
-                <hum-avatar [name]="fullName()" [src]="a.imageUrl" size="lg" />
-                <hum-button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  icon="upload"
-                  [loading]="photoBusy()"
-                  (click)="photoInput.click()"
-                  >{{ 'humano.account.uploadPhoto' | translate }}</hum-button
-                >
-                <input #photoInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onPhoto($event)" />
-                @if (a.imageUrl) {
-                  <hum-button type="button" variant="ghost" size="sm" icon="trash-2" [disabled]="photoBusy()" (click)="removePhoto()">{{
-                    'humano.account.removePhoto' | translate
-                  }}</hum-button>
-                }
-                <span class="hum-kpi__hint">{{ 'humano.account.photoRules' | translate }}</span>
-              </div>
-            }
-          </section>
+          @if (!isPlatform()) {
+            <section class="hum-set-card">
+              <header>
+                <h3>{{ 'humano.account.photoTitle' | translate }}</h3>
+                <p>{{ (canUploadPhoto() ? 'humano.account.photoHint' : 'humano.account.photoNoProfile') | translate }}</p>
+              </header>
+              @if (canUploadPhoto()) {
+                <div class="hum-acct-photo">
+                  <hum-avatar [name]="fullName()" [src]="a.imageUrl" size="lg" />
+                  <hum-button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    icon="upload"
+                    [loading]="photoBusy()"
+                    (click)="photoInput.click()"
+                    >{{ 'humano.account.uploadPhoto' | translate }}</hum-button
+                  >
+                  <input #photoInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onPhoto($event)" />
+                  @if (a.imageUrl) {
+                    <hum-button type="button" variant="ghost" size="sm" icon="trash-2" [disabled]="photoBusy()" (click)="removePhoto()">{{
+                      'humano.account.removePhoto' | translate
+                    }}</hum-button>
+                  }
+                  <span class="hum-kpi__hint">{{ 'humano.account.photoRules' | translate }}</span>
+                </div>
+              }
+            </section>
+          }
         }
 
         @case ('security') {

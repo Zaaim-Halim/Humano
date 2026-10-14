@@ -1,0 +1,85 @@
+<section class="hum-set-card">
+  <header>
+    <h3>{{ 'humano.settings.billing.planTitle' | translate }}</h3>
+    <p>{{ 'humano.settings.billing.planHint' | translate }}</p>
+  </header>
+  @if (subscription() === undefined) {
+    <hum-skeleton-row /><hum-skeleton-row />
+  } @else if (subscription(); as s) {
+    <div class="hum-con-hero" style="margin: 0">
+      <span class="hum-records__icon" style="width: 48px; height: 48px"><lucide-icon name="layers" [size]="22" /></span>
+      <div class="hum-con-hero__text">
+        <h1 style="font-size: var(--text-xl)">{{ plan()?.displayName ?? s.subscriptionPlanName ?? '—' }}</h1>
+        <p class="hum-con-hero__meta">
+          <span
+            ><strong class="tabular-nums">{{ cyclePrice() | money: currency() }}</strong>
+            {{ (s.billingCycle === 'YEARLY' ? 'humano.settings.billing.perYear' : 'humano.settings.billing.perMonth') | translate }}</span
+          >
+          @if (s.currentPeriodEnd) {
+            <span
+              ><lucide-icon name="calendar" [size]="14" />{{
+                'humano.settings.billing.renews' | translate: { date: (s.currentPeriodEnd | date: 'mediumDate') }
+              }}</span
+            >
+          }
+          @if (s.trialEnd && s.status === 'TRIAL') {
+            <span
+              ><lucide-icon name="hourglass" [size]="14" />{{
+                'humano.settings.billing.trialEnds' | translate: { date: (s.trialEnd | date: 'mediumDate') }
+              }}</span
+            >
+          }
+        </p>
+      </div>
+      <hum-badge [status]="s.status" />
+    </div>
+  } @else {
+    <p class="hum-insights__note">{{ 'humano.settings.billing.noSubscription' | translate }}</p>
+  }
+</section>
+
+<section class="hum-set-card" style="margin-top: var(--space-4)">
+  <header class="hum-set-card__head-row">
+    <div>
+      <h3>{{ 'humano.settings.billing.invoicesTitle' | translate }}</h3>
+      <p>{{ 'humano.settings.billing.invoicesHint' | translate }}</p>
+    </div>
+    @if (openTotal() > 0) {
+      <span class="hum-records__count">{{ 'humano.settings.billing.due' | translate: { amount: (openTotal() | money: currency()) } }}</span>
+    }
+  </header>
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (invoices() === null) {
+    <hum-skeleton-row /><hum-skeleton-row />
+  } @else if (sortedInvoices().length) {
+    <div class="hum-con-table-wrap">
+      <table class="hum-con-table">
+        <thead>
+          <tr>
+            <th>{{ 'humano.console.invoices.number' | translate }}</th>
+            <th>{{ 'humano.console.invoices.issued' | translate }}</th>
+            <th>{{ 'humano.console.invoices.due' | translate }}</th>
+            <th class="is-num">{{ 'humano.console.invoices.total' | translate }}</th>
+            <th>{{ 'humano.console.invoices.status' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (i of sortedInvoices(); track i.id) {
+            <tr>
+              <td class="tabular-nums">{{ i.invoiceNumber }}</td>
+              <td>{{ i.issueDate | date: 'mediumDate' }}</td>
+              <td>{{ i.dueDate | date: 'mediumDate' }}</td>
+              <td class="is-num tabular-nums">{{ i.totalAmount | money: i.currency }}</td>
+              <td><hum-badge [status]="i.status" /></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p class="hum-insights__note">{{ 'humano.settings.billing.noInvoices' | translate }}</p>
+  }
+</section>

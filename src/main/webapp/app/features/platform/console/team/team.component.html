@@ -1,0 +1,161 @@
+<div class="hum-page">
+  <hum-page-header
+    [title]="'humano.console.team.title' | translate"
+    [subtitle]="'humano.console.team.subtitle' | translate"
+    [hasActions]="canManage()"
+  >
+    <div hum-page-actions>
+      <hum-button variant="primary" icon="user-plus" (click)="openInvite()">{{ 'humano.console.team.invite' | translate }}</hum-button>
+    </div>
+  </hum-page-header>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (members() === null) {
+    <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+  } @else {
+    <div class="hum-insights__kpis hum-dash-kpis">
+      <div class="hum-kpi">
+        <div class="hum-kpi__label">
+          <lucide-icon name="crown" [size]="14" />{{ 'humano.console.roles.ROLE_PLATFORM_OWNER' | translate }}
+        </div>
+        <div class="hum-kpi__value">{{ counts().owners }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.team.ownerHint' | translate }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label">
+          <lucide-icon name="shield" [size]="14" />{{ 'humano.console.roles.ROLE_PLATFORM_ADMIN' | translate }}
+        </div>
+        <div class="hum-kpi__value">{{ counts().admins }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.team.adminHint' | translate }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="mail" [size]="14" />{{ 'humano.console.team.pending' | translate }}</div>
+        <div class="hum-kpi__value">{{ counts().pending }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.team.pendingHint' | translate }}</div>
+      </div>
+    </div>
+
+    <section class="hum-set-card" style="padding: 0">
+      <ul class="hum-user-list hum-con-team">
+        @for (m of members(); track m.id) {
+          <li [class.is-off]="!m.activated">
+            <hum-avatar [name]="name(m)" [src]="m.imageUrl" size="sm" />
+            <span class="hum-person__text">
+              <span class="hum-person__name">
+                {{ name(m) }}
+                @if (isSelf(m)) {
+                  <hum-badge tone="brand" [label]="'humano.settings.access.you' | translate" [dot]="false" />
+                }
+                @if (m.invitationPending) {
+                  <hum-badge tone="warning" [label]="'humano.console.team.invited' | translate" [dot]="false" />
+                }
+              </span>
+              <span class="hum-person__sub"
+                >{{ m.email }} · {{ 'humano.console.team.since' | translate: { date: (m.createdDate | date: 'mediumDate') } }}</span
+              >
+            </span>
+            @if (canManage() && !isSelf(m)) {
+              <div style="width: 180px">
+                <hum-select [options]="roleOptions()" [ngModel]="m.role" (ngModelChange)="setRole(m, $event)" [disabled]="busy()" />
+              </div>
+              <hum-switch
+                [ngModel]="m.activated"
+                (ngModelChange)="setActive(m, $event)"
+                [ariaLabel]="'humano.console.team.canSignIn' | translate"
+              />
+              @if (m.invitationPending) {
+                <hum-button variant="ghost" size="sm" icon="send" (click)="resend(m)">{{
+                  'humano.console.team.resend' | translate
+                }}</hum-button>
+              }
+              <hum-button
+                variant="ghost"
+                size="sm"
+                icon="trash-2"
+                [attr.aria-label]="'humano.console.team.remove' | translate"
+                (click)="removing.set(m)"
+              />
+            } @else {
+              <span class="hum-role-chip" [class.is-admin]="m.role === 'ROLE_PLATFORM_OWNER'">{{
+                m.role ? ('humano.console.roles.' + m.role | translate) : '—'
+              }}</span>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="hum-set-card" style="margin-top: var(--space-4)">
+      <header>
+        <h3>{{ 'humano.console.team.rolesTitle' | translate }}</h3>
+      </header>
+      <div class="hum-con-roles">
+        <div>
+          <strong><lucide-icon name="crown" [size]="14" /> {{ 'humano.console.roles.ROLE_PLATFORM_OWNER' | translate }}</strong>
+          <p>{{ 'humano.console.team.ownerCan' | translate }}</p>
+        </div>
+        <div>
+          <strong><lucide-icon name="shield" [size]="14" /> {{ 'humano.console.roles.ROLE_PLATFORM_ADMIN' | translate }}</strong>
+          <p>{{ 'humano.console.team.adminCan' | translate }}</p>
+        </div>
+      </div>
+    </section>
+  }
+</div>
+
+<hum-drawer [open]="invite() !== null" [title]="'humano.console.team.inviteTitle' | translate" hasFooter (closed)="invite.set(null)">
+  @if (invite(); as d) {
+    <div style="display: grid; gap: var(--space-4)">
+      <hum-form-field
+        [label]="'humano.employeeForm.email' | translate"
+        controlId="inv-email"
+        required
+        [hint]="'humano.console.team.emailHint' | translate"
+      >
+        <hum-input
+          inputId="inv-email"
+          type="email"
+          [ngModel]="d.email"
+          (ngModelChange)="patchInvite({ email: $event })"
+          placeholder="name@company.com"
+        />
+      </hum-form-field>
+      <div class="hum-set-grid hum-set-grid--2">
+        <hum-form-field [label]="'humano.employeeForm.firstName' | translate" controlId="inv-first">
+          <hum-input inputId="inv-first" [ngModel]="d.firstName" (ngModelChange)="patchInvite({ firstName: $event })" />
+        </hum-form-field>
+        <hum-form-field [label]="'humano.employeeForm.lastName' | translate" controlId="inv-last">
+          <hum-input inputId="inv-last" [ngModel]="d.lastName" (ngModelChange)="patchInvite({ lastName: $event })" />
+        </hum-form-field>
+      </div>
+      <hum-form-field [label]="'humano.console.team.role' | translate" controlId="inv-role">
+        <hum-select [options]="roleOptions()" [ngModel]="d.role" (ngModelChange)="patchInvite({ role: $event })" />
+      </hum-form-field>
+      <p class="hum-kpi__hint">
+        {{ (d.role === 'ROLE_PLATFORM_OWNER' ? 'humano.console.team.ownerCan' : 'humano.console.team.adminCan') | translate }}
+      </p>
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="invite.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="send" [loading]="busy()" [disabled]="!inviteValid()" (click)="sendInvite()">{{
+      'humano.console.team.send' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<hum-dialog
+  [open]="removing() !== null"
+  [title]="'humano.console.team.removeTitle' | translate: { name: removing() ? name(removing()!) : '' }"
+  [description]="'humano.console.team.removeBody' | translate"
+  hasFooter
+  (closed)="removing.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="removing.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" [loading]="busy()" (click)="remove()">{{ 'humano.console.team.remove' | translate }}</hum-button>
+  </div>
+</hum-dialog>

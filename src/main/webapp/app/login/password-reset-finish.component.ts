@@ -47,7 +47,7 @@ export default class PasswordResetFinishComponent {
 
   protected readonly form = this.fb.nonNullable.group(
     {
-      newPassword: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(50)]],
+      newPassword: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(100)]],
       confirmPassword: ['', [Validators.required]],
     },
     { validators: passwordsMatch },

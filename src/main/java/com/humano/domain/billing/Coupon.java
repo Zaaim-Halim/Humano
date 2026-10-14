@@ -106,7 +106,6 @@ public class Coupon extends AbstractAuditingEntity<UUID> {
      * Only relevant when type is FIXED.
      */
     @Column(name = "currency", length = 3)
-    @Size(min = 3, max = 3, message = "Currency code must be exactly 3 characters")
     @Enumerated(EnumType.STRING)
     private CurrencyCode currency = CurrencyCode.USD;
 

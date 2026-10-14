@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/billing/payments")
-@RequirePermission(PermissionsConstants.PROCESS_PAYMENTS)
+@RequirePermission(PermissionsConstants.VIEW_INVOICE)
 public class PaymentResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(PaymentResource.class);
@@ -54,43 +54,11 @@ public class PaymentResource {
         return ResponseEntity.ok(paymentService.getPaymentsByInvoice(invoiceId));
     }
 
-    @PostMapping
-    public ResponseEntity<PaymentResponse> create(@Valid @RequestBody CreatePaymentRequest request) {
-        LOG.debug("REST request to create Payment: {}", request);
-        verifyTenantOwnership(request.invoiceId());
-        PaymentResponse created = paymentService.createPayment(request);
-        return ResponseEntity.created(URI.create("/api/billing/payments/" + created.id())).body(created);
-    }
-
-    @PostMapping("/{id}/complete")
-    public ResponseEntity<PaymentResponse> complete(@PathVariable UUID id) {
-        verifyTenantOwnership(paymentService.getPaymentById(id).invoiceId());
-        return ResponseEntity.ok(paymentService.completePayment(id));
-    }
-
-    @PostMapping("/{id}/fail")
-    public ResponseEntity<PaymentResponse> fail(@PathVariable UUID id, @RequestParam(required = false) String reason) {
-        verifyTenantOwnership(paymentService.getPaymentById(id).invoiceId());
-        return ResponseEntity.ok(paymentService.failPayment(id, reason));
-    }
-
-    @PostMapping("/{id}/refund")
-    public ResponseEntity<PaymentResponse> refund(@PathVariable UUID id, @RequestParam BigDecimal amount) {
-        verifyTenantOwnership(paymentService.getPaymentById(id).invoiceId());
-        return ResponseEntity.ok(paymentService.refundPayment(id, amount));
-    }
-
     @PostMapping("/{id}/retry")
+    @RequirePermission(PermissionsConstants.MANAGE_SUBSCRIPTIONS)
     public ResponseEntity<PaymentResponse> retry(@PathVariable UUID id, @RequestParam String token) {
         verifyTenantOwnership(paymentService.getPaymentById(id).invoiceId());
         return ResponseEntity.ok(paymentService.retryPayment(id, token));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        verifyTenantOwnership(paymentService.getPaymentById(id).invoiceId());
-        paymentService.deletePayment(id);
-        return ResponseEntity.noContent().build();
     }
 
     private void verifyTenantOwnership(UUID invoiceId) {

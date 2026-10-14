@@ -6,10 +6,8 @@ import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.dto.tenant.TenantRegistrationDTO;
 import com.humano.dto.tenant.responses.TenantResponse;
-import com.humano.repository.tenant.TenantRepository;
 import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequirePermission;
-import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.multitenancy.TenantProvisioningService;
 import com.humano.service.tenant.TenantService;
 import jakarta.validation.Valid;
@@ -42,18 +40,15 @@ public class PlatformTenantResource {
 
     private final TenantProvisioningService provisioningService;
     private final TenantService tenantService;
-    private final TenantRepository tenantRepository;
     private final TenantDataSourceProvider dataSourceProvider;
 
     public PlatformTenantResource(
         TenantProvisioningService provisioningService,
         TenantService tenantService,
-        TenantRepository tenantRepository,
         TenantDataSourceProvider dataSourceProvider
     ) {
         this.provisioningService = provisioningService;
         this.tenantService = tenantService;
-        this.tenantRepository = tenantRepository;
         this.dataSourceProvider = dataSourceProvider;
     }
 
@@ -79,9 +74,10 @@ public class PlatformTenantResource {
     @GetMapping("/{id}")
     @RequirePermission(PermissionsConstants.VIEW_PLATFORM_TENANTS)
     public TenantDetailResponse getOne(@PathVariable("id") UUID id) {
-        Tenant tenant = tenantRepository.findById(id).orElseThrow(() -> EntityNotFoundException.create("Tenant", id));
-        ConnectionPoolStats stats = dataSourceProvider.getPoolStats().get(tenant.getSubdomain());
-        return new TenantDetailResponse(tenantService.toResponse(tenant), stats);
+        // Mapped inside the service's transaction: the plan is a lazy association.
+        TenantResponse tenant = tenantService.getTenantById(id);
+        ConnectionPoolStats stats = dataSourceProvider.getPoolStats().get(tenant.subdomain());
+        return new TenantDetailResponse(tenant, stats);
     }
 
     @PostMapping("/{id}/suspend")

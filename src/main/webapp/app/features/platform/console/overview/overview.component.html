@@ -1,0 +1,270 @@
+<div class="hum-page">
+  <hum-page-header [title]="greeting()" [subtitle]="'humano.console.overview.subtitle' | translate: { date: (today | date: 'fullDate') }" />
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (data(); as d) {
+    <!-- Headline KPIs -->
+    <div class="hum-insights__kpis hum-dash-kpis">
+      <div class="hum-kpi hum-kpi--hero">
+        <div class="hum-kpi__label"><lucide-icon name="trending-up" [size]="14" />{{ 'humano.console.kpi.mrr' | translate }}</div>
+        <div class="hum-kpi__value">{{ d.revenue.mrr | money: d.currency }}</div>
+        <div class="hum-kpi__hint">
+          @if (mrrDelta(); as delta) {
+            <span class="hum-delta" [class.is-up]="delta > 0" [class.is-down]="delta < 0">{{ delta > 0 ? '+' : '' }}{{ delta }}%</span>
+          }
+          {{ 'humano.console.kpi.mrrHint' | translate }}
+        </div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="calendar-range" [size]="14" />{{ 'humano.console.kpi.arr' | translate }}</div>
+        <div class="hum-kpi__value">{{ d.revenue.arr | money: d.currency }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.kpi.arpa' | translate: { amount: (d.revenue.arpa | money: d.currency) } }}</div>
+      </div>
+      <a class="hum-kpi hum-kpi--link" routerLink="/platform/customers">
+        <div class="hum-kpi__label"><lucide-icon name="building-2" [size]="14" />{{ 'humano.console.kpi.customers' | translate }}</div>
+        <div class="hum-kpi__value">
+          {{ d.customers.active }}<small>/ {{ d.customers.total }}</small>
+        </div>
+        <div class="hum-kpi__hint">{{ 'humano.console.kpi.newCustomers' | translate: { n: d.customers.newLast30Days } }}</div>
+      </a>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="user-minus" [size]="14" />{{ 'humano.console.kpi.churn' | translate }}</div>
+        <div class="hum-kpi__value">{{ d.subscriptions.churnRate | number: '1.0-1' }}%</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.kpi.churnHint' | translate: { n: d.subscriptions.churnedLast30Days } }}</div>
+      </div>
+      <a class="hum-kpi hum-kpi--link" routerLink="/platform/billing/invoices" [class.hum-kpi--warn]="d.revenue.overdueInvoices > 0">
+        <div class="hum-kpi__label"><lucide-icon name="receipt" [size]="14" />{{ 'humano.console.kpi.outstanding' | translate }}</div>
+        <div class="hum-kpi__value">{{ d.revenue.outstanding | money: d.currency }}</div>
+        <div class="hum-kpi__hint">
+          {{ 'humano.console.kpi.overdue' | translate: { amount: (d.revenue.overdue | money: d.currency), n: d.revenue.overdueInvoices } }}
+        </div>
+      </a>
+    </div>
+
+    <div class="hum-con-grid">
+      <!-- MRR growth -->
+      <section class="hum-card hum-insights__card hum-con-grid__wide">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="chart-line" [size]="16" /></span>
+          <h3>{{ 'humano.console.overview.mrrGrowth' | translate }}</h3>
+          <span class="hum-records__spacer"></span>
+          <span class="hum-kpi__hint">{{ 'humano.console.overview.last12' | translate }}</span>
+        </header>
+        <hum-trend-chart [points]="mrrPoints()" [min]="0" [label]="'humano.console.overview.mrrGrowth' | translate" />
+      </section>
+
+      <!-- Needs attention -->
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon" [class.is-warn]="attention().length"><lucide-icon name="triangle-alert" [size]="16" /></span>
+          <h3>{{ 'humano.console.overview.attention' | translate }}</h3>
+          <span class="hum-records__spacer"></span>
+          <span class="hum-records__count">{{ attention().length }}</span>
+        </header>
+        @if (attention().length) {
+          <ul class="hum-con-attention">
+            @for (a of attention(); track a.tenantId) {
+              <li>
+                <a [routerLink]="['/platform/customers', a.tenantId]">
+                  <span
+                    class="hum-con-attention__dot"
+                    [style.background]="a.severe ? 'var(--danger-solid)' : 'var(--warning-solid)'"
+                  ></span>
+                  <span class="hum-person__text">
+                    <span class="hum-person__name">{{ a.tenantName }}</span>
+                    @for (r of a.reasons; track r.kind) {
+                      <span class="hum-person__sub">
+                        {{ 'humano.console.attention.' + r.kind | translate }}
+                        @if (r.detail) {
+                          · {{ +r.detail | money: d.currency }}
+                        }
+                      </span>
+                    }
+                  </span>
+                  <lucide-icon name="chevron-right" [size]="16" />
+                </a>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="hum-insights__note">
+            <lucide-icon name="circle-check" [size]="14" /> {{ 'humano.console.overview.allGood' | translate }}
+          </p>
+        }
+      </section>
+
+      <!-- Cash collected -->
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="banknote" [size]="16" /></span>
+          <h3>{{ 'humano.console.overview.collected' | translate }}</h3>
+          <span class="hum-records__spacer"></span>
+          <strong class="tabular-nums">{{ d.revenue.collectedLast30Days | money: d.currency }}</strong>
+        </header>
+        <div class="hum-dash-trend" role="img" [attr.aria-label]="'humano.console.overview.collected' | translate">
+          @for (b of collected(); track b.month) {
+            <div class="hum-dash-trend__col" [title]="b.label + ': ' + (b.value | money: d.currency)">
+              <span class="hum-dash-trend__bar" [style.height.%]="b.pct"></span>
+              <span class="hum-dash-trend__label">{{ b.label }}</span>
+            </div>
+          }
+        </div>
+        <div class="hum-kpi__hint">{{ 'humano.console.overview.collectedHint' | translate }}</div>
+      </section>
+
+      <!-- Plan mix -->
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="layers" [size]="16" /></span>
+          <h3>{{ 'humano.console.overview.planMix' | translate }}</h3>
+          <span class="hum-records__spacer"></span>
+          <a class="hum-linkbtn" routerLink="/platform/billing/plans">{{ 'humano.console.overview.managePlans' | translate }}</a>
+        </header>
+        <div class="hum-stackbar hum-stackbar--lg">
+          @for (p of plans(); track p.planId) {
+            @if (p.share > 0) {
+              <span [style.width.%]="p.share" [style.background]="p.color" [title]="p.name + ': ' + (p.mrr | money: d.currency)"></span>
+            }
+          }
+        </div>
+        <div class="hum-con-plans">
+          @for (p of plans(); track p.planId) {
+            <div class="hum-con-plans__row" [class.is-off]="!p.active">
+              <i [style.background]="p.color"></i>
+              <span class="hum-con-plans__name">
+                <strong>{{ p.name }}</strong>
+                <span class="hum-kpi__hint">{{
+                  'humano.console.overview.perMonth' | translate: { amount: (p.monthlyPrice | money: d.currency) }
+                }}</span>
+              </span>
+              <span class="tabular-nums">{{ 'humano.console.overview.customersN' | translate: { n: p.customers } }}</span>
+              <strong class="tabular-nums">{{ p.mrr | money: d.currency }}</strong>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- Customers & subscriptions health -->
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="heart-pulse" [size]="16" /></span>
+          <h3>{{ 'humano.console.overview.health' | translate }}</h3>
+        </header>
+        <div class="hum-kpi__label">{{ 'humano.console.overview.customersByStatus' | translate }}</div>
+        <div class="hum-stackbar" style="margin-top: var(--space-2)">
+          @for (s of customerStatus(); track s.key) {
+            <span
+              [style.width.%]="s.pct"
+              [style.background]="s.color"
+              [title]="('humano.console.status.' + s.key | translate) + ': ' + s.count"
+            ></span>
+          }
+        </div>
+        <ul class="hum-dash-legend">
+          @for (s of customerStatus(); track s.key) {
+            <li>
+              <i [style.background]="s.color"></i>{{ 'humano.console.status.' + s.key | translate
+              }}<strong class="tabular-nums">{{ s.count }}</strong>
+            </li>
+          }
+        </ul>
+        <div class="hum-kpi__label" style="margin-top: var(--space-4)">
+          {{ 'humano.console.overview.subscriptionsByStatus' | translate }}
+        </div>
+        <div class="hum-stackbar" style="margin-top: var(--space-2)">
+          @for (s of subscriptionStatus(); track s.key) {
+            <span
+              [style.width.%]="s.pct"
+              [style.background]="s.color"
+              [title]="('humano.console.status.' + s.key | translate) + ': ' + s.count"
+            ></span>
+          }
+        </div>
+        <ul class="hum-dash-legend">
+          @for (s of subscriptionStatus(); track s.key) {
+            <li>
+              <i [style.background]="s.color"></i>{{ 'humano.console.status.' + s.key | translate
+              }}<strong class="tabular-nums">{{ s.count }}</strong>
+            </li>
+          }
+        </ul>
+        @if (d.subscriptions.trialsEndingIn14Days) {
+          <p class="hum-insights__note" style="margin-top: var(--space-3)">
+            <lucide-icon name="hourglass" [size]="14" />
+            {{ 'humano.console.overview.trialsEnding' | translate: { n: d.subscriptions.trialsEndingIn14Days } }}
+          </p>
+        }
+      </section>
+
+      <!-- Sign-ups -->
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="user-plus" [size]="16" /></span>
+          <h3>{{ 'humano.console.overview.signups' | translate }}</h3>
+          <span class="hum-records__spacer"></span>
+          <strong class="tabular-nums">{{ d.customers.newLast30Days }}</strong>
+        </header>
+        <div class="hum-dash-trend" role="img" [attr.aria-label]="'humano.console.overview.signups' | translate">
+          @for (b of signups(); track b.month) {
+            <div class="hum-dash-trend__col" [title]="b.label + ': ' + b.value">
+              <span class="hum-dash-trend__bar" style="background: #8b5cf6" [style.height.%]="b.pct"></span>
+              <span class="hum-dash-trend__label">{{ b.label }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- Reports -->
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="file-spreadsheet" [size]="16" /></span>
+          <h3>{{ 'humano.console.reports.title' | translate }}</h3>
+        </header>
+        <ul class="hum-con-reports">
+          <li>
+            <span class="hum-person__text">
+              <span class="hum-person__name">{{ 'humano.console.reports.revenue' | translate }}</span>
+              <span class="hum-person__sub">{{ 'humano.console.reports.revenueHint' | translate }}</span>
+            </span>
+            <hum-button variant="ghost" size="sm" icon="download" (click)="exportRevenue()">CSV</hum-button>
+          </li>
+          <li>
+            <span class="hum-person__text">
+              <span class="hum-person__name">{{ 'humano.console.reports.customers' | translate }}</span>
+              <span class="hum-person__sub">{{ 'humano.console.reports.customersHint' | translate }}</span>
+            </span>
+            <hum-button variant="ghost" size="sm" icon="download" [loading]="exporting() === 'customers'" (click)="exportCustomers()"
+              >CSV</hum-button
+            >
+          </li>
+          <li>
+            <span class="hum-person__text">
+              <span class="hum-person__name">{{ 'humano.console.reports.invoices' | translate }}</span>
+              <span class="hum-person__sub">{{ 'humano.console.reports.invoicesHint' | translate }}</span>
+            </span>
+            <hum-button variant="ghost" size="sm" icon="download" [loading]="exporting() === 'invoices'" (click)="exportInvoices()"
+              >CSV</hum-button
+            >
+          </li>
+          <li>
+            <span class="hum-person__text">
+              <span class="hum-person__name">{{ 'humano.console.reports.plans' | translate }}</span>
+              <span class="hum-person__sub">{{ 'humano.console.reports.plansHint' | translate }}</span>
+            </span>
+            <hum-button variant="ghost" size="sm" icon="download" (click)="exportPlans()">CSV</hum-button>
+          </li>
+        </ul>
+      </section>
+    </div>
+  } @else {
+    <div class="hum-insights__kpis hum-dash-kpis">
+      @for (i of [1, 2, 3, 4, 5]; track i) {
+        <div class="hum-kpi"><hum-skeleton [height]="56" /></div>
+      }
+    </div>
+    <hum-skeleton [height]="280" />
+  }
+</div>

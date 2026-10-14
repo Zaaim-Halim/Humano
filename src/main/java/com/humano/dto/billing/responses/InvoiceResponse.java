@@ -17,6 +17,7 @@ public record InvoiceResponse(
     BigDecimal amount,
     BigDecimal taxAmount,
     BigDecimal totalAmount,
+    String currency,
     InvoiceStatus status,
     Instant issueDate,
     Instant dueDate,

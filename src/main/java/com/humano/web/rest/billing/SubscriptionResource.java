@@ -37,47 +37,17 @@ public class SubscriptionResource {
     }
 
     @GetMapping("/{id}")
+    @RequirePermission(PermissionsConstants.VIEW_INVOICE)
     public ResponseEntity<SubscriptionResponse> get(@PathVariable UUID id) {
         SubscriptionResponse sub = subscriptionService.getSubscriptionById(id);
         verifyTenantOwnership(sub);
         return ResponseEntity.ok(sub);
     }
 
-    @PostMapping
-    public ResponseEntity<SubscriptionResponse> create(@Valid @RequestBody CreateSubscriptionRequest request) {
-        LOG.debug("REST request to create Subscription: {}", request);
-        UUID currentTenantId = tenantIdResolver.requireCurrentTenantId();
-        // Override the request tenantId with the resolved current tenant so a client can't
-        // accidentally (or maliciously) create a subscription against another tenant.
-        CreateSubscriptionRequest safe = new CreateSubscriptionRequest(
-            currentTenantId,
-            request.subscriptionPlanId(),
-            request.billingCycle(),
-            request.autoRenew(),
-            request.trialEnd(),
-            request.couponCode()
-        );
-        SubscriptionResponse created = subscriptionService.createSubscription(safe);
-        return ResponseEntity.created(URI.create("/api/billing/subscriptions/" + created.id())).body(created);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<SubscriptionResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateSubscriptionRequest request) {
-        verifyTenantOwnership(subscriptionService.getSubscriptionById(id));
-        return ResponseEntity.ok(subscriptionService.updateSubscription(id, request));
-    }
-
     @PostMapping("/{id}/cancel")
     public ResponseEntity<SubscriptionResponse> cancel(@PathVariable UUID id, @RequestParam(defaultValue = "false") boolean immediate) {
         verifyTenantOwnership(subscriptionService.getSubscriptionById(id));
         return ResponseEntity.ok(subscriptionService.cancelSubscription(id, immediate));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        verifyTenantOwnership(subscriptionService.getSubscriptionById(id));
-        subscriptionService.deleteSubscription(id);
-        return ResponseEntity.noContent().build();
     }
 
     private void verifyTenantOwnership(SubscriptionResponse sub) {

@@ -1,0 +1,598 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.console.billing.title' | translate" [subtitle]="'humano.console.billing.subtitle' | translate" />
+
+  <hum-tabs [items]="tabs()" [value]="tab()" (valueChange)="setTab($event)" />
+
+  <div style="margin-top: var(--space-4)">
+    @switch (tab()) {
+      <!-- ======================= Invoices ======================= -->
+      @case ('invoices') {
+        @if (invoicesError(); as e) {
+          <hum-alert tone="danger" [title]="e">
+            <hum-button variant="outline" size="sm" (click)="loadInvoices()">{{ 'humano.action.retry' | translate }}</hum-button>
+          </hum-alert>
+        } @else if (invoices() === null) {
+          <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+        } @else {
+          <div class="hum-insights__kpis hum-dash-kpis">
+            <div class="hum-kpi">
+              <div class="hum-kpi__label">
+                <lucide-icon name="hourglass" [size]="14" />{{ 'humano.console.invoices.openTotal' | translate }}
+              </div>
+              <div class="hum-kpi__value">{{ invoiceTotals().open | money: currency() }}</div>
+              <div class="hum-kpi__hint">{{ 'humano.console.invoices.countN' | translate: { n: invoiceCounts().open } }}</div>
+            </div>
+            <div class="hum-kpi" [class.hum-kpi--warn]="invoiceCounts().overdue > 0">
+              <div class="hum-kpi__label">
+                <lucide-icon name="clock-alert" [size]="14" />{{ 'humano.console.invoices.overdueTotal' | translate }}
+              </div>
+              <div class="hum-kpi__value">{{ invoiceTotals().overdue | money: currency() }}</div>
+              <div class="hum-kpi__hint">{{ 'humano.console.invoices.countN' | translate: { n: invoiceCounts().overdue } }}</div>
+            </div>
+            <div class="hum-kpi">
+              <div class="hum-kpi__label">
+                <lucide-icon name="banknote" [size]="14" />{{ 'humano.console.invoices.paid30' | translate }}
+              </div>
+              <div class="hum-kpi__value">{{ invoiceTotals().paid30 | money: currency() }}</div>
+              <div class="hum-kpi__hint">{{ 'humano.console.invoices.paidAll' | translate: { n: invoiceCounts().paid } }}</div>
+            </div>
+          </div>
+
+          <div class="hum-con-toolbar">
+            <div class="hum-con-chips" role="tablist">
+              @for (f of invoiceFilters; track f) {
+                <button
+                  type="button"
+                  role="tab"
+                  class="hum-con-chip"
+                  [class.is-on]="invoiceFilter() === f"
+                  [attr.aria-selected]="invoiceFilter() === f"
+                  (click)="invoiceFilter.set(f)"
+                >
+                  {{ 'humano.console.invoices.filter.' + f | translate }}<span class="tabular-nums">{{ invoiceCounts()[f] }}</span>
+                </button>
+              }
+            </div>
+            <span class="hum-records__spacer"></span>
+            <div style="width: 260px; max-width: 100%">
+              <hum-input
+                type="search"
+                icon="search"
+                [placeholder]="'humano.console.invoices.search' | translate"
+                [ngModel]="invoiceQuery()"
+                (ngModelChange)="invoiceQuery.set($event)"
+              />
+            </div>
+          </div>
+
+          @if (visibleInvoices().length) {
+            <div class="hum-con-table-wrap hum-set-card" style="padding: 0">
+              <table class="hum-con-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'humano.console.invoices.number' | translate }}</th>
+                    <th>{{ 'humano.console.invoices.customer' | translate }}</th>
+                    <th>{{ 'humano.console.invoices.issued' | translate }}</th>
+                    <th>{{ 'humano.console.invoices.due' | translate }}</th>
+                    <th class="is-num">{{ 'humano.console.invoices.total' | translate }}</th>
+                    <th>{{ 'humano.console.invoices.status' | translate }}</th>
+                    @if (canManage()) {
+                      <th></th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (i of visibleInvoices(); track i.id) {
+                    <tr>
+                      <td class="tabular-nums">{{ i.invoiceNumber }}</td>
+                      <td>
+                        <a class="hum-linkbtn" [routerLink]="['/platform/customers', i.tenantId]">{{ i.tenantName }}</a>
+                      </td>
+                      <td>{{ i.issueDate | date: 'mediumDate' }}</td>
+                      <td [class.hum-con-late]="isLate(i)">{{ i.dueDate | date: 'mediumDate' }}</td>
+                      <td class="is-num tabular-nums">{{ i.totalAmount | money: currency() }}</td>
+                      <td>
+                        @if (isLate(i) && i.status === 'PENDING') {
+                          <hum-badge status="OVERDUE" />
+                        } @else {
+                          <hum-badge [status]="i.status" />
+                        }
+                      </td>
+                      @if (canManage()) {
+                        <td class="is-actions">
+                          @if (isOpen(i)) {
+                            <hum-button variant="ghost" size="sm" icon="check" (click)="invoiceAction.set({ invoice: i, action: 'pay' })">{{
+                              'humano.console.invoices.markPaid' | translate
+                            }}</hum-button>
+                            <hum-button variant="ghost" size="sm" icon="ban" (click)="invoiceAction.set({ invoice: i, action: 'void' })">{{
+                              'humano.console.invoices.void' | translate
+                            }}</hum-button>
+                          }
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <hum-empty-state icon="receipt" [title]="'humano.console.invoices.empty' | translate" />
+          }
+        }
+      }
+
+      <!-- ======================= Plans ======================= -->
+      @case ('plans') {
+        <div class="hum-con-toolbar">
+          <p class="hum-kpi__hint" style="margin: 0">{{ 'humano.console.plans.hint' | translate }}</p>
+          <span class="hum-records__spacer"></span>
+          @if (canManage()) {
+            <hum-button variant="primary" icon="plus" (click)="newPlan()">{{ 'humano.console.plans.new' | translate }}</hum-button>
+          }
+        </div>
+        @if (plans() === null) {
+          <hum-skeleton-row /><hum-skeleton-row />
+        } @else {
+          <div class="hum-con-plan-grid">
+            @for (p of plans(); track p.id) {
+              <article class="hum-con-plan" [class.is-off]="!p.active">
+                <header>
+                  <span class="hum-con-plan__type">{{ 'humano.console.planType.' + p.subscriptionType | translate }}</span>
+                  @if (!p.active) {
+                    <hum-badge tone="neutral" [label]="'humano.console.plans.retiredBadge' | translate" [dot]="false" />
+                  }
+                </header>
+                <h3>{{ p.displayName ?? p.subscriptionType }}</h3>
+                <div class="hum-con-plan__price">
+                  <strong>{{ p.basePrice ?? p.price | money: currency() }}</strong
+                  ><span>/ {{ 'humano.console.plans.month' | translate }}</span>
+                </div>
+                <div class="hum-kpi__hint">
+                  {{ 'humano.console.plans.yearly' | translate: { amount: (+(p.basePrice ?? p.price) * 12 * 0.85 | money: currency()) } }}
+                </div>
+                <dl class="hum-con-plan__stats">
+                  <div>
+                    <dt>{{ 'humano.console.plans.customers' | translate }}</dt>
+                    <dd class="tabular-nums">{{ planStats().get(p.id)?.customers ?? 0 }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ 'humano.console.kpi.mrr' | translate }}</dt>
+                    <dd class="tabular-nums">{{ planStats().get(p.id)?.mrr ?? 0 | money: currency() }}</dd>
+                  </div>
+                </dl>
+                <div class="hum-con-plan__includes">
+                  @if (cheaperPlanName().get(p.id); as prev) {
+                    <div class="hum-kpi__label">{{ 'humano.console.plans.everythingIn' | translate: { plan: prev } }}</div>
+                  } @else {
+                    <div class="hum-kpi__label">{{ 'humano.console.plans.includes' | translate }}</div>
+                  }
+                  <ul>
+                    @for (h of expanded().has(p.id) ? highlights().get(p.id) : (highlights().get(p.id) ?? []).slice(0, 6); track h.label) {
+                      <li><lucide-icon [name]="h.extra ? 'plus' : 'check'" [size]="14" />{{ h.label }}</li>
+                    } @empty {
+                      <li class="hum-kpi__hint">{{ 'humano.console.plans.noIncludes' | translate }}</li>
+                    }
+                  </ul>
+                  @if ((highlights().get(p.id) ?? []).length > 6) {
+                    <button type="button" class="hum-linkbtn" (click)="toggleExpanded(p.id)">
+                      {{
+                        expanded().has(p.id)
+                          ? ('humano.console.plans.showLess' | translate)
+                          : ('humano.console.plans.showMore' | translate: { n: (highlights().get(p.id) ?? []).length - 6 })
+                      }}
+                    </button>
+                  }
+                </div>
+                @if (canManage()) {
+                  <footer>
+                    <label class="hum-con-plan__toggle">
+                      <hum-switch
+                        [ngModel]="p.active"
+                        (ngModelChange)="togglePlan(p, $event)"
+                        [ariaLabel]="'humano.console.plans.available' | translate"
+                      />
+                      <span>{{ 'humano.console.plans.available' | translate }}</span>
+                    </label>
+                    <hum-button variant="ghost" size="sm" icon="pencil" (click)="editPlan(p)">{{
+                      'humano.console.plans.edit' | translate
+                    }}</hum-button>
+                  </footer>
+                }
+              </article>
+            }
+          </div>
+
+          <!-- Comparison -->
+          <section class="hum-set-card" style="margin-top: var(--space-4); padding: 0">
+            <header class="hum-set-card__head-row" style="padding: var(--space-4) var(--space-4) 0">
+              <div>
+                <h3>{{ 'humano.console.plans.compareTitle' | translate }}</h3>
+                <p>{{ 'humano.console.plans.compareHint' | translate }}</p>
+              </div>
+              @if (canManage()) {
+                <hum-button variant="secondary" size="sm" icon="plus" (click)="newFeature()">{{
+                  'humano.console.features.new' | translate
+                }}</hum-button>
+              }
+            </header>
+            @if (comparison() === null) {
+              <div style="padding: var(--space-4)"><hum-skeleton-row /><hum-skeleton-row /></div>
+            } @else if (!featureGroups().length) {
+              <p class="hum-insights__note" style="padding: var(--space-4)">{{ 'humano.console.features.empty' | translate }}</p>
+            } @else {
+              <div class="hum-con-table-wrap">
+                <table class="hum-con-table hum-con-compare">
+                  <thead>
+                    <tr>
+                      <th></th>
+                      @for (col of planColumns(); track col.plan.id) {
+                        <th class="is-plan" [class.is-off]="!col.plan.active">
+                          <strong>{{ col.plan.displayName ?? col.plan.subscriptionType }}</strong>
+                          <span
+                            >{{ col.plan.basePrice ?? col.plan.price | money: currency() }} /
+                            {{ 'humano.console.plans.month' | translate }}</span
+                          >
+                        </th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (g of featureGroups(); track g.category) {
+                      <tr class="hum-con-compare__group">
+                        <td [attr.colspan]="planColumns().length + 1">{{ g.category }}</td>
+                      </tr>
+                      @for (f of g.features; track f.id) {
+                        <tr>
+                          <td class="hum-con-compare__feature">
+                            @if (canManage()) {
+                              <button type="button" class="hum-linkbtn" (click)="editFeature(f)" [title]="f.description ?? ''">
+                                {{ f.name }}
+                              </button>
+                            } @else {
+                              <span [title]="f.description ?? ''">{{ f.name }}</span>
+                            }
+                          </td>
+                          @for (col of planColumns(); track col.plan.id) {
+                            <td class="is-plan">
+                              @if (col.cells.get(f.id)?.included) {
+                                @if (cellText(f, col.cells.get(f.id)); as text) {
+                                  <span class="hum-con-compare__value">{{ text }}</span>
+                                } @else {
+                                  <lucide-icon name="check" [size]="16" class="hum-con-compare__yes" />
+                                }
+                              } @else {
+                                <span class="hum-con-compare__no" aria-label="—">—</span>
+                              }
+                            </td>
+                          }
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </section>
+        }
+      }
+
+      <!-- ======================= Coupons ======================= -->
+      @case ('coupons') {
+        <div class="hum-con-toolbar">
+          <p class="hum-kpi__hint" style="margin: 0">{{ 'humano.console.coupons.hint' | translate }}</p>
+          <span class="hum-records__spacer"></span>
+          @if (canManage()) {
+            <hum-button variant="primary" icon="plus" (click)="newCoupon()">{{ 'humano.console.coupons.new' | translate }}</hum-button>
+          }
+        </div>
+        @if (coupons() === null) {
+          <hum-skeleton-row /><hum-skeleton-row />
+        } @else if (coupons()!.length) {
+          <div class="hum-con-table-wrap hum-set-card" style="padding: 0">
+            <table class="hum-con-table">
+              <thead>
+                <tr>
+                  <th>{{ 'humano.console.coupons.code' | translate }}</th>
+                  <th>{{ 'humano.console.coupons.discount' | translate }}</th>
+                  <th>{{ 'humano.console.coupons.redemptions' | translate }}</th>
+                  <th>{{ 'humano.console.coupons.validUntil' | translate }}</th>
+                  <th>{{ 'humano.console.invoices.status' | translate }}</th>
+                  @if (canManage()) {
+                    <th></th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of coupons(); track c.id) {
+                  <tr>
+                    <td>
+                      <code class="hum-con-code">{{ c.code }}</code>
+                    </td>
+                    <td class="tabular-nums">
+                      {{ c.type === 'PERCENT' ? (c.percentage | number: '1.0-1') + '%' : (c.discount | money: currency()) }}
+                    </td>
+                    <td>
+                      <div class="hum-con-usage">
+                        <span class="tabular-nums">{{ c.timesRedeemed ?? 0 }}{{ c.maxRedemptions ? ' / ' + c.maxRedemptions : '' }}</span>
+                        @if (c.maxRedemptions) {
+                          <span class="hum-meter" style="flex: 1"><span [style.width.%]="couponUsage(c)"></span></span>
+                        }
+                      </div>
+                    </td>
+                    <td [class.hum-con-late]="couponExpired(c)">{{ c.expiryDate | date: 'mediumDate' }}</td>
+                    <td>
+                      @if (!c.active) {
+                        <hum-badge tone="neutral" [label]="'humano.console.coupons.inactive' | translate" />
+                      } @else if (couponExpired(c)) {
+                        <hum-badge status="EXPIRED" />
+                      } @else {
+                        <hum-badge status="ACTIVE" />
+                      }
+                    </td>
+                    @if (canManage()) {
+                      <td class="is-actions">
+                        @if (c.active) {
+                          <hum-button variant="ghost" size="sm" icon="pause" (click)="deactivateCoupon(c)">{{
+                            'humano.console.coupons.deactivate' | translate
+                          }}</hum-button>
+                        }
+                        <hum-button variant="ghost" size="sm" icon="trash-2" (click)="couponDelete.set(c)">{{
+                          'humano.action.delete' | translate
+                        }}</hum-button>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <hum-empty-state icon="ticket" [title]="'humano.console.coupons.empty' | translate" />
+        }
+      }
+    }
+  </div>
+</div>
+
+<!-- Invoice action -->
+<hum-dialog
+  [open]="invoiceAction() !== null"
+  [title]="
+    invoiceAction()
+      ? ('humano.console.invoices.confirm.' + invoiceAction()!.action | translate: { number: invoiceAction()!.invoice.invoiceNumber })
+      : ''
+  "
+  [description]="invoiceAction() ? ('humano.console.invoices.confirmBody.' + invoiceAction()!.action | translate) : ''"
+  hasFooter
+  (closed)="invoiceAction.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="invoiceAction.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button
+      [variant]="invoiceAction()?.action === 'void' ? 'destructive' : 'primary'"
+      [loading]="busy()"
+      (click)="applyInvoiceAction()"
+      >{{ 'humano.console.invoices.confirmAction.' + (invoiceAction()?.action ?? 'pay') | translate }}</hum-button
+    >
+  </div>
+</hum-dialog>
+
+<!-- Plan editor -->
+<hum-drawer
+  [open]="planDraft() !== null"
+  [title]="(planDraft()?.id ? 'humano.console.plans.editTitle' : 'humano.console.plans.newTitle') | translate"
+  hasFooter
+  (closed)="planDraft.set(null)"
+>
+  @if (planDraft(); as d) {
+    <div style="display: grid; gap: var(--space-4)">
+      <hum-form-field [label]="'humano.console.plans.name' | translate" controlId="plan-name" required>
+        <hum-input inputId="plan-name" [ngModel]="d.name" (ngModelChange)="patchPlanDraft({ name: $event })" placeholder="Growth" />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.console.plans.tier' | translate" controlId="plan-type">
+        <hum-select [options]="typeOptions()" [ngModel]="d.type" (ngModelChange)="patchPlanDraft({ type: $event })" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.console.plans.monthlyPrice' | translate: { currency: currency() }"
+        controlId="plan-price"
+        required
+        [hint]="'humano.console.plans.priceHint' | translate"
+      >
+        <hum-input
+          inputId="plan-price"
+          type="number"
+          [ngModel]="d.price"
+          (ngModelChange)="patchPlanDraft({ price: $event })"
+          placeholder="149"
+        />
+      </hum-form-field>
+
+      <div>
+        <div class="hum-kpi__label">{{ 'humano.console.plans.whatsIncluded' | translate }}</div>
+        <p class="hum-kpi__hint" style="margin: 4px 0 var(--space-3)">{{ 'humano.console.plans.whatsIncludedHint' | translate }}</p>
+        @for (g of featureGroups(); track g.category) {
+          <fieldset class="hum-role-picker hum-con-feature-edit">
+            <legend>{{ g.category }}</legend>
+            @for (f of g.features; track f.id) {
+              @if (draftItems()[f.id]; as item) {
+                <div class="hum-con-feature-edit__row">
+                  <hum-checkbox [label]="f.name" [checked]="item.included" (checkedChange)="patchItem(f.id, { included: $event })" />
+                  @if (item.included) {
+                    @if (f.limitType === 'QUANTITY') {
+                      <div class="hum-con-feature-edit__limit">
+                        <hum-input
+                          type="number"
+                          [ngModel]="item.limit"
+                          (ngModelChange)="patchItem(f.id, { limit: $event })"
+                          [placeholder]="'humano.console.plans.unlimited' | translate"
+                          [suffix]="f.unit ?? undefined"
+                        />
+                      </div>
+                    } @else {
+                      <div class="hum-con-feature-edit__limit">
+                        <hum-input
+                          [ngModel]="item.note"
+                          (ngModelChange)="patchItem(f.id, { note: $event })"
+                          [placeholder]="'humano.console.plans.notePlaceholder' | translate"
+                        />
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            }
+          </fieldset>
+        }
+      </div>
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="planDraft.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" [loading]="busy()" [disabled]="!planDraftValid()" (click)="savePlan()">{{
+      'humano.action.save' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Feature editor -->
+<hum-drawer
+  [open]="featureDraft() !== null"
+  [title]="(featureDraft()?.id ? 'humano.console.features.editTitle' : 'humano.console.features.newTitle') | translate"
+  hasFooter
+  (closed)="featureDraft.set(null)"
+>
+  @if (featureDraft(); as d) {
+    <div style="display: grid; gap: var(--space-4)">
+      <hum-form-field [label]="'humano.console.features.name' | translate" controlId="ft-name" required>
+        <hum-input inputId="ft-name" [ngModel]="d.name" (ngModelChange)="patchFeatureDraft({ name: $event })" placeholder="Employees" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.console.features.category' | translate"
+        controlId="ft-cat"
+        [hint]="'humano.console.features.categoryHint' | translate: { list: categories().join(', ') }"
+      >
+        <hum-input inputId="ft-cat" [ngModel]="d.category" (ngModelChange)="patchFeatureDraft({ category: $event })" />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.console.features.kind' | translate" controlId="ft-kind">
+        <hum-select [options]="limitTypeOptions()" [ngModel]="d.limitType" (ngModelChange)="patchFeatureDraft({ limitType: $event })" />
+      </hum-form-field>
+      @if (d.limitType === 'QUANTITY') {
+        <hum-form-field
+          [label]="'humano.console.features.unit' | translate"
+          controlId="ft-unit"
+          [hint]="'humano.console.features.unitHint' | translate"
+        >
+          <hum-input inputId="ft-unit" [ngModel]="d.unit" (ngModelChange)="patchFeatureDraft({ unit: $event })" placeholder="employees" />
+        </hum-form-field>
+      }
+      <hum-form-field [label]="'humano.console.features.description' | translate" controlId="ft-desc">
+        <hum-input inputId="ft-desc" [ngModel]="d.description" (ngModelChange)="patchFeatureDraft({ description: $event })" />
+      </hum-form-field>
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: space-between">
+    <span>
+      @if (featureDraft()?.id) {
+        <hum-button
+          variant="ghost"
+          icon="trash-2"
+          (click)="featureDelete.set(comparison()?.features?.find(f => f.id === featureDraft()?.id) ?? null)"
+          >{{ 'humano.action.delete' | translate }}</hum-button
+        >
+      }
+    </span>
+    <span style="display: flex; gap: var(--space-2)">
+      <hum-button variant="secondary" (click)="featureDraft.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+      <hum-button
+        variant="primary"
+        [loading]="busy()"
+        [disabled]="(featureDraft()?.name?.trim()?.length ?? 0) < 2"
+        (click)="saveFeature()"
+        >{{ 'humano.action.save' | translate }}</hum-button
+      >
+    </span>
+  </div>
+</hum-drawer>
+
+<hum-dialog
+  [open]="featureDelete() !== null"
+  [title]="'humano.console.features.deleteTitle' | translate: { name: featureDelete()?.name }"
+  [description]="'humano.console.features.deleteBody' | translate"
+  hasFooter
+  (closed)="featureDelete.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="featureDelete.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" [loading]="busy()" (click)="deleteFeature()">{{ 'humano.action.delete' | translate }}</hum-button>
+  </div>
+</hum-dialog>
+
+<!-- Coupon editor -->
+<hum-drawer
+  [open]="couponDraft() !== null"
+  [title]="'humano.console.coupons.newTitle' | translate"
+  hasFooter
+  (closed)="couponDraft.set(null)"
+>
+  @if (couponDraft(); as d) {
+    <div style="display: grid; gap: var(--space-4)">
+      <hum-form-field
+        [label]="'humano.console.coupons.code' | translate"
+        controlId="cp-code"
+        required
+        [hint]="'humano.console.coupons.codeHint' | translate"
+      >
+        <hum-input
+          inputId="cp-code"
+          [ngModel]="d.code"
+          (ngModelChange)="patchCouponDraft({ code: $event.toUpperCase() })"
+          placeholder="WELCOME20"
+          mono
+        />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.console.coupons.type' | translate" controlId="cp-type">
+        <hum-select [options]="couponTypeOptions()" [ngModel]="d.type" (ngModelChange)="patchCouponDraft({ type: $event })" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="
+          (d.type === 'PERCENT' ? 'humano.console.coupons.percentValue' : 'humano.console.coupons.fixedValue')
+            | translate: { currency: currency() }
+        "
+        controlId="cp-value"
+        required
+      >
+        <hum-input inputId="cp-value" type="number" [ngModel]="d.value" (ngModelChange)="patchCouponDraft({ value: $event })" />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.console.coupons.validUntil' | translate" controlId="cp-expiry" required>
+        <hum-input inputId="cp-expiry" type="date" [ngModel]="d.expiry" (ngModelChange)="patchCouponDraft({ expiry: $event })" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.console.coupons.max' | translate"
+        controlId="cp-max"
+        [hint]="'humano.console.coupons.maxHint' | translate"
+      >
+        <hum-input inputId="cp-max" type="number" [ngModel]="d.max" (ngModelChange)="patchCouponDraft({ max: $event })" />
+      </hum-form-field>
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="couponDraft.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" [loading]="busy()" [disabled]="!couponDraftValid()" (click)="saveCoupon()">{{
+      'humano.console.coupons.create' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Delete coupon -->
+<hum-dialog
+  [open]="couponDelete() !== null"
+  [title]="'humano.console.coupons.deleteTitle' | translate: { code: couponDelete()?.code }"
+  [description]="'humano.console.coupons.deleteBody' | translate"
+  hasFooter
+  (closed)="couponDelete.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="couponDelete.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" [loading]="busy()" (click)="deleteCoupon()">{{ 'humano.action.delete' | translate }}</hum-button>
+  </div>
+</hum-dialog>

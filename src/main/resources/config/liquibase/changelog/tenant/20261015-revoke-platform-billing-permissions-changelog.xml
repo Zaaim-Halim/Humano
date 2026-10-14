@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Plans, coupons, features, invoicing and payment processing are shared by every customer
+        (master database) and are managed only by the platform owner. Earlier catalogs granted
+        them to customer billing roles (and ROLE_ADMIN); the role backfill is additive, so revoke
+        the existing grants explicitly. Self-cancelling a subscription stays with BILLING_ADMIN.
+    -->
+    <changeSet id="20261015-revoke-platform-billing-permissions" author="halimzaaim">
+        <delete tableName="authority_permissions">
+            <where>permission_name IN ('CREATE_INVOICE', 'UPDATE_INVOICE', 'DELETE_INVOICE', 'MANAGE_SUBSCRIPTION_PLANS', 'MANAGE_FEATURES', 'MANAGE_COUPONS', 'PROCESS_PAYMENTS')</where>
+        </delete>
+        <delete tableName="authority_permissions">
+            <where>permission_name = 'MANAGE_SUBSCRIPTIONS' AND authority_name NOT IN ('ROLE_BILLING_ADMIN', 'ROLE_ADMIN')</where>
+        </delete>
+    </changeSet>
+</databaseChangeLog>

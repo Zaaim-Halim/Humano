@@ -1,5 +1,6 @@
 package com.humano.service.tenant;
 
+import com.humano.config.multitenancy.MultiTenantProperties;
 import com.humano.domain.billing.Invoice;
 import com.humano.domain.billing.Payment;
 import com.humano.domain.billing.Subscription;
@@ -56,6 +57,7 @@ public class TenantOnboardingService {
     private static final AtomicLong invoiceCounter = new AtomicLong(System.currentTimeMillis() % 100000);
 
     private final TenantRepository tenantRepository;
+    private final MultiTenantProperties multiTenantProperties;
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final InvoiceRepository invoiceRepository;
@@ -74,8 +76,10 @@ public class TenantOnboardingService {
         OrganizationRepository organizationRepository,
         ApplicationEventPublisher eventPublisher,
         com.humano.service.multitenancy.TenantProvisioningService provisioningService,
-        com.humano.repository.shared.UserRepository userRepository
+        com.humano.repository.shared.UserRepository userRepository,
+        MultiTenantProperties multiTenantProperties
     ) {
+        this.multiTenantProperties = multiTenantProperties;
         this.tenantRepository = tenantRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionPlanRepository = subscriptionPlanRepository;
@@ -179,7 +183,10 @@ public class TenantOnboardingService {
      * Validate the onboarding request.
      */
     private void validateOnboardingRequest(TenantOnboardingRequest request) {
-        // Check subdomain availability
+        // Check subdomain availability (reserved names belong to the platform)
+        if (multiTenantProperties.isReservedSubdomain(request.subdomain())) {
+            throw new BadRequestAlertException("This subdomain is reserved", ENTITY_NAME, "subdomainreserved");
+        }
         if (tenantRepository.existsBySubdomain(request.subdomain())) {
             throw new BadRequestAlertException("Subdomain is already taken", ENTITY_NAME, "subdomaintaken");
         }
