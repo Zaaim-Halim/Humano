@@ -1,0 +1,22 @@
+{
+  "humano": {
+    "documents": {
+      "dropTitle": "Drop files here or browse",
+      "dropHint": "PDF or image, up to 20 MB each",
+      "as": "File as",
+      "all": "All",
+      "total": "{{ size }} in total",
+      "search": "Find a document…",
+      "open": "Open",
+      "noMatch": "No document matches.",
+      "emptyTitle": "No documents yet",
+      "emptyBody": "Documents HR shares with you will appear here.",
+      "emptyManage": "Drop a contract, ID or certificate above to start this employee's file.",
+      "deleteTitle": "Delete document?",
+      "deleteBody": "{{ name }} will be removed permanently.",
+      "deleted": "Document deleted",
+      "uploaded": "{{ count }} document(s) uploaded",
+      "invalid": "{{ name }}: upload a PDF or image up to 20 MB."
+    }
+  }
+}

@@ -5,6 +5,10 @@ export interface EmployeeDocument extends AuditFields {
   id: string;
   type: string | null;
   filePath: string | null;
+  /** The uploaded file's name. */
+  fileName: string | null;
+  contentType: string | null;
+  sizeBytes: number | null;
   employeeId: string;
   employeeName: string | null;
 }

@@ -86,6 +86,9 @@
     <!-- Optional human-readable description on pay_rule -->
     <include file="config/liquibase/changelog/tenant/20260731-pay-rule-description-changelog.xml" relativeToChangelogFile="false"/>
 
+    <!-- Original file name, media type and size on employee_document -->
+    <include file="config/liquibase/changelog/tenant/20261014-employee-document-file-metadata-changelog.xml" relativeToChangelogFile="false"/>
+
     <!--  will add tenant liquibase changelogs here -->
 
 </databaseChangeLog>

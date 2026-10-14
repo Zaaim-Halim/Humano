@@ -4,8 +4,10 @@ import com.humano.dto.hr.requests.CreateEmployeeDocumentRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeDocumentRequest;
 import com.humano.dto.hr.responses.EmployeeDocumentResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.SecurityExpressions;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.EmployeeDocumentService;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -21,9 +23,11 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -44,9 +48,22 @@ public class EmployeeDocumentResource {
     private String applicationName;
 
     private final EmployeeDocumentService employeeDocumentService;
+    private final SecurityExpressions securityExpressions;
 
-    public EmployeeDocumentResource(EmployeeDocumentService employeeDocumentService) {
+    public EmployeeDocumentResource(EmployeeDocumentService employeeDocumentService, SecurityExpressions securityExpressions) {
         this.employeeDocumentService = employeeDocumentService;
+        this.securityExpressions = securityExpressions;
+    }
+
+    /** Someone else's document is only visible to people who handle documents; others get a 404. */
+    private EmployeeDocumentResponse ownOrPermitted(EmployeeDocumentResponse document) {
+        if (
+            !securityExpressions.isCurrentUser(document.employeeId()) &&
+            !securityExpressions.hasAnyPermission("VIEW_EMPLOYEE_DOCUMENTS", "MANAGE_EMPLOYEE_DOCUMENTS")
+        ) {
+            throw EntityNotFoundException.create("EmployeeDocument", document.id());
+        }
+        return document;
     }
 
     /**
@@ -146,7 +163,7 @@ public class EmployeeDocumentResource {
     public ResponseEntity<EmployeeDocumentResponse> getDocument(@PathVariable UUID id) {
         LOG.debug("REST request to get Document: {}", id);
 
-        EmployeeDocumentResponse result = employeeDocumentService.getDocument(id);
+        EmployeeDocumentResponse result = ownOrPermitted(employeeDocumentService.getDocument(id));
 
         return ResponseEntity.ok(result);
     }
@@ -163,15 +180,19 @@ public class EmployeeDocumentResource {
     public ResponseEntity<Resource> downloadDocument(@PathVariable UUID id) throws IOException {
         LOG.debug("REST request to download Document: {}", id);
 
-        EmployeeDocumentResponse document = employeeDocumentService.getDocument(id);
+        EmployeeDocumentResponse document = ownOrPermitted(employeeDocumentService.getDocument(id));
         InputStream content = employeeDocumentService.getDocumentContent(id);
 
-        // Extract filename from file path
-        String fileName = document.filePath().substring(document.filePath().lastIndexOf('/') + 1);
-
+        String fileName = document.fileName() != null ? document.fileName() : "document";
+        // Plain filename= for ASCII names (universally understood); RFC 5987 filename* otherwise.
+        ContentDisposition disposition = java.nio.charset.StandardCharsets.US_ASCII.newEncoder().canEncode(fileName)
+            ? ContentDisposition.attachment().filename(fileName).build()
+            : ContentDisposition.attachment().filename(fileName, java.nio.charset.StandardCharsets.UTF_8).build();
         return ResponseEntity.ok()
-            .contentType(MediaType.APPLICATION_OCTET_STREAM)
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+            .contentType(
+                document.contentType() != null ? MediaType.parseMediaType(document.contentType()) : MediaType.APPLICATION_OCTET_STREAM
+            )
+            .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
             .body(new InputStreamResource(content));
     }
 
@@ -182,7 +203,11 @@ public class EmployeeDocumentResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of documents in body
      */
     @GetMapping("/employee/{employeeId}")
-    @RequireHrStaffOrEmployee
+    // One's own documents, or anyone's for people who handle employee documents.
+    @PreAuthorize(
+        "@securityExpressions.isCurrentUser(#employeeId) or " +
+        "@securityExpressions.hasAnyPermission('VIEW_EMPLOYEE_DOCUMENTS', 'MANAGE_EMPLOYEE_DOCUMENTS')"
+    )
     public ResponseEntity<List<EmployeeDocumentResponse>> getDocumentsByEmployee(@PathVariable UUID employeeId) {
         LOG.debug("REST request to get Documents by employee: {}", employeeId);
 

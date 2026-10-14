@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- What was uploaded: the original file name (the stored key is generated), its media type
+         and size, so documents can be listed and downloaded under their real names. Nullable:
+         documents uploaded before this change simply show their stored name. -->
+    <changeSet id="tenant-employee-document-file-metadata-001" author="halimzaaim">
+        <addColumn tableName="employee_document">
+            <column name="original_file_name" type="VARCHAR(255)"/>
+            <column name="content_type" type="VARCHAR(100)"/>
+            <column name="size_bytes" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

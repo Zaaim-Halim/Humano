@@ -7212,3 +7212,239 @@ button.hum-records__empty:hover {
 .hum-avatar-stack__item[data-presence='ON_LEAVE'] {
   box-shadow: 0 0 0 2px var(--info-solid);
 }
+
+/* Payroll run */
+.hum-stackbar--lg {
+  height: 18px;
+}
+
+.hum-dash-legend--wide {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.hum-dash-legend--wide strong {
+  margin-left: auto;
+}
+
+.hum-typebars__row--money {
+  grid-template-columns: 170px 1fr 110px;
+}
+
+.hum-dept-pay {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hum-dept-pay__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: 4px;
+  font-size: var(--text-sm);
+}
+
+.hum-dept-pay__bar {
+  display: flex;
+  height: 10px;
+  overflow: hidden;
+  background: var(--bg-muted);
+  border-radius: 999px;
+}
+
+.hum-dept-pay__bar .is-net {
+  background: var(--brand);
+}
+
+.hum-dept-pay__bar .is-ded {
+  background: var(--warning-solid);
+}
+
+.hum-pay-results {
+  overflow-x: auto;
+}
+
+.hum-pay-results__row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(200px, 2fr) 120px 120px 120px;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  min-width: 860px;
+  padding: 10px 0;
+  font-size: var(--text-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.hum-pay-results__row:last-child {
+  border-bottom: none;
+}
+
+.hum-pay-results__row--head {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hum-pay-results .hum-person__name {
+  color: var(--text-strong);
+  text-decoration: none;
+}
+
+.hum-pay-results .hum-person__name:hover {
+  color: var(--brand-text);
+}
+
+/* Document library */
+.hum-dropzone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+
+.hum-dropzone:hover,
+.hum-dropzone.is-dragging {
+  border-color: var(--brand);
+  background: var(--brand-subtle);
+}
+
+.hum-dropzone.is-busy {
+  cursor: progress;
+}
+
+.hum-dropzone__text {
+  display: grid;
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.hum-dropzone__text strong {
+  font-size: var(--text-base);
+}
+
+.hum-dropzone__type .hum-kpi__label {
+  white-space: nowrap;
+}
+
+.hum-dropzone__type {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 260px;
+  cursor: default;
+}
+
+.hum-doc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.hum-doc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+}
+
+.hum-doc {
+  --doc: var(--slate-500);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.hum-doc[data-kind='pdf'] {
+  --doc: var(--danger-solid);
+}
+
+.hum-doc[data-kind='image'] {
+  --doc: var(--info-solid);
+}
+
+.hum-doc:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-sm);
+}
+
+.hum-doc__preview {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 64px;
+  color: var(--doc);
+  background: color-mix(in srgb, var(--doc) 10%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, var(--doc) 25%, transparent);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.hum-doc__ext {
+  position: absolute;
+  bottom: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.hum-doc__body {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.hum-doc__type {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hum-doc__name {
+  overflow: hidden;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hum-doc__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0.4;
+  transition: opacity 0.12s ease;
+}
+
+.hum-doc:hover .hum-doc__actions,
+.hum-doc:focus-within .hum-doc__actions {
+  opacity: 1;
+}

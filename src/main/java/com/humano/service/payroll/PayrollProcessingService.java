@@ -1187,9 +1187,7 @@ public class PayrollProcessingService {
     public PayrollRunSummaryResponse getPayrollRunSummary(UUID runId) {
         PayrollRun run = payrollRunRepository.findById(runId).orElseThrow(() -> new EntityNotFoundException("PayrollRun", runId));
 
-        List<PayrollResult> results = payrollResultRepository.findAll(
-            (Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), runId)
-        );
+        List<PayrollResult> results = resultsWithDepartments(runId);
 
         // P3.4 — when the run has a reporting currency, the summary totals are computed
         // from the per-result reporting_* columns (all employees expressed in the SAME
@@ -1251,14 +1249,141 @@ public class PayrollProcessingService {
             totalDeductions,
             totalNet,
             totalEmployerCost,
-            totalNet.add(totalEmployerCost),
+            // Employer cost already includes gross pay (gross + employer charges + benefits), so
+            // it IS the total cost of the payroll — adding net on top would count wages twice.
+            totalEmployerCost,
             currencyCode,
             earningsByComponent,
             deductionsByComponent,
-            Collections.emptyMap(), // By department - would need additional logic
-            Collections.emptyList(), // Top earners
-            null // Comparison with previous period
+            departmentBreakdown(results, useReporting),
+            topEarners(results, useReporting),
+            comparisonWithPrevious(run, results.size(), totalGross, totalNet, useReporting)
         );
+    }
+
+    /** A run's results with employee and department loaded in the same query (summary breakdowns). */
+    private List<PayrollResult> resultsWithDepartments(UUID runId) {
+        return payrollResultRepository.findAll(
+            (Specification<PayrollResult>) (root, query, cb) -> {
+                if (query != null && PayrollResult.class.equals(query.getResultType())) {
+                    root
+                        .fetch("employee", jakarta.persistence.criteria.JoinType.LEFT)
+                        .fetch("department", jakarta.persistence.criteria.JoinType.LEFT);
+                }
+                return cb.equal(root.get("run").get("id"), runId);
+            }
+        );
+    }
+
+    private static BigDecimal grossOf(PayrollResult r, boolean reporting) {
+        return reporting ? coalesce(r.getReportingGross(), r.getGross()) : r.getGross();
+    }
+
+    private static BigDecimal netOf(PayrollResult r, boolean reporting) {
+        return reporting ? coalesce(r.getReportingNet(), r.getNet()) : r.getNet();
+    }
+
+    private static String departmentOf(PayrollResult r) {
+        return r.getEmployee() != null && r.getEmployee().getDepartment() != null ? r.getEmployee().getDepartment().getName() : "—";
+    }
+
+    /** Headcount, gross, net and average gross per department, largest gross first. */
+    private Map<String, PayrollRunSummaryResponse.DepartmentPayrollSummary> departmentBreakdown(
+        List<PayrollResult> results,
+        boolean reporting
+    ) {
+        Map<String, List<PayrollResult>> byDept = results
+            .stream()
+            .collect(java.util.stream.Collectors.groupingBy(PayrollProcessingService::departmentOf));
+        return byDept
+            .entrySet()
+            .stream()
+            .map(e -> {
+                BigDecimal gross = e.getValue().stream().map(r -> grossOf(r, reporting)).reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal net = e.getValue().stream().map(r -> netOf(r, reporting)).reduce(BigDecimal.ZERO, BigDecimal::add);
+                int count = e.getValue().size();
+                return new PayrollRunSummaryResponse.DepartmentPayrollSummary(
+                    e.getKey(),
+                    count,
+                    gross,
+                    net,
+                    gross.divide(BigDecimal.valueOf(count), MONEY_SCALE, MONEY_ROUNDING)
+                );
+            })
+            .sorted(java.util.Comparator.comparing(PayrollRunSummaryResponse.DepartmentPayrollSummary::totalGross).reversed())
+            .collect(
+                java.util.stream.Collectors.toMap(
+                    PayrollRunSummaryResponse.DepartmentPayrollSummary::departmentName,
+                    d -> d,
+                    (a, b) -> a,
+                    java.util.LinkedHashMap::new
+                )
+            );
+    }
+
+    private List<PayrollRunSummaryResponse.EmployeePayrollSummary> topEarners(List<PayrollResult> results, boolean reporting) {
+        return results
+            .stream()
+            .sorted(java.util.Comparator.comparing((PayrollResult r) -> grossOf(r, reporting)).reversed())
+            .limit(5)
+            .map(r ->
+                new PayrollRunSummaryResponse.EmployeePayrollSummary(
+                    r.getEmployee().getId(),
+                    r.getEmployee().getFirstName() + " " + r.getEmployee().getLastName(),
+                    departmentOf(r),
+                    grossOf(r, reporting),
+                    netOf(r, reporting)
+                )
+            )
+            .toList();
+    }
+
+    /** Against the latest posted run of an earlier period, if any. */
+    private PayrollRunSummaryResponse.ComparisonWithPreviousPeriod comparisonWithPrevious(
+        PayrollRun run,
+        int employees,
+        BigDecimal gross,
+        BigDecimal net,
+        boolean reporting
+    ) {
+        java.time.LocalDate start = run.getPeriod().getStartDate();
+        List<PayrollRun> earlier = payrollRunRepository.findAll(
+            (Specification<PayrollRun>) (root, query, cb) ->
+                cb.and(
+                    cb.equal(root.get("status"), RunStatus.POSTED),
+                    cb.lessThan(root.get("period").get("startDate"), start),
+                    cb.notEqual(root.get("id"), run.getId())
+                ),
+            org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "period.startDate")
+        );
+        if (earlier.isEmpty()) {
+            return null;
+        }
+        List<PayrollResult> previous = payrollResultRepository.findAll(
+            (Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), earlier.get(0).getId())
+        );
+        BigDecimal prevGross = previous.stream().map(r -> grossOf(r, reporting)).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal prevNet = previous.stream().map(r -> netOf(r, reporting)).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new PayrollRunSummaryResponse.ComparisonWithPreviousPeriod(
+            prevGross,
+            gross.subtract(prevGross),
+            percentChange(prevGross, gross),
+            prevNet,
+            net.subtract(prevNet),
+            percentChange(prevNet, net),
+            previous.size(),
+            employees - previous.size()
+        );
+    }
+
+    private static BigDecimal percentChange(BigDecimal from, BigDecimal to) {
+        return from.signum() == 0
+            ? BigDecimal.ZERO
+            : to
+                .subtract(from)
+                .divide(from, 4, java.math.RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(1, java.math.RoundingMode.HALF_UP);
     }
 
     /**

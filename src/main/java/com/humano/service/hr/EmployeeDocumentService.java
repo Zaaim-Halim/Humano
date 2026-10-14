@@ -72,21 +72,14 @@ public class EmployeeDocumentService {
             .findById(employeeId)
             .orElseThrow(() -> new EntityNotFoundException("Employee not found with ID: " + employeeId));
 
-        // Generate unique file name
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-        String originalFilename = file.getOriginalFilename();
-        String extension = originalFilename != null ? originalFilename.substring(originalFilename.lastIndexOf(".")) : "";
-        String fileName = String.format("%s-%s-%s%s", employee.getId(), request.type().replaceAll("\\s+", "-"), timestamp, extension);
+        String type = request.type() == null || request.type().isBlank() ? "Other" : request.type().strip();
+        validate(file);
 
-        // Store the file using the storage service
-        String directory = "employee-documents/" + employee.getId();
-        String fileReference = fileStorageService().store(file, directory, fileName);
-
-        // Create document entity
         EmployeeDocument document = new EmployeeDocument();
         document.setEmployee(employee);
-        document.setType(request.type());
-        document.setFilePath(fileReference);
+        document.setType(type);
+        document.setFilePath(storeFile(employee.getId(), type, file));
+        applyFileMetadata(document, file);
 
         EmployeeDocument savedDocument = employeeDocumentRepository.save(document);
         log.info("Document uploaded successfully with ID: {}", savedDocument.getId());
@@ -134,21 +127,8 @@ public class EmployeeDocumentService {
             .findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Document not found with ID: " + id));
 
-        // Generate new unique file name
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-        String originalFilename = file.getOriginalFilename();
-        String extension = originalFilename != null ? originalFilename.substring(originalFilename.lastIndexOf(".")) : "";
-        String fileName = String.format(
-            "%s-%s-%s%s",
-            document.getEmployee().getId(),
-            document.getType().replaceAll("\\s+", "-"),
-            timestamp,
-            extension
-        );
-
-        // Store the new file
-        String directory = "employee-documents/" + document.getEmployee().getId();
-        String fileReference = fileStorageService().store(file, directory, fileName);
+        validate(file);
+        String fileReference = storeFile(document.getEmployee().getId(), document.getType(), file);
 
         // Delete the old file if possible
         if (fileStorageService().exists(document.getFilePath())) {
@@ -157,6 +137,7 @@ public class EmployeeDocumentService {
 
         // Update document entity
         document.setFilePath(fileReference);
+        applyFileMetadata(document, file);
 
         EmployeeDocument updatedDocument = employeeDocumentRepository.save(document);
         log.info("Document file replaced successfully for ID: {}", updatedDocument.getId());
@@ -279,6 +260,9 @@ public class EmployeeDocumentService {
             document.getId(),
             document.getType(),
             publicUrl,
+            document.getOriginalFileName() != null ? document.getOriginalFileName() : storedName(document.getFilePath()),
+            document.getContentType(),
+            document.getSizeBytes(),
             document.getEmployee().getId(),
             document.getEmployee().getFirstName() + " " + document.getEmployee().getLastName(),
             document.getCreatedBy(),
@@ -286,5 +270,48 @@ public class EmployeeDocumentService {
             document.getLastModifiedBy(),
             document.getLastModifiedDate()
         );
+    }
+
+    /** Accepted uploads: PDF and images, up to 20 MB (the EMPLOYEE_DOCUMENT file policy). */
+    private static final java.util.Set<String> ALLOWED_TYPES = java.util.Set.of("application/pdf", "image/jpeg", "image/png", "image/webp");
+    private static final long MAX_BYTES = 20L * 1024 * 1024;
+
+    private static void validate(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new com.humano.service.errors.BusinessRuleViolationException("document.empty", "The file is empty.");
+        }
+        if (file.getContentType() == null || !ALLOWED_TYPES.contains(file.getContentType())) {
+            throw new com.humano.service.errors.BusinessRuleViolationException(
+                "document.type",
+                "Upload a PDF or an image (JPEG, PNG, WebP)."
+            );
+        }
+        if (file.getSize() > MAX_BYTES) {
+            throw new com.humano.service.errors.BusinessRuleViolationException("document.size", "Files can be at most 20 MB.");
+        }
+    }
+
+    /** Stores the file under a generated key: {@code <employee>-<type>-<timestamp><.ext>}. */
+    private String storeFile(UUID employeeId, String type, MultipartFile file) throws IOException {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+        String original = file.getOriginalFilename();
+        int dot = original == null ? -1 : original.lastIndexOf('.');
+        String extension = dot >= 0 ? original.substring(dot).replaceAll("[^A-Za-z0-9.]", "") : "";
+        String slug = type.replaceAll("[^A-Za-z0-9]+", "-");
+        String fileName = String.format("%s-%s-%s%s", employeeId, slug, timestamp, extension);
+        return fileStorageService().store(file, "employee-documents/" + employeeId, fileName);
+    }
+
+    private static void applyFileMetadata(EmployeeDocument document, MultipartFile file) {
+        String original = file.getOriginalFilename();
+        document.setOriginalFileName(
+            original == null || original.isBlank() ? null : java.nio.file.Paths.get(original).getFileName().toString()
+        );
+        document.setContentType(file.getContentType());
+        document.setSizeBytes(file.getSize());
+    }
+
+    private static String storedName(String key) {
+        return key == null ? null : key.substring(key.lastIndexOf('/') + 1);
     }
 }

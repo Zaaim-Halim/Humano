@@ -11,6 +11,10 @@ public record EmployeeDocumentResponse(
     UUID id,
     String type,
     String filePath,
+    /** The uploaded file's name (falls back to the stored name for older documents). */
+    String fileName,
+    String contentType,
+    Long sizeBytes,
     UUID employeeId,
     String employeeName,
     String createdBy,

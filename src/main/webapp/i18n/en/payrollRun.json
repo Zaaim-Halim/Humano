@@ -37,7 +37,25 @@
       "recalculated": "Run recalculated",
       "payslipsGenerated": "Payslips generated",
       "noApproverProfile": "Your account has no employee profile, so you can't approve payroll.",
-      "viewPayslips": "View payslips"
+      "viewPayslips": "View payslips",
+      "paidTo": "Paid to {{ count }} people",
+      "vsPrevious": "vs {{ amount }} last run",
+      "firstRun": "First posted run",
+      "ofGross": "{{ pct }}% of gross",
+      "totalCost": "Total cost",
+      "employerCharges": "Incl. {{ amount }} employer charges",
+      "costBreakdown": "Where the money goes",
+      "employeeDeductions": "Employee deductions",
+      "employerChargesShort": "Employer charges",
+      "byComponent": "By pay component",
+      "earnings": "Earnings",
+      "deptMeta": "{{ count }} people · avg {{ avg }}",
+      "searchPeople": "Find an employee…",
+      "split": "Net vs deductions",
+      "sortNet": "Highest net first",
+      "sortGross": "Highest gross first",
+      "sortName": "Name A–Z",
+      "noMatch": "No employee matches."
     }
   }
 }

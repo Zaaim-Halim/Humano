@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
+import { DecimalPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { LucideAngularModule } from 'lucide-angular';
 import { Observable } from 'rxjs';
 
 import { normalizeHttpError } from 'app/core/api';
@@ -13,7 +16,9 @@ import {
   EmptyStateComponent,
   PageHeaderComponent,
   SkeletonRowComponent,
-  StatTileComponent,
+  AvatarComponent,
+  InputComponent,
+  SelectComponent,
   StepperComponent,
   ToastService,
 } from 'app/shared/ui';
@@ -31,9 +36,10 @@ interface Holder<T> {
 const idle = <T>(): Holder<T> => ({ data: null, loading: false, error: null });
 
 /**
- * Payroll Run (HR/Admin hero screen) — `/payroll/runs/:id`. Shows the run
- * summary (totals, variance vs previous period, by-department, top earners) and
- * per-employee results, with a lifecycle stepper and guarded approve/post.
+ * Payroll Run — `/payroll/runs/:id`. Figures with change vs the previous posted run, where the
+ * money goes (net / employee deductions / employer charges), earnings and deductions by
+ * component, gross and net by department, and every employee's result (searchable, sortable,
+ * with a net-vs-deductions bar), plus the lifecycle stepper and guarded approve/post.
  *
  * The run's status comes from `GET /api/payroll/runs/{id}` and drives the stepper and the
  * available actions; `summary.errorCount` counts validation errors, and the detailed
@@ -45,12 +51,17 @@ const idle = <T>(): Holder<T> => ({ data: null, loading: false, error: null });
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,
+    FormsModule,
+    DecimalPipe,
+    LucideAngularModule,
+    AvatarComponent,
+    InputComponent,
+    SelectComponent,
     MoneyPipe,
     PayPeriodPipe,
     TranslatePipe,
     PageHeaderComponent,
     StepperComponent,
-    StatTileComponent,
     ButtonComponent,
     DialogComponent,
     AlertComponent,
@@ -86,7 +97,74 @@ export default class PayrollRunComponent {
     const i = status ? STEP_ORDER.indexOf(status) : 0;
     return i < 0 ? 0 : i;
   });
-  protected readonly byDepartment = computed(() => Object.entries(this.summary().data?.byDepartment ?? {}));
+  /** Departments, largest gross first; bar widths relative to the largest gross. */
+  protected readonly byDepartment = computed(() => {
+    const list = Object.values(this.summary().data?.byDepartment ?? {}).sort((a, b) => b.totalGross - a.totalGross);
+    const max = Math.max(1, ...list.map(d => d.totalGross));
+    return list.map(d => ({
+      name: d.departmentName,
+      employeeCount: d.employeeCount,
+      totalGross: d.totalGross,
+      totalNet: d.totalNet,
+      averageSalary: d.averageSalary,
+      grossPct: (d.totalGross / max) * 100,
+      netPct: (d.totalNet / max) * 100,
+    }));
+  });
+
+  /** Total cost split: what employees take home, what is withheld, what the employer adds. */
+  protected readonly costParts = computed(() => {
+    const s = this.summary().data;
+    if (!s) return [];
+    const total = Math.max(1, s.totalEmployerCost);
+    const parts = [
+      { key: 'humano.payrollRun.net', amount: s.totalNet, color: 'var(--brand)' },
+      { key: 'humano.payrollRun.employeeDeductions', amount: s.totalDeductions, color: 'var(--warning-solid)' },
+      {
+        key: 'humano.payrollRun.employerChargesShort',
+        amount: Math.max(0, s.totalEmployerCost - s.totalGross),
+        color: 'var(--violet-500)',
+      },
+    ];
+    return parts.map(p => ({ ...p, pct: (p.amount / total) * 100 }));
+  });
+
+  protected readonly earnings = computed(() => this.components(this.summary().data?.earningsByComponent));
+  protected readonly deductionParts = computed(() => this.components(this.summary().data?.deductionsByComponent));
+
+  // Results list
+  protected readonly query = signal('');
+  protected readonly sortBy = signal<'net' | 'gross' | 'name'>('net');
+  protected readonly sortOptions = computed(() => [
+    { value: 'net', label: String(this.translate.instant('humano.payrollRun.sortNet')) },
+    { value: 'gross', label: String(this.translate.instant('humano.payrollRun.sortGross')) },
+    { value: 'name', label: String(this.translate.instant('humano.payrollRun.sortName')) },
+  ]);
+  protected readonly visibleResults = computed(() => {
+    const q = this.query().trim().toLowerCase();
+    const sort = this.sortBy();
+    return (this.results().data ?? [])
+      .filter(r => !q || (r.employeeName ?? '').toLowerCase().includes(q) || (r.employeeCode ?? '').toLowerCase().includes(q))
+      .sort((a, b) => (sort === 'name' ? (a.employeeName ?? '').localeCompare(b.employeeName ?? '') : Number(b[sort]) - Number(a[sort])));
+  });
+  protected readonly maxGross = computed(() => Math.max(1, ...(this.results().data ?? []).map(r => Number(r.gross))));
+
+  protected pct(value: number | null | undefined): string {
+    const n = Number(value ?? 0);
+    return `${n > 0 ? '+' : ''}${n.toFixed(1)}%`;
+  }
+
+  protected share(part: number, whole: number): string {
+    return whole ? ((Number(part) / Number(whole)) * 100).toFixed(0) : '0';
+  }
+
+  private components(map: Record<string, number> | undefined): { name: string; amount: number; pct: number }[] {
+    const list = Object.entries(map ?? {})
+      .map(([name, amount]) => ({ name, amount: Number(amount) }))
+      .sort((a, b) => b.amount - a.amount);
+    const max = Math.max(1, ...list.map(c => c.amount));
+    return list.map(c => ({ ...c, pct: (c.amount / max) * 100 }));
+  }
 
   constructor() {
     this.currentEmployee.resolve();

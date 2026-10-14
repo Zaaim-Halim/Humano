@@ -157,3 +157,6 @@ docs/
 # Claude Code (local)
 ######################
 .claude/
+
+# Local file storage (FILESYSTEM storage backend): tenant uploads, never committed
+/uploads/

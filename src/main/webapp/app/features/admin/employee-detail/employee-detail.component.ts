@@ -1,4 +1,3 @@
-import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -9,7 +8,8 @@ import { Observable } from 'rxjs';
 import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
 import { normalizeHttpError } from 'app/core/api';
-import { EmployeeDocument, EmployeeDocumentService, EmployeeProfile, EmployeeService } from 'app/features/employee';
+import { EmployeeProfile, EmployeeService } from 'app/features/employee';
+import { DocumentLibraryComponent } from 'app/features/employee/documents/document-library.component';
 import { CurrentEmployeeService } from 'app/features/employee';
 import { EmployeeHeroComponent } from 'app/features/employee/profile/employee-hero.component';
 import { EmployeeOverviewComponent } from 'app/features/employee/profile/employee-overview.component';
@@ -20,11 +20,9 @@ import { EmployeePerformanceComponent } from 'app/features/employee/insights/emp
 import {
   AlertComponent,
   ButtonComponent,
-  DialogComponent,
   DrawerComponent,
   EmptyStateComponent,
   FormFieldComponent,
-  IconButtonComponent,
   InputComponent,
   SelectComponent,
   SelectOption,
@@ -74,17 +72,16 @@ const idle = <T>(): TabState<T> => ({ data: null, loading: false, error: null })
     ReactiveFormsModule,
     TranslatePipe,
     ButtonComponent,
-    IconButtonComponent,
     TabsComponent,
     AlertComponent,
     EmptyStateComponent,
     SkeletonRowComponent,
     DrawerComponent,
-    DialogComponent,
     InputComponent,
     SelectComponent,
     FormFieldComponent,
     EmployeeRecordsComponent,
+    DocumentLibraryComponent,
     EmployeeHeroComponent,
     EmployeeOverviewComponent,
     EmployeePayComponent,
@@ -103,11 +100,9 @@ export default class EmployeeDetailComponent {
   private readonly compensationService = inject(CompensationService);
   private readonly positionService = inject(PositionService);
   private readonly currencyService = inject(CurrencyService);
-  private readonly documentService = inject(EmployeeDocumentService);
   private readonly router = inject(Router);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
-  private readonly document = inject(DOCUMENT);
   private readonly account = inject(AccountService);
 
   /** Gate the Edit action on the same permission the edit route requires. */
@@ -115,24 +110,8 @@ export default class EmployeeDetailComponent {
   /** Gate document upload/delete on the same permission the write endpoints require. */
   protected readonly canManageDocuments = this.account.hasPermission(Permission.MANAGE_EMPLOYEE_DOCUMENTS);
 
-  // Document upload drawer + delete confirm.
-  protected readonly uploadOpen = signal(false);
-  protected readonly uploading = signal(false);
-  protected readonly selectedFile = signal<File | null>(null);
-  protected readonly uploadForm = this.fb.nonNullable.group({
-    type: ['', [Validators.maxLength(255)]],
-  });
-  protected readonly deleteTarget = signal<EmployeeDocument | null>(null);
-  protected readonly deleting = signal(false);
-
-  // TODO: backend — the employee profile DTOs expose no person name (only jobTitle);
-  // firstName/lastName live on User/MeResponse, not the employee profile. Using
-  // jobTitle as the display identity until a user-join is available.
-
   // Identity.
   protected readonly identity = signal<TabState<EmployeeProfile>>(idle());
-  // Lazy tabs.
-  protected readonly documents = signal<TabState<EmployeeDocument[]>>(idle());
   /** Salary history as last loaded by the pay tab; bump `compReload` to refresh it. */
   protected readonly compHistory = signal<SalaryHistory | null>(null);
   protected readonly compReload = signal(0);
@@ -179,7 +158,6 @@ export default class EmployeeDetailComponent {
   });
 
   protected readonly activeTab = signal<TabId>('overview');
-  private readonly loadedKeys = new Set<string>();
 
   protected readonly tabs = computed<TabItem[]>(() => [
     { id: 'overview', label: this.translate.instant('humano.employee360.tabOverview'), icon: 'layout-grid' },
@@ -198,23 +176,10 @@ export default class EmployeeDetailComponent {
         untracked(() => this.loadIdentity(id));
       }
     });
-
-    // Lazy-load the active tab's data on first activation (keyed by id+tab).
-    effect(() => {
-      const id = this.id();
-      const tab = this.activeTab();
-      if (!id || tab === 'overview') return;
-      const key = `${id}:${tab}`;
-      if (this.loadedKeys.has(key)) return;
-      this.loadedKeys.add(key);
-      untracked(() => this.loadTab(id, tab));
-    });
   }
 
   private loadIdentity(id: string): void {
-    this.loadedKeys.clear();
     this.compHistory.set(null);
-    this.documents.set(idle());
     this.identity.set({ data: null, loading: true, error: null });
     this.employeeService.find(id).subscribe({
       next: data => this.identity.set({ data, loading: false, error: null }),
@@ -224,95 +189,6 @@ export default class EmployeeDetailComponent {
 
   protected retryIdentity(): void {
     this.loadIdentity(this.id());
-  }
-
-  protected retryTab(tab: TabId): void {
-    const id = this.id();
-    // Drop the cache key; loadTab re-runs and the activation guard re-adds it on success.
-    this.loadedKeys.delete(`${id}:${tab}`);
-    this.loadedKeys.add(`${id}:${tab}`);
-    this.loadTab(id, tab);
-  }
-
-  private loadTab(id: string, tab: TabId): void {
-    switch (tab) {
-      case 'documents':
-        this.documents.set({ data: null, loading: true, error: null });
-        this.documentService.forEmployee(id).subscribe({
-          next: data => this.documents.set({ data, loading: false, error: null }),
-          error: (err: unknown) => this.documents.set({ data: null, loading: false, error: normalizeHttpError(err) }),
-        });
-        break;
-    }
-  }
-
-  protected download(doc: EmployeeDocument): void {
-    this.documentService.download(doc.id).subscribe({
-      next: res => {
-        const blob = res.body;
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = this.document.createElement('a');
-        a.href = url;
-        a.download = doc.filePath?.split('/').pop() ?? `${doc.type ?? 'document'}-${doc.id}`;
-        a.click();
-        URL.revokeObjectURL(url);
-      },
-      error: (err: unknown) => this.toast.danger(normalizeHttpError(err)),
-    });
-  }
-
-  protected openUpload(): void {
-    this.uploadForm.reset({ type: '' });
-    this.selectedFile.set(null);
-    this.uploadOpen.set(true);
-  }
-
-  protected onFileSelected(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.selectedFile.set(target.files?.[0] ?? null);
-  }
-
-  protected submitUpload(): void {
-    const file = this.selectedFile();
-    if (!file) return;
-    const type = this.uploadForm.getRawValue().type.trim();
-    this.uploading.set(true);
-    this.documentService.uploadForEmployee(this.id(), file, type ? { type } : {}).subscribe({
-      next: () => {
-        this.toast.success(this.translate.instant('humano.employee360.docUploaded'));
-        this.uploadOpen.set(false);
-        this.uploading.set(false);
-        this.reloadDocuments();
-      },
-      error: (err: unknown) => {
-        this.toast.danger(normalizeHttpError(err));
-        this.uploading.set(false);
-      },
-    });
-  }
-
-  protected confirmDeleteDocument(): void {
-    const target = this.deleteTarget();
-    if (!target) return;
-    this.deleting.set(true);
-    this.documentService.delete(target.id).subscribe({
-      next: () => {
-        this.toast.success(this.translate.instant('humano.employee360.docDeleted'));
-        this.deleting.set(false);
-        this.deleteTarget.set(null);
-        this.reloadDocuments();
-      },
-      error: (err: unknown) => {
-        this.toast.danger(normalizeHttpError(err));
-        this.deleting.set(false);
-      },
-    });
-  }
-
-  /** Re-fetch the documents tab after a write (reuses the tab's cache-busting retry). */
-  private reloadDocuments(): void {
-    this.retryTab('documents');
   }
 
   protected openCompEditor(): void {

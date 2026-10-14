@@ -1,0 +1,119 @@
+@if (canManage()) {
+  <label
+    class="hum-dropzone"
+    [class.is-dragging]="dragging()"
+    [class.is-busy]="uploading()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="dragging.set(false)"
+    (drop)="onDrop($event)"
+  >
+    <span class="hum-records__icon"
+      ><lucide-icon [name]="uploading() ? 'loader-circle' : 'upload'" [size]="18" [class.hum-spin]="uploading()"
+    /></span>
+    <span class="hum-dropzone__text">
+      <strong>{{ 'humano.documents.dropTitle' | translate }}</strong>
+      <span>{{ 'humano.documents.dropHint' | translate }}</span>
+    </span>
+    <span class="hum-dropzone__type" (click)="$event.preventDefault()">
+      <span class="hum-kpi__label">{{ 'humano.documents.as' | translate }}</span>
+      <hum-select [options]="typeOptions" [ngModel]="uploadType()" (ngModelChange)="uploadType.set($event)" />
+    </span>
+    <input type="file" class="sr-only" multiple [accept]="accept" [disabled]="uploading()" (change)="onPick($event)" />
+  </label>
+}
+
+@if (error(); as e) {
+  <hum-alert tone="danger" [title]="e"
+    ><hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+  >
+} @else if (documents() === null) {
+  <div class="hum-doc-grid"><hum-skeleton [height]="120" /><hum-skeleton [height]="120" /><hum-skeleton [height]="120" /></div>
+} @else if (documents()!.length) {
+  <div class="hum-doc-toolbar">
+    <button type="button" class="hum-chip" [class.is-active]="!typeFilter()" (click)="typeFilter.set('')">
+      {{ 'humano.documents.all' | translate }} <span class="hum-records__count">{{ documents()!.length }}</span>
+    </button>
+    @for (c of typeChips(); track c.type) {
+      <button
+        type="button"
+        class="hum-chip"
+        [class.is-active]="typeFilter() === c.type"
+        (click)="typeFilter.set(typeFilter() === c.type ? '' : c.type)"
+      >
+        {{ c.type }} <span class="hum-records__count">{{ c.count }}</span>
+      </button>
+    }
+    <span class="hum-records__spacer"></span>
+    <span class="hum-kpi__hint">{{ 'humano.documents.total' | translate: { size: size(totalSize()) } }}</span>
+    <div style="width: 220px">
+      <hum-input
+        type="search"
+        icon="search"
+        [placeholder]="'humano.documents.search' | translate"
+        [ngModel]="query()"
+        (ngModelChange)="query.set($event)"
+      />
+    </div>
+  </div>
+
+  <div class="hum-doc-grid">
+    @for (d of visible(); track d.id) {
+      <article class="hum-doc" [attr.data-kind]="kind(d)">
+        <button type="button" class="hum-doc__preview" (click)="preview(d)" [title]="'humano.documents.open' | translate">
+          <lucide-icon [name]="kind(d) === 'image' ? 'image' : 'file-text'" [size]="28" />
+          <span class="hum-doc__ext">{{ kind(d) === 'pdf' ? 'PDF' : kind(d) === 'image' ? 'IMG' : 'FILE' }}</span>
+        </button>
+        <div class="hum-doc__body">
+          <span class="hum-doc__type">{{ d.type ?? '—' }}</span>
+          <span class="hum-doc__name" [title]="d.fileName ?? ''">{{ d.fileName ?? '—' }}</span>
+          <span class="hum-kpi__hint">
+            {{ d.createdDate | date: 'mediumDate' }}
+            @if (d.sizeBytes) {
+              · {{ size(d.sizeBytes) }}
+            }
+          </span>
+        </div>
+        <div class="hum-doc__actions">
+          <hum-icon-button icon="eye" size="sm" variant="ghost" [label]="'humano.documents.open' | translate" (click)="preview(d)" />
+          <hum-icon-button
+            icon="download"
+            size="sm"
+            variant="ghost"
+            [label]="'humano.employee360.download' | translate"
+            (click)="download(d)"
+          />
+          @if (canManage()) {
+            <hum-icon-button
+              icon="trash-2"
+              size="sm"
+              variant="ghost"
+              [label]="'humano.action.delete' | translate"
+              (click)="deleteTarget.set(d)"
+            />
+          }
+        </div>
+      </article>
+    } @empty {
+      <p class="hum-insights__note">{{ 'humano.documents.noMatch' | translate }}</p>
+    }
+  </div>
+} @else {
+  <hum-empty-state
+    icon="file-text"
+    [title]="'humano.documents.emptyTitle' | translate"
+    [description]="(canManage() ? 'humano.documents.emptyManage' : 'humano.documents.emptyBody') | translate"
+  />
+}
+
+<hum-dialog
+  [open]="deleteTarget() !== null"
+  [title]="'humano.documents.deleteTitle' | translate"
+  [description]="'humano.documents.deleteBody' | translate: { name: deleteTarget()?.fileName ?? '' }"
+  hasFooter
+  (closed)="deleteTarget.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="deleteTarget.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" [loading]="deleting()" (click)="confirmDelete()">{{ 'humano.action.delete' | translate }}</hum-button>
+  </div>
+</hum-dialog>

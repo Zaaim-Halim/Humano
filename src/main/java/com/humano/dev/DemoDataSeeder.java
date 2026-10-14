@@ -25,6 +25,7 @@ import com.humano.domain.hr.Department;
 import com.humano.domain.hr.EmployeeAsset;
 import com.humano.domain.hr.EmployeeBankAccount;
 import com.humano.domain.hr.EmployeeCertification;
+import com.humano.domain.hr.EmployeeDocument;
 import com.humano.domain.hr.EmployeeEducation;
 import com.humano.domain.hr.EmployeeExperience;
 import com.humano.domain.hr.EmployeeLanguage;
@@ -107,6 +108,7 @@ import com.humano.service.payroll.PayrollCalendarService;
 import com.humano.service.payroll.PayrollProcessingService;
 import com.humano.service.payroll.PayslipService;
 import com.humano.service.payroll.TaxCalculationService;
+import com.humano.service.storage.StorageFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.math.BigDecimal;
@@ -208,6 +210,7 @@ public class DemoDataSeeder {
     private final PayrollPeriodRepository payrollPeriodRepository;
     private final PayrollRunRepository payrollRunRepository;
     private final TransactionTemplate tenantTx;
+    private final StorageFactory storageFactory;
 
     @PersistenceContext(unitName = "tenant")
     private EntityManager entityManager;
@@ -262,7 +265,8 @@ public class DemoDataSeeder {
         PayslipRepository payslipRepository,
         PayrollPeriodRepository payrollPeriodRepository,
         PayrollRunRepository payrollRunRepository,
-        @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager
+        @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager,
+        StorageFactory storageFactory
     ) {
         this.unitService = unitService;
         this.departmentService = departmentService;
@@ -304,6 +308,7 @@ public class DemoDataSeeder {
         this.payrollPeriodRepository = payrollPeriodRepository;
         this.payrollRunRepository = payrollRunRepository;
         this.tenantTx = new TransactionTemplate(tenantTransactionManager);
+        this.storageFactory = storageFactory;
     }
 
     /** One seeded person: the key is the persona local part or the staff login. */
@@ -383,6 +388,9 @@ public class DemoDataSeeder {
             0
         ) {
             section("review history", this::seedReviewHistory);
+        }
+        if (inTx(() -> entityManager.createQuery("select count(d) from EmployeeDocument d", Long.class).getSingleResult()) == 0) {
+            section("employee documents", this::seedDocuments);
         }
         if (inTx(() -> entityManager.createQuery("select count(e) from AttendanceEvent e", Long.class).getSingleResult()) == 0) {
             section("attendance events", this::seedAttendanceEvents);
@@ -1438,6 +1446,113 @@ public class DemoDataSeeder {
             }
             return null;
         });
+    }
+
+    // ---------------------------------------------------------------- documents
+
+    /**
+     * A few real (small, valid) PDF documents per employee — offer letter, employment contract,
+     * tax form, handbook acknowledgement — stored through the tenant's storage backend, so the
+     * document library lists, previews and downloads real files.
+     */
+    private void seedDocuments() {
+        com.humano.service.storage.FileStorageService storage = storageFactory.getStorageService();
+        List<Employee> employees = inTx(employeeRepository::findAll);
+        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("MMMM d, yyyy", java.util.Locale.US);
+        for (Employee e : employees) {
+            String name = e.getFirstName() + " " + e.getLastName();
+            LocalDate start = e.getStartDate() == null ? today : e.getStartDate();
+            String[][] docs = {
+                {
+                    "Offer letter",
+                    "offer-letter.pdf",
+                    "Offer of employment",
+                    "Dear " +
+                    name +
+                    ", we are pleased to offer you the position of " +
+                    e.getJobTitle() +
+                    " starting " +
+                    start.format(fmt) +
+                    ".",
+                },
+                {
+                    "Employment contract",
+                    "employment-contract.pdf",
+                    "Employment contract",
+                    "Between Demo Company Inc. and " + name + ", effective " + start.format(fmt) + ". Position: " + e.getJobTitle() + ".",
+                },
+                {
+                    "Tax form",
+                    "w4-" + start.getYear() + ".pdf",
+                    "Form W-4 (" + start.getYear() + ")",
+                    "Employee's withholding certificate for " + name + ".",
+                },
+                {
+                    "Policy acknowledgement",
+                    "handbook-acknowledgement.pdf",
+                    "Employee handbook acknowledgement",
+                    name + " has read and accepted the employee handbook on " + start.plusDays(3).format(fmt) + ".",
+                },
+            };
+            for (String[] d : docs) {
+                byte[] pdf = simplePdf(d[2], d[3]);
+                try {
+                    String key = storage.store(
+                        new java.io.ByteArrayInputStream(pdf),
+                        "employee-documents/" + e.getId(),
+                        e.getId() + "-" + d[0].replaceAll("[^A-Za-z0-9]+", "-") + "-seed.pdf",
+                        "application/pdf"
+                    );
+                    inTx(() -> {
+                        EmployeeDocument doc = new EmployeeDocument();
+                        doc.setEmployee(entityManager.getReference(Employee.class, e.getId()));
+                        doc.setType(d[0]);
+                        doc.setFilePath(key);
+                        doc.setOriginalFileName(d[1]);
+                        doc.setContentType("application/pdf");
+                        doc.setSizeBytes((long) pdf.length);
+                        entityManager.persist(doc);
+                        return null;
+                    });
+                } catch (java.io.IOException ex) {
+                    throw new java.io.UncheckedIOException(ex);
+                }
+            }
+        }
+    }
+
+    /** A one-page PDF with a title and a line of text (valid PDF 1.4, Helvetica). */
+    private static byte[] simplePdf(String title, String body) {
+        String safeTitle = title.replace("(", "[").replace(")", "]");
+        String safeBody = body.replace("(", "[").replace(")", "]");
+        String stream =
+            "BT /F1 20 Tf 72 740 Td (" +
+            safeTitle +
+            ") Tj ET\n" +
+            "BT /F1 11 Tf 72 712 Td (Demo Company Inc.) Tj ET\n" +
+            "BT /F1 11 Tf 72 680 Td (" +
+            safeBody +
+            ") Tj ET\n";
+        String[] objects = {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+            "<< /Length " + stream.length() + " >>\nstream\n" + stream + "endstream",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        };
+        StringBuilder pdf = new StringBuilder("%PDF-1.4\n");
+        int[] offsets = new int[objects.length];
+        for (int i = 0; i < objects.length; i++) {
+            offsets[i] = pdf.length();
+            pdf.append(i + 1).append(" 0 obj\n").append(objects[i]).append("\nendobj\n");
+        }
+        int xref = pdf.length();
+        pdf.append("xref\n0 ").append(objects.length + 1).append("\n0000000000 65535 f \n");
+        for (int offset : offsets) {
+            pdf.append(String.format("%010d 00000 n \n", offset));
+        }
+        pdf.append("trailer\n<< /Size ").append(objects.length + 1).append(" /Root 1 0 R >>\nstartxref\n").append(xref).append("\n%%EOF\n");
+        return pdf.toString().getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
     }
 
     // ---------------------------------------------------------------- attendance events

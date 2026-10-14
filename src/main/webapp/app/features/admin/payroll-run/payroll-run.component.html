@@ -59,103 +59,206 @@
       ><hum-button variant="outline" size="sm" (click)="load(id())">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
     >
   } @else if (summary().data; as s) {
-    <!-- KPI totals -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-3); margin: var(--space-4) 0">
-      <hum-stat-tile [label]="'humano.payrollRun.employees' | translate" [value]="s.totalEmployees" icon="users" />
-      <hum-stat-tile [label]="'humano.payrollRun.processed' | translate" [value]="s.processedEmployees" icon="check-check" />
-      <hum-stat-tile [label]="'humano.payrollRun.errors' | translate" [value]="s.errorCount" icon="info" />
-      <hum-stat-tile [label]="'humano.payrollRun.gross' | translate" [value]="s.totalGross | money: s.currencyCode" icon="wallet" />
-      <hum-stat-tile [label]="'humano.payrollRun.net' | translate" [value]="s.totalNet | money: s.currencyCode" icon="wallet" />
-      <hum-stat-tile
-        [label]="'humano.payrollRun.employerCost' | translate"
-        [value]="s.totalEmployerCost | money: s.currencyCode"
-        icon="wallet"
-      />
+    <!-- Figures (with change vs the previous posted run) -->
+    <div class="hum-insights__kpis" style="margin-top: var(--space-4)">
+      <div class="hum-kpi hum-kpi--hero">
+        <div class="hum-kpi__label"><lucide-icon name="wallet" [size]="14" />{{ 'humano.payrollRun.net' | translate }}</div>
+        <div class="hum-kpi__value">
+          {{ s.totalNet | money: s.currencyCode }}
+          @if (s.comparison; as c) {
+            <span class="hum-delta" [class.is-up]="c.netChange >= 0">{{ pct(c.netChangePercentage) }}</span>
+          }
+        </div>
+        <div class="hum-kpi__hint">{{ 'humano.payrollRun.paidTo' | translate: { count: s.totalEmployees } }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="trending-up" [size]="14" />{{ 'humano.payrollRun.gross' | translate }}</div>
+        <div class="hum-kpi__value">
+          {{ s.totalGross | money: s.currencyCode }}
+          @if (s.comparison; as c) {
+            <span class="hum-delta" [class.is-up]="c.grossChange >= 0">{{ pct(c.grossChangePercentage) }}</span>
+          }
+        </div>
+        <div class="hum-kpi__hint">
+          @if (s.comparison; as c) {
+            {{ 'humano.payrollRun.vsPrevious' | translate: { amount: (c.previousGross | money: s.currencyCode) } }}
+          } @else {
+            {{ 'humano.payrollRun.firstRun' | translate }}
+          }
+        </div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="landmark" [size]="14" />{{ 'humano.payrollRun.deductions' | translate }}</div>
+        <div class="hum-kpi__value">{{ s.totalDeductions | money: s.currencyCode }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.payrollRun.ofGross' | translate: { pct: share(s.totalDeductions, s.totalGross) } }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="building-2" [size]="14" />{{ 'humano.payrollRun.totalCost' | translate }}</div>
+        <div class="hum-kpi__value">{{ s.totalEmployerCost | money: s.currencyCode }}</div>
+        <div class="hum-kpi__hint">
+          {{ 'humano.payrollRun.employerCharges' | translate: { amount: (s.totalEmployerCost - s.totalGross | money: s.currencyCode) } }}
+        </div>
+      </div>
     </div>
 
-    <!-- Variance vs previous period -->
-    @if (s.comparison; as c) {
-      <div
-        style="
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-          gap: var(--space-3);
-          margin-bottom: var(--space-4);
-        "
-      >
-        <hum-stat-tile
-          [label]="'humano.payrollRun.grossChange' | translate"
-          [value]="c.grossChange | money: s.currencyCode : true"
-          [trend]="c.grossChangePercentage + '%'"
-          [trendDirection]="c.grossChange >= 0 ? 'up' : 'down'"
-        />
-        <hum-stat-tile
-          [label]="'humano.payrollRun.netChange' | translate"
-          [value]="c.netChange | money: s.currencyCode : true"
-          [trend]="c.netChangePercentage + '%'"
-          [trendDirection]="c.netChange >= 0 ? 'up' : 'down'"
-        />
+    <!-- Where the money goes -->
+    <section class="hum-card hum-insights__card" style="margin-top: var(--space-4)">
+      <header class="hum-insights__head">
+        <span class="hum-records__icon"><lucide-icon name="chart-pie" [size]="16" /></span>
+        <h3>{{ 'humano.payrollRun.costBreakdown' | translate }}</h3>
+      </header>
+      <div class="hum-stackbar hum-stackbar--lg">
+        @for (part of costParts(); track part.key) {
+          <span
+            [style.width.%]="part.pct"
+            [style.background]="part.color"
+            [title]="(part.key | translate) + ': ' + (part.amount | money: s.currencyCode)"
+          ></span>
+        }
       </div>
-    }
+      <ul class="hum-dash-legend hum-dash-legend--wide">
+        @for (part of costParts(); track part.key) {
+          <li>
+            <i [style.background]="part.color"></i>{{ part.key | translate }}
+            <strong class="tabular-nums">{{ part.amount | money: s.currencyCode }}</strong>
+            <span class="hum-kpi__hint">{{ part.pct | number: '1.0-0' }}%</span>
+          </li>
+        }
+      </ul>
+    </section>
 
-    <!-- By department -->
-    @if (byDepartment().length) {
-      <div class="hum-payslip__section-title" style="margin-top: 0">{{ 'humano.payrollRun.byDepartment' | translate }}</div>
-      <table class="hum-table">
-        <thead>
-          <tr>
-            <th>{{ 'humano.payrollRun.colDepartment' | translate }}</th>
-            <th class="hum-table__num">{{ 'humano.payrollRun.colEmployees' | translate }}</th>
-            <th class="hum-table__num">{{ 'humano.payrollRun.gross' | translate }}</th>
-            <th class="hum-table__num">{{ 'humano.payrollRun.net' | translate }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (d of byDepartment(); track d[0]) {
-            <tr>
-              <td>{{ d[1].departmentName }}</td>
-              <td class="hum-table__num tabular-nums">{{ d[1].employeeCount }}</td>
-              <td class="hum-table__num tabular-nums">{{ d[1].totalGross }}</td>
-              <td class="hum-table__num tabular-nums">{{ d[1].totalNet }}</td>
-            </tr>
+    <div class="hum-insights__grid" style="margin-top: var(--space-4)">
+      <!-- Components -->
+      <section class="hum-card hum-insights__card">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="list" [size]="16" /></span>
+          <h3>{{ 'humano.payrollRun.byComponent' | translate }}</h3>
+        </header>
+        <div class="hum-kpi__label">{{ 'humano.payrollRun.earnings' | translate }}</div>
+        <div class="hum-typebars" style="margin: var(--space-2) 0 var(--space-4)">
+          @for (c of earnings(); track c.name) {
+            <div class="hum-typebars__row hum-typebars__row--money">
+              <span class="hum-typebars__label">{{ c.name }}</span>
+              <span class="hum-typebars__track"><span [style.width.%]="c.pct" style="background: var(--success-solid)"></span></span>
+              <span class="hum-typebars__value">{{ c.amount | money: s.currencyCode }}</span>
+            </div>
           }
-        </tbody>
-      </table>
-    }
+        </div>
+        <div class="hum-kpi__label">{{ 'humano.payrollRun.deductions' | translate }}</div>
+        <div class="hum-typebars" style="margin-top: var(--space-2)">
+          @for (c of deductionParts(); track c.name) {
+            <div class="hum-typebars__row hum-typebars__row--money">
+              <span class="hum-typebars__label">{{ c.name }}</span>
+              <span class="hum-typebars__track"><span [style.width.%]="c.pct" style="background: var(--warning-solid)"></span></span>
+              <span class="hum-typebars__value">{{ c.amount | money: s.currencyCode }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- Departments -->
+      @if (byDepartment().length) {
+        <section class="hum-card hum-insights__card">
+          <header class="hum-insights__head">
+            <span class="hum-records__icon"><lucide-icon name="layers" [size]="16" /></span>
+            <h3>{{ 'humano.payrollRun.byDepartment' | translate }}</h3>
+          </header>
+          <ul class="hum-dept-pay">
+            @for (d of byDepartment(); track d.name) {
+              <li>
+                <div class="hum-dept-pay__head">
+                  <strong>{{ d.name }}</strong>
+                  <span class="hum-kpi__hint">{{
+                    'humano.payrollRun.deptMeta' | translate: { count: d.employeeCount, avg: (d.averageSalary | money: s.currencyCode) }
+                  }}</span>
+                  <span class="hum-records__spacer"></span>
+                  <span class="tabular-nums">{{ d.totalGross | money: s.currencyCode }}</span>
+                </div>
+                <span
+                  class="hum-dept-pay__bar"
+                  [title]="('humano.payrollRun.net' | translate) + ' ' + (d.totalNet | money: s.currencyCode)"
+                >
+                  <span class="is-net" [style.width.%]="d.netPct"></span>
+                  <span class="is-ded" [style.width.%]="d.grossPct - d.netPct"></span>
+                </span>
+              </li>
+            }
+          </ul>
+          <div class="hum-kpi__hint" style="margin-top: var(--space-2)">
+            <span class="hum-legend"><i style="background: var(--brand)"></i>{{ 'humano.payrollRun.net' | translate }}</span>
+            <span class="hum-legend"><i style="background: var(--warning-solid)"></i>{{ 'humano.payrollRun.deductions' | translate }}</span>
+          </div>
+        </section>
+      }
+    </div>
   }
 
   <!-- Per-employee results -->
-  <div class="hum-payslip__section-title">{{ 'humano.payrollRun.results' | translate }}</div>
-  @if (results().loading) {
-    <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
-  } @else if (results().error; as e) {
-    <hum-alert tone="danger" [title]="e"
-      ><hum-button variant="outline" size="sm" (click)="load(id())">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
-    >
-  } @else if (results().data?.length) {
-    <table class="hum-table">
-      <thead>
-        <tr>
-          <th>{{ 'humano.payrollRun.colEmployee' | translate }}</th>
-          <th class="hum-table__num">{{ 'humano.payrollRun.gross' | translate }}</th>
-          <th class="hum-table__num">{{ 'humano.payrollRun.deductions' | translate }}</th>
-          <th class="hum-table__num">{{ 'humano.payrollRun.net' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (r of results().data; track r.id) {
-          <tr>
-            <td>{{ r.employeeName ?? r.employeeCode ?? r.employeeId }}</td>
-            <td class="hum-table__num tabular-nums">{{ r.gross | money: r.currencyCode }}</td>
-            <td class="hum-table__num tabular-nums">{{ r.totalDeductions | money: r.currencyCode }}</td>
-            <td class="hum-table__num tabular-nums">{{ r.net | money: r.currencyCode }}</td>
-          </tr>
+  <section class="hum-card hum-insights__card" style="margin-top: var(--space-4)">
+    <header class="hum-insights__head">
+      <span class="hum-records__icon"><lucide-icon name="users" [size]="16" /></span>
+      <h3>{{ 'humano.payrollRun.results' | translate }}</h3>
+      @if (results().data; as list) {
+        <span class="hum-records__count">{{ list.length }}</span>
+      }
+      <span class="hum-records__spacer"></span>
+      <div class="hum-dir-toolbar__search" style="max-width: 260px">
+        <hum-input
+          type="search"
+          icon="search"
+          [placeholder]="'humano.payrollRun.searchPeople' | translate"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+        />
+      </div>
+      <div style="width: 190px"><hum-select [options]="sortOptions()" [ngModel]="sortBy()" (ngModelChange)="sortBy.set($event)" /></div>
+    </header>
+    @if (results().loading) {
+      <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+    } @else if (results().error; as e) {
+      <hum-alert tone="danger" [title]="e"
+        ><hum-button variant="outline" size="sm" (click)="load(id())">{{ 'humano.action.retry' | translate }}</hum-button></hum-alert
+      >
+    } @else if (visibleResults().length) {
+      <div class="hum-pay-results">
+        <div class="hum-pay-results__row hum-pay-results__row--head">
+          <span>{{ 'humano.payrollRun.colEmployee' | translate }}</span>
+          <span>{{ 'humano.payrollRun.split' | translate }}</span>
+          <span class="hum-team-att__num">{{ 'humano.payrollRun.gross' | translate }}</span>
+          <span class="hum-team-att__num">{{ 'humano.payrollRun.deductions' | translate }}</span>
+          <span class="hum-team-att__num">{{ 'humano.payrollRun.net' | translate }}</span>
+        </div>
+        @for (r of visibleResults(); track r.id) {
+          <div class="hum-pay-results__row">
+            <span class="hum-person">
+              <hum-avatar [name]="r.employeeName ?? '—'" size="sm" />
+              <span class="hum-person__text">
+                <a class="hum-person__name" [routerLink]="['/employees', r.employeeId]">{{
+                  r.employeeName ?? r.employeeCode ?? r.employeeId
+                }}</a>
+                @if (r.payslipNumber) {
+                  <span class="hum-person__sub">{{ r.payslipNumber }}</span>
+                }
+              </span>
+            </span>
+            <span class="hum-dept-pay__bar" [title]="share(r.net, r.gross) + '% ' + ('humano.payrollRun.net' | translate)">
+              <span class="is-net" [style.width.%]="(r.net / maxGross()) * 100"></span>
+              <span class="is-ded" [style.width.%]="(r.totalDeductions / maxGross()) * 100"></span>
+            </span>
+            <span class="hum-team-att__num tabular-nums">{{ r.gross | money: r.currencyCode }}</span>
+            <span class="hum-team-att__num tabular-nums">{{ r.totalDeductions | money: r.currencyCode }}</span>
+            <span class="hum-team-att__num tabular-nums"
+              ><strong>{{ r.net | money: r.currencyCode }}</strong></span
+            >
+          </div>
         }
-      </tbody>
-    </table>
-  } @else {
-    <hum-empty-state icon="wallet" [title]="'humano.payrollRun.notFound' | translate" />
-  }
+      </div>
+    } @else if (results().data?.length) {
+      <p class="hum-insights__note">{{ 'humano.payrollRun.noMatch' | translate }}</p>
+    } @else {
+      <hum-empty-state icon="wallet" [title]="'humano.payrollRun.notFound' | translate" />
+    }
+  </section>
 </div>
 
 <hum-dialog

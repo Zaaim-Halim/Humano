@@ -33,6 +33,18 @@ public class EmployeeDocument extends AbstractAuditingEntity<UUID> {
     @Column(name = "file_path", nullable = false)
     private String filePath;
 
+    /** The uploaded file's own name (the stored key is generated). */
+    @Column(name = "original_file_name")
+    private String originalFileName;
+
+    /** Media type of the uploaded file, e.g. {@code application/pdf}. */
+    @Column(name = "content_type", length = 100)
+    private String contentType;
+
+    /** Size of the uploaded file in bytes. */
+    @Column(name = "size_bytes")
+    private Long sizeBytes;
+
     /**
      * The employee this document belongs to.
      */
@@ -47,6 +59,30 @@ public class EmployeeDocument extends AbstractAuditingEntity<UUID> {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public String getOriginalFileName() {
+        return originalFileName;
+    }
+
+    public void setOriginalFileName(String originalFileName) {
+        this.originalFileName = originalFileName;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
+    }
+
+    public Long getSizeBytes() {
+        return sizeBytes;
+    }
+
+    public void setSizeBytes(Long sizeBytes) {
+        this.sizeBytes = sizeBytes;
     }
 
     public String getType() {
