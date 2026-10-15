@@ -91,6 +91,12 @@ const routes: Routes = [
         title: 'humano.console.nav.billing',
         loadComponent: () => import('./features/platform/console/billing/console-billing.component'),
       },
+      { path: 'demos', pathMatch: 'full', redirectTo: 'demos/requests' },
+      {
+        path: 'demos/:tab',
+        title: 'humano.console.nav.demos',
+        loadComponent: () => import('./features/platform/console/demos/demos.component'),
+      },
       { path: 'team', title: 'humano.console.nav.team', loadComponent: () => import('./features/platform/console/team/team.component') },
       { path: 'account', pathMatch: 'full', redirectTo: 'account/profile' },
       { path: 'account/:section', title: 'humano.account.title', loadComponent: () => import('./account/account.component') },

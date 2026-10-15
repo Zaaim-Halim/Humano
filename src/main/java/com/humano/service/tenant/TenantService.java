@@ -170,10 +170,11 @@ public class TenantService {
     @Transactional(readOnly = true)
     public Page<TenantResponse> getTenantsByStatus(TenantStatus status, Pageable pageable) {
         log.debug("Request to get Tenants by status: {}", status);
+        // Demo workspaces are not customers; they are listed by the demos console.
         if (status == null) {
-            return tenantRepository.findAll(pageable).map(this::mapToResponse);
+            return tenantRepository.findByDemoFalse(pageable).map(this::mapToResponse);
         }
-        return tenantRepository.findByStatus(status, pageable).map(this::mapToResponse);
+        return tenantRepository.findByStatusAndDemoFalse(status, pageable).map(this::mapToResponse);
     }
 
     /** Map a {@link Tenant} entity to a response DTO. Used by platform/admin controllers. */
@@ -243,6 +244,8 @@ public class TenantService {
             tenant.getSubscriptionPlan().getId(),
             tenant.getSubscriptionPlan().getDisplayName(),
             tenant.getOrganizations().size(),
+            tenant.isDemo(),
+            tenant.getDemoExpiresAt(),
             tenant.getCreatedBy(),
             tenant.getCreatedDate(),
             tenant.getLastModifiedBy(),

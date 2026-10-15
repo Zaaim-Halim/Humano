@@ -21,6 +21,9 @@ export interface Tenant extends AuditFields {
   subscriptionPlanId: string | null;
   subscriptionPlanName: string | null;
   organizationCount: number;
+  /** A demo workspace (listed under Demos, not customers). */
+  demo: boolean;
+  demoExpiresAt: string | null;
 }
 
 /** Live Hikari pool stats attached to tenant detail (best-effort, may be null). */

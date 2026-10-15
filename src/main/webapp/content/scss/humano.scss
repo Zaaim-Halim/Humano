@@ -2710,6 +2710,26 @@ dt {
 }
 
 /* pricing */
+/* Book-a-demo dialog */
+.lp-demo-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.lp-demo-form__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.lp-demo-form__hp {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .lp-pricing {
   align-items: start;
 }
@@ -8573,6 +8593,125 @@ button.hum-records__empty:hover {
 
 .hum-con-table-wrap {
   overflow-x: auto;
+}
+
+/* Settings — plan & billing */
+.hum-bill-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+.hum-bill-plan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.hum-bill-plan.is-featured {
+  border-color: var(--brand-border);
+}
+
+.hum-bill-plan.is-current {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 1px var(--brand);
+}
+
+.hum-bill-plan header {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hum-bill-plan h4 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.hum-bill-plan__price strong {
+  font-size: var(--text-xl);
+  color: var(--text-strong);
+}
+
+.hum-bill-plan__price span {
+  margin-left: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.hum-bill-plan ul {
+  display: grid;
+  flex: 1;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.hum-bill-plan li {
+  display: flex;
+  gap: var(--space-1_5, 6px);
+  align-items: center;
+}
+
+.hum-bill-cancel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.hum-bill-cancel p {
+  margin: 2px 0 0;
+}
+
+/* Owner console — demos */
+.hum-demo-row {
+  cursor: pointer;
+}
+
+.hum-demo-soon {
+  color: var(--warning-fg);
+  font-weight: 600;
+}
+
+.hum-demo-message {
+  margin: var(--space-1) 0 0;
+  padding: var(--space-3);
+  white-space: pre-wrap;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md, 8px);
+}
+
+.hum-demo-mono {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  overflow-wrap: anywhere;
+}
+
+.hum-demo-creds {
+  grid-template-columns: 1fr;
+}
+
+.hum-demo-switch {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.hum-demo-switch > span {
+  display: grid;
+  gap: 2px;
 }
 
 .hum-con-table {

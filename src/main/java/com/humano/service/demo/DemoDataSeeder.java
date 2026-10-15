@@ -1,4 +1,4 @@
-package com.humano.dev;
+package com.humano.service.demo;
 
 import com.humano.domain.enumeration.CountryCode;
 import com.humano.domain.enumeration.CurrencyCode;
@@ -129,16 +129,20 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Profile;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Fills the dev demo tenant with a realistic company, so every screen has something to show.
+ * Fills a tenant with a realistic sample company, so every screen has something to show.
  * <p>
- * Called by {@link DevDataSeeder} after the persona logins exist; disable with
- * {@code humano.dev.seed.demo-data=false}. Everything goes through the service layer — the same
+ * Used for the dev demo tenant ({@code DevDataSeeder}, disable with
+ * {@code humano.dev.seed.demo-data=false}) and for the demo workspaces the platform team sets up for
+ * prospects ({@link DemoWorkspaceService}); both create the persona logins first
+ * ({@link DemoPersonaService}). Prototype-scoped: it keeps per-run state, so each run takes a fresh
+ * instance. Everything goes through the service layer — the same
  * request records and validation the REST API uses — so the data honours the backend contract.
  * Fail-soft per section (a failing section is logged and the rest continue) and idempotent: it runs
  * once, keyed on a marker employee, and a fixed {@link Random} seed keeps the data identical across
@@ -147,7 +151,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <h3>What it creates</h3>
  * <ul>
  *   <li>An org-unit tree (company → departments → engineering teams), departments and positions.</li>
- *   <li>The persona logins from {@link DevDataSeeder} turned into employees with realistic names,
+ *   <li>The persona logins from {@link DemoPersonaService} turned into employees with realistic names,
  *       placed in the hierarchy (CEO → department heads → managers → reports), plus ~45 more staff.</li>
  *   <li>Compensation, addresses, emergency contacts and contracts for everyone.</li>
  *   <li>Projects, two weeks of timesheets and attendance, leave and expenses in every state —
@@ -157,7 +161,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * </ul>
  */
 @Component
-@Profile("dev")
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class DemoDataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(DemoDataSeeder.class);
@@ -414,7 +418,7 @@ public class DemoDataSeeder {
                     null
                 );
                 people.add(seeded);
-                byKey.put(seeded.key().replace("@demo.humano", ""), seeded);
+                byKey.put(seeded.key().replace("@" + DemoPersonaService.EMAIL_DOMAIN, ""), seeded);
             }
             return null;
         });
@@ -523,7 +527,7 @@ public class DemoDataSeeder {
 
     // ---------------------------------------------------------------- people
 
-    /** Persona logins (from DevDataSeeder) with the real person behind each one. Order = hierarchy. */
+    /** Persona logins (from DemoPersonaService) with the real person behind each one. Order = hierarchy. */
     private static List<Person> personas() {
         return List.of(
             p(
@@ -1022,7 +1026,7 @@ public class DemoDataSeeder {
         List<? extends AbstractReferenceData> grades,
         List<? extends AbstractReferenceData> types
     ) {
-        String login = person.key() + "@demo.humano";
+        String login = person.key() + "@" + DemoPersonaService.EMAIL_DOMAIN;
         UUID positionId = position(person.unit(), person.title(), person.level());
         UUID unitId = unitIds.get(person.unit());
         UUID managerId = person.managerKey() == null ? null : ids.get(person.managerKey());
@@ -1095,7 +1099,7 @@ public class DemoDataSeeder {
         for (Person person : personas()) {
             boolean missing = inTx(() ->
                 userRepository
-                    .findOneByLogin(person.key() + "@demo.humano")
+                    .findOneByLogin(person.key() + "@" + DemoPersonaService.EMAIL_DOMAIN)
                     .map(u -> employeeRepository.findById(u.getId()).map(e -> e.getJobTitle() == null).orElse(true))
                     .orElse(false)
             );

@@ -153,7 +153,42 @@
         "invoicesTitle": "Invoices",
         "invoicesHint": "What Humano has billed your company.",
         "due": "{{ amount }} due",
-        "noInvoices": "No invoices yet."
+        "noInvoices": "No invoices yet.",
+        "planHintManage": "Your Humano subscription. Change plan or billing cycle below, or end the subscription.",
+        "endsOn": "Ends {{ date }}",
+        "cancelScheduled": "Your subscription ends on {{ date }}. Your workspace stays open until then.",
+        "keep": "Keep my subscription",
+        "ended": "Your subscription has ended. Choose a plan below to continue.",
+        "changeTitle": "Change plan",
+        "chooseTitle": "Choose a plan",
+        "changeHint": "Upgrades and downgrades apply right away; the new price is billed from your next invoice.",
+        "current": "Current plan",
+        "unlimited": "Unlimited {{ unit }}",
+        "upTo": "Up to {{ n }} {{ unit }}",
+        "action": {
+          "upgrade": "Upgrade",
+          "downgrade": "Downgrade",
+          "switch": "Switch billing cycle",
+          "choose": "Choose plan"
+        },
+        "cancelTitle": "End subscription",
+        "cancelHint": "Your subscription stops renewing and ends at the close of the current period. You can change your mind until then.",
+        "cancel": "End subscription",
+        "cancelConfirmTitle": "End your subscription?",
+        "cancelConfirmBody": "It will end on {{ date }}. Until then everything keeps working, and you can keep the subscription after all.",
+        "cancelConfirm": "End subscription",
+        "changeConfirmTitle": "Move to {{ name }}?",
+        "changeConfirmBody": "Your plan changes now; you will be billed {{ amount }} {{ cycle }} from your next invoice.",
+        "chooseConfirmBody": "Your subscription starts today at {{ amount }} {{ cycle }}.",
+        "changeConfirm": "Confirm",
+        "changed": "Your plan has been updated",
+        "cancelled": "Your subscription will end at the close of this period",
+        "resumed": "Your subscription will keep renewing",
+        "demoTitle": "Demo workspace",
+        "demoHint": "This workspace is a demo set up by Humano, with a sample company to explore.",
+        "demoBadge": "Demo",
+        "demoEnds": "Demo ends {{ date }}",
+        "demoKeep": "Want to keep it? Talk to your Humano contact — we can turn this workspace into your own, on the plan you choose."
       }
     }
   }

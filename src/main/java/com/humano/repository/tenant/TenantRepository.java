@@ -2,11 +2,13 @@ package com.humano.repository.tenant;
 
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -28,6 +30,18 @@ public interface TenantRepository extends JpaRepository<Tenant, UUID>, JpaSpecif
     Page<Tenant> findByStatus(TenantStatus status, Pageable pageable);
 
     long countByStatus(TenantStatus status);
+
+    /** Customers only — demo workspaces are not customers. */
+    Page<Tenant> findByDemoFalse(Pageable pageable);
+
+    Page<Tenant> findByStatusAndDemoFalse(TenantStatus status, Pageable pageable);
+
+    @EntityGraph(attributePaths = "subscriptionPlan")
+    List<Tenant> findByDemoTrueOrderByCreatedDateDesc();
+
+    /** Ready demo workspaces past their expiry, still open — the expiry job suspends them. */
+    @Query("SELECT t FROM Tenant t WHERE t.demo = true AND t.status = 'ACTIVE' AND t.demoExpiresAt <= :now")
+    List<Tenant> findExpiredDemos(@Param("now") Instant now);
 
     /**
      * Projection-only query for tenant fan-out tasks. Returns just the subdomain

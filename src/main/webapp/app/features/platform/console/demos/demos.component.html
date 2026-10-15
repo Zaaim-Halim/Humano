@@ -1,0 +1,577 @@
+<div class="hum-page">
+  <hum-page-header
+    [title]="'humano.console.demos.title' | translate"
+    [subtitle]="'humano.console.demos.subtitle' | translate"
+    [hasActions]="can().provision"
+  >
+    <div hum-page-actions>
+      <hum-button variant="primary" icon="plus" (click)="openCreate()">{{ 'humano.console.demos.new' | translate }}</hum-button>
+    </div>
+  </hum-page-header>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" icon="rotate-ccw" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (requests() === null || demos() === null) {
+    <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+  } @else {
+    <div class="hum-insights__kpis hum-dash-kpis">
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="inbox" [size]="14" />{{ 'humano.console.demos.kpi.new' | translate }}</div>
+        <div class="hum-kpi__value tabular-nums">{{ counts().newRequests }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.demos.kpi.newHint' | translate: { n: counts().openRequests } }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="presentation" [size]="14" />{{ 'humano.console.demos.kpi.live' | translate }}</div>
+        <div class="hum-kpi__value tabular-nums">{{ counts().live }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.demos.kpi.liveHint' | translate }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="clock" [size]="14" />{{ 'humano.console.demos.kpi.expiring' | translate }}</div>
+        <div class="hum-kpi__value tabular-nums">{{ counts().expiringSoon }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.demos.kpi.expiringHint' | translate }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="lock" [size]="14" />{{ 'humano.console.demos.kpi.expired' | translate }}</div>
+        <div class="hum-kpi__value tabular-nums">{{ counts().expired }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.demos.kpi.expiredHint' | translate }}</div>
+      </div>
+    </div>
+
+    <hum-tabs [items]="tabs()" [value]="tab()" (valueChange)="setTab($event)" />
+
+    <div style="margin-top: var(--space-4)">
+      @switch (tab()) {
+        <!-- ======================= Requests ======================= -->
+        @case ('requests') {
+          <div class="hum-con-toolbar">
+            <div class="hum-con-chips" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                class="hum-con-chip"
+                [class.is-on]="requestFilter() === 'open'"
+                [attr.aria-selected]="requestFilter() === 'open'"
+                (click)="requestFilter.set('open')"
+              >
+                {{ 'humano.console.demos.request.filter.open' | translate }}
+                <span class="tabular-nums">{{ counts().openRequests }}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                class="hum-con-chip"
+                [class.is-on]="requestFilter() === 'all'"
+                [attr.aria-selected]="requestFilter() === 'all'"
+                (click)="requestFilter.set('all')"
+              >
+                {{ 'humano.console.demos.request.filter.all' | translate }}
+                <span class="tabular-nums">{{ requests()!.length }}</span>
+              </button>
+            </div>
+          </div>
+
+          @if (visibleRequests().length) {
+            <section class="hum-set-card" style="padding: 0">
+              <div class="hum-con-table-wrap">
+                <table class="hum-con-table">
+                  <thead>
+                    <tr>
+                      <th>{{ 'humano.console.demos.request.company' | translate }}</th>
+                      <th>{{ 'humano.console.demos.request.contact' | translate }}</th>
+                      <th>{{ 'humano.console.demos.request.received' | translate }}</th>
+                      <th>{{ 'humano.console.demos.request.status' | translate }}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of visibleRequests(); track r.id) {
+                      <tr class="hum-demo-row" (click)="openRequest(r)">
+                        <td>
+                          <span class="hum-person__text">
+                            <span class="hum-person__name">{{ r.companyName }}</span>
+                            <span class="hum-person__sub">
+                              @if (r.companySize) {
+                                {{ 'humano.console.demos.request.employees' | translate: { size: r.companySize } }}
+                              }
+                              @if (r.companySize && r.country) {
+                                ·
+                              }
+                              {{ countryName(r.country) }}
+                            </span>
+                          </span>
+                        </td>
+                        <td>
+                          <span class="hum-person__text">
+                            <span>{{ r.fullName }}</span>
+                            <span class="hum-person__sub">{{ r.workEmail }}</span>
+                          </span>
+                        </td>
+                        <td class="tabular-nums">{{ r.createdDate | date: 'mediumDate' }}</td>
+                        <td>
+                          <hum-badge
+                            [tone]="requestTone(r.status)"
+                            [label]="'humano.console.demos.request.statuses.' + r.status | translate"
+                          />
+                        </td>
+                        <td class="is-actions" (click)="$event.stopPropagation()">
+                          @if (can().provision && !r.tenantId && r.status !== 'DECLINED') {
+                            <hum-button variant="secondary" size="sm" icon="presentation" (click)="openCreate(r)">{{
+                              'humano.console.demos.request.createDemo' | translate
+                            }}</hum-button>
+                          }
+                          @if (r.tenantSubdomain) {
+                            <span class="hum-kpi__hint">{{ r.tenantSubdomain }}</span>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          } @else {
+            <hum-empty-state
+              icon="inbox"
+              [title]="'humano.console.demos.request.empty' | translate"
+              [description]="'humano.console.demos.request.emptyHint' | translate"
+            />
+          }
+        }
+
+        <!-- ======================= Workspaces ======================= -->
+        @case ('workspaces') {
+          @if (demos()!.length) {
+            <section class="hum-set-card" style="padding: 0">
+              <div class="hum-con-table-wrap">
+                <table class="hum-con-table">
+                  <thead>
+                    <tr>
+                      <th>{{ 'humano.console.demos.col.demo' | translate }}</th>
+                      <th>{{ 'humano.console.demos.col.contact' | translate }}</th>
+                      <th>{{ 'humano.console.demos.col.plan' | translate }}</th>
+                      <th>{{ 'humano.console.demos.col.status' | translate }}</th>
+                      <th>{{ 'humano.console.demos.col.expires' | translate }}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (d of demos(); track d.id) {
+                      @let s = setupLabel(d);
+                      <tr>
+                        <td>
+                          <span class="hum-person__text">
+                            <span class="hum-person__name">{{ d.name }}</span>
+                            <span class="hum-person__sub">{{ d.subdomain }} · {{ countryName(d.country) }}</span>
+                          </span>
+                        </td>
+                        <td>
+                          @if (d.contactName || d.contactEmail) {
+                            <span class="hum-person__text">
+                              <span>{{ d.contactName || '—' }}</span>
+                              <span class="hum-person__sub">{{ d.contactEmail }}</span>
+                            </span>
+                          } @else {
+                            <span class="hum-kpi__hint">—</span>
+                          }
+                        </td>
+                        <td>{{ d.planName || '—' }}</td>
+                        <td><hum-badge [tone]="s.tone" [label]="'humano.console.demos.setup.' + s.key | translate" /></td>
+                        <td class="tabular-nums">
+                          @if (d.expiresAt) {
+                            <span class="hum-person__text">
+                              <span>{{ d.expiresAt | date: 'mediumDate' }}</span>
+                              @if (d.status !== 'SUSPENDED') {
+                                @let left = daysLeft(d);
+                                <span class="hum-person__sub" [class.hum-demo-soon]="expiresSoon(d)">{{
+                                  (left === 0
+                                    ? 'humano.console.demos.expiresToday'
+                                    : left === 1
+                                      ? 'humano.console.demos.dayLeft'
+                                      : 'humano.console.demos.daysLeft'
+                                  ) | translate: { n: left }
+                                }}</span>
+                              }
+                            </span>
+                          }
+                        </td>
+                        <td class="is-actions">
+                          @if (d.setup === 'FAILED') {
+                            @if (can().provision) {
+                              <hum-button variant="secondary" size="sm" icon="rotate-ccw" [loading]="busy()" (click)="retry(d)">{{
+                                'humano.console.demos.retry' | translate
+                              }}</hum-button>
+                            }
+                          } @else if (d.setup === 'READY') {
+                            @if (can().suspend) {
+                              <hum-button variant="ghost" size="sm" icon="calendar-plus" (click)="extending.set({ demo: d, days: 14 })">{{
+                                'humano.console.demos.extend' | translate
+                              }}</hum-button>
+                            }
+                            @if (can().billing) {
+                              <hum-button variant="ghost" size="sm" icon="badge-check" (click)="openConvert(d)">{{
+                                'humano.console.demos.convert' | translate
+                              }}</hum-button>
+                            }
+                            @if (can().provision) {
+                              <hum-button
+                                variant="ghost"
+                                size="sm"
+                                icon="key-round"
+                                [attr.aria-label]="'humano.console.demos.resetPassword' | translate"
+                                [title]="'humano.console.demos.resetPassword' | translate"
+                                (click)="confirming.set({ demo: d, action: 'reset' })"
+                              />
+                            }
+                            @if (can().suspend && d.status === 'ACTIVE') {
+                              <hum-button
+                                variant="ghost"
+                                size="sm"
+                                icon="lock"
+                                [attr.aria-label]="'humano.console.demos.expire' | translate"
+                                [title]="'humano.console.demos.expire' | translate"
+                                (click)="confirming.set({ demo: d, action: 'expire' })"
+                              />
+                            }
+                          } @else {
+                            <span class="hum-kpi__hint">{{ 'humano.console.demos.settingUpHint' | translate }}</span>
+                          }
+                          @if (can().deprovision && d.setup !== 'PROVISIONING' && d.setup !== 'SEEDING') {
+                            <hum-button
+                              variant="ghost"
+                              size="sm"
+                              icon="trash-2"
+                              [attr.aria-label]="'humano.console.demos.delete' | translate"
+                              [title]="'humano.console.demos.delete' | translate"
+                              (click)="confirming.set({ demo: d, action: 'delete' })"
+                            />
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          } @else {
+            <hum-empty-state
+              icon="presentation"
+              [title]="'humano.console.demos.empty' | translate"
+              [description]="'humano.console.demos.emptyHint' | translate"
+            />
+          }
+        }
+      }
+    </div>
+  }
+</div>
+
+<!-- Request details -->
+<hum-drawer [open]="viewing() !== null" [title]="viewing()?.companyName ?? ''" hasFooter (closed)="viewing.set(null)">
+  @if (viewing(); as r) {
+    <div style="display: grid; gap: var(--space-4)">
+      <div>
+        <hum-badge [tone]="requestTone(r.status)" [label]="'humano.console.demos.request.statuses.' + r.status | translate" />
+      </div>
+      <dl class="hum-con-facts">
+        <div>
+          <dt>{{ 'humano.console.demos.request.contact' | translate }}</dt>
+          <dd>{{ r.fullName }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'humano.console.demos.request.email' | translate }}</dt>
+          <dd>
+            <a [href]="'mailto:' + r.workEmail">{{ r.workEmail }}</a>
+          </dd>
+        </div>
+        @if (r.phone) {
+          <div>
+            <dt>{{ 'humano.console.demos.request.phone' | translate }}</dt>
+            <dd>{{ r.phone }}</dd>
+          </div>
+        }
+        @if (r.companySize) {
+          <div>
+            <dt>{{ 'humano.console.demos.request.size' | translate }}</dt>
+            <dd>{{ r.companySize }}</dd>
+          </div>
+        }
+        @if (r.country) {
+          <div>
+            <dt>{{ 'humano.console.demos.request.country' | translate }}</dt>
+            <dd>{{ countryName(r.country) }}</dd>
+          </div>
+        }
+        <div>
+          <dt>{{ 'humano.console.demos.request.received' | translate }}</dt>
+          <dd>{{ r.createdDate | date: 'medium' }}</dd>
+        </div>
+        @if (r.tenantSubdomain) {
+          <div>
+            <dt>{{ 'humano.console.demos.request.demo' | translate }}</dt>
+            <dd>{{ r.tenantSubdomain }}</dd>
+          </div>
+        }
+      </dl>
+      @if (r.message) {
+        <div>
+          <p class="hum-kpi__label">{{ 'humano.console.demos.request.message' | translate }}</p>
+          <p class="hum-demo-message">{{ r.message }}</p>
+        </div>
+      }
+      <hum-form-field [label]="'humano.console.demos.request.notes' | translate" controlId="req-notes">
+        <hum-textarea
+          [rows]="4"
+          [ngModel]="notesDraft()"
+          (ngModelChange)="notesDraft.set($event)"
+          [placeholder]="'humano.console.demos.request.notesPlaceholder' | translate"
+          [disabled]="!can().provision"
+        />
+      </hum-form-field>
+      @if (can().provision) {
+        <div style="display: flex; flex-wrap: wrap; gap: var(--space-2)">
+          @if (r.status === 'NEW') {
+            <hum-button variant="secondary" size="sm" icon="phone" (click)="setRequestStatus(r, 'CONTACTED')">{{
+              'humano.console.demos.request.markContacted' | translate
+            }}</hum-button>
+          }
+          @if (r.status === 'NEW' || r.status === 'CONTACTED') {
+            <hum-button variant="secondary" size="sm" icon="x" (click)="setRequestStatus(r, 'DECLINED')">{{
+              'humano.console.demos.request.decline' | translate
+            }}</hum-button>
+          }
+          @if (r.status === 'DECLINED') {
+            <hum-button variant="secondary" size="sm" icon="rotate-ccw" (click)="setRequestStatus(r, 'NEW')">{{
+              'humano.console.demos.request.reopen' | translate
+            }}</hum-button>
+          }
+          <hum-button variant="ghost" size="sm" icon="trash-2" (click)="deleteRequest(r)">{{
+            'humano.console.demos.request.delete' | translate
+          }}</hum-button>
+        </div>
+      }
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" icon="x" (click)="viewing.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    @if (can().provision) {
+      <hum-button variant="secondary" icon="save" [loading]="busy()" (click)="saveNotes()">{{
+        'humano.console.demos.request.saveNotes' | translate
+      }}</hum-button>
+      @if (viewing(); as r) {
+        @if (!r.tenantId && r.status !== 'DECLINED') {
+          <hum-button variant="primary" icon="presentation" (click)="openCreate(r)">{{
+            'humano.console.demos.request.createDemo' | translate
+          }}</hum-button>
+        }
+      }
+    }
+  </div>
+</hum-drawer>
+
+<!-- New demo -->
+<hum-drawer [open]="create() !== null" [title]="'humano.console.demos.newTitle' | translate" hasFooter (closed)="create.set(null)">
+  @if (create(); as d) {
+    <div style="display: grid; gap: var(--space-4)">
+      <hum-form-field [label]="'humano.console.demos.form.company' | translate" controlId="demo-company" required>
+        <hum-input inputId="demo-company" [ngModel]="d.companyName" (ngModelChange)="patchCreate({ companyName: $event })" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.console.demos.form.subdomain' | translate"
+        controlId="demo-subdomain"
+        required
+        [hint]="'humano.console.demos.form.subdomainHint' | translate"
+      >
+        <hum-input
+          inputId="demo-subdomain"
+          mono
+          [ngModel]="d.subdomain"
+          (ngModelChange)="patchCreate({ subdomain: $event.toLowerCase(), subdomainTouched: true })"
+        />
+      </hum-form-field>
+      <div class="hum-set-grid hum-set-grid--2">
+        <hum-form-field [label]="'humano.console.demos.form.country' | translate" controlId="demo-country" required>
+          <hum-select [options]="countryOptions()" [ngModel]="d.country" (ngModelChange)="patchCreate({ country: $event })" />
+        </hum-form-field>
+        <hum-form-field [label]="'humano.console.demos.form.duration' | translate" controlId="demo-duration">
+          <hum-select
+            [options]="durationOptions()"
+            [ngModel]="'' + d.durationDays"
+            (ngModelChange)="patchCreate({ durationDays: +$event })"
+          />
+        </hum-form-field>
+      </div>
+      <div class="hum-set-grid hum-set-grid--2">
+        <hum-form-field [label]="'humano.console.demos.form.contactName' | translate" controlId="demo-contact">
+          <hum-input inputId="demo-contact" [ngModel]="d.contactName" (ngModelChange)="patchCreate({ contactName: $event })" />
+        </hum-form-field>
+        <hum-form-field [label]="'humano.console.demos.form.contactEmail' | translate" controlId="demo-email">
+          <hum-input inputId="demo-email" type="email" [ngModel]="d.contactEmail" (ngModelChange)="patchCreate({ contactEmail: $event })" />
+        </hum-form-field>
+      </div>
+      <hum-form-field
+        [label]="'humano.console.demos.form.plan' | translate"
+        controlId="demo-plan"
+        [hint]="'humano.console.demos.form.planHint' | translate"
+      >
+        <hum-select [options]="planOptions()" [ngModel]="d.planId" (ngModelChange)="patchCreate({ planId: $event })" />
+      </hum-form-field>
+      <div class="hum-demo-switch">
+        <hum-switch
+          [ngModel]="d.sampleData"
+          (ngModelChange)="patchCreate({ sampleData: $event })"
+          [ariaLabel]="'humano.console.demos.form.sampleData' | translate"
+        />
+        <span>
+          <strong>{{ 'humano.console.demos.form.sampleData' | translate }}</strong>
+          <span class="hum-kpi__hint">{{ 'humano.console.demos.form.sampleDataHint' | translate }}</span>
+        </span>
+      </div>
+      <hum-alert tone="info" [title]="'humano.console.demos.form.backgroundTitle' | translate">
+        {{ 'humano.console.demos.form.backgroundBody' | translate }}
+      </hum-alert>
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" icon="x" (click)="create.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="presentation" [loading]="busy()" [disabled]="!createValid()" (click)="submitCreate()">{{
+      'humano.console.demos.form.submit' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Sign-in details (shown once) -->
+<hum-dialog
+  [open]="credentials() !== null"
+  [title]="'humano.console.demos.creds.title' | translate"
+  [description]="'humano.console.demos.creds.body' | translate"
+  hasFooter
+  (closed)="credentials.set(null)"
+>
+  @if (credentials(); as c) {
+    <dl class="hum-con-facts hum-demo-creds">
+      <div>
+        <dt>{{ 'humano.console.demos.creds.workspace' | translate }}</dt>
+        <dd class="hum-demo-mono">{{ c.workspace }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'humano.console.demos.creds.admin' | translate }}</dt>
+        <dd class="hum-demo-mono">{{ c.adminLogin }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'humano.console.demos.creds.password' | translate }}</dt>
+        <dd class="hum-demo-mono">{{ c.password }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'humano.console.demos.creds.others' | translate }}</dt>
+        <dd class="hum-demo-mono">
+          @for (l of c.personaLogins; track l) {
+            <div>{{ l }}</div>
+          }
+        </dd>
+      </div>
+    </dl>
+  }
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    @if (credentials(); as c) {
+      <hum-button variant="secondary" icon="copy" (click)="copy(credentialsText(c))">{{
+        'humano.console.demos.creds.copy' | translate
+      }}</hum-button>
+    }
+    <hum-button variant="primary" icon="check" (click)="credentials.set(null)">{{
+      'humano.console.demos.creds.done' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>
+
+<!-- Extend -->
+<hum-dialog
+  [open]="extending() !== null"
+  [title]="'humano.console.demos.extendTitle' | translate: { name: extending()?.demo?.name ?? '' }"
+  [description]="'humano.console.demos.extendBody' | translate"
+  hasFooter
+  (closed)="extending.set(null)"
+>
+  @if (extending(); as e) {
+    <hum-form-field [label]="'humano.console.demos.form.duration' | translate" controlId="demo-extend">
+      <hum-select [options]="durationOptions()" [ngModel]="'' + e.days" (ngModelChange)="extending.set({ demo: e.demo, days: +$event })" />
+    </hum-form-field>
+  }
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" icon="x" (click)="extending.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="calendar-plus" [loading]="busy()" (click)="submitExtend()">{{
+      'humano.console.demos.extend' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>
+
+<!-- Convert -->
+<hum-drawer
+  [open]="converting() !== null"
+  [title]="'humano.console.demos.convertTitle' | translate: { name: converting()?.demo?.name ?? '' }"
+  hasFooter
+  (closed)="converting.set(null)"
+>
+  @if (converting(); as c) {
+    <div style="display: grid; gap: var(--space-4)">
+      <p class="hum-kpi__hint">{{ 'humano.console.demos.convertBody' | translate }}</p>
+      <hum-form-field [label]="'humano.console.demos.form.plan' | translate" controlId="conv-plan" required>
+        <hum-select [options]="planOptions()" [ngModel]="c.planId" (ngModelChange)="patchConvert({ planId: $event })" />
+      </hum-form-field>
+      <div class="hum-set-grid hum-set-grid--2">
+        <hum-form-field [label]="'humano.console.demos.form.cycle' | translate" controlId="conv-cycle">
+          <hum-select [options]="cycleOptions()" [ngModel]="c.billingCycle" (ngModelChange)="patchConvert({ billingCycle: $event })" />
+        </hum-form-field>
+        <hum-form-field
+          [label]="'humano.console.demos.form.trialDays' | translate"
+          controlId="conv-trial"
+          [hint]="'humano.console.demos.form.trialDaysHint' | translate"
+        >
+          <hum-input
+            inputId="conv-trial"
+            type="number"
+            [ngModel]="c.trialDays"
+            (ngModelChange)="patchConvert({ trialDays: +$event || 0 })"
+          />
+        </hum-form-field>
+      </div>
+      <hum-form-field [label]="'humano.console.demos.form.coupon' | translate" controlId="conv-coupon">
+        <hum-input
+          inputId="conv-coupon"
+          mono
+          [ngModel]="c.couponCode"
+          (ngModelChange)="patchConvert({ couponCode: $event.toUpperCase() })"
+        />
+      </hum-form-field>
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" icon="x" (click)="converting.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="badge-check" [loading]="busy()" [disabled]="!converting()?.planId" (click)="submitConvert()">{{
+      'humano.console.demos.convert' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Expire / delete / reset password -->
+<hum-dialog
+  [open]="confirming() !== null"
+  [title]="
+    'humano.console.demos.confirm.' + (confirming()?.action ?? 'expire') + 'Title' | translate: { name: confirming()?.demo?.name ?? '' }
+  "
+  [description]="'humano.console.demos.confirm.' + (confirming()?.action ?? 'expire') + 'Body' | translate"
+  hasFooter
+  (closed)="confirming.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" icon="x" (click)="confirming.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button
+      [variant]="confirming()?.action === 'delete' ? 'destructive' : 'primary'"
+      [icon]="confirming()?.action === 'delete' ? 'trash-2' : confirming()?.action === 'reset' ? 'key-round' : 'lock'"
+      [loading]="busy()"
+      (click)="confirm()"
+      >{{ 'humano.console.demos.confirm.' + (confirming()?.action ?? 'expire') | translate }}</hum-button
+    >
+  </div>
+</hum-dialog>

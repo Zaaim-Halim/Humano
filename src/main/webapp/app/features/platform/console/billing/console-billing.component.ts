@@ -38,6 +38,16 @@ import { PlatformConsoleService } from '../../services/platform-console.service'
 import { SubscriptionPlanService } from '../../services/subscription-plan.service';
 
 type Tab = 'invoices' | 'plans' | 'coupons';
+
+type PlanDraft = {
+  id: string | null;
+  name: string;
+  type: string;
+  price: string;
+  description: string;
+  featured: boolean;
+  publicListed: boolean;
+};
 type InvoiceFilter = 'open' | 'overdue' | 'paid' | 'all';
 
 /**
@@ -139,7 +149,7 @@ export default class ConsoleBillingComponent {
   // ---- Plans
   protected readonly plans = signal<SubscriptionPlan[] | null>(null);
   protected readonly planStats = signal<Map<string, PlanBreakdown>>(new Map());
-  protected readonly planDraft = signal<{ id: string | null; name: string; type: string; price: string } | null>(null);
+  protected readonly planDraft = signal<PlanDraft | null>(null);
   protected readonly typeOptions = computed(() =>
     Object.values(SubscriptionType).map(t => ({ value: t, label: this.t(`humano.console.planType.${t}`) })),
   );
@@ -330,12 +340,28 @@ export default class ConsoleBillingComponent {
   }
 
   protected newPlan(): void {
-    this.planDraft.set({ id: null, name: '', type: SubscriptionType.BASIC, price: '' });
+    this.planDraft.set({
+      id: null,
+      name: '',
+      type: SubscriptionType.BASIC,
+      price: '',
+      description: '',
+      featured: false,
+      publicListed: true,
+    });
     this.loadDraftItems(null);
   }
 
   protected editPlan(p: SubscriptionPlan): void {
-    this.planDraft.set({ id: p.id, name: p.displayName ?? '', type: p.subscriptionType, price: String(p.basePrice ?? p.price) });
+    this.planDraft.set({
+      id: p.id,
+      name: p.displayName ?? '',
+      type: p.subscriptionType,
+      price: String(p.basePrice ?? p.price),
+      description: p.description ?? '',
+      featured: p.featured,
+      publicListed: p.publicListed,
+    });
     this.loadDraftItems(p.id);
   }
 
@@ -362,7 +388,7 @@ export default class ConsoleBillingComponent {
     }));
   }
 
-  protected patchPlanDraft(patch: Partial<{ name: string; type: string; price: string }>): void {
+  protected patchPlanDraft(patch: Partial<PlanDraft>): void {
     this.planDraft.update(d => (d ? { ...d, ...patch } : d));
   }
 
@@ -375,7 +401,15 @@ export default class ConsoleBillingComponent {
     const d = this.planDraft();
     if (!d || !this.planDraftValid()) return;
     const price = Number(d.price);
-    const body = { subscriptionType: d.type as SubscriptionType, displayName: d.name.trim(), price, basePrice: price };
+    const body = {
+      subscriptionType: d.type as SubscriptionType,
+      displayName: d.name.trim(),
+      price,
+      basePrice: price,
+      description: d.description.trim(),
+      featured: d.featured,
+      publicListed: d.publicListed,
+    };
     const cells = this.draftCells();
     const call: Observable<unknown> = (d.id ? this.billing.updatePlan(d.id, body) : this.billing.createPlan(body)).pipe(
       switchMap(plan => this.billing.setPlanFeatures(plan.id, cells)),

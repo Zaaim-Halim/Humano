@@ -5,8 +5,8 @@
       <a routerLink="/" class="lp-wordmark">humano<span class="lp-dot" aria-hidden="true"></span></a>
 
       <nav class="lp-nav__links" aria-label="Primary">
-        @for (link of navLinks; track link) {
-          <a class="lp-nav__link" href="#">{{ link }}</a>
+        @for (link of navLinks; track link.href) {
+          <a class="lp-nav__link" [href]="link.href">{{ link.label }}</a>
         }
       </nav>
 
@@ -23,8 +23,8 @@
         @if (authenticated()) {
           <hum-button variant="primary" routerLink="/dashboard" trailingIcon="arrow-right">Open app</hum-button>
         } @else {
-          <hum-button variant="ghost" routerLink="/login">Sign in</hum-button>
-          <a class="hum-btn hum-btn--primary" href="mailto:sales@humano.app?subject=Request%20access">Request access</a>
+          <hum-button variant="ghost" icon="log-in" routerLink="/login">Sign in</hum-button>
+          <hum-button variant="primary" icon="calendar" (click)="openDemo()">Book a demo</hum-button>
         }
       </div>
     </div>
@@ -45,8 +45,8 @@
             country you operate.
           </p>
           <div class="lp-hero__cta">
-            <a class="hum-btn hum-btn--primary hum-btn--lg" href="mailto:sales@humano.app?subject=Request%20access">Request access</a>
-            <hum-button variant="secondary" size="lg">Book a demo</hum-button>
+            <hum-button variant="primary" size="lg" icon="calendar" (click)="openDemo()">Book a demo</hum-button>
+            <a class="hum-btn hum-btn--secondary hum-btn--lg" href="#pricing"><lucide-icon name="tag" [size]="18" /> See pricing</a>
           </div>
           <p class="lp-trust">
             <lucide-icon name="check" [size]="16" class="lp-trust__check" />
@@ -159,7 +159,7 @@
     </section>
 
     <!-- ============ Features ============ -->
-    <section class="lp-section lp-section--surface">
+    <section class="lp-section lp-section--surface" id="product">
       <div class="lp-container">
         <div class="lp-head">
           <span class="lp-eyebrow">The platform</span>
@@ -217,15 +217,15 @@
     </section>
 
     <!-- ============ Pricing ============ -->
-    <section class="lp-section lp-section--surface">
+    <section class="lp-section lp-section--surface" id="pricing">
       <div class="lp-container">
         <div class="lp-head">
           <span class="lp-eyebrow">Pricing</span>
-          <h2 class="lp-h2">Simple, per-employee pricing</h2>
-          <p class="lp-head__sub">Start free for 14 days. Scale to multi-country payroll when you're ready.</p>
+          <h2 class="lp-h2">Simple, transparent pricing</h2>
+          <p class="lp-head__sub">One flat monthly price per workspace. Book a demo and we'll set up a workspace for you to try.</p>
         </div>
         <div class="lp-grid-3 lp-pricing">
-          @for (tier of tiers; track tier.name) {
+          @for (tier of tiers(); track tier.name) {
             <article class="lp-tier" [class.lp-tier--featured]="tier.featured">
               @if (tier.featured) {
                 <span class="lp-tier__flag">Most popular</span>
@@ -246,14 +246,15 @@
                   </li>
                 }
               </ul>
-              <a
+              <button
+                type="button"
                 class="hum-btn hum-btn--lg hum-btn--block"
                 [class.hum-btn--primary]="tier.featured"
                 [class.hum-btn--secondary]="!tier.featured"
-                href="mailto:sales@humano.app?subject=Request%20access"
+                (click)="openDemo(tier.name)"
               >
-                {{ tier.cta }}
-              </a>
+                <lucide-icon name="calendar" [size]="16" /> {{ tier.cta }}
+              </button>
             </article>
           }
         </div>
@@ -261,7 +262,7 @@
     </section>
 
     <!-- ============ FAQ ============ -->
-    <section class="lp-section">
+    <section class="lp-section" id="faq">
       <div class="lp-container lp-faq">
         <div class="lp-head">
           <span class="lp-eyebrow">FAQ</span>
@@ -288,10 +289,12 @@
       <div class="lp-container">
         <div class="lp-cta">
           <h2 class="lp-cta__title">Ready to run people ops with confidence?</h2>
-          <p class="lp-cta__sub">Start your free trial today — no credit card, no setup project, no risk.</p>
+          <p class="lp-cta__sub">See it with your own eyes — we'll set up a workspace with a sample company for you to explore.</p>
           <div class="lp-cta__actions">
-            <a class="hum-btn hum-btn--lg lp-btn-on-brand" href="mailto:sales@humano.app?subject=Request%20access">Request access</a>
-            <a class="hum-btn hum-btn--lg lp-btn-ghost-brand" href="#">Book a demo</a>
+            <button type="button" class="hum-btn hum-btn--lg lp-btn-on-brand" (click)="openDemo()">
+              <lucide-icon name="calendar" [size]="18" /> Book a demo
+            </button>
+            <a class="hum-btn hum-btn--lg lp-btn-ghost-brand" href="#pricing"><lucide-icon name="tag" [size]="18" /> See pricing</a>
           </div>
         </div>
       </div>
@@ -322,3 +325,90 @@
     </div>
   </footer>
 </div>
+
+<!-- ============ Book a demo ============ -->
+<hum-dialog
+  [open]="demoOpen()"
+  [title]="demoSent() ? 'Thanks — we’ll be in touch' : 'Book a demo'"
+  [description]="
+    demoSent()
+      ? 'We usually reply within one business day with a workspace set up for your team.'
+      : 'Tell us a little about your company and we’ll set up a demo workspace for you.'
+  "
+  hasFooter
+  (closed)="demoOpen.set(false)"
+>
+  @if (!demoSent()) {
+    @let f = demoForm();
+    <form class="lp-demo-form" (submit)="$event.preventDefault(); sendDemo()">
+      @if (demoError(); as e) {
+        <hum-alert tone="danger" [title]="e" />
+      }
+      <div class="lp-demo-form__row">
+        <hum-form-field label="Full name" controlId="demo-name" required>
+          <hum-input inputId="demo-name" [ngModel]="f.fullName" (ngModelChange)="patchDemo({ fullName: $event })" name="fullName" />
+        </hum-form-field>
+        <hum-form-field label="Work email" controlId="demo-email" required>
+          <hum-input
+            inputId="demo-email"
+            type="email"
+            [ngModel]="f.workEmail"
+            (ngModelChange)="patchDemo({ workEmail: $event })"
+            name="workEmail"
+            placeholder="you@company.com"
+          />
+        </hum-form-field>
+      </div>
+      <hum-form-field label="Company" controlId="demo-company" required>
+        <hum-input
+          inputId="demo-company"
+          [ngModel]="f.companyName"
+          (ngModelChange)="patchDemo({ companyName: $event })"
+          name="companyName"
+        />
+      </hum-form-field>
+      <div class="lp-demo-form__row">
+        <hum-form-field label="Company size" controlId="demo-size">
+          <hum-select
+            [options]="sizeOptions"
+            [ngModel]="f.companySize"
+            (ngModelChange)="patchDemo({ companySize: $event })"
+            name="companySize"
+          />
+        </hum-form-field>
+        <hum-form-field label="Country" controlId="demo-country">
+          <hum-select [options]="countryOptions" [ngModel]="f.country" (ngModelChange)="patchDemo({ country: $event })" name="country" />
+        </hum-form-field>
+      </div>
+      <hum-form-field label="Phone (optional)" controlId="demo-phone">
+        <hum-input inputId="demo-phone" type="tel" [ngModel]="f.phone" (ngModelChange)="patchDemo({ phone: $event })" name="phone" />
+      </hum-form-field>
+      <hum-form-field label="What would you like to see? (optional)" controlId="demo-message">
+        <hum-textarea [rows]="3" [ngModel]="f.message" (ngModelChange)="patchDemo({ message: $event })" name="message" />
+      </hum-form-field>
+      <!-- Honeypot: hidden from people; bots that fill it in are ignored. -->
+      <div class="lp-demo-form__hp" aria-hidden="true">
+        <label for="demo-website">Website</label>
+        <input
+          id="demo-website"
+          type="text"
+          tabindex="-1"
+          autocomplete="off"
+          [ngModel]="f.website"
+          (ngModelChange)="patchDemo({ website: $event })"
+          name="website"
+        />
+      </div>
+    </form>
+  }
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    @if (demoSent()) {
+      <hum-button variant="primary" icon="check" (click)="demoOpen.set(false)">Done</hum-button>
+    } @else {
+      <hum-button variant="secondary" icon="x" (click)="demoOpen.set(false)">Cancel</hum-button>
+      <hum-button variant="primary" icon="send" [loading]="demoSending()" [disabled]="!demoValid()" (click)="sendDemo()"
+        >Request demo</hum-button
+      >
+    }
+  </div>
+</hum-dialog>

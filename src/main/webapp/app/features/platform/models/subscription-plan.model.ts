@@ -11,6 +11,12 @@ export interface SubscriptionPlan extends AuditFields {
   active: boolean;
   basePrice: number | null;
   featureCount: number;
+  /** One-line pitch on the public pricing page. */
+  description: string | null;
+  /** Highlighted ("most popular") on the public pricing page. */
+  featured: boolean;
+  /** Listed on the public pricing page. */
+  publicListed: boolean;
 }
 
 export interface CreateSubscriptionPlanRequest {
@@ -18,6 +24,9 @@ export interface CreateSubscriptionPlanRequest {
   price: number;
   displayName?: string;
   basePrice?: number;
+  description?: string;
+  featured?: boolean;
+  publicListed?: boolean;
 }
 
 export interface UpdateSubscriptionPlanRequest {
@@ -26,4 +35,7 @@ export interface UpdateSubscriptionPlanRequest {
   displayName?: string;
   basePrice?: number;
   active?: boolean;
+  description?: string;
+  featured?: boolean;
+  publicListed?: boolean;
 }

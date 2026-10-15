@@ -3,6 +3,7 @@ package com.humano.domain.tenant;
 import com.humano.converters.TimeZoneConverter;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.CountryCode;
+import com.humano.domain.enumeration.tenant.DemoSetupStatus;
 import com.humano.domain.enumeration.tenant.ProvisioningStep;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.shared.AbstractAuditingEntity;
@@ -11,6 +12,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -174,6 +176,29 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
      */
     @OneToOne(mappedBy = "tenant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private TenantDatabaseConfig databaseConfig;
+
+    /**
+     * A demo workspace the platform team runs for a prospect: no subscription, kept out of billing
+     * and customer metrics, suspended once {@link #demoExpiresAt} passes.
+     */
+    @Column(name = "is_demo", nullable = false)
+    private boolean demo = false;
+
+    @Column(name = "demo_expires_at")
+    private Instant demoExpiresAt;
+
+    @Column(name = "demo_contact_name", length = 100)
+    @Size(max = 100)
+    private String demoContactName;
+
+    @Column(name = "demo_contact_email", length = 254)
+    @Size(max = 254)
+    private String demoContactEmail;
+
+    /** Setup progress of a demo workspace (null for customers). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "demo_setup", length = 20)
+    private DemoSetupStatus demoSetup;
 
     @Override
     public UUID getId() {
@@ -358,6 +383,46 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
     public Tenant databaseConfig(TenantDatabaseConfig databaseConfig) {
         this.databaseConfig = databaseConfig;
         return this;
+    }
+
+    public boolean isDemo() {
+        return demo;
+    }
+
+    public void setDemo(boolean demo) {
+        this.demo = demo;
+    }
+
+    public Instant getDemoExpiresAt() {
+        return demoExpiresAt;
+    }
+
+    public void setDemoExpiresAt(Instant demoExpiresAt) {
+        this.demoExpiresAt = demoExpiresAt;
+    }
+
+    public String getDemoContactName() {
+        return demoContactName;
+    }
+
+    public void setDemoContactName(String demoContactName) {
+        this.demoContactName = demoContactName;
+    }
+
+    public String getDemoContactEmail() {
+        return demoContactEmail;
+    }
+
+    public void setDemoContactEmail(String demoContactEmail) {
+        this.demoContactEmail = demoContactEmail;
+    }
+
+    public DemoSetupStatus getDemoSetup() {
+        return demoSetup;
+    }
+
+    public void setDemoSetup(DemoSetupStatus demoSetup) {
+        this.demoSetup = demoSetup;
     }
 
     @Override

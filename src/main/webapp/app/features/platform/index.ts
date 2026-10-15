@@ -31,4 +31,6 @@ export { MeBillingService } from './services/me-billing.service';
 // Owner console: cross-customer billing (reads + all billing writes), KPIs and team
 export { PlatformBillingService } from './services/platform-billing.service';
 export { PlatformConsoleService } from './services/platform-console.service';
+export { PlatformDemoService } from './services/platform-demo.service';
+export type * from './models/demo.model';
 export * from './models/platform.model';

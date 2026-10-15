@@ -143,6 +143,10 @@ import {
   UserCheck,
   Wallet,
   X,
+  Presentation,
+  CalendarPlus,
+  RotateCcw,
+  Copy,
 } from 'lucide-angular';
 
 // Curated starter set. Tree-shaken via named imports — screens add icons here
@@ -292,4 +296,8 @@ export const lucideIcons = {
   UserCheck,
   Wallet,
   X,
+  Presentation,
+  CalendarPlus,
+  RotateCcw,
+  Copy,
 };

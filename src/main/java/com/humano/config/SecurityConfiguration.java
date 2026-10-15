@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authorization.method.PrePostTemplateDefaults;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -101,6 +102,8 @@ public class SecurityConfiguration {
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
                     // Public tenant signup is hit by non-SPA clients that don't carry a CSRF cookie.
                     .ignoringRequestMatchers(antMatcher("/api/tenant-registration"))
+                    // The public "Book a demo" form: anonymous visitors of the marketing page.
+                    .ignoringRequestMatchers(antMatcher("/api/public/demo-requests"))
                     // P4.2 — Stripe POSTs webhook events with its own signed envelope; no CSRF cookie.
                     .ignoringRequestMatchers(antMatcher("/api/billing/webhooks/**"))
             )
@@ -131,6 +134,8 @@ public class SecurityConfiguration {
                     .requestMatchers(mvc.pattern("/api/authenticate")).permitAll()
                     .requestMatchers(mvc.pattern("/api/activate")).permitAll()
                     .requestMatchers(mvc.pattern("/api/tenant-registration")).permitAll()
+                    .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/public/pricing")).permitAll()
+                    .requestMatchers(mvc.pattern(HttpMethod.POST, "/api/public/demo-requests")).permitAll()
                     .requestMatchers(mvc.pattern("/api/billing/webhooks/**")).permitAll()
                     .requestMatchers(mvc.pattern("/api/account/reset-password/init")).permitAll()
                     .requestMatchers(mvc.pattern("/api/account/reset-password/finish")).permitAll()

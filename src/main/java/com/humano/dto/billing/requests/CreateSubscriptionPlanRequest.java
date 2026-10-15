@@ -18,5 +18,11 @@ public record CreateSubscriptionPlanRequest(
 
     @Size(max = 100, message = "Display name cannot exceed 100 characters") String displayName,
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Base price cannot be negative") BigDecimal basePrice
+    @DecimalMin(value = "0.0", inclusive = true, message = "Base price cannot be negative") BigDecimal basePrice,
+
+    @Size(max = 255, message = "Description cannot exceed 255 characters") String description,
+
+    Boolean featured,
+
+    Boolean publicListed
 ) {}

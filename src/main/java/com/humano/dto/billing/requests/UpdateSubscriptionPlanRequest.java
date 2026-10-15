@@ -17,5 +17,11 @@ public record UpdateSubscriptionPlanRequest(
 
     @DecimalMin(value = "0.0", message = "Base price cannot be negative") BigDecimal basePrice,
 
-    Boolean active
+    Boolean active,
+
+    @Size(max = 255, message = "Description cannot exceed 255 characters") String description,
+
+    Boolean featured,
+
+    Boolean publicListed
 ) {}

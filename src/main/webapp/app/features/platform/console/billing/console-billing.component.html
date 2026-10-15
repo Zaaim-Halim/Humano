@@ -140,6 +140,10 @@
                   <span class="hum-con-plan__type">{{ 'humano.console.planType.' + p.subscriptionType | translate }}</span>
                   @if (!p.active) {
                     <hum-badge tone="neutral" [label]="'humano.console.plans.retiredBadge' | translate" [dot]="false" />
+                  } @else if (!p.publicListed) {
+                    <hum-badge tone="neutral" [label]="'humano.console.plans.hiddenBadge' | translate" [dot]="false" />
+                  } @else if (p.featured) {
+                    <hum-badge tone="brand" [label]="'humano.console.plans.featuredBadge' | translate" [dot]="false" />
                   }
                 </header>
                 <h3>{{ p.displayName ?? p.subscriptionType }}</h3>
@@ -406,6 +410,30 @@
           placeholder="149"
         />
       </hum-form-field>
+      <hum-form-field
+        [label]="'humano.console.plans.description' | translate"
+        controlId="plan-description"
+        [hint]="'humano.console.plans.descriptionHint' | translate"
+      >
+        <hum-input
+          inputId="plan-description"
+          [ngModel]="d.description"
+          (ngModelChange)="patchPlanDraft({ description: $event })"
+          placeholder="For scaling companies that need payroll everywhere."
+        />
+      </hum-form-field>
+      <div style="display: flex; flex-wrap: wrap; gap: var(--space-5)">
+        <hum-switch
+          [label]="'humano.console.plans.publicListed' | translate"
+          [ngModel]="d.publicListed"
+          (ngModelChange)="patchPlanDraft({ publicListed: $event })"
+        />
+        <hum-switch
+          [label]="'humano.console.plans.featured' | translate"
+          [ngModel]="d.featured"
+          (ngModelChange)="patchPlanDraft({ featured: $event })"
+        />
+      </div>
 
       <div>
         <div class="hum-kpi__label">{{ 'humano.console.plans.whatsIncluded' | translate }}</div>

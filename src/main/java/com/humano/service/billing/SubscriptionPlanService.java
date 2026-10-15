@@ -46,6 +46,9 @@ public class SubscriptionPlanService {
         subscriptionPlan.setPrice(request.price());
         subscriptionPlan.setDisplayName(request.displayName());
         subscriptionPlan.setBasePrice(request.basePrice());
+        subscriptionPlan.setDescription(blankToNull(request.description()));
+        subscriptionPlan.setFeatured(Boolean.TRUE.equals(request.featured()));
+        subscriptionPlan.setPublicListed(!Boolean.FALSE.equals(request.publicListed()));
         subscriptionPlan.setActive(true);
 
         SubscriptionPlan savedPlan = subscriptionPlanRepository.save(subscriptionPlan);
@@ -82,6 +85,15 @@ public class SubscriptionPlanService {
                 }
                 if (request.active() != null) {
                     subscriptionPlan.setActive(request.active());
+                }
+                if (request.description() != null) {
+                    subscriptionPlan.setDescription(blankToNull(request.description()));
+                }
+                if (request.featured() != null) {
+                    subscriptionPlan.setFeatured(request.featured());
+                }
+                if (request.publicListed() != null) {
+                    subscriptionPlan.setPublicListed(request.publicListed());
                 }
                 return mapToResponse(subscriptionPlanRepository.save(subscriptionPlan));
             })
@@ -211,10 +223,17 @@ public class SubscriptionPlanService {
             subscriptionPlan.isActive(),
             subscriptionPlan.getBasePrice(),
             (int) subscriptionPlan.getFeatures().stream().filter(f -> f.isIncluded()).count(),
+            subscriptionPlan.getDescription(),
+            subscriptionPlan.isFeatured(),
+            subscriptionPlan.isPublicListed(),
             subscriptionPlan.getCreatedBy(),
             subscriptionPlan.getCreatedDate(),
             subscriptionPlan.getLastModifiedBy(),
             subscriptionPlan.getLastModifiedDate()
         );
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

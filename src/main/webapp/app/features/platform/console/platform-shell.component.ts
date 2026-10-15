@@ -49,6 +49,13 @@ const CONSOLE_NAV: { headingKey?: string; items: ConsoleNavItem[] }[] = [
         link: '/platform/customers',
         keywords: 'tenants companies',
       },
+      {
+        id: 'demos',
+        labelKey: 'humano.console.nav.demos',
+        icon: 'presentation',
+        link: '/platform/demos',
+        keywords: 'demo requests prospects leads trial sales',
+      },
     ],
   },
   {

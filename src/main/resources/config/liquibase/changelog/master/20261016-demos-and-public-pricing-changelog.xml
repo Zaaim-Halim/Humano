@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!--
+        Public pricing: a plan carries its own marketing pitch, whether it is the highlighted
+        ("most popular") one, and whether it is listed on the public pricing page at all.
+    -->
+    <changeSet id="20261016-plan-public-pricing" author="halimzaaim">
+        <addColumn tableName="billing_subscription_plan">
+            <column name="description" type="VARCHAR(255)"/>
+            <column name="featured" type="${booleanType}" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="public_listed" type="${booleanType}" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!--
+        Demo workspaces: a tenant run by the platform team for a prospect. It has no subscription
+        (so it never reaches billing, MRR or trial processing), is suspended when it expires, and
+        records who it was set up for.
+    -->
+    <changeSet id="20261016-tenant-demo" author="halimzaaim">
+        <addColumn tableName="tenant">
+            <column name="is_demo" type="${booleanType}" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="demo_expires_at" type="${datetimeType}"/>
+            <column name="demo_contact_name" type="VARCHAR(100)"/>
+            <column name="demo_contact_email" type="VARCHAR(254)"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- Setup progress of a demo workspace (provisioning, adding the sample company, ready, failed). -->
+    <changeSet id="20261016-tenant-demo-setup" author="halimzaaim">
+        <addColumn tableName="tenant">
+            <column name="demo_setup" type="VARCHAR(20)"/>
+        </addColumn>
+    </changeSet>
+
+    <!--
+        Demo requests: the "Book a demo" form on the public site. The platform team works them
+        (contacted / declined) or turns one into a demo workspace, which it then links to.
+    -->
+    <changeSet id="20261016-demo-request" author="halimzaaim">
+        <createTable tableName="demo_request">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_demo_request"/>
+            </column>
+            <column name="full_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="work_email" type="VARCHAR(254)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="company_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="company_size" type="VARCHAR(20)"/>
+            <column name="country" type="VARCHAR(2)"/>
+            <column name="phone" type="VARCHAR(30)"/>
+            <column name="message" type="VARCHAR(2000)"/>
+            <column name="status" type="VARCHAR(20)" defaultValue="NEW">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="VARCHAR(1000)"/>
+            <column name="tenant_id" type="${uuidType}"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="${datetimeType}"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="${datetimeType}"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="demo_request" baseColumnNames="tenant_id" constraintName="fk_demo_request_tenant"
+                                 referencedTableName="tenant" referencedColumnNames="id" onDelete="SET NULL"/>
+        <createIndex tableName="demo_request" indexName="idx_demo_request_status">
+            <column name="status"/>
+            <column name="created_date"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

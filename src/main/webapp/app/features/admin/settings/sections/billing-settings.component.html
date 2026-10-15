@@ -1,85 +1,244 @@
-<section class="hum-set-card">
-  <header>
-    <h3>{{ 'humano.settings.billing.planTitle' | translate }}</h3>
-    <p>{{ 'humano.settings.billing.planHint' | translate }}</p>
-  </header>
-  @if (subscription() === undefined) {
-    <hum-skeleton-row /><hum-skeleton-row />
-  } @else if (subscription(); as s) {
+@if (isDemo()) {
+  <!-- A demo workspace: no subscription to manage. -->
+  <section class="hum-set-card">
+    <header>
+      <h3>{{ 'humano.settings.billing.demoTitle' | translate }}</h3>
+      <p>{{ 'humano.settings.billing.demoHint' | translate }}</p>
+    </header>
     <div class="hum-con-hero" style="margin: 0">
-      <span class="hum-records__icon" style="width: 48px; height: 48px"><lucide-icon name="layers" [size]="22" /></span>
+      <span class="hum-records__icon" style="width: 48px; height: 48px"><lucide-icon name="presentation" [size]="22" /></span>
       <div class="hum-con-hero__text">
-        <h1 style="font-size: var(--text-xl)">{{ plan()?.displayName ?? s.subscriptionPlanName ?? '—' }}</h1>
+        <h1 style="font-size: var(--text-xl)">{{ tenant()?.subscriptionPlanName ?? '—' }}</h1>
         <p class="hum-con-hero__meta">
-          <span
-            ><strong class="tabular-nums">{{ cyclePrice() | money: currency() }}</strong>
-            {{ (s.billingCycle === 'YEARLY' ? 'humano.settings.billing.perYear' : 'humano.settings.billing.perMonth') | translate }}</span
-          >
-          @if (s.currentPeriodEnd) {
-            <span
-              ><lucide-icon name="calendar" [size]="14" />{{
-                'humano.settings.billing.renews' | translate: { date: (s.currentPeriodEnd | date: 'mediumDate') }
-              }}</span
-            >
-          }
-          @if (s.trialEnd && s.status === 'TRIAL') {
+          @if (tenant()?.demoExpiresAt; as end) {
             <span
               ><lucide-icon name="hourglass" [size]="14" />{{
-                'humano.settings.billing.trialEnds' | translate: { date: (s.trialEnd | date: 'mediumDate') }
+                'humano.settings.billing.demoEnds' | translate: { date: (end | date: 'mediumDate') }
               }}</span
             >
           }
         </p>
       </div>
-      <hum-badge [status]="s.status" />
+      <hum-badge tone="info" [label]="'humano.settings.billing.demoBadge' | translate" [dot]="false" />
     </div>
-  } @else {
-    <p class="hum-insights__note">{{ 'humano.settings.billing.noSubscription' | translate }}</p>
-  }
-</section>
+    <p class="hum-insights__note">{{ 'humano.settings.billing.demoKeep' | translate }}</p>
+  </section>
+} @else {
+  <section class="hum-set-card">
+    <header>
+      <h3>{{ 'humano.settings.billing.planTitle' | translate }}</h3>
+      <p>{{ (canManage() ? 'humano.settings.billing.planHintManage' : 'humano.settings.billing.planHint') | translate }}</p>
+    </header>
+    @if (subscription() === undefined) {
+      <hum-skeleton-row /><hum-skeleton-row />
+    } @else if (subscription(); as s) {
+      <div class="hum-con-hero" style="margin: 0">
+        <span class="hum-records__icon" style="width: 48px; height: 48px"><lucide-icon name="layers" [size]="22" /></span>
+        <div class="hum-con-hero__text">
+          <h1 style="font-size: var(--text-xl)">{{ plan()?.displayName ?? s.subscriptionPlanName ?? '—' }}</h1>
+          <p class="hum-con-hero__meta">
+            <span
+              ><strong class="tabular-nums">{{ cyclePrice() | money: currency() }}</strong>
+              {{ (s.billingCycle === 'YEARLY' ? 'humano.settings.billing.perYear' : 'humano.settings.billing.perMonth') | translate }}</span
+            >
+            @if (running() && s.currentPeriodEnd) {
+              <span
+                ><lucide-icon name="calendar" [size]="14" />{{
+                  (s.cancelAtPeriodEnd ? 'humano.settings.billing.endsOn' : 'humano.settings.billing.renews')
+                    | translate: { date: ((s.cancelAtPeriodEnd ? endDate() : s.currentPeriodEnd) | date: 'mediumDate') }
+                }}</span
+              >
+            }
+            @if (s.trialEnd && s.status === 'TRIAL') {
+              <span
+                ><lucide-icon name="hourglass" [size]="14" />{{
+                  'humano.settings.billing.trialEnds' | translate: { date: (s.trialEnd | date: 'mediumDate') }
+                }}</span
+              >
+            }
+          </p>
+        </div>
+        <hum-badge [status]="s.status" />
+      </div>
 
-<section class="hum-set-card" style="margin-top: var(--space-4)">
-  <header class="hum-set-card__head-row">
-    <div>
-      <h3>{{ 'humano.settings.billing.invoicesTitle' | translate }}</h3>
-      <p>{{ 'humano.settings.billing.invoicesHint' | translate }}</p>
-    </div>
-    @if (openTotal() > 0) {
-      <span class="hum-records__count">{{ 'humano.settings.billing.due' | translate: { amount: (openTotal() | money: currency()) } }}</span>
-    }
-  </header>
-  @if (error(); as e) {
-    <hum-alert tone="danger" [title]="e">
-      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
-    </hum-alert>
-  } @else if (invoices() === null) {
-    <hum-skeleton-row /><hum-skeleton-row />
-  } @else if (sortedInvoices().length) {
-    <div class="hum-con-table-wrap">
-      <table class="hum-con-table">
-        <thead>
-          <tr>
-            <th>{{ 'humano.console.invoices.number' | translate }}</th>
-            <th>{{ 'humano.console.invoices.issued' | translate }}</th>
-            <th>{{ 'humano.console.invoices.due' | translate }}</th>
-            <th class="is-num">{{ 'humano.console.invoices.total' | translate }}</th>
-            <th>{{ 'humano.console.invoices.status' | translate }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (i of sortedInvoices(); track i.id) {
-            <tr>
-              <td class="tabular-nums">{{ i.invoiceNumber }}</td>
-              <td>{{ i.issueDate | date: 'mediumDate' }}</td>
-              <td>{{ i.dueDate | date: 'mediumDate' }}</td>
-              <td class="is-num tabular-nums">{{ i.totalAmount | money: i.currency }}</td>
-              <td><hum-badge [status]="i.status" /></td>
-            </tr>
+      @if (running() && s.cancelAtPeriodEnd) {
+        <hum-alert
+          tone="warning"
+          [title]="'humano.settings.billing.cancelScheduled' | translate: { date: (endDate() | date: 'mediumDate') }"
+          style="margin-top: var(--space-4)"
+        >
+          @if (canManage()) {
+            <hum-button variant="outline" size="sm" icon="rotate-ccw" [loading]="busy()" (click)="resume()">{{
+              'humano.settings.billing.keep' | translate
+            }}</hum-button>
           }
-        </tbody>
-      </table>
-    </div>
-  } @else {
-    <p class="hum-insights__note">{{ 'humano.settings.billing.noInvoices' | translate }}</p>
+        </hum-alert>
+      } @else if (!running()) {
+        <hum-alert tone="info" [title]="'humano.settings.billing.ended' | translate" style="margin-top: var(--space-4)" />
+      }
+    } @else {
+      <p class="hum-insights__note">{{ 'humano.settings.billing.noSubscription' | translate }}</p>
+    }
+  </section>
+
+  @if (canManage() && options().length) {
+    <section class="hum-set-card" style="margin-top: var(--space-4)">
+      <header class="hum-set-card__head-row">
+        <div>
+          <h3>{{ (running() ? 'humano.settings.billing.changeTitle' : 'humano.settings.billing.chooseTitle') | translate }}</h3>
+          <p>{{ 'humano.settings.billing.changeHint' | translate }}</p>
+        </div>
+        <div class="hum-con-chips" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            class="hum-con-chip"
+            [class.is-on]="cycle() === 'MONTHLY'"
+            [attr.aria-selected]="cycle() === 'MONTHLY'"
+            (click)="cycle.set($any('MONTHLY'))"
+          >
+            {{ 'humano.console.cycle.MONTHLY' | translate }}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="hum-con-chip"
+            [class.is-on]="cycle() === 'YEARLY'"
+            [attr.aria-selected]="cycle() === 'YEARLY'"
+            (click)="cycle.set($any('YEARLY'))"
+          >
+            {{ 'humano.console.cycle.YEARLY' | translate }} <span>−15%</span>
+          </button>
+        </div>
+      </header>
+      <div class="hum-bill-plans">
+        @for (o of options(); track o.id) {
+          @let rel = relation(o);
+          <article class="hum-bill-plan" [class.is-current]="rel === 'current'" [class.is-featured]="o.featured">
+            <header>
+              <h4>{{ o.name }}</h4>
+              @if (rel === 'current') {
+                <hum-badge tone="brand" [label]="'humano.settings.billing.current' | translate" [dot]="false" />
+              } @else if (o.featured) {
+                <hum-badge tone="neutral" [label]="'humano.console.plans.featuredBadge' | translate" [dot]="false" />
+              }
+            </header>
+            @if (o.description) {
+              <p class="hum-kpi__hint">{{ o.description }}</p>
+            }
+            <div class="hum-bill-plan__price">
+              <strong class="tabular-nums">{{ price(o) | money: currency() }}</strong>
+              <span>{{ (cycle() === 'YEARLY' ? 'humano.settings.billing.perYear' : 'humano.settings.billing.perMonth') | translate }}</span>
+            </div>
+            <ul>
+              @for (h of o.highlights; track h) {
+                <li><lucide-icon name="check" [size]="14" /> {{ h }}</li>
+              }
+            </ul>
+            @if (rel !== 'current') {
+              <hum-button
+                [variant]="rel === 'upgrade' || (rel === 'choose' && o.featured) ? 'primary' : 'secondary'"
+                [icon]="rel === 'upgrade' ? 'trending-up' : rel === 'downgrade' ? 'trending-down' : 'check'"
+                (click)="confirming.set({ kind: 'change', option: o })"
+                >{{ 'humano.settings.billing.action.' + rel | translate }}</hum-button
+              >
+            }
+          </article>
+        }
+      </div>
+      @if (running() && !subscription()?.cancelAtPeriodEnd) {
+        <div class="hum-bill-cancel">
+          <div>
+            <strong>{{ 'humano.settings.billing.cancelTitle' | translate }}</strong>
+            <p class="hum-kpi__hint">{{ 'humano.settings.billing.cancelHint' | translate }}</p>
+          </div>
+          <hum-button variant="outline" icon="ban" (click)="confirming.set({ kind: 'cancel' })">{{
+            'humano.settings.billing.cancel' | translate
+          }}</hum-button>
+        </div>
+      }
+    </section>
   }
-</section>
+
+  <section class="hum-set-card" style="margin-top: var(--space-4)">
+    <header class="hum-set-card__head-row">
+      <div>
+        <h3>{{ 'humano.settings.billing.invoicesTitle' | translate }}</h3>
+        <p>{{ 'humano.settings.billing.invoicesHint' | translate }}</p>
+      </div>
+      @if (openTotal() > 0) {
+        <span class="hum-records__count">{{
+          'humano.settings.billing.due' | translate: { amount: (openTotal() | money: currency()) }
+        }}</span>
+      }
+    </header>
+    @if (error(); as e) {
+      <hum-alert tone="danger" [title]="e">
+        <hum-button variant="outline" size="sm" icon="rotate-ccw" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+      </hum-alert>
+    } @else if (invoices() === null) {
+      <hum-skeleton-row /><hum-skeleton-row />
+    } @else if (sortedInvoices().length) {
+      <div class="hum-con-table-wrap">
+        <table class="hum-con-table">
+          <thead>
+            <tr>
+              <th>{{ 'humano.console.invoices.number' | translate }}</th>
+              <th>{{ 'humano.console.invoices.issued' | translate }}</th>
+              <th>{{ 'humano.console.invoices.due' | translate }}</th>
+              <th class="is-num">{{ 'humano.console.invoices.total' | translate }}</th>
+              <th>{{ 'humano.console.invoices.status' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (i of sortedInvoices(); track i.id) {
+              <tr>
+                <td class="tabular-nums">{{ i.invoiceNumber }}</td>
+                <td>{{ i.issueDate | date: 'mediumDate' }}</td>
+                <td>{{ i.dueDate | date: 'mediumDate' }}</td>
+                <td class="is-num tabular-nums">{{ i.totalAmount | money: i.currency }}</td>
+                <td><hum-badge [status]="i.status" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="hum-insights__note">{{ 'humano.settings.billing.noInvoices' | translate }}</p>
+    }
+  </section>
+}
+
+<hum-dialog
+  [open]="confirming() !== null"
+  [title]="
+    confirming()?.kind === 'cancel'
+      ? ('humano.settings.billing.cancelConfirmTitle' | translate)
+      : ('humano.settings.billing.changeConfirmTitle' | translate: { name: $any(confirming())?.option?.name ?? '' })
+  "
+  [description]="
+    confirming()?.kind === 'cancel'
+      ? ('humano.settings.billing.cancelConfirmBody' | translate: { date: (endDate() | date: 'mediumDate') })
+      : ((running() ? 'humano.settings.billing.changeConfirmBody' : 'humano.settings.billing.chooseConfirmBody')
+        | translate
+          : {
+              amount: $any(confirming())?.option ? (price($any(confirming()).option) | money: currency()) : '',
+              cycle: ((cycle() === 'YEARLY' ? 'humano.settings.billing.perYear' : 'humano.settings.billing.perMonth') | translate),
+            })
+  "
+  hasFooter
+  (closed)="confirming.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" icon="x" (click)="confirming.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    @if (confirming()?.kind === 'cancel') {
+      <hum-button variant="destructive" icon="ban" [loading]="busy()" (click)="confirmCancel()">{{
+        'humano.settings.billing.cancelConfirm' | translate
+      }}</hum-button>
+    } @else {
+      <hum-button variant="primary" icon="check" [loading]="busy()" (click)="confirmChange()">{{
+        'humano.settings.billing.changeConfirm' | translate
+      }}</hum-button>
+    }
+  </div>
+</hum-dialog>

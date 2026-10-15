@@ -269,6 +269,7 @@ public class PlatformDemoSeeder {
     public void seed(String demoSubdomain) {
         boolean seeded = planRepository.findAll().stream().anyMatch(p -> MARKER_PLAN.equals(p.getDisplayName()));
         if (seeded) {
+            masterTx.executeWithoutResult(status -> backfillPricingCopy());
             return;
         }
         java.util.Map<UUID, Instant> joinedDates = new java.util.LinkedHashMap<>();
@@ -546,7 +547,34 @@ public class PlatformDemoSeeder {
         plan.setPrice(new BigDecimal(monthly));
         plan.setBasePrice(new BigDecimal(monthly));
         plan.setActive(true);
+        applyPricingCopy(plan);
         return planRepository.save(plan);
+    }
+
+    /** The public pricing page's pitch per seeded plan; the internal dev plan stays off the page. */
+    private static void applyPricingCopy(SubscriptionPlan plan) {
+        String name = plan.getDisplayName();
+        if (plan.getSubscriptionType() == SubscriptionType.FREE) {
+            plan.setPublicListed(false);
+        } else if ("Starter".equals(name)) {
+            plan.setDescription("For small teams getting their people ops in order.");
+        } else if (MARKER_PLAN.equals(name)) {
+            plan.setDescription("For scaling companies that need payroll everywhere.");
+            plan.setFeatured(true);
+        } else if ("Enterprise".equals(name)) {
+            plan.setDescription("For groups, resellers and complex org structures.");
+        }
+    }
+
+    /** Databases seeded before plans had pricing copy: fill it in once, never over an edit. */
+    private void backfillPricingCopy() {
+        for (SubscriptionPlan plan : planRepository.findAll()) {
+            boolean untouched = plan.getDescription() == null && !plan.isFeatured() && plan.isPublicListed();
+            if (untouched) {
+                applyPricingCopy(plan);
+                planRepository.save(plan);
+            }
+        }
     }
 
     /**

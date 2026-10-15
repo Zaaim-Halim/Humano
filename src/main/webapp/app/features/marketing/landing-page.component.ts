@@ -1,12 +1,26 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 
 import { AccountService } from 'app/core/auth/account.service';
 import { ThemeService } from 'app/core/theme/theme.service';
-import { AvatarComponent, BadgeComponent, ButtonComponent } from 'app/shared/ui';
+import {
+  AlertComponent,
+  AvatarComponent,
+  BadgeComponent,
+  ButtonComponent,
+  DialogComponent,
+  FormFieldComponent,
+  InputComponent,
+  SelectComponent,
+  TextareaComponent,
+} from 'app/shared/ui';
+import { countryOptions } from 'app/shared/util/countries';
+
+import { DemoRequestForm, MarketingService, PublicPlan, PublicPricing } from './marketing.service';
 
 interface Persona {
   icon: string;
@@ -29,6 +43,10 @@ interface Tier {
   cta: string;
   featured: boolean;
 }
+
+/** Yearly billing discount, as the console and the server bill it (12 × 85%). */
+const YEARLY_FACTOR = 0.85;
+const COMPANY_SIZES = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'];
 interface Faq {
   q: string;
   a: string;
@@ -43,12 +61,27 @@ interface Faq {
 @Component({
   selector: 'hum-landing-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe, LucideAngularModule, ButtonComponent, BadgeComponent, AvatarComponent],
+  imports: [
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    LucideAngularModule,
+    AlertComponent,
+    ButtonComponent,
+    BadgeComponent,
+    AvatarComponent,
+    DialogComponent,
+    FormFieldComponent,
+    InputComponent,
+    SelectComponent,
+    TextareaComponent,
+  ],
   templateUrl: './landing-page.component.html',
 })
 export default class LandingPageComponent {
   protected readonly theme = inject(ThemeService);
   private readonly accountService = inject(AccountService);
+  private readonly marketing = inject(MarketingService);
 
   private readonly account = this.accountService.trackCurrentAccount();
   protected readonly authenticated = computed(() => !!this.account());
@@ -56,7 +89,11 @@ export default class LandingPageComponent {
   /** Open FAQ item index (single-open accordion); first item open by default. */
   protected readonly openFaq = signal(0);
 
-  protected readonly navLinks = ['Product', 'Solutions', 'Pricing', 'FAQ', 'Docs'];
+  protected readonly navLinks = [
+    { label: 'Product', href: '#product' },
+    { label: 'Pricing', href: '#pricing' },
+    { label: 'FAQ', href: '#faq' },
+  ];
 
   protected readonly stats = [
     { figure: '2.4M+', label: 'Payslips processed / month' },
@@ -95,7 +132,8 @@ export default class LandingPageComponent {
     { icon: 'network', title: 'Multi-tenant platform', desc: 'Isolated workspaces with platform-grade controls for groups and resellers.' },
   ];
 
-  protected readonly tiers: Tier[] = [
+  /** Shown until the live plans load, and if they can't. */
+  private readonly fallbackTiers: Tier[] = [
     {
       name: 'Starter',
       desc: 'For small teams getting their people ops in order.',
@@ -142,8 +180,8 @@ export default class LandingPageComponent {
       a: 'Data is encrypted in transit and at rest, isolated per tenant, and backed by SOC 2 Type II controls with audit logging throughout.',
     },
     {
-      q: 'How much does it cost per employee?',
-      a: 'Plans start at $6 per employee per month on Starter and $12 on Growth, billed annually. Enterprise is volume-priced — talk to us.',
+      q: 'How much does it cost?',
+      a: 'Each plan has a flat monthly price per workspace, listed above; paying yearly saves 15%. Not sure which fits? Book a demo and we will set up a workspace for you to try.',
     },
     {
       q: 'What happens after the trial?',
@@ -160,10 +198,115 @@ export default class LandingPageComponent {
 
   protected readonly year = new Date().getFullYear();
 
+  /** The live plans (`/api/public/pricing`); null until loaded or if they can't be. */
+  private readonly pricing = signal<PublicPricing | null>(null);
+
+  protected readonly tiers = computed<Tier[]>(() => {
+    const p = this.pricing();
+    if (!p?.plans.length) return this.fallbackTiers;
+    const featureById = new Map(p.features.map(f => [f.id, f]));
+    const money = new Intl.NumberFormat('en', { style: 'currency', currency: p.currency, maximumFractionDigits: 0 });
+    const label = (it: PublicPlan['items'][number]): string => {
+      const f = featureById.get(it.featureId)!;
+      const unit = f.unit ?? f.name.toLowerCase();
+      if (f.limitType === 'QUANTITY') {
+        return it.limitValue === null ? `Unlimited ${unit}` : `Up to ${it.limitValue} ${unit}`;
+      }
+      return it.note ? `${f.name} — ${it.note}` : f.name;
+    };
+    return p.plans.map((plan, i) => {
+      const monthly = plan.monthlyPrice;
+      const previous = i > 0 ? p.plans[i - 1] : null;
+      // After the first plan, list only what this one adds or raises over the previous one.
+      const before = new Map((previous?.items ?? []).filter(it => it.included).map(it => [it.featureId, label(it)]));
+      const lines = plan.items
+        .filter(it => it.included && featureById.has(it.featureId))
+        .filter(it => before.get(it.featureId) !== label(it))
+        .map(label);
+      return {
+        name: plan.name,
+        desc: plan.description ?? '',
+        price: monthly > 0 ? money.format(monthly) : 'Free',
+        unit: monthly > 0 ? '/ month' : '',
+        note: monthly > 0 ? `${money.format(monthly * YEARLY_FACTOR)} / month billed yearly` : 'No credit card needed',
+        features: [...(previous ? [`Everything in ${previous.name}, plus`] : []), ...lines.slice(0, previous ? 5 : 6)],
+        cta: 'Book a demo',
+        featured: plan.featured,
+      };
+    });
+  });
+
+  // ---- Book a demo
+  protected readonly demoOpen = signal(false);
+  protected readonly demoSent = signal(false);
+  protected readonly demoSending = signal(false);
+  protected readonly demoError = signal<string | null>(null);
+  protected readonly demoForm = signal<Required<DemoRequestForm>>(this.emptyDemoForm());
+  protected readonly sizeOptions = [{ value: '', label: 'Select…' }, ...COMPANY_SIZES.map(s => ({ value: s, label: `${s} employees` }))];
+  protected readonly countryOptions = [{ value: '', label: 'Select…' }, ...countryOptions('en')];
+
   constructor() {
     // Public route runs no guard, so resolve identity here to drive the auth-aware nav.
     // identity() caches, so this is a no-op when already loaded.
     this.accountService.identity().pipe(takeUntilDestroyed()).subscribe();
+    this.marketing
+      .pricing()
+      .pipe(takeUntilDestroyed())
+      .subscribe({ next: p => this.pricing.set(p), error: () => this.pricing.set(null) });
+    // Opened on a section link (e.g. `/#pricing`): the page renders after the browser's own jump.
+    afterNextRender(() => {
+      const id = location.hash.slice(1);
+      if (id) document.getElementById(id)?.scrollIntoView();
+    });
+  }
+
+  protected openDemo(plan?: string): void {
+    this.demoSent.set(false);
+    this.demoError.set(null);
+    if (plan && !this.demoForm().message) this.patchDemo({ message: `Interested in the ${plan} plan.` });
+    this.demoOpen.set(true);
+  }
+
+  protected patchDemo(patch: Partial<DemoRequestForm>): void {
+    this.demoForm.update(f => ({ ...f, ...patch }));
+  }
+
+  protected demoValid(): boolean {
+    const f = this.demoForm();
+    return f.fullName.trim().length > 1 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.workEmail.trim()) && f.companyName.trim().length > 1;
+  }
+
+  protected sendDemo(): void {
+    if (!this.demoValid() || this.demoSending()) return;
+    const f = this.demoForm();
+    this.demoSending.set(true);
+    this.demoError.set(null);
+    this.marketing
+      .requestDemo({
+        fullName: f.fullName.trim(),
+        workEmail: f.workEmail.trim(),
+        companyName: f.companyName.trim(),
+        companySize: f.companySize || undefined,
+        country: f.country || undefined,
+        phone: f.phone.trim() || undefined,
+        message: f.message.trim() || undefined,
+        website: f.website || undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.demoSending.set(false);
+          this.demoSent.set(true);
+          this.demoForm.set(this.emptyDemoForm());
+        },
+        error: () => {
+          this.demoSending.set(false);
+          this.demoError.set('We could not send your request. Please try again, or email sales@humano.app.');
+        },
+      });
+  }
+
+  private emptyDemoForm(): Required<DemoRequestForm> {
+    return { fullName: '', workEmail: '', companyName: '', companySize: '', country: '', phone: '', message: '', website: '' };
   }
 
   protected toggleFaq(index: number): void {

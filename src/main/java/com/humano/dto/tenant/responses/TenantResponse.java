@@ -25,6 +25,8 @@ public record TenantResponse(
     UUID subscriptionPlanId,
     String subscriptionPlanName,
     int organizationCount,
+    boolean demo,
+    Instant demoExpiresAt,
     String createdBy,
     Instant createdDate,
     String lastModifiedBy,

@@ -91,6 +91,19 @@ public class SubscriptionPlan extends AbstractAuditingEntity<UUID> {
     @DecimalMin(value = "0.0", inclusive = true, message = "Base price cannot be negative")
     private BigDecimal basePrice;
 
+    /** One-line pitch shown under the plan name on the public pricing page. */
+    @Column(name = "description")
+    @Size(max = 255, message = "Description cannot exceed 255 characters")
+    private String description;
+
+    /** Highlighted as the recommended plan on the public pricing page. */
+    @Column(name = "featured", nullable = false)
+    private boolean featured = false;
+
+    /** Listed on the public pricing page (an active plan can still be sold privately when false). */
+    @Column(name = "public_listed", nullable = false)
+    private boolean publicListed = true;
+
     /**
      * Set of features included in this plan.
      * <p>
@@ -217,5 +230,29 @@ public class SubscriptionPlan extends AbstractAuditingEntity<UUID> {
             features.size() +
             '}'
         );
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public boolean isFeatured() {
+        return featured;
+    }
+
+    public void setFeatured(boolean featured) {
+        this.featured = featured;
+    }
+
+    public boolean isPublicListed() {
+        return publicListed;
+    }
+
+    public void setPublicListed(boolean publicListed) {
+        this.publicListed = publicListed;
     }
 }

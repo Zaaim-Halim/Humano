@@ -20,7 +20,8 @@
         "groups": {
           "revenue": "Revenue",
           "admin": "Administration"
-        }
+        },
+        "demos": "Demos"
       },
       "cycle": {
         "MONTHLY": "Monthly",
@@ -271,7 +272,13 @@
         "whatsIncluded": "What's included",
         "whatsIncludedHint": "Tick what this plan offers. Leave a limit empty for unlimited; add a short note where useful (e.g. \"Email & chat\").",
         "notePlaceholder": "Note (optional)",
-        "otherCategory": "Other"
+        "otherCategory": "Other",
+        "description": "Pricing page pitch",
+        "descriptionHint": "One line under the plan name on the public pricing page.",
+        "featured": "Highlight as most popular",
+        "publicListed": "Show on the pricing page",
+        "hiddenBadge": "Not on pricing page",
+        "featuredBadge": "Most popular"
       },
       "coupons": {
         "hint": "Discount codes customers can apply when they subscribe.",
@@ -347,6 +354,145 @@
         "deleted": "Feature removed.",
         "deleteTitle": "Remove {{ name }}?",
         "deleteBody": "It disappears from every plan and from the comparison."
+      },
+      "demos": {
+        "title": "Demos",
+        "subtitle": "Demo requests from the website, and the demo workspaces you run for prospects.",
+        "new": "New demo",
+        "newTitle": "Set up a demo workspace",
+        "tabs": {
+          "requests": "Requests",
+          "workspaces": "Workspaces"
+        },
+        "kpi": {
+          "new": "New requests",
+          "newHint": "{{ n }} open in total",
+          "live": "Live demos",
+          "liveHint": "Running or being set up",
+          "expiring": "Expiring soon",
+          "expiringHint": "Within 3 days",
+          "expired": "Expired",
+          "expiredHint": "Locked until extended or converted"
+        },
+        "days": "{{ n }} days",
+        "daysLeft": "{{ n }} days left",
+        "dayLeft": "1 day left",
+        "expiresToday": "Expires today",
+        "col": {
+          "demo": "Demo",
+          "contact": "Contact",
+          "plan": "Shows plan",
+          "status": "Status",
+          "expires": "Expires"
+        },
+        "setup": {
+          "provisioning": "Setting up",
+          "seeding": "Adding sample data",
+          "failed": "Setup failed",
+          "live": "Live",
+          "expiring": "Expiring",
+          "expired": "Expired"
+        },
+        "settingUpHint": "Ready in a few minutes",
+        "retry": "Retry setup",
+        "extend": "Extend",
+        "extendTitle": "Extend {{ name }}",
+        "extendBody": "Adds time from today, or from the current expiry if that is later. An expired demo reopens.",
+        "extended": "Demo extended",
+        "convert": "Convert",
+        "convertTitle": "Convert {{ name }} to a customer",
+        "convertBody": "The workspace and everything in it stays — including the sample data. It leaves Demos, appears under Customers and gets a subscription on the plan you pick.",
+        "converted": "Demo converted to a customer",
+        "resetPassword": "New password",
+        "expire": "Expire now",
+        "expired": "Demo expired",
+        "delete": "Delete",
+        "deleted": "Demo deleted",
+        "created": "Demo created — it is being set up",
+        "copied": "Copied to the clipboard",
+        "empty": "No demo workspaces",
+        "emptyHint": "Set one up from a request, or with New demo.",
+        "confirm": {
+          "expire": "Expire now",
+          "expireTitle": "Expire {{ name }}?",
+          "expireBody": "The workspace locks right away. Its data stays; extend it to reopen.",
+          "delete": "Delete demo",
+          "deleteTitle": "Delete {{ name }}?",
+          "deleteBody": "The workspace and its database are removed for good. This cannot be undone.",
+          "reset": "Generate",
+          "resetTitle": "New password for {{ name }}?",
+          "resetBody": "Every login of this demo gets a new shared password; the current one stops working."
+        },
+        "creds": {
+          "title": "Demo sign-in details",
+          "body": "Share these with the prospect. The password is shown only now — generate a new one from the list if it gets lost.",
+          "workspace": "Workspace",
+          "admin": "Admin login",
+          "password": "Password",
+          "others": "Other roles",
+          "copy": "Copy all",
+          "done": "Done"
+        },
+        "form": {
+          "company": "Company name",
+          "subdomain": "Workspace address",
+          "subdomainHint": "Lowercase letters, numbers and hyphens; at least 3 characters.",
+          "country": "Country",
+          "duration": "Runs for",
+          "contactName": "Contact name",
+          "contactEmail": "Contact email",
+          "plan": "Plan",
+          "planHint": "The demo shows this plan's features. Defaults to the featured plan.",
+          "sampleData": "Fill with a sample company",
+          "sampleDataHint": "About 50 employees with org chart, leave, timesheets, expenses, reviews and payroll history.",
+          "backgroundTitle": "Set up in the background",
+          "backgroundBody": "Creating the workspace and its sample company takes a few minutes. You get the sign-in details now; the list shows when it is ready.",
+          "submit": "Create demo",
+          "cycle": "Billing cycle",
+          "trialDays": "Trial days",
+          "trialDaysHint": "0 to start billing now.",
+          "coupon": "Coupon code"
+        },
+        "request": {
+          "filter": {
+            "open": "Open",
+            "all": "All"
+          },
+          "company": "Company",
+          "contact": "Contact",
+          "received": "Received",
+          "status": "Status",
+          "email": "Email",
+          "phone": "Phone",
+          "size": "Company size",
+          "country": "Country",
+          "demo": "Demo workspace",
+          "message": "Message",
+          "employees": "{{ size }} employees",
+          "statuses": {
+            "NEW": "New",
+            "CONTACTED": "Contacted",
+            "DEMO_CREATED": "Demo set up",
+            "DECLINED": "Declined"
+          },
+          "createDemo": "Create demo",
+          "markContacted": "Mark contacted",
+          "decline": "Decline",
+          "reopen": "Reopen",
+          "delete": "Delete",
+          "deleted": "Request deleted",
+          "notes": "Internal notes",
+          "notesPlaceholder": "Call notes, next steps…",
+          "saveNotes": "Save notes",
+          "notesSaved": "Notes saved",
+          "marked": {
+            "NEW": "Request reopened",
+            "CONTACTED": "Marked as contacted",
+            "DECLINED": "Request declined"
+          },
+          "empty": "No open demo requests",
+          "emptyHint": "Requests from the website's “Book a demo” form show up here."
+        }
       }
     }
   }

@@ -74,7 +74,8 @@ public class PlatformMetricsService {
     public PlatformOverview overview() {
         Instant now = Instant.now();
         Instant monthAgo = now.minus(30, ChronoUnit.DAYS);
-        List<Tenant> tenants = tenantRepository.findAll();
+        // Demo workspaces are not customers: no signups, no status mix.
+        List<Tenant> tenants = tenantRepository.findAll().stream().filter(t -> !t.isDemo()).toList();
         List<Subscription> subscriptions = subscriptionRepository.findAll();
         List<Invoice> invoices = invoiceRepository.findAll();
         List<YearMonth> months = lastMonths(now);

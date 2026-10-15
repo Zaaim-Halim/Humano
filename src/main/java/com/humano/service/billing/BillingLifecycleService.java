@@ -16,6 +16,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -255,6 +256,23 @@ public class BillingLifecycleService {
         // confirms the renewal status. Both go to the same admin email.
         sendInvoiceIssuedNotification(invoice);
         sendRenewalNotification(subscription, invoice);
+    }
+
+    /**
+     * Bills the period a subscription has just started (a customer choosing a plan, or choosing
+     * one again after its subscription ended): one invoice priced like a renewal, due at the end
+     * of that period. Renewals bill the next period ahead of time, so without this the first
+     * period of a self-started subscription would never be billed.
+     */
+    @Transactional
+    public Invoice issueFirstInvoice(UUID subscriptionId) {
+        Subscription subscription = subscriptionRepository
+            .findById(subscriptionId)
+            .orElseThrow(() -> new IllegalArgumentException("Subscription not found: " + subscriptionId));
+        Invoice invoice = generateRenewalInvoice(subscription);
+        log.info("Issued first invoice {} for subscription: {}", invoice.getInvoiceNumber(), subscription.getId());
+        sendInvoiceIssuedNotification(invoice);
+        return invoice;
     }
 
     /**

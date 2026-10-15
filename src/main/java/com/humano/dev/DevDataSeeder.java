@@ -15,6 +15,8 @@ import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.UserRepository;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.security.AuthoritiesConstants;
+import com.humano.service.demo.DemoDataSeeder;
+import com.humano.service.demo.DemoPersonaService;
 import com.humano.service.multitenancy.TenantInitializationService;
 import com.humano.service.multitenancy.TenantProvisioningService;
 import java.math.BigDecimal;
@@ -25,6 +27,7 @@ import java.util.Set;
 import java.util.TimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -74,7 +77,7 @@ public class DevDataSeeder implements ApplicationRunner {
     /** The platform (SaaS owner) console login, in the platform tenant. */
     static final String OWNER_LOGIN = "owner@humano.app";
 
-    private static final String EMAIL_DOMAIN = "demo.humano";
+    private static final String EMAIL_DOMAIN = DemoPersonaService.EMAIL_DOMAIN;
 
     private final TenantRepository tenantRepository;
     private final TenantProvisioningService provisioningService;
@@ -84,7 +87,8 @@ public class DevDataSeeder implements ApplicationRunner {
     private final PasswordEncoder passwordEncoder;
     private final TransactionTemplate masterTx;
     private final TransactionTemplate tenantTx;
-    private final DemoDataSeeder demoDataSeeder;
+    private final ObjectProvider<DemoDataSeeder> demoDataSeeder;
+    private final DemoPersonaService personaService;
     private final boolean seedDemoData;
     private final TenantInitializationService initializationService;
     private final PlatformDemoSeeder platformDemoSeeder;
@@ -99,13 +103,15 @@ public class DevDataSeeder implements ApplicationRunner {
         PasswordEncoder passwordEncoder,
         @Qualifier("masterTransactionManager") PlatformTransactionManager masterTransactionManager,
         @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager,
-        DemoDataSeeder demoDataSeeder,
+        ObjectProvider<DemoDataSeeder> demoDataSeeder,
+        DemoPersonaService personaService,
         TenantInitializationService initializationService,
         MultiTenantProperties multiTenantProperties,
         PlatformDemoSeeder platformDemoSeeder,
         @Value("${humano.dev.seed.demo-data:true}") boolean seedDemoData
     ) {
         this.demoDataSeeder = demoDataSeeder;
+        this.personaService = personaService;
         this.initializationService = initializationService;
         this.platformDemoSeeder = platformDemoSeeder;
         this.multiTenantProperties = multiTenantProperties;
@@ -198,6 +204,7 @@ public class DevDataSeeder implements ApplicationRunner {
                 plan.setSubscriptionType(SubscriptionType.FREE);
                 plan.setPrice(BigDecimal.ZERO);
                 plan.setDisplayName("Dev Free");
+                plan.setPublicListed(false); // internal dev plan, not on the public pricing page
                 plan.setActive(true);
                 return subscriptionPlanRepository.save(plan);
             });
@@ -222,7 +229,7 @@ public class DevDataSeeder implements ApplicationRunner {
         String previous = TenantContext.getCurrentTenant();
         TenantContext.setCurrentTenant(tenant.getSubdomain());
         try {
-            demoDataSeeder.seed();
+            demoDataSeeder.getObject().seed();
         } catch (Exception e) {
             log.error("[demo-data] seeding failed (non-fatal, app continues): {}", e.getMessage(), e);
         } finally {
@@ -230,33 +237,17 @@ public class DevDataSeeder implements ApplicationRunner {
         }
     }
 
-    /** Creates one activated user per role in the tenant's authority catalog (each in its own tx). */
+    /** Creates one activated persona login per role (see {@link DemoPersonaService}). */
     private void seedUsers(Tenant tenant) {
         String previous = TenantContext.getCurrentTenant();
         TenantContext.setCurrentTenant(tenant.getSubdomain());
         try {
-            // Capture role NAMES only (plain strings) — the Authority entities are re-fetched inside each
-            // per-user tx so they stay managed when attached to the new user.
-            List<String> roleNames = tenantTx.execute(status -> authorityRepository.findAll().stream().map(Authority::getName).toList());
-            if (roleNames == null) {
-                return;
-            }
-            for (String role : roleNames) {
-                if (AuthoritiesConstants.USER.equals(role) || AuthoritiesConstants.ANONYMOUS.equals(role)) {
-                    continue; // baseline roles, not personas
-                }
-                try {
-                    tenantTx.executeWithoutResult(status -> createUserForRole(role));
-                } catch (Exception e) {
-                    log.warn("[dev-seed] skipped demo user for role {} ({})", role, e.getMessage());
-                }
-            }
+            personaService.createPersonas(PASSWORD);
         } finally {
             restoreTenant(previous);
         }
     }
 
-    /** Runs inside a per-user tenant transaction so the looked-up authorities are managed. */
     /**
      * The SaaS owner's console login ({@value #OWNER_LOGIN}, organization = the platform tenant):
      * seeds the platform role catalog, then one {@code ROLE_PLATFORM_OWNER} user. Idempotent.
@@ -294,31 +285,6 @@ public class DevDataSeeder implements ApplicationRunner {
         }
     }
 
-    private void createUserForRole(String roleName) {
-        String login = emailForRole(roleName);
-        if (userRepository.findOneByLogin(login).isPresent()) {
-            return; // idempotent: already seeded (covers the provisioning-created admin)
-        }
-        Authority authority = authorityRepository.findById(roleName).orElse(null);
-        if (authority == null) {
-            return;
-        }
-        User user = new User();
-        user.setLogin(login);
-        user.setEmail(login);
-        user.setFirstName("Demo");
-        user.setLastName(labelForRole(roleName));
-        user.setPassword(passwordEncoder.encode(PASSWORD));
-        user.setActivated(true);
-        user.setLangKey("en");
-        Set<Authority> grants = new LinkedHashSet<>();
-        grants.add(authority);
-        authorityRepository.findById(AuthoritiesConstants.USER).ifPresent(grants::add);
-        user.setAuthorities(grants);
-        userRepository.save(user);
-        log.info("[dev-seed] created {}  (role {})", login, roleName);
-    }
-
     private void logCredentials() {
         log.info(
             "\n========================= DEV DEMO LOGINS =========================\n" +
@@ -347,28 +313,8 @@ public class DevDataSeeder implements ApplicationRunner {
         }
     }
 
-    /** {@code ROLE_HR_MANAGER} → {@code hr.manager@demo.humano}. Package-private for testing. */
+    /** {@code ROLE_HR_MANAGER} → {@code hr.manager@demo.humano}. */
     static String emailForRole(String role) {
-        return localPart(role) + "@" + EMAIL_DOMAIN;
-    }
-
-    private static String localPart(String role) {
-        return role.replaceFirst("^ROLE_", "").toLowerCase().replace('_', '.');
-    }
-
-    /** {@code ROLE_HR_MANAGER} → {@code Hr Manager}. */
-    private static String labelForRole(String role) {
-        String[] parts = role.replaceFirst("^ROLE_", "").toLowerCase().split("_");
-        StringBuilder sb = new StringBuilder();
-        for (String p : parts) {
-            if (p.isEmpty()) {
-                continue;
-            }
-            if (sb.length() > 0) {
-                sb.append(' ');
-            }
-            sb.append(Character.toUpperCase(p.charAt(0))).append(p.substring(1));
-        }
-        return sb.toString();
+        return DemoPersonaService.emailForRole(role);
     }
 }
