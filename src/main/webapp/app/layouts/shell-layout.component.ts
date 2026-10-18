@@ -188,6 +188,7 @@ export default class ShellLayoutComponent {
         // Outside the plan the screen is read-only: say so where people look for it.
         badge: it.feature && !planIncludes(this.meBilling.entitlements(), it.feature) ? this.t('humano.plan.navBadge') : it.badge,
         link: it.link,
+        activeFor: it.activeFor,
       })),
     })),
   );

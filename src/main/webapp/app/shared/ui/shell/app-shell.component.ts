@@ -1,13 +1,16 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, booleanAttribute, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Signal, booleanAttribute, computed, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { IsActiveMatchOptions, NavigationEnd, Router, RouterLink, isActive } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { filter } from 'rxjs/operators';
 
 import { AvatarComponent } from '../data-display/avatar.component';
 
 export type ShellChrome = 'app' | 'platform';
+
+const EXACT: IsActiveMatchOptions = { paths: 'exact', queryParams: 'ignored', fragment: 'ignored', matrixParams: 'ignored' };
+const SUBSET: IsActiveMatchOptions = { paths: 'subset', queryParams: 'ignored', fragment: 'ignored', matrixParams: 'ignored' };
 
 export interface NavItem {
   id: string;
@@ -18,6 +21,8 @@ export interface NavItem {
   link?: string | unknown[];
   /** Active only on this exact URL (for a section root such as an overview), not its children. */
   exact?: boolean;
+  /** Other paths where this item is the current page too, e.g. a detail page reached from it. */
+  activeFor?: string[];
 }
 
 export interface NavGroup {
@@ -50,7 +55,7 @@ export interface ShellTenant {
 @Component({
   selector: 'hum-app-shell',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, RouterLink, RouterLinkActive, LucideAngularModule, AvatarComponent],
+  imports: [NgTemplateOutlet, RouterLink, LucideAngularModule, AvatarComponent],
   host: {
     class: 'hum-shell',
     '[class.hum-shell--nav-open]': 'sidebarOpen()',
@@ -71,14 +76,7 @@ export interface ShellTenant {
             }
             @for (it of group.items; track it.id) {
               @if (it.link) {
-                <a
-                  class="hum-side__item"
-                  [routerLink]="it.link"
-                  routerLinkActive
-                  [routerLinkActiveOptions]="{ exact: !!it.exact }"
-                  #rla="routerLinkActive"
-                  [attr.aria-current]="rla.isActive ? 'page' : null"
-                >
+                <a class="hum-side__item" [routerLink]="it.link" [attr.aria-current]="isCurrent(it) ? 'page' : null">
                   <ng-container [ngTemplateOutlet]="itemInner" [ngTemplateOutletContext]="{ $implicit: it }" />
                 </a>
               } @else {
@@ -185,14 +183,43 @@ export class AppShellComponent {
   /** Whether the off-canvas sidebar drawer is open (only meaningful below --shell-collapse). */
   protected readonly sidebarOpen = signal(false);
 
+  private readonly router = inject(Router);
+  /** The current path: read by `isCurrent` so the active item follows navigation. */
+  private readonly path = signal(this.router.url.split(/[?#]/)[0]);
+
+  /** Per linked item, whether the router is on its link (or under it, unless `exact`). */
+  private readonly linkActive = computed(() => {
+    const active = new Map<string, Signal<boolean>>();
+    for (const it of this.nav().flatMap(g => g.items)) {
+      if (!it.link) continue;
+      const tree = this.router.createUrlTree(Array.isArray(it.link) ? it.link : [it.link]);
+      active.set(it.id, isActive(tree, this.router, it.exact ? EXACT : SUBSET));
+    }
+    return active;
+  });
+
   constructor() {
     // Close the drawer on any navigation — covers nav-item taps, the ⌘K palette, and programmatic nav.
-    inject(Router)
-      .events.pipe(
+    this.router.events
+      .pipe(
         filter(e => e instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.sidebarOpen.set(false));
+      .subscribe(() => {
+        this.sidebarOpen.set(false);
+        this.path.set(this.router.url.split(/[?#]/)[0]);
+      });
+  }
+
+  /**
+   * The item is the current page: the URL is its link (or under it, unless `exact`), or one of its
+   * `activeFor` paths. Computed here rather than with `routerLinkActive`, which clears any
+   * `aria-current` it did not set and so would undo `activeFor`.
+   */
+  protected isCurrent(it: NavItem): boolean {
+    const path = this.path();
+    if (it.activeFor?.some(p => path === p || path.startsWith(p + '/'))) return true;
+    return this.linkActive().get(it.id)?.() ?? false;
   }
 
   protected toggleNav(): void {

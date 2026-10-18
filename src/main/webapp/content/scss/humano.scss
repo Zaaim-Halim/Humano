@@ -3805,7 +3805,9 @@ dt {
   border-radius: var(--radius-xl);
   min-height: 360px;
   cursor: grab;
-  overscroll-behavior: contain;
+  /* Sideways scrolling stays in the chart (no browser back-swipe); a vertical wheel scrolls the
+     page, since the chart grows with its content and has nothing to scroll vertically. */
+  overscroll-behavior-x: contain;
 }
 
 .hum-orgchart:focus-visible {
@@ -3830,6 +3832,8 @@ dt {
 
 .hum-orgchart-host:fullscreen .hum-orgchart {
   height: calc(100vh - 2 * var(--space-4) - 28px);
+  /* Full screen has a fixed height: the chart scrolls on its own, with nothing behind it to scroll. */
+  overscroll-behavior: contain;
 }
 
 .hum-orgchart__hint {

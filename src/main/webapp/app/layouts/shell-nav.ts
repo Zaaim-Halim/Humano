@@ -21,6 +21,8 @@ export interface ShellNavItem {
   icon: string;
   /** Absolute router path the item navigates to. */
   link: string;
+  /** Other paths where the item is the current page too, e.g. a detail page reached from it. */
+  activeFor?: string[];
   badge?: string | number;
   /** Extra (already-localised or language-neutral) terms folded into the command-palette match. */
   keywords?: string;
@@ -67,6 +69,8 @@ export const SHELL_NAV: ShellNavGroup[] = [
         labelKey: 'humano.nav.myProfile',
         icon: 'id-card',
         link: '/my-profile',
+        // My own payslips open from the pay history on my profile.
+        activeFor: ['/my-payslips'],
         keywords: 'my profile details employment personal record',
       },
     ],
