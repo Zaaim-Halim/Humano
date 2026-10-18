@@ -17,6 +17,7 @@ import { DocumentLibraryComponent } from 'app/features/employee/documents/docume
 import { CurrentEmployeeService } from 'app/features/employee';
 import { EmployeeHeroComponent } from 'app/features/employee/profile/employee-hero.component';
 import { EmployeeOverviewComponent } from 'app/features/employee/profile/employee-overview.component';
+import { EmployeeOnboardingCardComponent } from '../onboarding/employee-onboarding-card.component';
 import { EmployeeRecordsComponent } from 'app/features/employee/employee-records/employee-records.component';
 import { EmployeeLeaveComponent } from 'app/features/employee/insights/employee-leave.component';
 import { EmployeeCareerComponent } from 'app/features/employee/insights/employee-career.component';
@@ -91,6 +92,7 @@ const idle = <T>(): TabState<T> => ({ data: null, loading: false, error: null })
     DocumentLibraryComponent,
     EmployeeHeroComponent,
     EmployeeOverviewComponent,
+    EmployeeOnboardingCardComponent,
     EmployeePayComponent,
     EmployeeCareerComponent,
     EmployeeLeaveComponent,

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -13,13 +14,18 @@ import static org.mockito.Mockito.when;
 
 import com.humano.domain.enumeration.hr.EmployeeProcessStatus;
 import com.humano.domain.enumeration.hr.EmployeeProcessType;
+import com.humano.domain.enumeration.hr.EmployeeStatus;
+import com.humano.domain.enumeration.hr.OnboardingTaskLink;
 import com.humano.domain.enumeration.hr.OnboardingTaskOwner;
+import com.humano.domain.enumeration.hr.TrainingStatus;
 import com.humano.domain.enumeration.hr.WorkflowStatus;
 import com.humano.domain.enumeration.hr.WorkflowType;
 import com.humano.domain.hr.EmployeeProcess;
 import com.humano.domain.hr.EmployeeProcessTask;
+import com.humano.domain.hr.EmployeeTraining;
 import com.humano.domain.hr.OnboardingSettings;
 import com.humano.domain.hr.OnboardingTaskTemplate;
+import com.humano.domain.hr.Training;
 import com.humano.domain.hr.WorkflowInstance;
 import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.workflow.requests.CompleteTaskRequest;
@@ -34,8 +40,11 @@ import com.humano.repository.hr.ExpenseClaimRepository;
 import com.humano.repository.hr.LeaveRequestRepository;
 import com.humano.repository.hr.OnboardingSettingsRepository;
 import com.humano.repository.hr.OnboardingTaskTemplateRepository;
+import com.humano.repository.hr.TrainingRepository;
 import com.humano.repository.payroll.EmployeeBenefitRepository;
 import com.humano.repository.shared.EmployeeRepository;
+import com.humano.service.billing.entitlement.EntitlementService;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.hr.workflow.infrastructure.DeadlineMonitorService;
 import com.humano.service.hr.workflow.infrastructure.NotificationOrchestrationService;
 import com.humano.service.hr.workflow.infrastructure.WorkflowStateManager;
@@ -49,6 +58,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -66,6 +76,8 @@ class EmployeeLifecycleWorkflowServiceTest {
     private final ExpenseClaimRepository expenses = mock(ExpenseClaimRepository.class);
     private final OnboardingSettingsRepository settings = mock(OnboardingSettingsRepository.class);
     private final OnboardingTaskTemplateRepository templates = mock(OnboardingTaskTemplateRepository.class);
+    private final TrainingRepository trainingCatalog = mock(TrainingRepository.class);
+    private final EntitlementService entitlements = mock(EntitlementService.class);
     private final EmployeeLifecycleWorkflowService service = new EmployeeLifecycleWorkflowService(
         workflows,
         mock(NotificationOrchestrationService.class),
@@ -78,7 +90,9 @@ class EmployeeLifecycleWorkflowServiceTest {
         documents,
         mock(LeaveRequestRepository.class),
         expenses,
-        new OnboardingChecklistService(settings, templates)
+        new OnboardingChecklistService(settings, templates),
+        trainingCatalog,
+        entitlements
     );
 
     private static final LocalDate START = LocalDate.of(2026, 10, 1);
@@ -93,6 +107,7 @@ class EmployeeLifecycleWorkflowServiceTest {
         nadia.setFirstName("Nadia");
         nadia.setLastName("Benali");
         nadia.setActivated(true);
+        nadia.setStatus(EmployeeStatus.ACTIVE);
 
         when(employees.findById(nadia.getId())).thenReturn(Optional.of(nadia));
         when(processes.findByEmployeeIdAndProcessTypeAndStatusIn(any(), any(), any())).thenReturn(Optional.empty());
@@ -263,6 +278,141 @@ class EmployeeLifecycleWorkflowServiceTest {
     }
 
     @Test
+    void linkedTasksShowWhetherTheRecordIsOnFile() {
+        OnboardingProcessResponse response = service.initiateOnboarding(onboard());
+        Map<String, OnboardingProcessResponse.OnboardingTaskResponse> byTitle = new HashMap<>();
+        response.tasks().forEach(t -> byTitle.put(t.title(), t));
+
+        // Nadia's account is activated; she has no benefit enrollment yet.
+        assertThat(byTitle.get("IT Systems Setup").link()).isEqualTo(OnboardingTaskLink.ACCOUNT);
+        assertThat(byTitle.get("IT Systems Setup").linkSatisfied()).isTrue();
+        assertThat(byTitle.get("Benefits Enrollment").link()).isEqualTo(OnboardingTaskLink.BENEFITS);
+        assertThat(byTitle.get("Benefits Enrollment").linkSatisfied()).isFalse();
+        assertThat(byTitle.get("Policy Acknowledgment").link()).isNull();
+        assertThat(byTitle.get("Policy Acknowledgment").linkSatisfied()).isNull();
+    }
+
+    @Test
+    void requiredTrainingsAreAssignedButOnlyCountOnceCompleted() {
+        Training security = training("Security awareness");
+        Training gdpr = training("GDPR basics");
+        when(trainingCatalog.findById(security.getId())).thenReturn(Optional.of(security));
+        when(trainingCatalog.findById(gdpr.getId())).thenReturn(Optional.of(gdpr));
+        when(trainings.existsByEmployeeIdAndTrainingId(nadia.getId(), gdpr.getId())).thenReturn(true); // already enrolled
+        when(trainings.existsByEmployeeId(nadia.getId())).thenReturn(true);
+        when(trainings.existsByEmployeeIdAndStatus(nadia.getId(), TrainingStatus.PLANNED)).thenReturn(true);
+
+        OnboardingProcessResponse response = service.initiateOnboarding(
+            onboard(START, null, List.of(security.getId(), gdpr.getId(), security.getId()))
+        );
+
+        ArgumentCaptor<EmployeeTraining> enrolled = ArgumentCaptor.forClass(EmployeeTraining.class);
+        verify(trainings).save(enrolled.capture());
+        assertThat(enrolled.getValue().getTraining()).isSameAs(security);
+        assertThat(enrolled.getValue().getStatus()).isEqualTo(TrainingStatus.PLANNED);
+        assertThat(response.progress().trainingsAssigned()).isTrue();
+        assertThat(response.tasks())
+            .filteredOn(t -> t.title().equals("Complete Mandatory Trainings"))
+            .singleElement()
+            .satisfies(t -> {
+                assertThat(t.link()).isEqualTo(OnboardingTaskLink.TRAININGS);
+                assertThat(t.linkSatisfied()).isFalse(); // planned, not completed
+            });
+    }
+
+    @Test
+    void anUnknownTrainingIsRejectedBeforeAnythingIsCreated() {
+        UUID unknown = UUID.randomUUID();
+        when(trainingCatalog.findById(unknown)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.initiateOnboarding(onboard(START, null, List.of(unknown))))
+            .isInstanceOf(BadRequestAlertException.class)
+            .hasMessageContaining("Unknown training");
+        verify(processes, never()).save(any());
+    }
+
+    @Test
+    void trainingsNeedTheTrainingModule() {
+        doThrow(new IllegalStateException("not in plan")).when(entitlements).checkIncluded(FeatureCodes.TRAINING);
+
+        assertThatThrownBy(() -> service.initiateOnboarding(onboard(START, null, List.of(UUID.randomUUID())))).hasMessageContaining(
+            "not in plan"
+        );
+        verify(processes, never()).save(any());
+    }
+
+    @Test
+    void historyAndPerEmployeeListsUseTheirFilters() {
+        Pageable pageable = Pageable.ofSize(20);
+        List<EmployeeProcessStatus> history = List.of(EmployeeProcessStatus.COMPLETED, EmployeeProcessStatus.CANCELLED);
+        when(processes.findByProcessTypeAndStatusIn(EmployeeProcessType.ONBOARDING, history, pageable)).thenReturn(Page.empty());
+        when(
+            processes.findByEmployeeIdAndProcessTypeAndStatusIn(eq(nadia.getId()), eq(EmployeeProcessType.ONBOARDING), any(), eq(pageable))
+        ).thenReturn(Page.empty());
+
+        service.getProcesses(EmployeeProcessType.ONBOARDING, history, null, pageable);
+        service.getProcesses(EmployeeProcessType.ONBOARDING, List.of(EmployeeProcessStatus.values()), nadia.getId(), pageable);
+
+        verify(processes).findByProcessTypeAndStatusIn(EmployeeProcessType.ONBOARDING, history, pageable);
+        verify(processes).findByEmployeeIdAndProcessTypeAndStatusIn(
+            nadia.getId(),
+            EmployeeProcessType.ONBOARDING,
+            List.of(EmployeeProcessStatus.values()),
+            pageable
+        );
+    }
+
+    @Test
+    void startingOnboardingMarksTheEmployeeOnboarding() {
+        service.initiateOnboarding(onboard());
+
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.ONBOARDING);
+        assertThat(nadiasWorkflows.get(0).getContext()).containsEntry(EmployeeLifecycleWorkflowService.CONTEXT_STATUS_BEFORE, "ACTIVE");
+        verify(employees).save(nadia);
+    }
+
+    @Test
+    void finishingTheChecklistMakesThemActive() {
+        OnboardingProcessResponse started = service.initiateOnboarding(onboard());
+        for (OnboardingProcessResponse.OnboardingTaskResponse task : started.tasks()) {
+            service.completeOnboardingTask(started.processId(), new CompleteTaskRequest(task.taskId(), null, true, null));
+        }
+
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.ACTIVE);
+    }
+
+    @Test
+    void cancellingRestoresTheStatusTheyHadBefore() {
+        nadia.setStatus(null); // a profile without a status yet
+        OnboardingProcessResponse started = service.initiateOnboarding(onboard());
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.ONBOARDING);
+
+        service.cancelOnboarding(started.processId(), "Offer withdrawn");
+
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.ACTIVE);
+    }
+
+    @Test
+    void inactiveEmployeesKeepTheirStatus() {
+        nadia.setStatus(EmployeeStatus.INACTIVE);
+
+        service.initiateOnboarding(onboard());
+
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.INACTIVE);
+        verify(employees, never()).save(any());
+    }
+
+    @Test
+    void aStatusChangedByHandDuringOnboardingIsKept() {
+        OnboardingProcessResponse started = service.initiateOnboarding(onboard());
+        nadia.setStatus(EmployeeStatus.TERMINATED); // HR changed it on the profile
+
+        service.cancelOnboarding(started.processId(), "Left before finishing");
+
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.TERMINATED);
+    }
+
+    @Test
     void aTargetBeforeTheStartIsRejected() {
         assertThatThrownBy(() -> service.initiateOnboarding(onboard(START, START.minusDays(1))))
             .isInstanceOf(BadRequestAlertException.class)
@@ -286,22 +436,18 @@ class EmployeeLifecycleWorkflowServiceTest {
     }
 
     private InitiateOnboardingRequest onboard(LocalDate startDate, LocalDate targetDate) {
-        return new InitiateOnboardingRequest(
-            nadia.getId(),
-            null,
-            null,
-            null,
-            null,
-            startDate,
-            targetDate,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        );
+        return onboard(startDate, targetDate, null);
+    }
+
+    private InitiateOnboardingRequest onboard(LocalDate startDate, LocalDate targetDate, List<UUID> trainingIds) {
+        return new InitiateOnboardingRequest(nadia.getId(), startDate, targetDate, trainingIds, null, null);
+    }
+
+    private static Training training(String name) {
+        Training t = new Training();
+        t.setId(UUID.randomUUID());
+        t.setName(name);
+        return t;
     }
 
     private static OnboardingTaskTemplate template(String title, int dueDay, OnboardingTaskOwner owner) {

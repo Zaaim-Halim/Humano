@@ -3,6 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { Page, PageRequest } from 'app/core/api';
+
+import { EmployeeProcessStatus } from '../models/enums/employee-process-status.enum';
 import { ApplicationConfigService } from 'app/core/config/application-config.service';
 import { createRequestOption } from 'app/core/request/request-util';
 
@@ -39,7 +41,21 @@ export class OnboardingService {
 
   /** `GET /` — active (planned, in-progress or delayed) onboardings. */
   listActive(req?: PageRequest): Observable<Page<EmployeeProcessSummary>> {
-    return this.http.get<Page<EmployeeProcessSummary>>(this.resourceUrl, { params: createRequestOption(req) });
+    return this.list({}, req);
+  }
+
+  /**
+   * `GET /?status=&employeeId=` — onboardings in the given statuses (active when none),
+   * optionally for one employee.
+   */
+  list(filter: { status?: EmployeeProcessStatus[]; employeeId?: string }, req?: PageRequest): Observable<Page<EmployeeProcessSummary>> {
+    return this.http.get<Page<EmployeeProcessSummary>>(this.resourceUrl, {
+      params: createRequestOption({
+        ...req,
+        ...(filter.status?.length ? { status: filter.status } : {}),
+        ...(filter.employeeId ? { employeeId: filter.employeeId } : {}),
+      }),
+    });
   }
 
   /** `GET /{processId}` — one process with its checklist, in any status. */

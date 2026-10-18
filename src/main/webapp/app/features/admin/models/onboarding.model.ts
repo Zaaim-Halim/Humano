@@ -19,6 +19,9 @@ export interface EmployeeProcessSummary {
   completedTasks: number;
   /** Open tasks whose due date has passed. */
   overdueTasks: number;
+  /** Process notes; on a cancelled process, the cancellation reason. */
+  notes: string | null;
+  lastModifiedDate: string | null;
 }
 
 /** One checklist item. `assignedTo*` is null for tasks owned by HR/IT rather than a person. */
@@ -32,6 +35,10 @@ export interface OnboardingTask {
   assignedToId: string | null;
   assignedToName: string | null;
   completionNotes: string | null;
+  /** Employee record that shows the task is done; null when not linked. */
+  link: OnboardingTaskLink | null;
+  /** Whether that record is on file; null when not linked. */
+  linkSatisfied: boolean | null;
 }
 
 /** Readiness flags derived from the employee's real records. */
@@ -72,8 +79,10 @@ export interface OnboardingProcess {
 export interface InitiateOnboardingRequest {
   employeeId: string;
   startDate?: string;
-  /** Finish-by date; task due dates are spread between the start and this day (default: 30 days after the start). */
+  /** Finish-by date; task due dates are spread between the start and this day (default: the company's default length). */
   targetDate?: string;
+  /** Trainings to enroll the new hire in (planned). Needs the Training module. */
+  requiredTrainingIds?: string[];
   notes?: string;
 }
 
@@ -87,12 +96,16 @@ export interface CompleteTaskRequest {
 /** `com.humano.domain.enumeration.hr.OnboardingTaskOwner` — who a checklist task is assigned to. */
 export type OnboardingTaskOwner = 'NEW_HIRE' | 'MANAGER' | 'HR';
 
+/** `com.humano.domain.enumeration.hr.OnboardingTaskLink` — the employee record that shows a task is done. */
+export type OnboardingTaskLink = 'ACCOUNT' | 'DOCUMENTS' | 'BENEFITS' | 'TRAININGS';
+
 /** One task of the company checklist. `dueDay` is days after the start on a default-length onboarding. */
 export interface OnboardingChecklistTask {
   title: string;
   description: string | null;
   dueDay: number;
   owner: OnboardingTaskOwner;
+  link: OnboardingTaskLink | null;
 }
 
 /**

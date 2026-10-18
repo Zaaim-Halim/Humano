@@ -1,5 +1,6 @@
 package com.humano.domain.hr;
 
+import com.humano.domain.enumeration.hr.OnboardingTaskLink;
 import com.humano.domain.enumeration.hr.OnboardingTaskOwner;
 import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.Column;
@@ -46,6 +47,19 @@ public class OnboardingTaskTemplate extends AbstractAuditingEntity<UUID> {
     /** Position in the checklist (0-based). */
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
+
+    /** Employee record that shows the task is done; null when not linked. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "link", length = 30)
+    private OnboardingTaskLink link;
+
+    public OnboardingTaskLink getLink() {
+        return link;
+    }
+
+    public void setLink(OnboardingTaskLink link) {
+        this.link = link;
+    }
 
     @Override
     public UUID getId() {

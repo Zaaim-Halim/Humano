@@ -1,5 +1,5 @@
 <div class="hum-page">
-  <a class="hum-onb-back" routerLink="/onboarding"
+  <a class="hum-onb-back" routerLink="/onboarding" [queryParams]="process() && !active() ? { view: 'history' } : {}"
     ><lucide-icon name="arrow-left" [size]="14" />{{ 'humano.onboarding.backToList' | translate }}</a
   >
 
@@ -178,6 +178,17 @@
                         <span class="hum-onb-item__team"><lucide-icon name="laptop" [size]="11" /></span
                         >{{ 'humano.onboarding.hrOwned' | translate }}
                       }
+                      @if (t.link) {
+                        <span class="hum-onb-link" [class.is-on]="t.linkSatisfied">
+                          <lucide-icon [name]="t.linkSatisfied ? 'circle-check' : 'circle'" [size]="12" />{{
+                            (t.linkSatisfied ? 'humano.onboarding.onRecord' : 'humano.onboarding.notOnRecord')
+                              | translate: { record: ('humano.onboarding.linkRecord.' + t.link | translate) }
+                          }}
+                          @if (!t.linkSatisfied && canOpenProfile) {
+                            <a [routerLink]="['/employees', p.employeeId]">{{ 'humano.onboarding.openProfile' | translate }}</a>
+                          }
+                        </span>
+                      }
                     </div>
                     @if (t.completionNotes) {
                       <p class="hum-onb-item__note">{{ t.completionNotes }}</p>
@@ -262,6 +273,16 @@
   hasFooter
   (closed)="completing.set(null)"
 >
+  @if (completing()?.link && !completing()?.linkSatisfied) {
+    <hum-alert
+      tone="warning"
+      [title]="
+        'humano.onboarding.notOnRecordTitle' | translate: { record: ('humano.onboarding.linkRecord.' + completing()!.link | translate) }
+      "
+      style="margin-bottom: var(--space-3)"
+      >{{ 'humano.onboarding.notOnRecordBody' | translate }}</hum-alert
+    >
+  }
   <hum-form-field [label]="'humano.onboarding.note' | translate" controlId="onb-note">
     <hum-textarea
       inputId="onb-note"

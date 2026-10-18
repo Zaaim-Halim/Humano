@@ -2,6 +2,7 @@ package com.humano.dto.hr.workflow.responses;
 
 import com.humano.domain.enumeration.hr.EmployeeProcessStatus;
 import com.humano.domain.enumeration.hr.EmployeeProcessType;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -21,5 +22,8 @@ public record EmployeeProcessSummary(
     int totalTasks,
     int completedTasks,
     /** Open tasks whose due date has passed. */
-    int overdueTasks
+    int overdueTasks,
+    /** Process notes; on a cancelled process, the cancellation reason. */
+    String notes,
+    Instant lastModifiedDate
 ) {}

@@ -99,7 +99,33 @@
       "tasksOverdue": "{{ count }} overdue",
       "editChecklist": "Checklist",
       "presetDays": "{{ count }} days",
-      "presetDefault": "{{ label }} (default)"
+      "presetDefault": "{{ label }} (default)",
+      "tabActive": "Active",
+      "tabHistory": "History",
+      "historyEmptyTitle": "No finished onboardings yet",
+      "historyEmptyBody": "Completed and cancelled onboardings show up here.",
+      "finished": "Finished",
+      "cancelledOn": "Cancelled",
+      "trainings": "Trainings to assign",
+      "noTrainings": "No trainings in the catalog yet.",
+      "trainingsHint": "The new hire is enrolled in these, and a task to complete them is added to the checklist.",
+      "onRecord": "{{ record }}: on file",
+      "notOnRecord": "{{ record }}: not on file yet",
+      "linkRecord": {
+        "ACCOUNT": "Account activated",
+        "DOCUMENTS": "Documents uploaded",
+        "BENEFITS": "Benefit enrollment",
+        "TRAININGS": "Trainings completed"
+      },
+      "openProfile": "Open profile",
+      "notOnRecordTitle": "{{ record }} isn't on file yet",
+      "notOnRecordBody": "You can still mark this done, for example if it's handled outside Humano.",
+      "finishBy": "Finish by {{ date }}",
+      "completedOn": "Completed {{ date }}",
+      "cancelledOnDate": "Cancelled {{ date }}",
+      "openChecklist": "Open checklist",
+      "startAgain": "Start a new onboarding",
+      "notStarted": "No onboarding for this person yet."
     },
     "onboardingChecklist": {
       "title": "Onboarding checklist",
@@ -136,7 +162,9 @@
       "moveUp": "Move up",
       "moveDown": "Move down",
       "remove": "Remove task",
-      "appliesHint": "Onboardings already in progress keep their own tasks."
+      "appliesHint": "Onboardings already in progress keep their own tasks.",
+      "linkLabel": "Shown done by",
+      "linkNone": "Nothing on file"
     }
   }
 }

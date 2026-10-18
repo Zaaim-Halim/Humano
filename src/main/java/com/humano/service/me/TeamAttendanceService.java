@@ -63,7 +63,10 @@ public class TeamAttendanceService {
         LocalDate day = date == null || date.isAfter(today) ? today : date;
 
         List<EmployeeHierarchyRow> people = everyone ? employeeRepository.findAllHierarchyRows() : reportsOf(viewerId);
-        people = people.stream().filter(p -> p.status() == EmployeeStatus.ACTIVE && (everyone || !p.id().equals(viewerId))).toList();
+        people = people
+            .stream()
+            .filter(p -> EmployeeStatus.WORKING.contains(p.status()) && (everyone || !p.id().equals(viewerId)))
+            .toList();
         if (people.isEmpty()) {
             return new TeamAttendance(everyone ? Scope.ALL : Scope.NONE, day, List.of());
         }

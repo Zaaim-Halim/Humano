@@ -182,7 +182,7 @@ public class EmployeeSpecification {
      * @return Specification
      */
     public static Specification<Employee> isActive() {
-        return (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("status"), EmployeeStatus.ACTIVE);
+        return (root, query, criteriaBuilder) -> root.get("status").in(EmployeeStatus.WORKING);
     }
 
     /**

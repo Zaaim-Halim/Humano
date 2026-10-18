@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.humano.domain.enumeration.hr.OnboardingTaskLink;
 import com.humano.domain.enumeration.hr.OnboardingTaskOwner;
 import com.humano.domain.hr.OnboardingSettings;
 import com.humano.domain.hr.OnboardingTaskTemplate;
@@ -77,8 +78,14 @@ class OnboardingChecklistServiceTest {
             new UpdateOnboardingChecklistRequest(
                 10,
                 List.of(
-                    new UpdateOnboardingChecklistRequest.Task("  Laptop handover ", " ", 0, OnboardingTaskOwner.HR),
-                    new UpdateOnboardingChecklistRequest.Task("Team lunch", "With the whole squad", 10, OnboardingTaskOwner.MANAGER)
+                    new UpdateOnboardingChecklistRequest.Task(
+                        "  Laptop handover ",
+                        " ",
+                        0,
+                        OnboardingTaskOwner.HR,
+                        OnboardingTaskLink.ACCOUNT
+                    ),
+                    new UpdateOnboardingChecklistRequest.Task("Team lunch", "With the whole squad", 10, OnboardingTaskOwner.MANAGER, null)
                 )
             )
         );
@@ -89,13 +96,14 @@ class OnboardingChecklistServiceTest {
         assertThat(saved.tasks()).extracting(OnboardingChecklistResponse.Task::title).containsExactly("Laptop handover", "Team lunch");
         assertThat(saved.tasks().get(0).description()).isNull();
         assertThat(savedTemplates).extracting(OnboardingTaskTemplate::getSortOrder).containsExactly(0, 1);
+        assertThat(saved.tasks()).extracting(OnboardingChecklistResponse.Task::link).containsExactly(OnboardingTaskLink.ACCOUNT, null);
     }
 
     @Test
     void aTaskDueAfterTheDefaultLengthIsRejected() {
         UpdateOnboardingChecklistRequest request = new UpdateOnboardingChecklistRequest(
             7,
-            List.of(new UpdateOnboardingChecklistRequest.Task("Review", null, 14, OnboardingTaskOwner.MANAGER))
+            List.of(new UpdateOnboardingChecklistRequest.Task("Review", null, 14, OnboardingTaskOwner.MANAGER, null))
         );
 
         assertThatThrownBy(() -> service.update(request)).isInstanceOf(BadRequestAlertException.class).hasMessageContaining("day 14");

@@ -1,6 +1,7 @@
 package com.humano.dto.hr.workflow.responses;
 
 import com.humano.domain.enumeration.hr.EmployeeProcessStatus;
+import com.humano.domain.enumeration.hr.OnboardingTaskLink;
 import com.humano.domain.enumeration.hr.WorkflowStatus;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -36,7 +37,11 @@ public record OnboardingProcessResponse(
         LocalDate completionDate,
         UUID assignedToId,
         String assignedToName,
-        String completionNotes
+        String completionNotes,
+        /** Employee record that shows the task is done; null when not linked. */
+        OnboardingTaskLink link,
+        /** Whether that record is on file; null when not linked. */
+        Boolean linkSatisfied
     ) {}
 
     public record OnboardingProgress(

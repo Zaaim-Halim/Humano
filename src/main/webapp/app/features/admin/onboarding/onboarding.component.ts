@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { Observable, pairwise, startWith } from 'rxjs';
@@ -11,12 +11,15 @@ import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
 import { normalizeHttpError } from 'app/core/api';
 import { EmployeeService } from 'app/features/employee';
+import { PlanFeature, planIncludes } from 'app/features/platform/models/entitlements.model';
+import { MeBillingService } from 'app/features/platform/services/me-billing.service';
 import {
   AlertComponent,
   AutocompleteComponent,
   AutocompleteOption,
   BadgeComponent,
   ButtonComponent,
+  CheckboxComponent,
   DrawerComponent,
   EmptyStateComponent,
   FormFieldComponent,
@@ -24,11 +27,27 @@ import {
   PageHeaderComponent,
   ProgressComponent,
   SkeletonComponent,
+  TabItem,
+  TabsComponent,
   TextareaComponent,
   ToastService,
 } from 'app/shared/ui';
 
-import { EmployeeProcessSummary, InitiateOnboardingRequest, OnboardingService, addDays, daysBetween, localIsoDate } from '../index';
+import {
+  EmployeeProcessStatus,
+  EmployeeProcessSummary,
+  InitiateOnboardingRequest,
+  OnboardingService,
+  Training,
+  TrainingService,
+  addDays,
+  daysBetween,
+  localIsoDate,
+} from '../index';
+
+/** Active (planned / in progress / delayed) or finished (completed / cancelled) onboardings. */
+type View = 'active' | 'history';
+const HISTORY_STATUSES = [EmployeeProcessStatus.COMPLETED, EmployeeProcessStatus.CANCELLED];
 
 /** Onboarding length until the company default has loaded (the backend default). */
 const FALLBACK_WINDOW = 30;
@@ -43,15 +62,18 @@ function targetNotBeforeStart(group: AbstractControl): ValidationErrors | null {
 }
 
 /**
- * Onboarding — new hires whose onboarding checklist is still open.
+ * Onboarding — new hires' checklists, in two tabs (`?view=`):
  *
- * Overview (active, overdue, due this week, average completion) and one row per
- * process (`GET /api/hr/workflows/onboarding`): the new hire, start and due date,
- * checklist progress and status; a row opens the checklist. "Start onboarding"
- * (`MANAGE_ONBOARDING`, plus `READ_EMPLOYEE` to search for the employee) opens a
- * panel to pick the employee, the start date, the finish-by date (presets for one
- * week, two weeks, 30 days; task due dates are spread across that window) and notes. Completed and cancelled
- * onboardings drop off this list; they stay reachable from their own page.
+ * - Active: overview (in progress, behind schedule, due this week, average completion) and one
+ *   row per open process — the new hire, start and due date, progress and status.
+ * - History: completed and cancelled onboardings, most recently finished first, with when they
+ *   finished and, for cancelled ones, the reason.
+ *
+ * A row opens the checklist. "Start onboarding" (`MANAGE_ONBOARDING`, plus `READ_EMPLOYEE` to
+ * search for the employee) opens a panel to pick the employee, the start date, the finish-by
+ * date (company default, one week, two weeks, 30 days; task due dates are spread across that
+ * window), trainings to enroll them in (Training module only) and notes. `?start=<employeeId>`
+ * (from an employee's profile) opens the panel with that person picked.
  */
 @Component({
   selector: 'hum-onboarding',
@@ -70,6 +92,8 @@ function targetNotBeforeStart(group: AbstractControl): ValidationErrors | null {
     ButtonComponent,
     BadgeComponent,
     ProgressComponent,
+    CheckboxComponent,
+    TabsComponent,
     DrawerComponent,
     AlertComponent,
     EmptyStateComponent,
@@ -85,12 +109,20 @@ export default class OnboardingComponent {
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
   private readonly account = inject(AccountService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly trainingService = inject(TrainingService);
+  private readonly meBilling = inject(MeBillingService);
 
   protected readonly canManage = this.account.hasPermission(Permission.MANAGE_ONBOARDING);
   protected readonly canStart =
     this.account.hasPermission(Permission.MANAGE_ONBOARDING) && this.account.hasPermission(Permission.READ_EMPLOYEE);
   protected readonly today = localIsoDate();
 
+  protected readonly view = signal<View>(this.route.snapshot.queryParamMap.get('view') === 'history' ? 'history' : 'active');
+  protected readonly tabs = computed<TabItem[]>(() => [
+    { id: 'active', label: this.label('humano.onboarding.tabActive'), icon: 'user-plus' },
+    { id: 'history', label: this.label('humano.onboarding.tabHistory'), icon: 'history' },
+  ]);
   protected readonly rows = signal<EmployeeProcessSummary[] | null>(null);
   protected readonly error = signal<string | null>(null);
 
@@ -127,11 +159,28 @@ export default class OnboardingComponent {
     return startDate && targetDate ? daysBetween(startDate, targetDate) : null;
   });
   protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
+  /** Pre-picked employee when opened from a profile (`?start=`). */
+  protected readonly startFor = signal<AutocompleteOption | null>(null);
+
+  // Trainings to enroll the new hire in — only with the Training module.
+  protected readonly trainingsAvailable = computed(() => planIncludes(this.meBilling.entitlements(), PlanFeature.TRAINING));
+  protected readonly trainings = signal<Training[] | null>(null);
+  protected readonly pickedTrainings = signal<ReadonlySet<string>>(new Set());
 
   constructor() {
     this.load();
     if (this.canStart) {
-      this.onboardingService.checklist().subscribe({ next: c => this.defaultWindow.set(c.defaultDays), error: () => undefined });
+      // Open `?start=` only once the company default is known, so the finish-by date is right.
+      const startId = this.route.snapshot.queryParamMap.get('start');
+      this.onboardingService.checklist().subscribe({
+        next: c => {
+          this.defaultWindow.set(c.defaultDays);
+          if (startId) this.openStartFor(startId);
+        },
+        error: () => {
+          if (startId) this.openStartFor(startId);
+        },
+      });
     }
     // Moving the start date moves the finish-by date with it, keeping the chosen length.
     this.form.controls.startDate.valueChanges
@@ -160,9 +209,48 @@ export default class OnboardingComponent {
     return row.overdueTasks > 0 || (!!row.dueDate && row.dueDate < this.today);
   }
 
-  protected openStart(): void {
-    this.form.reset({ employeeId: '', startDate: this.today, targetDate: addDays(this.today, this.defaultWindow()), notes: '' });
+  protected setView(view: string | undefined): void {
+    const next: View = view === 'history' ? 'history' : 'active';
+    if (next === this.view()) return;
+    this.view.set(next);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { view: next === 'history' ? 'history' : null },
+      replaceUrl: true,
+    });
+    this.load();
+  }
+
+  protected openStart(employee: AutocompleteOption | null = null, startDate = this.today): void {
+    this.startFor.set(employee);
+    this.pickedTrainings.set(new Set());
+    this.form.reset({
+      employeeId: employee?.value ?? '',
+      startDate,
+      targetDate: addDays(startDate, this.defaultWindow()),
+      notes: '',
+    });
     this.formOpen.set(true);
+    if (this.trainingsAvailable() && this.trainings() === null) {
+      this.trainingService.list({ page: 0, size: 100, sort: ['name,asc'] }).subscribe({
+        next: page => this.trainings.set(page.content),
+        error: () => this.trainings.set([]),
+      });
+    }
+  }
+
+  protected toggleTraining(id: string, on: boolean): void {
+    this.pickedTrainings.update(set => {
+      const next = new Set(set);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  /** History row: when it ended — completion date, or the last change for a cancelled one. */
+  protected endedOn(row: EmployeeProcessSummary): string | null {
+    return row.status === EmployeeProcessStatus.COMPLETED ? row.completionDate : row.lastModifiedDate;
   }
 
   protected invalid(control: string): boolean {
@@ -172,8 +260,14 @@ export default class OnboardingComponent {
 
   protected load(): void {
     this.error.set(null);
-    this.onboardingService.listActive({ page: 0, size: 100 }).subscribe({
-      next: page => this.rows.set([...page.content].sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''))),
+    this.rows.set(null);
+    const history = this.view() === 'history';
+    const request$ = history
+      ? this.onboardingService.list({ status: HISTORY_STATUSES }, { page: 0, size: 100, sort: ['lastModifiedDate,desc'] })
+      : this.onboardingService.listActive({ page: 0, size: 100 });
+    request$.subscribe({
+      next: page =>
+        this.rows.set(history ? page.content : [...page.content].sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''))),
       error: (err: unknown) => {
         this.error.set(normalizeHttpError(err));
         this.rows.set([]);
@@ -191,6 +285,7 @@ export default class OnboardingComponent {
       employeeId: raw.employeeId,
       startDate: raw.startDate,
       targetDate: raw.targetDate,
+      ...(this.pickedTrainings().size ? { requiredTrainingIds: [...this.pickedTrainings()] } : {}),
       ...(raw.notes.trim() ? { notes: raw.notes.trim() } : {}),
     };
     this.submitting.set(true);
@@ -205,6 +300,19 @@ export default class OnboardingComponent {
         this.toast.danger(normalizeHttpError(err));
         this.submitting.set(false);
       },
+    });
+  }
+
+  /** Opens the start panel for one employee (from their profile), then drops `?start=` from the URL. */
+  private openStartFor(employeeId: string): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { start: null }, queryParamsHandling: 'merge', replaceUrl: true });
+    this.employeeService.find(employeeId).subscribe({
+      next: e => {
+        const name = [e.firstName, e.lastName].filter(Boolean).join(' ');
+        const start = e.startDate?.slice(0, 10);
+        this.openStart({ value: e.id, label: name, sublabel: e.jobTitle }, start && start > this.today ? start : this.today);
+      },
+      error: (err: unknown) => this.toast.danger(normalizeHttpError(err)),
     });
   }
 

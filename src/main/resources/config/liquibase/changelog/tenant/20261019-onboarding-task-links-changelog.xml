@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Onboarding tasks can name the employee record that shows they're done
+         (com.humano.domain.enumeration.hr.OnboardingTaskLink: ACCOUNT, DOCUMENTS, BENEFITS,
+         TRAININGS). The checklist template carries it, and each onboarding task copies it when
+         the onboarding starts. Null = not linked. -->
+    <changeSet id="20261019-onboarding-task-links" author="halimzaaim">
+        <addColumn tableName="onboarding_task_template">
+            <column name="link" type="VARCHAR(30)"/>
+        </addColumn>
+        <addColumn tableName="employee_process_task">
+            <column name="link" type="VARCHAR(30)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

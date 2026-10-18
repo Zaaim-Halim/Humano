@@ -1,5 +1,7 @@
 package com.humano.service.hr.workflow;
 
+import static com.humano.domain.enumeration.hr.OnboardingTaskLink.ACCOUNT;
+import static com.humano.domain.enumeration.hr.OnboardingTaskLink.BENEFITS;
 import static com.humano.domain.enumeration.hr.OnboardingTaskOwner.HR;
 import static com.humano.domain.enumeration.hr.OnboardingTaskOwner.MANAGER;
 import static com.humano.domain.enumeration.hr.OnboardingTaskOwner.NEW_HIRE;
@@ -37,33 +39,50 @@ public class OnboardingChecklistService {
             "IT Systems Setup",
             "Get system access, email setup, and necessary software installations",
             2,
-            HR
+            HR,
+            ACCOUNT
         ),
         new OnboardingChecklistResponse.Task(
             "Complete Profile Information",
             "Update personal details, emergency contacts, and upload profile photo",
             3,
-            NEW_HIRE
+            NEW_HIRE,
+            null
         ),
         new OnboardingChecklistResponse.Task(
             "Department Orientation",
             "Meet with team members and understand department structure",
             5,
-            NEW_HIRE
+            NEW_HIRE,
+            null
         ),
-        new OnboardingChecklistResponse.Task("Policy Acknowledgment", "Read and acknowledge company policies and handbook", 7, NEW_HIRE),
+        new OnboardingChecklistResponse.Task(
+            "Policy Acknowledgment",
+            "Read and acknowledge company policies and handbook",
+            7,
+            NEW_HIRE,
+            null
+        ),
         new OnboardingChecklistResponse.Task(
             "First Check-in with Manager",
             "Schedule and complete an early check-in meeting with the manager",
             7,
-            MANAGER
+            MANAGER,
+            null
         ),
-        new OnboardingChecklistResponse.Task("Benefits Enrollment", "Review and enroll in company benefits programs", 14, NEW_HIRE),
+        new OnboardingChecklistResponse.Task(
+            "Benefits Enrollment",
+            "Review and enroll in company benefits programs",
+            14,
+            NEW_HIRE,
+            BENEFITS
+        ),
         new OnboardingChecklistResponse.Task(
             "Onboarding Review Meeting",
             "Schedule and complete the end-of-onboarding review",
             OnboardingSettings.DEFAULT_DAYS,
-            MANAGER
+            MANAGER,
+            null
         )
     );
 
@@ -98,7 +117,8 @@ public class OnboardingChecklistService {
                         t.title(),
                         t.description(),
                         (int) Math.round(((double) t.dueDay() * defaultDays) / OnboardingSettings.DEFAULT_DAYS),
-                        t.owner()
+                        t.owner(),
+                        t.link()
                     )
                 )
                 .toList();
@@ -109,7 +129,7 @@ public class OnboardingChecklistService {
             true,
             templates
                 .stream()
-                .map(t -> new OnboardingChecklistResponse.Task(t.getTitle(), t.getDescription(), t.getDueDay(), t.getOwner()))
+                .map(t -> new OnboardingChecklistResponse.Task(t.getTitle(), t.getDescription(), t.getDueDay(), t.getOwner(), t.getLink()))
                 .toList()
         );
     }
@@ -145,6 +165,7 @@ public class OnboardingChecklistService {
             template.setDescription(task.description() == null || task.description().isBlank() ? null : task.description().trim());
             template.setDueDay(task.dueDay());
             template.setOwner(task.owner());
+            template.setLink(task.link());
             template.setSortOrder(i);
             templates.add(template);
         }

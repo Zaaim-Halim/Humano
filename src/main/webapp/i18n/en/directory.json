@@ -13,6 +13,7 @@
       "allLocations": "All locations",
       "status": {
         "ACTIVE": "Active",
+        "ONBOARDING": "Onboarding",
         "INACTIVE": "Inactive",
         "TERMINATED": "Terminated"
       },

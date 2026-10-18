@@ -1429,7 +1429,7 @@ public class PayrollProcessingService {
         if ("ALL".equals(scope)) {
             return employeeRepository.findAll(
                 (Specification<Employee>) (root, query, cb) ->
-                    cb.equal(root.get("status"), com.humano.domain.enumeration.hr.EmployeeStatus.ACTIVE)
+                    root.get("status").in(com.humano.domain.enumeration.hr.EmployeeStatus.WORKING)
             );
         }
         // Handle other scopes (UNIT, DEPARTMENT, etc.)

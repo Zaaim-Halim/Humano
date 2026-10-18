@@ -64,6 +64,16 @@ public interface EmployeeProcessRepository extends JpaRepository<EmployeeProcess
     Page<EmployeeProcess> findByProcessTypeAndStatusIn(EmployeeProcessType type, List<EmployeeProcessStatus> statuses, Pageable pageable);
 
     /**
+     * Find one employee's processes of a type within a set of statuses.
+     */
+    Page<EmployeeProcess> findByEmployeeIdAndProcessTypeAndStatusIn(
+        UUID employeeId,
+        EmployeeProcessType type,
+        List<EmployeeProcessStatus> statuses,
+        Pageable pageable
+    );
+
+    /**
      * Find processes within a set of statuses.
      */
     Page<EmployeeProcess> findByStatusIn(List<EmployeeProcessStatus> statuses, Pageable pageable);

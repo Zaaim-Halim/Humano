@@ -129,6 +129,15 @@
                   (ngModelChange)="update(r.key, { owner: $event })"
                 />
               </div>
+              <div class="hum-onbc-field">
+                <span aria-hidden="true">{{ 'humano.onboardingChecklist.linkLabel' | translate }}</span>
+                <hum-select
+                  [options]="linkOptions"
+                  [ariaLabel]="'humano.onboardingChecklist.linkLabel' | translate"
+                  [ngModel]="r.link"
+                  (ngModelChange)="update(r.key, { link: $event })"
+                />
+              </div>
               <div class="hum-onbc-field hum-onbc-field--day">
                 <label [for]="'onbc-day-' + r.key">{{ 'humano.onboardingChecklist.dueDay' | translate }}</label>
                 <hum-input

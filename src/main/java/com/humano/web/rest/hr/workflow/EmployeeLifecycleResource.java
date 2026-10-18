@@ -1,5 +1,6 @@
 package com.humano.web.rest.hr.workflow;
 
+import com.humano.domain.enumeration.hr.EmployeeProcessStatus;
 import com.humano.domain.enumeration.hr.EmployeeProcessType;
 import com.humano.dto.hr.workflow.requests.CompleteTaskRequest;
 import com.humano.dto.hr.workflow.requests.InitiateOffboardingRequest;
@@ -13,6 +14,7 @@ import com.humano.security.annotation.RequireHrStaff;
 import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.workflow.EmployeeLifecycleWorkflowService;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,13 +68,18 @@ public class EmployeeLifecycleResource {
     }
 
     /**
-     * {@code GET  /onboarding} : Get active onboarding processes.
+     * {@code GET  /onboarding?status=&employeeId=} : Onboarding processes — active ones by
+     * default; pass {@code status} (repeatable) for history, {@code employeeId} for one person.
      */
     @GetMapping("/onboarding")
     @PreAuthorize(CAN_VIEW_ONBOARDING)
-    public ResponseEntity<Page<EmployeeProcessSummary>> getActiveOnboardings(Pageable pageable) {
-        LOG.debug("REST request to get active onboarding processes");
-        return paged(lifecycleService.getActiveProcesses(EmployeeProcessType.ONBOARDING, pageable));
+    public ResponseEntity<Page<EmployeeProcessSummary>> getOnboardings(
+        @RequestParam(required = false) List<EmployeeProcessStatus> status,
+        @RequestParam(required = false) UUID employeeId,
+        Pageable pageable
+    ) {
+        LOG.debug("REST request to get onboarding processes (status {}, employee {})", status, employeeId);
+        return paged(lifecycleService.getProcesses(EmployeeProcessType.ONBOARDING, status, employeeId, pageable));
     }
 
     /**

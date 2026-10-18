@@ -17,11 +17,12 @@ import {
   ToastService,
 } from 'app/shared/ui';
 
-import { OnboardingChecklist, OnboardingService, OnboardingTaskOwner } from '../index';
+import { OnboardingChecklist, OnboardingService, OnboardingTaskLink, OnboardingTaskOwner } from '../index';
 
 /** Quick picks for the default onboarding length. */
 const LENGTH_PRESETS = [7, 14, 30];
 const OWNERS: OnboardingTaskOwner[] = ['NEW_HIRE', 'MANAGER', 'HR'];
+const LINKS: OnboardingTaskLink[] = ['ACCOUNT', 'DOCUMENTS', 'BENEFITS', 'TRAININGS'];
 
 /** One editable checklist row; `key` keeps row identity stable while reordering. */
 interface Row {
@@ -30,6 +31,8 @@ interface Row {
   description: string;
   dueDay: number;
   owner: OnboardingTaskOwner;
+  /** '' = not linked. */
+  link: OnboardingTaskLink | '';
 }
 
 /**
@@ -39,7 +42,8 @@ interface Row {
  * The default length is the finish-by date a new onboarding gets unless another is picked, and
  * the scale the tasks' due days are written on: a task due on day 3 of 30 lands on day 1 of a
  * 10-day onboarding. A track previews where the tasks fall. Tasks are edited in place (title,
- * description, owner — new hire, manager or HR & IT — and due day), reordered with up/down and
+ * description, owner — new hire, manager or HR & IT — due day, and optionally the employee record
+ * that shows it's done: account, documents, benefits, trainings), reordered with up/down and
  * saved together; onboardings already started keep their own checklist.
  */
 @Component({
@@ -70,6 +74,10 @@ export default class OnboardingChecklistComponent {
     value: o,
     label: this.label(`humano.onboardingChecklist.owner.${o}`),
   }));
+  protected readonly linkOptions: SelectOption[] = [
+    { value: '', label: this.label('humano.onboardingChecklist.linkNone') },
+    ...LINKS.map(l => ({ value: l, label: this.label(`humano.onboarding.linkRecord.${l}`) })),
+  ];
 
   protected readonly loaded = signal<OnboardingChecklist | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -145,7 +153,10 @@ export default class OnboardingChecklistComponent {
   }
 
   protected add(): void {
-    this.rows.update(rows => [...rows, { key: this.nextKey++, title: '', description: '', dueDay: this.defaultDays(), owner: 'NEW_HIRE' }]);
+    this.rows.update(rows => [
+      ...rows,
+      { key: this.nextKey++, title: '', description: '', dueDay: this.defaultDays(), owner: 'NEW_HIRE', link: '' },
+    ]);
   }
 
   protected discard(): void {
@@ -164,6 +175,7 @@ export default class OnboardingChecklistComponent {
           description: r.description.trim() || null,
           dueDay: r.dueDay,
           owner: r.owner,
+          link: r.link || null,
         })),
       })
       .subscribe({
@@ -183,7 +195,14 @@ export default class OnboardingChecklistComponent {
     this.loaded.set(c);
     this.defaultDays.set(c.defaultDays);
     this.rows.set(
-      c.tasks.map(t => ({ key: this.nextKey++, title: t.title, description: t.description ?? '', dueDay: t.dueDay, owner: t.owner })),
+      c.tasks.map(t => ({
+        key: this.nextKey++,
+        title: t.title,
+        description: t.description ?? '',
+        dueDay: t.dueDay,
+        owner: t.owner,
+        link: t.link ?? '',
+      })),
     );
     this.baseline.set(this.serialize());
   }

@@ -1,5 +1,6 @@
 package com.humano.dto.hr.workflow.requests;
 
+import com.humano.domain.enumeration.hr.OnboardingTaskLink;
 import com.humano.domain.enumeration.hr.OnboardingTaskOwner;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -26,6 +27,8 @@ public record UpdateOnboardingChecklistRequest(
         @NotBlank(message = "Task title is required") @Size(max = 255) String title,
         @Size(max = 1000) String description,
         @Min(value = 0, message = "Due day can't be negative") int dueDay,
-        @NotNull(message = "Task owner is required") OnboardingTaskOwner owner
+        @NotNull(message = "Task owner is required") OnboardingTaskOwner owner,
+        /** Employee record that shows the task is done; null for none. */
+        OnboardingTaskLink link
     ) {}
 }

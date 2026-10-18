@@ -91,9 +91,13 @@
       },
       "statusValue": {
         "ACTIVE": "Active",
+        "ONBOARDING": "Onboarding",
         "INACTIVE": "Inactive",
         "TERMINATED": "Terminated"
-      }
+      },
+      "startOnboarding": "Start onboarding after saving",
+      "onboardingStarted": "Onboarding started",
+      "onboardingFailed": "Employee created, but onboarding couldn't start"
     }
   }
 }

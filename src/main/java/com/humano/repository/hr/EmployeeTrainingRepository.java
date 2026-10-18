@@ -1,5 +1,6 @@
 package com.humano.repository.hr;
 
+import com.humano.domain.enumeration.hr.TrainingStatus;
 import com.humano.domain.hr.EmployeeTraining;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -18,4 +19,8 @@ public interface EmployeeTrainingRepository extends JpaRepository<EmployeeTraini
     Page<EmployeeTraining> findByTrainingId(UUID trainingId, Pageable pageable);
 
     boolean existsByEmployeeId(UUID employeeId);
+
+    boolean existsByEmployeeIdAndTrainingId(UUID employeeId, UUID trainingId);
+
+    boolean existsByEmployeeIdAndStatus(UUID employeeId, TrainingStatus status);
 }

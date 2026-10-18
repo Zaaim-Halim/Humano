@@ -315,6 +315,9 @@
             >
           }
           <span class="hum-records__spacer"></span>
+          @if (!isEdit() && canStartOnboarding) {
+            <hum-checkbox [label]="'humano.employeeForm.startOnboarding' | translate" [(checked)]="startOnboarding" />
+          }
           <hum-button type="button" variant="secondary" (click)="cancel()">{{ 'humano.action.cancel' | translate }}</hum-button>
           <hum-button type="submit" variant="primary" icon="save" [loading]="saving()">{{
             (isEdit() ? 'humano.employeeForm.saveEdit' : 'humano.employeeForm.saveCreate') | translate

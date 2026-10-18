@@ -30,6 +30,7 @@
       @switch (activeTab()) {
         @case ('overview') {
           <hum-employee-overview [employee]="emp" />
+          <hum-employee-onboarding-card [employeeId]="id()" />
           <hum-employee-career
             [employeeId]="id()"
             [reloadKey]="careerReload()"

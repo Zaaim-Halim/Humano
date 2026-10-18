@@ -15,6 +15,8 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { Observable, map } from 'rxjs';
 
+import { Permission } from 'app/config/permission.constants';
+import { AccountService } from 'app/core/auth/account.service';
 import { normalizeHttpError } from 'app/core/api';
 import {
   AlertComponent,
@@ -45,6 +47,7 @@ import {
   ReferenceData,
 } from 'app/features/admin';
 import { ROLE_GROUPS, humanizeCode } from 'app/features/admin/models/user-admin.model';
+import { OnboardingService } from 'app/features/admin/services/onboarding.service';
 import {
   EmployeeAttributeService,
   EmployeeService,
@@ -117,6 +120,8 @@ export default class EmployeeFormComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly employeeService = inject(EmployeeService);
+  private readonly onboardingService = inject(OnboardingService);
+  private readonly account = inject(AccountService);
   private readonly attributeService = inject(EmployeeAttributeService);
   private readonly departmentService = inject(DepartmentService);
   private readonly positionService = inject(PositionService);
@@ -125,6 +130,9 @@ export default class EmployeeFormComponent implements OnInit {
   /** Edit target id (null in create mode). */
   protected readonly employeeId = signal<string | null>(null);
   protected readonly isEdit = computed(() => this.employeeId() !== null);
+  /** Opt-in: start onboarding right after creating the employee (off by default). */
+  protected readonly canStartOnboarding = this.account.hasPermission(Permission.MANAGE_ONBOARDING);
+  protected readonly startOnboarding = signal(false);
 
   /** Roles assignable on the form (from the backend), and the current selection. */
   protected readonly assignableRoles = signal<string[]>([]);
@@ -428,12 +436,36 @@ export default class EmployeeFormComponent implements OnInit {
     request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (saved: EmployeeProfile) => {
         this.toast.success(this.translate.instant(id ? 'humano.employeeForm.updated' : 'humano.employeeForm.created'));
+        if (!id && this.canStartOnboarding && this.startOnboarding()) {
+          this.startOnboardingFor(saved);
+          return;
+        }
         this.saving.set(false);
         void this.router.navigate(['/employees', saved.id]);
       },
       error: (err: unknown) => {
         this.toast.danger(normalizeHttpError(err));
         this.saving.set(false);
+      },
+    });
+  }
+
+  /**
+   * Optional follow-up to creating someone: start their onboarding (company default length, from
+   * their start date). The employee is kept if this fails — they can be onboarded from their profile.
+   */
+  private startOnboardingFor(saved: EmployeeProfile): void {
+    const startDate = this.form.getRawValue().startDate || undefined;
+    this.onboardingService.initiate({ employeeId: saved.id, ...(startDate ? { startDate } : {}) }).subscribe({
+      next: () => {
+        this.toast.success(this.translate.instant('humano.employeeForm.onboardingStarted'));
+        this.saving.set(false);
+        void this.router.navigate(['/employees', saved.id]);
+      },
+      error: (err: unknown) => {
+        this.toast.warning(this.translate.instant('humano.employeeForm.onboardingFailed'), normalizeHttpError(err));
+        this.saving.set(false);
+        void this.router.navigate(['/employees', saved.id]);
       },
     });
   }

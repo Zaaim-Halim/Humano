@@ -1,5 +1,6 @@
 package com.humano.domain.hr;
 
+import com.humano.domain.enumeration.hr.OnboardingTaskLink;
 import com.humano.domain.shared.AbstractAuditingEntity;
 import com.humano.domain.shared.Employee;
 import jakarta.persistence.*;
@@ -75,6 +76,19 @@ public class EmployeeProcessTask extends AbstractAuditingEntity<UUID> {
      */
     @Column(name = "completion_notes", length = 1000)
     private String completionNotes;
+
+    /** Employee record that shows the task is done; null when not linked. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "link", length = 30)
+    private OnboardingTaskLink link;
+
+    public OnboardingTaskLink getLink() {
+        return link;
+    }
+
+    public void setLink(OnboardingTaskLink link) {
+        this.link = link;
+    }
 
     /**
      * Mark this task as completed.
