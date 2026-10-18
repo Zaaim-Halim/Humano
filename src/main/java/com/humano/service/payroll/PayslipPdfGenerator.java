@@ -78,14 +78,20 @@ public class PayslipPdfGenerator {
      *       separate, larger change.</li>
      * </ul>
      *
+     * <ul>
+     *   <li>The HTML5 doctype is dropped: the formatter writes it lowercase ({@code <!doctype html>}),
+     *       which is not valid XML and fails the whole document; the renderer needs none.</li>
+     * </ul>
+     *
      * <p>This is a deliberate scope limit: explain strings are operator-readable text,
      * not legally typeset content, so ASCII normalization is acceptable. If a future
      * task surfaces these strings in a UI that needs proper typography, embed a font
      * (e.g. DejaVu Sans) instead of expanding this normalizer.
      */
-    static String sanitizeForXmlAndBase14(String html) {
+    public static String sanitizeForXmlAndBase14(String html) {
         if (html == null || html.isEmpty()) return html;
         return html
+            .replaceFirst("(?i)^\\s*<!doctype[^>]*>", "")
             // Named HTML entities -> ASCII (chosen so the parser AND the font both accept).
             .replace("&mdash;", "-")
             .replace("&ndash;", "-")

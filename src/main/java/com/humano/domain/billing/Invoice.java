@@ -10,10 +10,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.UuidGenerator;
 
 /**
@@ -191,6 +194,15 @@ public class Invoice extends AbstractAuditingEntity<UUID> {
     private Set<Payment> payments = new HashSet<>();
 
     /**
+     * What the invoice bills, line by line ({@code amount} is their sum). Invoices issued before
+     * lines were recorded have none.
+     */
+    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    @BatchSize(size = 50)
+    private List<InvoiceLine> lines = new ArrayList<>();
+
+    /**
      * Currency code for this invoice.
      * <p>
      * ISO 4217 currency code (e.g., "USD", "EUR") for all monetary amounts in this invoice.
@@ -331,6 +343,18 @@ public class Invoice extends AbstractAuditingEntity<UUID> {
 
     public String getCurrency() {
         return currency;
+    }
+
+    public List<InvoiceLine> getLines() {
+        return lines;
+    }
+
+    /** Appends a line at the end of the invoice. */
+    public Invoice addLine(InvoiceLine line) {
+        line.setInvoice(this);
+        line.setSortOrder(lines.size());
+        lines.add(line);
+        return this;
     }
 
     public void setCurrency(String currency) {

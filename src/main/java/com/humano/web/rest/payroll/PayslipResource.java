@@ -8,11 +8,13 @@ import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.payroll.PayslipService;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -67,9 +69,14 @@ public class PayslipResource {
         return ResponseEntity.ok(payslipService.getLatestPayslip(employeeId));
     }
 
+    /** Year-to-date pay of {@code year}, up to {@code through} (a payslip's period end) when given. */
     @GetMapping("/employees/{employeeId}/ytd")
-    public ResponseEntity<Map<String, Object>> ytdForEmployee(@PathVariable UUID employeeId, @RequestParam int year) {
-        return ResponseEntity.ok(payslipService.getYearToDateSummary(employeeId, year));
+    public ResponseEntity<Map<String, Object>> ytdForEmployee(
+        @PathVariable UUID employeeId,
+        @RequestParam int year,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate through
+    ) {
+        return ResponseEntity.ok(payslipService.getYearToDateSummary(employeeId, year, through));
     }
 
     @GetMapping("/periods/{periodId}")

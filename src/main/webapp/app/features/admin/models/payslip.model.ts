@@ -24,6 +24,19 @@ export interface Payslip {
   details: PayrollResult | null;
 }
 
+/** Year-to-date pay — `…/ytd?year=&through=`: the payslips of the year whose period ends by `through`. */
+export interface PayslipYtd {
+  year: number;
+  /** ISO date the totals run to. */
+  through: string;
+  payslipCount: number;
+  totalGross: number;
+  totalDeductions: number;
+  totalNet: number;
+  /** Net pay by month (`yyyy-MM`), in order. */
+  monthlyNet: Record<string, number>;
+}
+
 /** Criteria for `POST /api/payroll/payslips/search`. */
 export interface PayslipSearchRequest {
   employeeId?: string;

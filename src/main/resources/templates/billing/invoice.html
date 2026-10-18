@@ -1,0 +1,375 @@
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title th:text="|Invoice ${model.number}|">Invoice</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 16mm 16mm 22mm 16mm;
+        @bottom-left {
+          content: element(footer);
+          vertical-align: top;
+        }
+        @bottom-right {
+          content: 'Page ' counter(page) ' of ' counter(pages);
+          font-family: Helvetica, Arial, sans-serif;
+          font-size: 7.5pt;
+          color: #8a8f9c;
+          vertical-align: top;
+          padding-top: 6pt;
+        }
+      }
+      body {
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 9pt;
+        line-height: 1.45;
+        color: #1f2430;
+        margin: 0;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      td,
+      th {
+        vertical-align: top;
+        padding: 0;
+      }
+      .muted {
+        color: #6b7280;
+      }
+      .num {
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      /* Header */
+      .brand {
+        font-size: 20pt;
+        font-weight: bold;
+        letter-spacing: -0.5pt;
+        color: #111827;
+      }
+      .brand-dot {
+        color: #4338ca;
+      }
+      .doc-title {
+        font-size: 20pt;
+        font-weight: bold;
+        color: #111827;
+        text-align: right;
+      }
+      .doc-number {
+        text-align: right;
+        color: #6b7280;
+        font-size: 9.5pt;
+        margin-top: 2pt;
+      }
+      .stamp {
+        display: inline-block;
+        margin-top: 6pt;
+        padding: 2pt 8pt;
+        border-radius: 8pt;
+        font-size: 8pt;
+        font-weight: bold;
+        letter-spacing: 0.4pt;
+      }
+      .stamp-paid {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .stamp-due {
+        background: #e0e7ff;
+        color: #3730a3;
+      }
+      .stamp-overdue {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .stamp-void {
+        background: #f3f4f6;
+        color: #4b5563;
+      }
+      .rule {
+        border-top: 0.75pt solid #e5e7eb;
+        margin: 14pt 0;
+      }
+
+      /* Parties and dates */
+      .label {
+        font-size: 7.5pt;
+        font-weight: bold;
+        color: #6b7280;
+        letter-spacing: 0.3pt;
+        margin-bottom: 3pt;
+      }
+      .party-name {
+        font-weight: bold;
+        font-size: 10pt;
+        color: #111827;
+      }
+      .dates td {
+        padding: 1.5pt 0;
+      }
+      .dates td.k {
+        color: #6b7280;
+        padding-right: 10pt;
+      }
+      .dates td.v {
+        text-align: right;
+        font-weight: bold;
+        color: #111827;
+      }
+
+      /* Amount due banner */
+      .banner {
+        margin-top: 16pt;
+        border-radius: 6pt;
+        padding: 10pt 12pt;
+      }
+      .banner-open {
+        background: #eef2ff;
+        border: 0.75pt solid #c7d2fe;
+      }
+      .banner-overdue {
+        background: #fef2f2;
+        border: 0.75pt solid #fecaca;
+      }
+      .banner-closed {
+        background: #f9fafb;
+        border: 0.75pt solid #e5e7eb;
+      }
+      .banner-amount {
+        font-size: 16pt;
+        font-weight: bold;
+        color: #111827;
+      }
+      .banner-sub {
+        color: #4b5563;
+        margin-left: 6pt;
+      }
+
+      /* Lines */
+      table.lines {
+        margin-top: 18pt;
+      }
+      table.lines th {
+        font-size: 7.5pt;
+        font-weight: bold;
+        color: #6b7280;
+        letter-spacing: 0.3pt;
+        text-align: left;
+        padding: 0 0 5pt 0;
+        border-bottom: 0.75pt solid #d1d5db;
+      }
+      table.lines th.num {
+        text-align: right;
+      }
+      table.lines td {
+        padding: 8pt 0;
+        border-bottom: 0.5pt solid #eceef2;
+      }
+      table.lines td.num,
+      table.lines th.num {
+        padding-left: 12pt;
+      }
+      .line-desc {
+        font-weight: bold;
+        color: #111827;
+      }
+      .line-period {
+        font-size: 8pt;
+        color: #6b7280;
+        margin-top: 1pt;
+      }
+
+      /* Totals */
+      table.totals {
+        width: 46%;
+        margin-left: 54%;
+        margin-top: 10pt;
+      }
+      table.totals td {
+        padding: 3pt 0;
+      }
+      table.totals td.k {
+        color: #4b5563;
+      }
+      table.totals tr.total td {
+        border-top: 0.75pt solid #d1d5db;
+        padding-top: 7pt;
+        font-weight: bold;
+        font-size: 10.5pt;
+        color: #111827;
+      }
+      table.totals tr.due td {
+        background: #f3f4f6;
+        padding: 6pt 6pt;
+        font-weight: bold;
+        color: #111827;
+      }
+
+      .notes {
+        margin-top: 22pt;
+        padding-top: 10pt;
+        border-top: 0.75pt solid #e5e7eb;
+      }
+      .footer .sep {
+        margin-left: 6pt;
+        padding-left: 6pt;
+        border-left: 0.5pt solid #c4c8d0;
+      }
+      .footer {
+        position: running(footer);
+        font-size: 7.5pt;
+        color: #8a8f9c;
+        padding-top: 6pt;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="footer">
+      <span th:text="${model.issuer.name}">Humano</span>
+      <span class="sep" th:if="${model.issuer.email}" th:text="${model.issuer.email}"></span>
+      <span class="sep" th:if="${model.issuer.website}" th:text="${model.issuer.website}"></span>
+      <span class="sep" th:text="|Invoice ${model.number}|"></span>
+    </div>
+
+    <!-- Header -->
+    <table>
+      <tr>
+        <td style="width: 55%">
+          <div class="brand">humano<span class="brand-dot">.</span></div>
+          <div class="muted" style="margin-top: 2pt">HR, payroll and people operations</div>
+        </td>
+        <td style="width: 45%; text-align: right">
+          <div class="doc-title">Invoice</div>
+          <div class="doc-number" th:text="${model.number}">INV-0001</div>
+          <div th:class="|stamp stamp-${model.status}|" th:text="${model.statusLabel}">Due</div>
+        </td>
+      </tr>
+    </table>
+
+    <div class="rule"></div>
+
+    <!-- From / Bill to / Dates -->
+    <table>
+      <tr>
+        <td style="width: 33%; padding-right: 12pt">
+          <div class="label">From</div>
+          <div class="party-name" th:text="${model.issuer.name}">Humano</div>
+          <div th:each="l : ${model.issuer.addressLines}" th:text="${l}">Street</div>
+          <div class="muted" th:if="${model.issuer.email}" th:text="${model.issuer.email}">billing@example.com</div>
+          <div class="muted" th:if="${model.issuer.taxId}" th:text="|Tax ID ${model.issuer.taxId}|">Tax ID</div>
+        </td>
+        <td style="width: 33%; padding-right: 12pt">
+          <div class="label">Bill to</div>
+          <div class="party-name" th:text="${model.customer.name}">Customer</div>
+          <div class="muted" th:if="${model.customer.workspace}" th:text="|Workspace ${model.customer.workspace}|">Workspace</div>
+          <div th:if="${model.customer.country}" th:text="${model.customer.country}">Country</div>
+          <div class="muted" th:if="${model.customer.email}" th:text="${model.customer.email}">admin@example.com</div>
+        </td>
+        <td style="width: 34%">
+          <table class="dates">
+            <tr>
+              <td class="k">Invoice number</td>
+              <td class="v" th:text="${model.number}">INV-0001</td>
+            </tr>
+            <tr>
+              <td class="k">Issue date</td>
+              <td class="v" th:text="${model.issueDate}">Oct 18, 2026</td>
+            </tr>
+            <tr>
+              <td class="k">Due date</td>
+              <td class="v" th:text="${model.dueDate}">Nov 15, 2026</td>
+            </tr>
+            <tr th:if="${model.paidDate}">
+              <td class="k">Paid on</td>
+              <td class="v" th:text="${model.paidDate}">Oct 20, 2026</td>
+            </tr>
+            <tr>
+              <td class="k">Currency</td>
+              <td class="v" th:text="${model.currency}">USD</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Amount due -->
+    <div th:switch="${model.status}">
+      <div th:case="'paid'" class="banner banner-closed">
+        <span class="banner-amount" th:text="${model.total}">$0.00</span>
+        <span class="banner-sub" th:text="|paid in full on ${model.paidDate != null ? model.paidDate : model.issueDate}|">paid</span>
+      </div>
+      <div th:case="'void'" class="banner banner-closed">
+        <span class="banner-amount">Void</span>
+        <span class="banner-sub">This invoice was cancelled and is not owed.</span>
+      </div>
+      <div th:case="'overdue'" class="banner banner-overdue">
+        <span class="banner-amount" th:text="${model.amountDue}">$0.00</span>
+        <span class="banner-sub" th:text="|overdue since ${model.dueDate}|">overdue</span>
+      </div>
+      <div th:case="*" class="banner banner-open">
+        <span class="banner-amount" th:text="${model.amountDue}">$0.00</span>
+        <span class="banner-sub" th:text="|due by ${model.dueDate}|">due</span>
+      </div>
+    </div>
+
+    <!-- Lines -->
+    <table class="lines">
+      <thead>
+        <tr>
+          <th style="width: 52%">Description</th>
+          <th class="num" style="width: 10%">Qty</th>
+          <th class="num" style="width: 19%">Unit price</th>
+          <th class="num" style="width: 19%">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="line : ${model.lines}">
+          <td>
+            <div class="line-desc" th:text="${line.description}">Growth plan, billed monthly</div>
+            <div class="line-period" th:if="${line.period}" th:text="${line.period}">Oct 16, 2026 - Nov 15, 2026</div>
+          </td>
+          <td class="num" th:text="${line.quantity}">1</td>
+          <td class="num" th:text="${line.unitPrice}">$0.00</td>
+          <td class="num" th:text="${line.amount}">$0.00</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <table class="totals">
+      <tr>
+        <td class="k">Subtotal</td>
+        <td class="num" th:text="${model.subtotal}">$0.00</td>
+      </tr>
+      <tr th:if="${model.discount}">
+        <td class="k" th:text="${model.couponCode != null ? 'Discount (' + model.couponCode + ')' : 'Discount'}">Discount</td>
+        <td class="num" th:text="${model.discount}">-$0.00</td>
+      </tr>
+      <tr>
+        <td class="k" th:text="${model.taxLabel}">Tax</td>
+        <td class="num" th:text="${model.tax}">$0.00</td>
+      </tr>
+      <tr class="total">
+        <td>Total</td>
+        <td class="num" th:text="${model.total}">$0.00</td>
+      </tr>
+      <tr th:if="${model.amountPaid}">
+        <td class="k">Amount paid</td>
+        <td class="num" th:text="${model.amountPaid}">-$0.00</td>
+      </tr>
+      <tr class="due">
+        <td th:text="|Amount due (${model.currency})|">Amount due</td>
+        <td class="num" th:text="${model.amountDue}">$0.00</td>
+      </tr>
+    </table>
+
+    <div class="notes" th:if="${model.notes}">
+      <div class="label">Notes</div>
+      <div th:text="${model.notes}">Notes</div>
+    </div>
+  </body>
+</html>

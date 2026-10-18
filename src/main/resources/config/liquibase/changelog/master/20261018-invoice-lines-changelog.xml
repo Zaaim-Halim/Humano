@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!--
+        What an invoice bills, line by line (the plan for a period, each add-on, a manual charge),
+        snapshotted when the invoice is issued so later plan or price changes never alter it. The
+        invoice keeps its totals (amount = sum of the lines, then discount and tax).
+    -->
+    <changeSet id="20261018-invoice-line" author="halimzaaim">
+        <createTable tableName="billing_invoice_line">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_billing_invoice_line"/>
+            </column>
+            <column name="invoice_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sort_order" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kind" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="quantity" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit_price" type="DECIMAL(19, 4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="DECIMAL(19, 4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="period_start" type="${datetimeType}"/>
+            <column name="period_end" type="${datetimeType}"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="billing_invoice_line" baseColumnNames="invoice_id"
+                                 constraintName="fk_billing_invoice_line_invoice"
+                                 referencedTableName="billing_invoice" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

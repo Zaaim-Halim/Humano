@@ -14,6 +14,7 @@ import {
   AvatarComponent,
   BadgeComponent,
   ButtonComponent,
+  IconButtonComponent,
   DialogComponent,
   DrawerComponent,
   FormFieldComponent,
@@ -23,6 +24,7 @@ import {
   SkeletonRowComponent,
   ToastService,
 } from 'app/shared/ui';
+import { saveFile } from 'app/shared/util/download';
 import { MoneyPipe } from 'app/shared/util/format.pipes';
 
 import { CustomerStorage } from '../../models/entitlements.model';
@@ -58,6 +60,7 @@ type InvoiceAction = 'pay' | 'overdue' | 'void';
     AvatarComponent,
     BadgeComponent,
     ButtonComponent,
+    IconButtonComponent,
     DialogComponent,
     DrawerComponent,
     FormFieldComponent,
@@ -78,6 +81,9 @@ export default class ConsoleCustomerDetailComponent {
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
   private readonly accountService = inject(AccountService);
+  /** The invoice whose PDF is being fetched. */
+  protected readonly downloadingInvoice = signal<string | null>(null);
+
   protected readonly currency = inject(PlatformConsoleService).currency;
 
   protected readonly detail = signal<TenantDetail | null>(null);
@@ -249,6 +255,21 @@ export default class ConsoleCustomerDetailComponent {
           ? this.billing.markInvoiceOverdue(a.invoice.id)
           : this.billing.voidInvoice(a.invoice.id);
     this.run(call, `invoice.${a.action}`, () => this.invoiceAction.set(null));
+  }
+
+  /** Saves the invoice as a PDF document. */
+  protected downloadInvoice(i: Invoice): void {
+    this.downloadingInvoice.set(i.id);
+    this.billing.invoicePdf(i.id).subscribe({
+      next: blob => {
+        this.downloadingInvoice.set(null);
+        saveFile(blob, `${i.invoiceNumber}.pdf`);
+      },
+      error: () => {
+        this.downloadingInvoice.set(null);
+        this.toast.danger(this.t('humano.console.invoices.downloadFailed'));
+      },
+    });
   }
 
   private run(call: Observable<unknown>, doneKey: string, after: () => void): void {

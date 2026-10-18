@@ -266,6 +266,13 @@ humano:
         pack-gb: 100
         monthly-price: 25
         plan-types: ENTERPRISE
+    # Who issues the invoices, printed on every invoice PDF. address: lines separated by "|".
+    issuer:
+      name: ${BILLING_ISSUER_NAME:Humano}
+      address: ${BILLING_ISSUER_ADDRESS:}
+      email: ${BILLING_ISSUER_EMAIL:}
+      website: ${BILLING_ISSUER_WEBSITE:}
+      tax-id: ${BILLING_ISSUER_TAX_ID:}
     stripe:
       secret-key: ${STRIPE_SECRET_KEY:}
       webhook-secret: ${STRIPE_WEBHOOK_SECRET:}

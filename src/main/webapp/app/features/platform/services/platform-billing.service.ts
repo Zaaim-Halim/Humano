@@ -121,6 +121,11 @@ export class PlatformBillingService {
   }
 
   // ---- Invoices
+  /** Any customer's invoice as a PDF document. */
+  invoicePdf(id: string): Observable<Blob> {
+    return this.http.get(`${this.url}/invoices/${encodeURIComponent(id)}/pdf`, { responseType: 'blob' });
+  }
+
   markInvoicePaid(id: string): Observable<Invoice> {
     return this.http.post<Invoice>(`${this.url}/invoices/${encodeURIComponent(id)}/pay`, {});
   }

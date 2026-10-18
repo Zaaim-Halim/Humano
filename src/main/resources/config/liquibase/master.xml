@@ -68,6 +68,7 @@
     <include file="config/liquibase/changelog/master/20261015-plan-features-changelog.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/master/20261016-demos-and-public-pricing-changelog.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/master/20261018-subscription-addons-changelog.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/master/20261018-invoice-lines-changelog.xml" relativeToChangelogFile="false"/>
 
     <!--  will add incremental liquibase changelogs here -->
 </databaseChangeLog>

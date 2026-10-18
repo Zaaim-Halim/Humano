@@ -2,9 +2,11 @@ package com.humano.service.billing;
 
 import com.humano.config.multitenancy.TenantAccessGuard;
 import com.humano.domain.billing.Invoice;
+import com.humano.domain.billing.InvoiceLine;
 import com.humano.domain.billing.Subscription;
 import com.humano.domain.billing.SubscriptionAddon;
 import com.humano.domain.enumeration.billing.BillingCycle;
+import com.humano.domain.enumeration.billing.InvoiceLineKind;
 import com.humano.domain.enumeration.billing.InvoiceStatus;
 import com.humano.domain.enumeration.billing.SubscriptionStatus;
 import com.humano.domain.enumeration.tenant.TenantStatus;
@@ -13,6 +15,7 @@ import com.humano.repository.billing.InvoiceRepository;
 import com.humano.repository.billing.SubscriptionAddonRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.math.BigDecimal;
@@ -21,6 +24,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -267,8 +271,8 @@ public class BillingLifecycleService {
             return;
         }
 
-        // Generate renewal invoice
-        Invoice invoice = generateRenewalInvoice(subscription);
+        // Generate renewal invoice, for the period that starts when the current one ends
+        Invoice invoice = generateRenewalInvoice(subscription, subscription.getCurrentPeriodEnd());
         log.info("Generated renewal invoice {} for subscription: {}", invoice.getInvoiceNumber(), subscription.getId());
 
         // P4.3 — Two emails for one event by design: the invoice-issued copy gives the tenant
@@ -289,30 +293,64 @@ public class BillingLifecycleService {
         Subscription subscription = subscriptionRepository
             .findById(subscriptionId)
             .orElseThrow(() -> new IllegalArgumentException("Subscription not found: " + subscriptionId));
-        Invoice invoice = generateRenewalInvoice(subscription);
+        Instant periodStart = subscription.getCurrentPeriodStart() != null ? subscription.getCurrentPeriodStart() : Instant.now();
+        Invoice invoice = generateRenewalInvoice(subscription, periodStart);
         log.info("Issued first invoice {} for subscription: {}", invoice.getInvoiceNumber(), subscription.getId());
         sendInvoiceIssuedNotification(invoice);
         return invoice;
     }
 
     /**
-     * Generate a renewal invoice for a subscription.
+     * The invoice for one period of the plan starting at {@code periodStart}, due when the current
+     * period ends. A monthly plan carries its add-ons on the same invoice, one line each.
      */
-    private Invoice generateRenewalInvoice(Subscription subscription) {
-        BigDecimal amount = calculateRenewalAmount(subscription);
-        // A monthly plan carries its add-ons on the same invoice, on top of the plan.
-        BigDecimal addons = subscription.getBillingCycle() == BillingCycle.MONTHLY ? addonsMonthly(subscription) : BigDecimal.ZERO;
-        String notes = addons.signum() > 0 ? "Includes extra storage: " + addonsDescription(subscription) : null;
-        return createInvoice(subscription, amount.add(addons), true, subscription.getCurrentPeriodEnd(), notes);
+    private Invoice generateRenewalInvoice(Subscription subscription, Instant periodStart) {
+        Instant periodEnd = periodStart.plus(subscription.getBillingCycle() == BillingCycle.YEARLY ? 365 : 30, ChronoUnit.DAYS);
+        List<InvoiceLine> lines = new ArrayList<>();
+        BigDecimal planAmount = calculateRenewalAmount(subscription);
+        lines.add(new InvoiceLine(InvoiceLineKind.PLAN, planLineDescription(subscription), 1, planAmount, periodStart, periodEnd));
+        if (subscription.getBillingCycle() == BillingCycle.MONTHLY) {
+            lines.addAll(addonLines(subscription.getId(), periodStart, periodEnd));
+        }
+        return createInvoice(subscription, lines, subscription.getCurrentPeriodEnd(), null);
+    }
+
+    /** "Growth plan, billed monthly". */
+    private static String planLineDescription(Subscription subscription) {
+        String cycle = subscription.getBillingCycle() == BillingCycle.YEARLY ? "billed yearly (15% off)" : "billed monthly";
+        return planLabel(subscription) + " plan, " + cycle;
+    }
+
+    /** One line per add-on with packs: e.g. 3 × "Extra storage, 100 GB pack" at its monthly price. */
+    private List<InvoiceLine> addonLines(UUID subscriptionId, Instant periodStart, Instant periodEnd) {
+        return addonRepository
+            .findBySubscriptionId(subscriptionId)
+            .stream()
+            .filter(a -> a.getQuantity() > 0)
+            .map(a -> addonLine(a, periodStart, periodEnd))
+            .toList();
+    }
+
+    private static InvoiceLine addonLine(SubscriptionAddon addon, Instant periodStart, Instant periodEnd) {
+        String description = FeatureCodes.STORAGE.equals(addon.getFeatureCode())
+            ? "Extra storage, " + addon.getUnitSize() + " GB pack"
+            : addon.getFeatureCode() + " pack of " + addon.getUnitSize();
+        return new InvoiceLine(InvoiceLineKind.ADDON, description, addon.getQuantity(), addon.getUnitPrice(), periodStart, periodEnd);
     }
 
     /**
-     * Builds and saves an invoice for {@code amount}: the subscription's coupon re-applied when
-     * {@code applyCoupon} (plan renewals; add-ons are never discounted), country tax resolved at the
-     * issue date, due on {@code dueDate}.
+     * Builds and saves an invoice of {@code lines} (its amount is their sum): the subscription's
+     * coupon re-applied to the plan lines only (add-ons are never discounted), country tax resolved
+     * at the issue date on what is left, due on {@code dueDate}.
      */
-    private Invoice createInvoice(Subscription subscription, BigDecimal amount, boolean applyCoupon, Instant dueDate, String notes) {
+    private Invoice createInvoice(Subscription subscription, List<InvoiceLine> lines, Instant dueDate, String notes) {
         Instant issueDate = Instant.now();
+        BigDecimal amount = lines.stream().map(InvoiceLine::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal planAmount = lines
+            .stream()
+            .filter(l -> l.getKind() == InvoiceLineKind.PLAN)
+            .map(InvoiceLine::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // P4.5 — re-apply the coupon the tenant signed up with, if still valid.
         // applyToAmount bumps timesRedeemed atomically; if the coupon has expired
@@ -321,11 +359,11 @@ public class BillingLifecycleService {
         // sticker price is what's owed). Log + clear the snapshot so a future
         // tick doesn't keep trying.
         BigDecimal discountAmount = BigDecimal.ZERO;
-        String couponSnapshot = applyCoupon ? subscription.getCouponCode() : null;
+        String couponSnapshot = planAmount.signum() > 0 ? subscription.getCouponCode() : null;
         String couponCodeOnInvoice = null;
         if (couponSnapshot != null && !couponSnapshot.isBlank()) {
             try {
-                CouponService.CouponApplication applied = couponService.applyToAmount(couponSnapshot, amount);
+                CouponService.CouponApplication applied = couponService.applyToAmount(couponSnapshot, planAmount);
                 discountAmount = applied.discountAmount();
                 couponCodeOnInvoice = applied.coupon().getCode();
                 log.info("Renewal coupon {} applied to subscription {}: -{}", couponSnapshot, subscription.getId(), discountAmount);
@@ -368,30 +406,12 @@ public class BillingLifecycleService {
         invoice.setIssueDate(issueDate);
         invoice.setDueDate(dueDate);
         invoice.setNotes(notes);
+        lines.forEach(invoice::addLine);
 
         return invoiceRepository.save(invoice);
     }
 
     // ========== ADD-ONS (billed monthly, on top of the subscription) ==========
-
-    /** What the subscription's add-ons cost a month. */
-    private BigDecimal addonsMonthly(Subscription subscription) {
-        return addonRepository
-            .findBySubscriptionId(subscription.getId())
-            .stream()
-            .map(SubscriptionAddon::monthlyPrice)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    /** "2 × 100 GB" — for the invoice note. */
-    private String addonsDescription(Subscription subscription) {
-        return addonRepository
-            .findBySubscriptionId(subscription.getId())
-            .stream()
-            .filter(a -> a.getQuantity() > 0)
-            .map(a -> a.getQuantity() + " × " + a.getUnitSize() + " GB")
-            .collect(java.util.stream.Collectors.joining(", "));
-    }
 
     /**
      * Daily: add-ons of yearly subscriptions get their own invoice each month (a monthly plan
@@ -413,10 +433,9 @@ public class BillingLifecycleService {
                 Instant until = from.atZone(ZoneOffset.UTC).plusMonths(1).toInstant();
                 Invoice invoice = createInvoice(
                     subscription,
-                    addon.monthlyPrice(),
-                    false,
+                    List.of(addonLine(addon, from, until)),
                     now.plus(ADDON_INVOICE_DUE_DAYS, ChronoUnit.DAYS),
-                    "Extra storage " + addon.getQuantity() + " × " + addon.getUnitSize() + " GB, one month"
+                    null
                 );
                 addon.setBilledUntil(until);
                 addonRepository.save(addon);

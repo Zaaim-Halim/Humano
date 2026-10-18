@@ -34,6 +34,7 @@ import {
   ToastService,
 } from 'app/shared/ui';
 import { SubscriptionStatus } from 'app/features/platform/models/enums/subscription-status.enum';
+import { saveFile } from 'app/shared/util/download';
 import { MoneyPipe } from 'app/shared/util/format.pipes';
 import { formatPlanAmount } from 'app/shared/util/plan-units';
 
@@ -84,6 +85,9 @@ export class BillingSettingsComponent {
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
   private readonly account = inject(AccountService).trackCurrentAccount();
+
+  /** The invoice whose PDF is being fetched. */
+  protected readonly downloadingInvoice = signal<string | null>(null);
 
   protected readonly tenant = signal<Tenant | null>(null);
   protected readonly subscription = signal<Subscription | null | undefined>(undefined);
@@ -330,6 +334,21 @@ export class BillingSettingsComponent {
 
   protected resume(): void {
     this.run(this.meBilling.resume(), 'humano.settings.billing.resumed');
+  }
+
+  /** Saves the invoice as a PDF document. */
+  protected downloadInvoice(i: Invoice): void {
+    this.downloadingInvoice.set(i.id);
+    this.invoiceService.pdf(i.id).subscribe({
+      next: blob => {
+        this.downloadingInvoice.set(null);
+        saveFile(blob, `${i.invoiceNumber}.pdf`);
+      },
+      error: () => {
+        this.downloadingInvoice.set(null);
+        this.toast.danger(this.t('humano.console.invoices.downloadFailed'));
+      },
+    });
   }
 
   private run(call: Observable<unknown>, doneKey: string): void {

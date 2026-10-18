@@ -232,6 +232,8 @@
         "status": "Status",
         "markPaid": "Mark paid",
         "markOverdue": "Mark overdue",
+        "download": "Download PDF",
+        "downloadFailed": "The invoice PDF could not be downloaded. Try again.",
         "void": "Void",
         "confirm": {
           "pay": "Mark {{ number }} as paid?",

@@ -1480,6 +1480,44 @@ dt {
   color: var(--text-strong);
 }
 
+/* payslip — year to date: three figures, then net pay month by month */
+.hum-payslip__ytd {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.hum-payslip__ytd-value {
+  margin-top: var(--space-1);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-strong);
+}
+.hum-payslip__ytd-value--net {
+  color: var(--brand);
+}
+.hum-payslip__ytd-barcol {
+  width: 45%;
+}
+.hum-payslip__ytd-barcol .hum-progress {
+  height: 6px;
+}
+.hum-payslip__ytd-current td {
+  font-weight: var(--weight-semibold);
+  color: var(--text-strong);
+}
+@media (max-width: 560px) {
+  .hum-payslip__ytd {
+    grid-template-columns: 1fr;
+  }
+  .hum-payslip__ytd-barcol {
+    display: none;
+  }
+}
+
 /* print: drop the app chrome + actions; show only the payslip document */
 @media print {
   .hum-side,

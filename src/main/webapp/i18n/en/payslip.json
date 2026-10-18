@@ -22,6 +22,8 @@
       "netPay": "Net pay",
       "employerCost": "Total employer cost",
       "ytd": "Year to date",
+      "ytdHint": "{{ n }} payslips, {{ from }} to {{ to }}",
+      "month": "Month",
       "print": "Print",
       "downloadPdf": "Download PDF",
       "noLines": "No line items"

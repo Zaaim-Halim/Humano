@@ -8,7 +8,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { normalizeHttpError } from 'app/core/api';
 import { AlertComponent, ButtonComponent, EmptyStateComponent, SkeletonRowComponent, ToastService } from 'app/shared/ui';
 
-import { Payslip, PayslipService } from '../index';
+import { Payslip, PayslipService, PayslipYtd } from '../index';
 
 /**
  * Payslip (HR/Admin hero screen) — print-ready letterhead for a single payslip
@@ -40,9 +40,21 @@ export default class PayslipComponent {
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
 
-  /** YTD footer — a backend map (`Map<String,Object>`); rendered generically. */
-  protected readonly ytd = signal<Record<string, unknown> | null>(null);
-  protected readonly ytdEntries = computed(() => Object.entries(this.ytd() ?? {}));
+  /** Year to date, up to this payslip's period: totals and net pay month by month. */
+  protected readonly ytd = signal<PayslipYtd | null>(null);
+  /** Months in order, with a bar width relative to the best month. */
+  protected readonly ytdMonths = computed(() => {
+    const entries = Object.entries(this.ytd()?.monthlyNet ?? {}).sort(([a], [b]) => a.localeCompare(b));
+    const max = Math.max(0, ...entries.map(([, net]) => net));
+    return entries.map(([month, net]) => ({
+      month,
+      /** First day of the month, for the date pipe. */
+      date: `${month}-01`,
+      net,
+      pct: max > 0 ? Math.round((net / max) * 100) : 0,
+      current: month === this.payslip()?.periodEnd?.slice(0, 7),
+    }));
+  });
 
   constructor() {
     effect(() => {
@@ -69,10 +81,12 @@ export default class PayslipComponent {
   }
 
   private loadYtd(p: Payslip): void {
-    const year = Number((p.paymentDate ?? p.periodEnd ?? '').slice(0, 4));
+    // The year of the period this payslip covers, up to its end: later payslips don't count.
+    const through = p.periodEnd ?? undefined;
+    const year = Number((p.periodEnd ?? p.paymentDate ?? '').slice(0, 4));
     if (!p.employeeId || !year) return;
     // YTD is supplementary; its failure must not break the payslip view.
-    (this.self() ? this.meWork.payslipYtd(year) : this.payslipService.ytdForEmployee(p.employeeId, year)).subscribe({
+    (this.self() ? this.meWork.payslipYtd(year, through) : this.payslipService.ytdForEmployee(p.employeeId, year, through)).subscribe({
       next: data => this.ytd.set(data),
       error: () => this.ytd.set(null),
     });

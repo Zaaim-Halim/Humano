@@ -2,11 +2,14 @@ package com.humano.service.billing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.humano.config.multitenancy.TenantAccessGuard;
+import com.humano.domain.billing.Coupon;
 import com.humano.domain.billing.Invoice;
 import com.humano.domain.billing.Subscription;
 import com.humano.domain.billing.SubscriptionAddon;
@@ -38,6 +41,7 @@ class AddonBillingTest {
     private final BillingTaxResolver tax = mock(BillingTaxResolver.class);
     private final TenantAdminEmailResolver emails = mock(TenantAdminEmailResolver.class);
     private final SubscriptionAddonRepository addons = mock(SubscriptionAddonRepository.class);
+    private final CouponService coupons = mock(CouponService.class);
     private final BillingLifecycleService lifecycle = new BillingLifecycleService(
         subscriptions,
         invoices,
@@ -45,7 +49,7 @@ class AddonBillingTest {
         tax,
         mock(BillingMailService.class),
         emails,
-        mock(CouponService.class),
+        coupons,
         new SimpleMeterRegistry(),
         mock(TenantAccessGuard.class),
         addons
@@ -61,6 +65,7 @@ class AddonBillingTest {
         tenant.setSubdomain("acme");
         SubscriptionPlan enterprise = new SubscriptionPlan();
         enterprise.setBasePrice(new BigDecimal("499"));
+        enterprise.setDisplayName("Enterprise");
         subscription.setId(UUID.randomUUID());
         subscription.setTenant(tenant);
         subscription.setSubscriptionPlan(enterprise);
@@ -87,7 +92,9 @@ class AddonBillingTest {
         Invoice invoice = lifecycle.issueFirstInvoice(subscription.getId());
 
         assertThat(invoice.getAmount()).isEqualByComparingTo("549");
-        assertThat(invoice.getNotes()).contains("2 × 100 GB");
+        assertThat(invoice.getLines()).hasSize(2);
+        assertThat(invoice.getLines().get(1).getDescription()).isEqualTo("Extra storage, 100 GB pack");
+        assertThat(invoice.getLines().get(1).getQuantity()).isEqualTo(2);
     }
 
     @Test
@@ -114,6 +121,22 @@ class AddonBillingTest {
         assertThat(invoice.getAmount()).isEqualByComparingTo(
             new BigDecimal("499").multiply(new BigDecimal("12")).multiply(new BigDecimal("0.85"))
         );
-        assertThat(invoice.getNotes()).isNull();
+        assertThat(invoice.getLines()).hasSize(1);
+    }
+
+    @Test
+    void couponDiscountsThePlanButNotTheAddons() {
+        subscription.setBillingCycle(BillingCycle.MONTHLY);
+        subscription.setCouponCode("SAVE10");
+        Coupon coupon = new Coupon();
+        coupon.setCode("SAVE10");
+        when(coupons.applyToAmount(eq("SAVE10"), any())).thenReturn(new CouponService.CouponApplication(coupon, new BigDecimal("49.90")));
+
+        Invoice invoice = lifecycle.issueFirstInvoice(subscription.getId());
+
+        verify(coupons).applyToAmount(eq("SAVE10"), argThat(amount -> amount.compareTo(new BigDecimal("499")) == 0));
+        assertThat(invoice.getAmount()).isEqualByComparingTo("549");
+        assertThat(invoice.getDiscountAmount()).isEqualByComparingTo("49.90");
+        assertThat(invoice.getTotalAmount()).isEqualByComparingTo("499.10");
     }
 }

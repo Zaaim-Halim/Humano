@@ -6,7 +6,7 @@ import { Page, PageRequest } from 'app/core/api';
 import { ApplicationConfigService } from 'app/core/config/application-config.service';
 import { createRequestOption } from 'app/core/request/request-util';
 import { SalaryHistory } from 'app/features/admin/models/compensation.model';
-import { Payslip } from 'app/features/admin/models/payslip.model';
+import { Payslip, PayslipYtd } from 'app/features/admin/models/payslip.model';
 
 import { EmployeeTraining } from '../models/employee-training.model';
 import { PerformanceReview } from '../models/performance-review.model';
@@ -30,8 +30,9 @@ export class MeWorkService {
     return this.http.get<Payslip>(`${this.url}/payslips/${encodeURIComponent(id)}`);
   }
 
-  payslipYtd(year: number): Observable<Record<string, unknown>> {
-    return this.http.get<Record<string, unknown>>(`${this.url}/payslips/ytd`, { params: createRequestOption({ year }) });
+  /** My year-to-date totals, up to `through` (a payslip's period end) when given. */
+  payslipYtd(year: number, through?: string): Observable<PayslipYtd> {
+    return this.http.get<PayslipYtd>(`${this.url}/payslips/ytd`, { params: createRequestOption(through ? { year, through } : { year }) });
   }
 
   payslipPdf(id: string): Observable<HttpResponse<Blob>> {

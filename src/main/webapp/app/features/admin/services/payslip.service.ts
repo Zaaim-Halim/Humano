@@ -6,7 +6,7 @@ import { Page, PageRequest } from 'app/core/api';
 import { ApplicationConfigService } from 'app/core/config/application-config.service';
 import { createRequestOption } from 'app/core/request/request-util';
 
-import { Payslip, PayslipSearchRequest } from '../models/payslip.model';
+import { Payslip, PayslipSearchRequest, PayslipYtd } from '../models/payslip.model';
 
 /** Payslips — `/api/payroll/payslips` (lookup by id/number, per employee/period, search, PDF). */
 @Injectable({ providedIn: 'root' })
@@ -36,10 +36,10 @@ export class PayslipService {
     return this.http.get<Payslip>(`${this.resourceUrl}/employees/${encodeURIComponent(employeeId)}/latest`);
   }
 
-  /** `GET /api/payroll/payslips/employees/{employeeId}/ytd?year=` — year-to-date totals. */
-  ytdForEmployee(employeeId: string, year: number): Observable<Record<string, unknown>> {
-    return this.http.get<Record<string, unknown>>(`${this.resourceUrl}/employees/${encodeURIComponent(employeeId)}/ytd`, {
-      params: createRequestOption({ year }),
+  /** `GET /api/payroll/payslips/employees/{employeeId}/ytd?year=&through=` — year-to-date totals, up to `through` when given. */
+  ytdForEmployee(employeeId: string, year: number, through?: string): Observable<PayslipYtd> {
+    return this.http.get<PayslipYtd>(`${this.resourceUrl}/employees/${encodeURIComponent(employeeId)}/ytd`, {
+      params: createRequestOption(through ? { year, through } : { year }),
     });
   }
 

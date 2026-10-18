@@ -1,4 +1,3 @@
-<!doctype html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -6,257 +5,429 @@
     <style>
       @page {
         size: A4;
-        margin: 18mm 16mm;
+        margin: 16mm 16mm 22mm 16mm;
+        @bottom-left {
+          content: element(footer);
+          vertical-align: top;
+        }
+        @bottom-right {
+          content: 'Page ' counter(page) ' of ' counter(pages);
+          font-family: Helvetica, Arial, sans-serif;
+          font-size: 7.5pt;
+          color: #8a8f9c;
+          vertical-align: top;
+          padding-top: 6pt;
+        }
       }
       body {
         font-family: Helvetica, Arial, sans-serif;
-        font-size: 10pt;
-        color: #222;
+        font-size: 9pt;
+        line-height: 1.45;
+        color: #1f2430;
+        margin: 0;
       }
-      h1 {
-        font-size: 16pt;
-        margin: 0 0 4pt 0;
-      }
-      h2 {
-        font-size: 11pt;
-        margin: 14pt 0 4pt 0;
-        border-bottom: 1pt solid #aaa;
-        padding-bottom: 2pt;
-      }
-      .meta {
-        width: 100%;
+      table {
         border-collapse: collapse;
-        margin-top: 8pt;
+        width: 100%;
       }
-      .meta td {
-        padding: 2pt 6pt;
+      td,
+      th {
         vertical-align: top;
+        padding: 0;
       }
-      .meta .label {
-        color: #666;
-        width: 28%;
+      .muted {
+        color: #6b7280;
       }
-      table.lines {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 4pt;
+      .num {
+        text-align: right;
+        white-space: nowrap;
       }
-      table.lines th,
-      table.lines td {
-        border-bottom: 0.5pt solid #ccc;
-        padding: 3pt 4pt;
-        text-align: left;
+
+      /* Header */
+      .employer {
+        font-size: 18pt;
+        font-weight: bold;
+        letter-spacing: -0.3pt;
+        color: #111827;
+      }
+      .doc-title {
+        font-size: 20pt;
+        font-weight: bold;
+        color: #111827;
+        text-align: right;
+      }
+      .doc-number {
+        text-align: right;
+        color: #6b7280;
+        font-size: 9.5pt;
+        margin-top: 2pt;
+      }
+      .stamp {
+        display: inline-block;
+        margin-top: 6pt;
+        padding: 2pt 8pt;
+        border-radius: 8pt;
+        font-size: 8pt;
+        font-weight: bold;
+        letter-spacing: 0.4pt;
+        white-space: nowrap;
+        background: #e0e7ff;
+        color: #3730a3;
+      }
+      .rule {
+        border-top: 0.75pt solid #e5e7eb;
+        margin: 14pt 0;
+      }
+
+      /* Employee and pay period */
+      .label {
+        font-size: 7.5pt;
+        font-weight: bold;
+        color: #6b7280;
+        letter-spacing: 0.3pt;
+        margin-bottom: 3pt;
+      }
+      .party-name {
+        font-weight: bold;
+        font-size: 10pt;
+        color: #111827;
+      }
+      .dates td {
+        padding: 1.5pt 0;
+      }
+      .dates td.k {
+        color: #6b7280;
+        padding-right: 10pt;
+        white-space: nowrap;
+      }
+      .dates td.v {
+        text-align: right;
+        font-weight: bold;
+        color: #111827;
+      }
+
+      /* Net pay banner */
+      .banner {
+        margin-top: 16pt;
+        border-radius: 6pt;
+        padding: 10pt 12pt;
+        background: #eef2ff;
+        border: 0.75pt solid #c7d2fe;
+      }
+      .banner-amount {
+        font-size: 16pt;
+        font-weight: bold;
+        color: #111827;
+      }
+      .banner-sub {
+        color: #4b5563;
+        margin-left: 6pt;
+      }
+
+      /* Lines */
+      .section {
+        margin-top: 18pt;
+      }
+      .section-title {
+        font-size: 10pt;
+        font-weight: bold;
+        color: #111827;
+        margin-bottom: 6pt;
+      }
+      .section-note {
+        font-weight: normal;
+        color: #6b7280;
+        font-size: 8pt;
+        margin-left: 4pt;
       }
       table.lines th {
-        background: #f3f3f3;
+        font-size: 7.5pt;
         font-weight: bold;
-      }
-      table.lines td.num {
-        text-align: right;
-        font-family: 'Courier New', monospace;
+        color: #6b7280;
+        letter-spacing: 0.3pt;
+        text-align: left;
+        padding: 0 0 5pt 0;
+        border-bottom: 0.75pt solid #d1d5db;
       }
       table.lines th.num {
         text-align: right;
       }
-      .explain {
-        color: #777;
-        font-size: 8.5pt;
+      table.lines td {
+        padding: 7pt 0;
+        border-bottom: 0.5pt solid #eceef2;
       }
-      .totals {
-        width: 100%;
-        margin-top: 14pt;
-        border-top: 1.5pt solid #333;
+      table.lines td.num,
+      table.lines th.num {
+        padding-left: 12pt;
       }
-      .totals td {
-        padding: 4pt 6pt;
-      }
-      .totals td.label {
-        text-align: right;
-        width: 70%;
-        color: #333;
-      }
-      .totals td.amount {
-        text-align: right;
-        font-family: 'Courier New', monospace;
+      .line-desc {
         font-weight: bold;
+        color: #111827;
       }
-      .totals tr.net td {
-        background: #e8f0ff;
-        font-size: 11.5pt;
+      .line-explain {
+        font-size: 7.5pt;
+        color: #6b7280;
+        margin-top: 1pt;
+      }
+      .empty {
+        color: #6b7280;
+        padding: 4pt 0;
+      }
+
+      /* Totals */
+      table.totals {
+        width: 46%;
+        margin-left: 54%;
+        margin-top: 16pt;
+      }
+      table.totals td {
+        padding: 3pt 0;
+      }
+      table.totals td.k {
+        color: #4b5563;
+      }
+      table.totals tr.net td {
+        background: #f3f4f6;
+        padding: 6pt 6pt;
+        font-weight: bold;
+        font-size: 10.5pt;
+        color: #111827;
+      }
+
+      .reporting {
+        margin-top: 16pt;
+        border-radius: 6pt;
+        padding: 8pt 12pt;
+        background: #f9fafb;
+        border: 0.75pt solid #e5e7eb;
+      }
+      .reporting table td {
+        padding: 2pt 0;
+      }
+      .footer .sep {
+        margin-left: 6pt;
+        padding-left: 6pt;
+        border-left: 0.5pt solid #c4c8d0;
       }
       .footer {
-        margin-top: 20pt;
-        font-size: 8pt;
-        color: #888;
-        text-align: center;
-      }
-      .reporting {
-        background: #fafafa;
-        padding: 6pt 8pt;
-        margin-top: 10pt;
-        border: 0.5pt dashed #aaa;
-      }
-      .reporting td.label {
-        color: #555;
-      }
-      .employer {
-        font-size: 15px;
-        font-weight: bold;
-        letter-spacing: 0.02em;
-        margin-bottom: 4px;
+        position: running(footer);
+        font-size: 7.5pt;
+        color: #8a8f9c;
+        padding-top: 6pt;
       }
     </style>
   </head>
   <body>
-    <div class="employer" th:if="${model.employerName}" th:text="${model.employerName}">Demo Company</div>
-    <h1 th:text="|Payslip ${model.payslipNumber}|">Payslip PS-2025-08-001</h1>
+    <div class="footer">
+      <span th:text="${model.employerName} ?: 'Payslip'">Demo Company</span>
+      <span class="sep" th:text="|Payslip ${model.payslipNumber}|">Payslip PS-2025-08-001</span>
+      <span
+        class="sep"
+        th:text="|Generated ${#strings.length(model.generatedAt) >= 10 ? #strings.substring(model.generatedAt, 0, 10) : model.generatedAt}|"
+        >Generated 2025-09-05</span
+      >
+      <span class="sep">Confidential</span>
+    </div>
 
-    <table class="meta">
+    <!-- Header -->
+    <table>
       <tr>
-        <td class="label">Employee</td>
-        <td th:text="${model.employeeName}">Jane Doe</td>
-        <td class="label">Period</td>
-        <td th:text="${model.periodCode}">2025-08</td>
-      </tr>
-      <tr>
-        <td class="label">Employee code</td>
-        <td th:text="${model.employeeCode}">jdoe</td>
-        <td class="label">Pay window</td>
-        <td><span th:text="${model.periodStart}">2025-08-01</span> to <span th:text="${model.periodEnd}">2025-08-31</span></td>
-      </tr>
-      <tr>
-        <td class="label">Department</td>
-        <td th:text="${model.department} ?: '—'">Engineering</td>
-        <td class="label">Payment date</td>
-        <td th:text="${model.paymentDate}">2025-09-05</td>
-      </tr>
-      <tr>
-        <td class="label">Position</td>
-        <td th:text="${model.position} ?: '—'">Senior Engineer</td>
-        <td class="label">Currency</td>
-        <td th:text="${model.currencyCode}">USD</td>
+        <td style="width: 55%">
+          <div class="employer" th:text="${model.employerName} ?: 'Payslip'">Demo Company</div>
+          <div class="muted" style="margin-top: 2pt">Payslip, confidential</div>
+        </td>
+        <td style="width: 45%; text-align: right">
+          <div class="doc-title">Payslip</div>
+          <div class="doc-number" th:text="${model.payslipNumber}">PS-2025-08-001</div>
+          <div class="stamp" th:text="${#temporals.format(model.periodStart, 'MMMM yyyy')}">August 2025</div>
+        </td>
       </tr>
     </table>
 
-    <h2>Earnings</h2>
-    <table class="lines" th:if="${!#lists.isEmpty(model.earnings)}">
-      <thead>
-        <tr>
-          <th>Code</th>
-          <th>Description</th>
-          <th class="num">Quantity</th>
-          <th class="num">Rate</th>
-          <th class="num">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr th:each="line : ${model.earnings}">
-          <td th:text="${line.code}">BASIC</td>
-          <td>
-            <span th:text="${line.name}">Basic salary</span>
-            <div class="explain" th:if="${line.explain}" th:text="${line.explain}">Step 1 — Base salary ...</div>
-          </td>
-          <td class="num" th:text="${line.quantity} ?: ''"></td>
-          <td class="num" th:text="${line.rate} ?: ''"></td>
-          <td class="num" th:text="${line.amount}">10000.00</td>
-        </tr>
-      </tbody>
-    </table>
-    <p th:if="${#lists.isEmpty(model.earnings)}" style="color: #999">(no earning lines)</p>
+    <div class="rule"></div>
 
-    <h2>Deductions &amp; Withholdings</h2>
-    <table class="lines" th:if="${!#lists.isEmpty(model.deductions)}">
-      <thead>
-        <tr>
-          <th>Code</th>
-          <th>Description</th>
-          <th class="num">Quantity</th>
-          <th class="num">Rate</th>
-          <th class="num">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr th:each="line : ${model.deductions}">
-          <td th:text="${line.code}">TAX_PIT</td>
-          <td>
-            <span th:text="${line.name}">Income tax</span>
-            <div class="explain" th:if="${line.explain}" th:text="${line.explain}">Step 7 — Income tax ...</div>
-          </td>
-          <td class="num" th:text="${line.quantity} ?: ''"></td>
-          <td class="num" th:text="${line.rate} ?: ''"></td>
-          <td class="num" th:text="${line.amount}">1500.00</td>
-        </tr>
-      </tbody>
+    <!-- Employee / Position / Pay period -->
+    <table>
+      <tr>
+        <td style="width: 30%; padding-right: 12pt">
+          <div class="label">Employee</div>
+          <div class="party-name" th:text="${model.employeeName}">Jane Doe</div>
+          <div class="muted" th:text="${model.employeeCode}">jdoe</div>
+        </td>
+        <td style="width: 26%; padding-right: 12pt">
+          <div class="label">Position</div>
+          <div class="party-name" th:text="${model.position} ?: '-'">Senior Engineer</div>
+          <div class="muted" th:if="${model.department}" th:text="${model.department}">Engineering</div>
+        </td>
+        <td style="width: 44%">
+          <table class="dates">
+            <tr>
+              <td class="k">Pay period</td>
+              <td
+                class="v"
+                th:text="|${#temporals.format(model.periodStart, 'MMM d')} - ${#temporals.format(model.periodEnd, 'MMM d, yyyy')}|"
+              >
+                Aug 1 - Aug 31, 2025
+              </td>
+            </tr>
+            <tr>
+              <td class="k">Payment date</td>
+              <td class="v" th:text="${#temporals.format(model.paymentDate, 'MMM d, yyyy')}">Sep 5, 2025</td>
+            </tr>
+            <tr>
+              <td class="k">Period code</td>
+              <td class="v" th:text="${model.periodCode}">2025-08</td>
+            </tr>
+            <tr>
+              <td class="k">Currency</td>
+              <td class="v" th:text="${model.currencyCode}">USD</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
     </table>
-    <p th:if="${#lists.isEmpty(model.deductions)}" style="color: #999">(no deduction lines)</p>
 
+    <!-- Net pay -->
+    <div class="banner">
+      <span class="banner-amount" th:text="|${model.currencyCode} ${#numbers.formatDecimal(model.net, 1, 'COMMA', 2, 'POINT')}|"
+        >USD 7,500.00</span
+      >
+      <span class="banner-sub" th:text="|net pay, paid on ${#temporals.format(model.paymentDate, 'MMM d, yyyy')}|">net pay</span>
+    </div>
+
+    <!-- Earnings -->
+    <div class="section">
+      <div class="section-title">Earnings</div>
+      <table class="lines">
+        <thead>
+          <tr>
+            <th style="width: 55%">Description</th>
+            <th class="num" style="width: 12%">Qty</th>
+            <th class="num" style="width: 15%">Rate</th>
+            <th class="num" style="width: 18%" th:text="|Amount (${model.currencyCode})|">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="line : ${model.earnings}">
+            <td>
+              <div class="line-desc" th:text="${line.name}">Basic salary</div>
+              <div class="line-explain" th:text="${line.explain != null ? line.code + ' - ' + line.explain : line.code}">BASIC</div>
+            </td>
+            <td class="num" th:text="${line.quantity != null ? #numbers.formatDecimal(line.quantity, 1, 'COMMA', 2, 'POINT') : ''}"></td>
+            <td class="num" th:text="${line.rate != null ? #numbers.formatDecimal(line.rate, 1, 'COMMA', 2, 'POINT') : ''}"></td>
+            <td class="num" th:text="${#numbers.formatDecimal(line.amount, 1, 'COMMA', 2, 'POINT')}">10,000.00</td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(model.earnings)}">
+            <td class="empty" colspan="4">No earnings this period.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Deductions -->
+    <div class="section">
+      <div class="section-title">Deductions and withholdings</div>
+      <table class="lines">
+        <thead>
+          <tr>
+            <th style="width: 55%">Description</th>
+            <th class="num" style="width: 12%">Qty</th>
+            <th class="num" style="width: 15%">Rate</th>
+            <th class="num" style="width: 18%" th:text="|Amount (${model.currencyCode})|">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="line : ${model.deductions}">
+            <td>
+              <div class="line-desc" th:text="${line.name}">Income tax</div>
+              <div class="line-explain" th:text="${line.explain != null ? line.code + ' - ' + line.explain : line.code}">TAX_PIT</div>
+            </td>
+            <td class="num" th:text="${line.quantity != null ? #numbers.formatDecimal(line.quantity, 1, 'COMMA', 2, 'POINT') : ''}"></td>
+            <td class="num" th:text="${line.rate != null ? #numbers.formatDecimal(line.rate, 1, 'COMMA', 2, 'POINT') : ''}"></td>
+            <td class="num" th:text="${#numbers.formatDecimal(line.amount, 1, 'COMMA', 2, 'POINT')}">1,500.00</td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(model.deductions)}">
+            <td class="empty" colspan="4">No deductions this period.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Totals -->
     <table class="totals">
       <tr>
-        <td class="label">Gross pay</td>
-        <td class="amount"><span th:text="${model.gross}">10000.00</span> <span th:text="${model.currencyCode}">USD</span></td>
+        <td class="k">Gross pay</td>
+        <td class="num" th:text="${#numbers.formatDecimal(model.gross, 1, 'COMMA', 2, 'POINT')}">10,000.00</td>
       </tr>
       <tr>
-        <td class="label">Total deductions</td>
-        <td class="amount">-<span th:text="${model.totalDeductions}">2500.00</span> <span th:text="${model.currencyCode}">USD</span></td>
+        <td class="k">Total deductions</td>
+        <td class="num" th:text="|-${#numbers.formatDecimal(model.totalDeductions, 1, 'COMMA', 2, 'POINT')}|">-2,500.00</td>
       </tr>
       <tr class="net">
-        <td class="label"><strong>NET PAY</strong></td>
-        <td class="amount"><span th:text="${model.net}">7500.00</span> <span th:text="${model.currencyCode}">USD</span></td>
+        <td th:text="|Net pay (${model.currencyCode})|">Net pay (USD)</td>
+        <td class="num" th:text="${#numbers.formatDecimal(model.net, 1, 'COMMA', 2, 'POINT')}">7,500.00</td>
       </tr>
     </table>
 
-    <!-- Reporting-currency block (P3.4) — only shown when conversion was applied. -->
-    <table class="totals reporting" th:if="${model.reportingCurrencyCode}">
-      <tr>
-        <td colspan="2" style="color: #555">
-          Consolidated in <strong th:text="${model.reportingCurrencyCode}">EUR</strong> at rate
-          <span th:text="${model.exchangeRate}">0.92</span> (effective <span th:text="${model.exchangeRateDate}">2025-09-05</span>)
-        </td>
-      </tr>
-      <tr>
-        <td class="label">Reporting gross</td>
-        <td class="amount">
-          <span th:text="${model.reportingGross}">9200.00</span> <span th:text="${model.reportingCurrencyCode}">EUR</span>
-        </td>
-      </tr>
-      <tr>
-        <td class="label">Reporting deductions</td>
-        <td class="amount">
-          -<span th:text="${model.reportingTotalDeductions}">2300.00</span> <span th:text="${model.reportingCurrencyCode}">EUR</span>
-        </td>
-      </tr>
-      <tr>
-        <td class="label">Reporting net</td>
-        <td class="amount">
-          <span th:text="${model.reportingNet}">6900.00</span> <span th:text="${model.reportingCurrencyCode}">EUR</span>
-        </td>
-      </tr>
-    </table>
-
-    <h2 th:if="${!#lists.isEmpty(model.employerCharges)}">Employer charges (informational)</h2>
-    <table class="lines" th:if="${!#lists.isEmpty(model.employerCharges)}">
-      <thead>
+    <!-- Reporting currency (P3.4): only when the run converts to one. -->
+    <div class="reporting" th:if="${model.reportingCurrencyCode}">
+      <div class="label">Reporting currency</div>
+      <div class="muted" style="margin-bottom: 4pt">
+        Converted to <span th:text="${model.reportingCurrencyCode}">EUR</span> at <span th:text="${model.exchangeRate}">0.92</span>, rate of
+        <span th:text="${#temporals.format(model.exchangeRateDate, 'MMM d, yyyy')}">Sep 5, 2025</span>
+      </div>
+      <table>
         <tr>
-          <th>Code</th>
-          <th>Description</th>
-          <th class="num">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr th:each="line : ${model.employerCharges}">
-          <td th:text="${line.code}">EMPLOYER_CHARGE</td>
-          <td>
-            <span th:text="${line.name}">Social contributions</span>
-            <div class="explain" th:if="${line.explain}" th:text="${line.explain}">Step 12 — Employer charge ...</div>
+          <td class="muted">Gross pay</td>
+          <td
+            class="num"
+            th:text="|${model.reportingCurrencyCode} ${#numbers.formatDecimal(model.reportingGross, 1, 'COMMA', 2, 'POINT')}|"
+          >
+            EUR 9,200.00
           </td>
-          <td class="num" th:text="${line.amount}">800.00</td>
         </tr>
-      </tbody>
-    </table>
+        <tr>
+          <td class="muted">Total deductions</td>
+          <td
+            class="num"
+            th:text="|${model.reportingCurrencyCode} -${#numbers.formatDecimal(model.reportingTotalDeductions, 1, 'COMMA', 2, 'POINT')}|"
+          >
+            EUR -2,300.00
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Net pay</strong></td>
+          <td class="num">
+            <strong th:text="|${model.reportingCurrencyCode} ${#numbers.formatDecimal(model.reportingNet, 1, 'COMMA', 2, 'POINT')}|"
+              >EUR 6,900.00</strong
+            >
+          </td>
+        </tr>
+      </table>
+    </div>
 
-    <div class="footer">
-      Generated <span th:text="${model.generatedAt}">2025-09-05T08:00:00Z</span> | Payslip
-      <span th:text="${model.payslipNumber}">PS-2025-08-001</span> | Run <span th:text="${model.runId}">run-uuid</span>
+    <!-- Employer charges: paid by the employer, not taken from pay. -->
+    <div class="section" th:if="${!#lists.isEmpty(model.employerCharges)}">
+      <div class="section-title">Employer contributions<span class="section-note">paid by the employer, not deducted from pay</span></div>
+      <table class="lines">
+        <thead>
+          <tr>
+            <th style="width: 82%">Description</th>
+            <th class="num" style="width: 18%" th:text="|Amount (${model.currencyCode})|">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="line : ${model.employerCharges}">
+            <td>
+              <div class="line-desc" th:text="${line.name}">Social contributions</div>
+              <div class="line-explain" th:text="${line.explain != null ? line.code + ' - ' + line.explain : line.code}">
+                EMPLOYER_CHARGE
+              </div>
+            </td>
+            <td class="num" th:text="${#numbers.formatDecimal(line.amount, 1, 'COMMA', 2, 'POINT')}">800.00</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </body>
 </html>

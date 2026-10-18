@@ -24,4 +24,9 @@ export class InvoiceService {
   find(id: string): Observable<Invoice> {
     return this.http.get<Invoice>(`${this.resourceUrl}/${encodeURIComponent(id)}`);
   }
+
+  /** `GET /api/billing/invoices/{id}/pdf` — the invoice document. */
+  pdf(id: string): Observable<Blob> {
+    return this.http.get(`${this.resourceUrl}/${encodeURIComponent(id)}/pdf`, { responseType: 'blob' });
+  }
 }

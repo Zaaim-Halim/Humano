@@ -1,7 +1,9 @@
 package com.humano.service.billing;
 
 import com.humano.domain.billing.Invoice;
+import com.humano.domain.billing.InvoiceLine;
 import com.humano.domain.billing.Subscription;
+import com.humano.domain.enumeration.billing.InvoiceLineKind;
 import com.humano.domain.enumeration.billing.InvoiceStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.dto.billing.requests.CreateInvoiceRequest;
@@ -117,6 +119,10 @@ public class InvoiceService {
         invoice.setStatus(InvoiceStatus.PENDING);
         invoice.setIssueDate(issueDate);
         invoice.setDueDate(request.dueDate());
+        String description = request.description() != null && !request.description().isBlank()
+            ? request.description().trim()
+            : "Manual charge";
+        invoice.addLine(new InvoiceLine(InvoiceLineKind.MANUAL, description, 1, request.amount(), null, null));
 
         Invoice savedInvoice = invoiceRepository.save(invoice);
         log.info("Created invoice with ID: {}", savedInvoice.getId());

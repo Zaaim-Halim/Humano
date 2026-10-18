@@ -20,11 +20,13 @@ import com.humano.service.payroll.CompensationService;
 import com.humano.service.payroll.OrganizationSettingsService;
 import com.humano.service.payroll.PayslipService;
 import com.humano.service.tenant.TenantService;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -116,11 +118,14 @@ public class MeWorkResource {
         return own(id);
     }
 
-    /** {@code GET /api/me/payslips/ytd?year=} : my year-to-date totals. */
+    /** {@code GET /api/me/payslips/ytd?year=&through=} : my year-to-date totals, up to {@code through} when given. */
     @GetMapping("/payslips/ytd")
     @RequireAuthenticated
-    public Map<String, Object> payslipYtd(@RequestParam int year) {
-        return payslipService.getYearToDateSummary(me(), year);
+    public Map<String, Object> payslipYtd(
+        @RequestParam int year,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate through
+    ) {
+        return payslipService.getYearToDateSummary(me(), year, through);
     }
 
     /** {@code GET /api/me/payslips/{id}/pdf} : the PDF of one of my payslips. */

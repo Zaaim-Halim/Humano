@@ -7,6 +7,7 @@ import com.humano.dto.billing.responses.PaymentResponse;
 import com.humano.dto.billing.responses.SubscriptionResponse;
 import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.InvoiceDocumentService;
 import com.humano.service.billing.InvoiceService;
 import com.humano.service.billing.PaymentService;
 import com.humano.service.billing.SubscriptionService;
@@ -34,14 +35,17 @@ public class PlatformBillingResource {
     private final PaymentService paymentService;
 
     private final StorageAddonService storageAddonService;
+    private final InvoiceDocumentService invoiceDocumentService;
 
     public PlatformBillingResource(
         SubscriptionService subscriptionService,
         InvoiceService invoiceService,
         PaymentService paymentService,
-        StorageAddonService storageAddonService
+        StorageAddonService storageAddonService,
+        InvoiceDocumentService invoiceDocumentService
     ) {
         this.storageAddonService = storageAddonService;
+        this.invoiceDocumentService = invoiceDocumentService;
         this.subscriptionService = subscriptionService;
         this.invoiceService = invoiceService;
         this.paymentService = paymentService;
@@ -72,6 +76,12 @@ public class PlatformBillingResource {
     @GetMapping("/invoices")
     public ResponseEntity<Page<InvoiceResponse>> listInvoices(Pageable pageable) {
         return ResponseEntity.ok(invoiceService.getAllInvoices(pageable));
+    }
+
+    /** Any customer's invoice as a PDF document. */
+    @GetMapping("/invoices/{id}/pdf")
+    public ResponseEntity<byte[]> downloadInvoicePdf(@PathVariable UUID id) {
+        return InvoiceResource.pdfResponse(invoiceDocumentService.pdf(id, null));
     }
 
     @GetMapping("/invoices/by-tenant/{tenantId}")

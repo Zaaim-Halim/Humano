@@ -13,6 +13,7 @@ import {
   AlertComponent,
   BadgeComponent,
   ButtonComponent,
+  IconButtonComponent,
   CheckboxComponent,
   DialogComponent,
   DrawerComponent,
@@ -27,6 +28,7 @@ import {
   TabsComponent,
   ToastService,
 } from 'app/shared/ui';
+import { saveFile } from 'app/shared/util/download';
 import { MoneyPipe } from 'app/shared/util/format.pipes';
 
 import { SubscriptionType } from '../../models/enums/subscription-type.enum';
@@ -70,6 +72,7 @@ type InvoiceFilter = 'open' | 'overdue' | 'paid' | 'all';
     AlertComponent,
     BadgeComponent,
     ButtonComponent,
+    IconButtonComponent,
     CheckboxComponent,
     DialogComponent,
     DrawerComponent,
@@ -95,6 +98,9 @@ export default class ConsoleBillingComponent {
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly account = inject(AccountService).trackCurrentAccount();
+  /** The invoice whose PDF is being fetched. */
+  protected readonly downloadingInvoice = signal<string | null>(null);
+
   protected readonly currency = this.console.currency;
 
   protected readonly canManage = computed(() => !!this.account()?.permissions?.includes(Permission.MANAGE_PLATFORM_BILLING));
@@ -335,6 +341,21 @@ export default class ConsoleBillingComponent {
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
+    });
+  }
+
+  /** Saves the invoice as a PDF document. */
+  protected downloadInvoice(i: Invoice): void {
+    this.downloadingInvoice.set(i.id);
+    this.billing.invoicePdf(i.id).subscribe({
+      next: blob => {
+        this.downloadingInvoice.set(null);
+        saveFile(blob, `${i.invoiceNumber}.pdf`);
+      },
+      error: () => {
+        this.downloadingInvoice.set(null);
+        this.toast.danger(this.t('humano.console.invoices.downloadFailed'));
+      },
     });
   }
 

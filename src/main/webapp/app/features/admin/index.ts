@@ -44,7 +44,7 @@ export { PayrollResultService } from './services/payroll-result.service';
 export type { PayrollResult, PayrollLineItem } from './models/payroll-result.model';
 
 export { PayslipService } from './services/payslip.service';
-export type { Payslip, PayslipSearchRequest } from './models/payslip.model';
+export type { Payslip, PayslipSearchRequest, PayslipYtd } from './models/payslip.model';
 
 export { CompensationService } from './services/compensation.service';
 export type {

@@ -251,9 +251,7 @@
                 <th>{{ 'humano.console.invoices.due' | translate }}</th>
                 <th class="is-num">{{ 'humano.console.invoices.total' | translate }}</th>
                 <th>{{ 'humano.console.invoices.status' | translate }}</th>
-                @if (canManageBilling()) {
-                  <th></th>
-                }
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -269,27 +267,32 @@
                       <span class="hum-kpi__hint"> {{ i.paidDate | date: 'mediumDate' }}</span>
                     }
                   </td>
-                  @if (canManageBilling()) {
-                    <td class="is-actions">
-                      @if (i.status === 'PENDING' || i.status === 'OVERDUE') {
-                        <hum-button variant="ghost" size="sm" icon="check" (click)="invoiceAction.set({ invoice: i, action: 'pay' })">{{
-                          'humano.console.invoices.markPaid' | translate
-                        }}</hum-button>
-                        @if (i.status === 'PENDING') {
-                          <hum-button
-                            variant="ghost"
-                            size="sm"
-                            icon="clock-alert"
-                            (click)="invoiceAction.set({ invoice: i, action: 'overdue' })"
-                            >{{ 'humano.console.invoices.markOverdue' | translate }}</hum-button
-                          >
-                        }
-                        <hum-button variant="ghost" size="sm" icon="ban" (click)="invoiceAction.set({ invoice: i, action: 'void' })">{{
-                          'humano.console.invoices.void' | translate
-                        }}</hum-button>
+                  <td class="is-actions">
+                    @if (canManageBilling() && (i.status === 'PENDING' || i.status === 'OVERDUE')) {
+                      <hum-button variant="ghost" size="sm" icon="check" (click)="invoiceAction.set({ invoice: i, action: 'pay' })">{{
+                        'humano.console.invoices.markPaid' | translate
+                      }}</hum-button>
+                      @if (i.status === 'PENDING') {
+                        <hum-button
+                          variant="ghost"
+                          size="sm"
+                          icon="clock-alert"
+                          (click)="invoiceAction.set({ invoice: i, action: 'overdue' })"
+                          >{{ 'humano.console.invoices.markOverdue' | translate }}</hum-button
+                        >
                       }
-                    </td>
-                  }
+                      <hum-button variant="ghost" size="sm" icon="ban" (click)="invoiceAction.set({ invoice: i, action: 'void' })">{{
+                        'humano.console.invoices.void' | translate
+                      }}</hum-button>
+                    }
+                    <hum-icon-button
+                      icon="download"
+                      size="sm"
+                      [label]="'humano.console.invoices.download' | translate"
+                      [disabled]="downloadingInvoice() === i.id"
+                      (click)="downloadInvoice(i)"
+                    />
+                  </td>
                 </tr>
               }
             </tbody>

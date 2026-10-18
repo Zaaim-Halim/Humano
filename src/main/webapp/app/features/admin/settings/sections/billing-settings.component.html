@@ -247,6 +247,7 @@
               <th>{{ 'humano.console.invoices.due' | translate }}</th>
               <th class="is-num">{{ 'humano.console.invoices.total' | translate }}</th>
               <th>{{ 'humano.console.invoices.status' | translate }}</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -257,6 +258,15 @@
                 <td>{{ i.dueDate | date: 'mediumDate' }}</td>
                 <td class="is-num tabular-nums">{{ i.totalAmount | money: i.currency }}</td>
                 <td><hum-badge [status]="i.status" /></td>
+                <td class="is-actions">
+                  <hum-icon-button
+                    icon="download"
+                    size="sm"
+                    [label]="'humano.console.invoices.download' | translate"
+                    [disabled]="downloadingInvoice() === i.id"
+                    (click)="downloadInvoice(i)"
+                  />
+                </td>
               </tr>
             }
           </tbody>

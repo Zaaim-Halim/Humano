@@ -3,6 +3,7 @@ package com.humano.dev;
 import com.humano.domain.billing.Coupon;
 import com.humano.domain.billing.Feature;
 import com.humano.domain.billing.Invoice;
+import com.humano.domain.billing.InvoiceLine;
 import com.humano.domain.billing.PlanFeature;
 import com.humano.domain.billing.Subscription;
 import com.humano.domain.billing.SubscriptionPlan;
@@ -10,6 +11,7 @@ import com.humano.domain.enumeration.CountryCode;
 import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.billing.DiscountType;
 import com.humano.domain.enumeration.billing.FeatureLimitType;
+import com.humano.domain.enumeration.billing.InvoiceLineKind;
 import com.humano.domain.enumeration.billing.InvoiceStatus;
 import com.humano.domain.enumeration.billing.SubscriptionStatus;
 import com.humano.domain.enumeration.billing.SubscriptionType;
@@ -648,6 +650,9 @@ public class PlatformDemoSeeder {
             inv.setIssueDate(issue);
             inv.setDueDate(issue.plus(14, ChronoUnit.DAYS));
             inv.setStatus(invoiceStatus);
+            String planName = plan.getDisplayName() != null ? plan.getDisplayName() : plan.getSubscriptionType().name();
+            String billed = cycle == BillingCycle.YEARLY ? "billed yearly (15% off)" : "billed monthly";
+            inv.addLine(new InvoiceLine(InvoiceLineKind.PLAN, planName + " plan, " + billed, 1, amount, issue, next));
             if (invoiceStatus == InvoiceStatus.PAID) {
                 inv.setPaidDate(issue.plus(3, ChronoUnit.DAYS));
             }

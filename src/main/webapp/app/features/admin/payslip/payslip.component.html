@@ -130,19 +130,55 @@
         }
       </div>
 
-      <!-- YTD footer -->
-      @if (ytdEntries().length) {
-        <div class="hum-payslip__section-title">{{ 'humano.payslip.ytd' | translate }}</div>
-        <table class="hum-table">
-          <tbody>
-            @for (e of ytdEntries(); track e[0]) {
-              <tr>
-                <td>{{ e[0] }}</td>
-                <td class="hum-table__num tabular-nums">{{ e[1] }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+      <!-- Year to date -->
+      @if (ytd(); as y) {
+        @if (y.payslipCount > 0) {
+          <div class="hum-payslip__section-title">{{ 'humano.payslip.ytd' | translate }}</div>
+          <p class="hum-field__hint" style="margin: 0 0 var(--space-3)">
+            {{
+              'humano.payslip.ytdHint'
+                | translate: { n: y.payslipCount, from: (y.year + '-01-01' | date: 'mediumDate'), to: (y.through | date: 'mediumDate') }
+            }}
+          </p>
+          <div class="hum-payslip__ytd">
+            <div>
+              <div class="hum-field__label">{{ 'humano.payslip.grossPay' | translate }}</div>
+              <div class="hum-payslip__ytd-value tabular-nums">{{ y.totalGross | money: p.currencyCode }}</div>
+            </div>
+            <div>
+              <div class="hum-field__label">{{ 'humano.payslip.totalDeductions' | translate }}</div>
+              <div class="hum-payslip__ytd-value tabular-nums">{{ -y.totalDeductions | money: p.currencyCode }}</div>
+            </div>
+            <div>
+              <div class="hum-field__label">{{ 'humano.payslip.netPay' | translate }}</div>
+              <div class="hum-payslip__ytd-value hum-payslip__ytd-value--net tabular-nums">{{ y.totalNet | money: p.currencyCode }}</div>
+            </div>
+          </div>
+          @if (ytdMonths().length > 1) {
+            <table class="hum-table" style="margin-top: var(--space-3)">
+              <thead>
+                <tr>
+                  <th>{{ 'humano.payslip.month' | translate }}</th>
+                  <th class="hum-payslip__ytd-barcol">
+                    <span class="sr-only">{{ 'humano.payslip.netPay' | translate }}</span>
+                  </th>
+                  <th class="hum-table__num">{{ 'humano.payslip.netPay' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of ytdMonths(); track m.month) {
+                  <tr [class.hum-payslip__ytd-current]="m.current">
+                    <td>{{ m.date | date: 'MMMM' }}</td>
+                    <td class="hum-payslip__ytd-barcol">
+                      <div class="hum-progress"><div class="hum-progress__bar" [style.width.%]="m.pct"></div></div>
+                    </td>
+                    <td class="hum-table__num tabular-nums">{{ m.net | money: p.currencyCode }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        }
       }
     </article>
   } @else {

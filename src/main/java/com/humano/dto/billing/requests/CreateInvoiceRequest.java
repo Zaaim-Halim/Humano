@@ -32,5 +32,8 @@ public record CreateInvoiceRequest(
      * resolved discount is subtracted from {@code amount} before tax is computed.
      * Invalid / expired / exhausted coupons return HTTP 400.
      */
-    @Size(max = 50, message = "Coupon code cannot exceed 50 characters") String couponCode
+    @Size(max = 50, message = "Coupon code cannot exceed 50 characters") String couponCode,
+
+    /** What is charged, printed as the invoice's single line; "Manual charge" when empty. */
+    @Size(max = 255, message = "Description cannot exceed 255 characters") String description
 ) {}

@@ -453,12 +453,14 @@ public class PayslipService {
     }
 
     /**
-     * Gets year-to-date earnings summary for an employee.
+     * An employee's year-to-date pay: the payslips of {@code year} whose period ends by
+     * {@code through} (a payslip's own period end, so later months don't count), or the whole
+     * year when {@code through} is null. {@code monthlyNet} is keyed {@code yyyy-MM}, in order.
      */
     @Transactional(value = "tenantTransactionManager", readOnly = true)
-    public Map<String, Object> getYearToDateSummary(UUID employeeId, int year) {
+    public Map<String, Object> getYearToDateSummary(UUID employeeId, int year, LocalDate through) {
         LocalDate yearStart = LocalDate.of(year, 1, 1);
-        LocalDate yearEnd = LocalDate.of(year, 12, 31);
+        LocalDate yearEnd = through != null && through.getYear() == year ? through : LocalDate.of(year, 12, 31);
 
         List<Payslip> payslips = payslipRepository.findAll(
             (Specification<Payslip>) (root, query, cb) ->
@@ -480,17 +482,19 @@ public class PayslipService {
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("employeeId", employeeId);
         summary.put("year", year);
+        summary.put("through", yearEnd);
         summary.put("payslipCount", payslips.size());
         summary.put("totalGross", totalGross);
         summary.put("totalDeductions", totalDeductions);
         summary.put("totalNet", totalNet);
 
-        // Monthly breakdown
+        // Monthly breakdown, by the month each period ends in
         Map<String, BigDecimal> monthlyNet = payslips
             .stream()
             .collect(
                 Collectors.groupingBy(
-                    p -> p.getResult().getPayrollPeriod().getEndDate().getMonth().name(),
+                    p -> java.time.YearMonth.from(p.getResult().getPayrollPeriod().getEndDate()).toString(),
+                    java.util.TreeMap::new,
                     Collectors.reducing(BigDecimal.ZERO, p -> p.getResult().getNet(), BigDecimal::add)
                 )
             );
