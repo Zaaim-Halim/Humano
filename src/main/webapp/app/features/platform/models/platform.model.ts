@@ -20,6 +20,8 @@ export interface PlatformOverview {
     overdueInvoices: number;
     collectedByMonth: MonthValue[];
     mrrByMonth: MonthValue[];
+    /** Of the MRR, what add-ons (extra storage) bring. */
+    addonMrr: number;
   };
   subscriptions: {
     byStatus: Record<string, number>;

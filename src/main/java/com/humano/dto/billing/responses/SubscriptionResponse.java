@@ -26,6 +26,8 @@ public record SubscriptionResponse(
     Instant trialEnd,
     /** Set while a trial that ended without a plan leaves the workspace read-only: when it gets suspended. */
     Instant readOnlyUntil,
+    /** What its add-ons (extra storage) add per month, on top of the plan. */
+    java.math.BigDecimal addonsMonthly,
     String createdBy,
     Instant createdDate,
     String lastModifiedBy,

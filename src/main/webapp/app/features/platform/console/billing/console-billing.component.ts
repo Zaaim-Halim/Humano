@@ -33,11 +33,12 @@ import { SubscriptionType } from '../../models/enums/subscription-type.enum';
 import { Invoice } from '../../models/invoice.model';
 import { Coupon, PlanBreakdown, PlanComparison, PlanFeatureCell, PlanFeatureDef } from '../../models/platform.model';
 import { SubscriptionPlan } from '../../models/subscription-plan.model';
+import { AddonRow } from '../../models/entitlements.model';
 import { PlatformBillingService } from '../../services/platform-billing.service';
 import { PlatformConsoleService } from '../../services/platform-console.service';
 import { SubscriptionPlanService } from '../../services/subscription-plan.service';
 
-type Tab = 'invoices' | 'plans' | 'coupons';
+type Tab = 'invoices' | 'plans' | 'coupons' | 'addons';
 
 type PlanDraft = {
   id: string | null;
@@ -99,13 +100,25 @@ export default class ConsoleBillingComponent {
   protected readonly canManage = computed(() => !!this.account()?.permissions?.includes(Permission.MANAGE_PLATFORM_BILLING));
   protected readonly tab = computed<Tab>(() => {
     const t = this.tabParam();
-    return t === 'plans' || t === 'coupons' ? t : 'invoices';
+    return t === 'plans' || t === 'coupons' || t === 'addons' ? t : 'invoices';
   });
   protected readonly tabs = computed<TabItem[]>(() => [
     { id: 'invoices', label: this.t('humano.console.nav.invoices'), icon: 'receipt' },
     { id: 'plans', label: this.t('humano.console.nav.plans'), icon: 'layers' },
     { id: 'coupons', label: this.t('humano.console.nav.coupons'), icon: 'ticket' },
+    { id: 'addons', label: this.t('humano.console.nav.addons'), icon: 'hard-drive' },
   ]);
+
+  // ---- Add-ons
+  protected readonly addons = signal<AddonRow[] | null>(null);
+  protected readonly addonsError = signal<string | null>(null);
+  /** Monthly add-on revenue from running subscriptions (trials are not billed). */
+  protected readonly addonsMonthly = computed(() =>
+    (this.addons() ?? [])
+      .filter(a => a.subscriptionStatus === 'ACTIVE' || a.subscriptionStatus === 'PAST_DUE')
+      .reduce((s, a) => s + a.monthlyTotal, 0),
+  );
+  protected readonly addonsGb = computed(() => (this.addons() ?? []).reduce((s, a) => s + a.quantity * a.unitSize, 0));
   protected readonly busy = signal(false);
 
   // ---- Invoices
@@ -234,11 +247,25 @@ export default class ConsoleBillingComponent {
       if (t === 'invoices' && this.invoices() === null) this.loadInvoices();
       if (t === 'plans' && this.plans() === null) this.loadPlans();
       if (t === 'coupons' && this.coupons() === null) this.loadCoupons();
+      if (t === 'addons' && this.addons() === null) this.loadAddons();
     });
   }
 
   protected setTab(id: string | undefined): void {
     if (id) void this.router.navigate(['/platform/billing', id]);
+  }
+
+  // ---- Add-ons
+
+  protected loadAddons(): void {
+    this.addonsError.set(null);
+    this.billing.addons().subscribe({
+      next: list => this.addons.set(list),
+      error: (err: unknown) => {
+        this.addonsError.set(normalizeHttpError(err));
+        this.addons.set([]);
+      },
+    });
   }
 
   // ---- Invoices

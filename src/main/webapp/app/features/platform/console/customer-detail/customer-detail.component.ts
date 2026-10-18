@@ -18,12 +18,14 @@ import {
   DrawerComponent,
   FormFieldComponent,
   InputComponent,
+  ProgressComponent,
   SelectComponent,
   SkeletonRowComponent,
   ToastService,
 } from 'app/shared/ui';
 import { MoneyPipe } from 'app/shared/util/format.pipes';
 
+import { CustomerStorage } from '../../models/entitlements.model';
 import { BillingCycle } from '../../models/enums/billing-cycle.enum';
 import { Invoice } from '../../models/invoice.model';
 import { SubscriptionPlan } from '../../models/subscription-plan.model';
@@ -62,6 +64,7 @@ type InvoiceAction = 'pay' | 'overdue' | 'void';
     InputComponent,
     SelectComponent,
     SkeletonRowComponent,
+    ProgressComponent,
     MoneyPipe,
   ],
   templateUrl: './customer-detail.component.html',
@@ -112,6 +115,15 @@ export default class ConsoleCustomerDetailComponent {
   protected readonly confirmCancel = signal(false);
   protected readonly invoiceAction = signal<{ invoice: Invoice; action: InvoiceAction } | null>(null);
 
+  // Storage: extra packs bought on top of the plan.
+  protected readonly storage = signal<CustomerStorage | null>(null);
+  /** The storage editor's draft; null when closed. */
+  protected readonly storageDraft = signal<{ packs: number; price: number } | null>(null);
+  protected readonly storagePct = computed(() => {
+    const s = this.storage();
+    return s?.usedGb != null && s.limitGb ? Math.min(100, (s.usedGb / s.limitGb) * 100) : 0;
+  });
+
   protected readonly planOptions = computed(() =>
     this.plans()
       .filter(p => p.active || p.id === this.subscription()?.subscriptionPlanId)
@@ -133,8 +145,10 @@ export default class ConsoleCustomerDetailComponent {
       sub: this.billing.subscriptionByTenant(id).pipe(catchError(() => of(null))) as Observable<Subscription | null>,
       invoices: this.billing.invoicesByTenant(id).pipe(catchError(() => of([] as Invoice[]))),
       plans: this.plansApi.query({ page: 0, size: 200 }),
+      storage: this.billing.customerStorage(id).pipe(catchError(() => of(null))),
     }).subscribe({
-      next: ({ detail, sub, invoices, plans }) => {
+      next: ({ detail, sub, invoices, plans, storage }) => {
+        this.storage.set(storage);
         this.detail.set(detail);
         this.subscription.set(sub);
         this.invoices.set(invoices);
@@ -151,6 +165,29 @@ export default class ConsoleCustomerDetailComponent {
     } catch {
       return code;
     }
+  }
+
+  // ---- Storage
+
+  protected openStorage(): void {
+    const a = this.storage()?.addon;
+    if (!a) return;
+    this.storageDraft.set({ packs: Math.max(1, a.packs), price: a.packMonthlyPrice ?? a.offerMonthlyPrice });
+  }
+
+  /** Number inputs hand over strings: kept as numbers from here on. */
+  protected patchStorage(field: 'packs' | 'price', value: unknown): void {
+    this.storageDraft.update(d => (d ? { ...d, [field]: Number(value) || 0 } : d));
+  }
+
+  protected saveStorage(): void {
+    const t = this.tenant();
+    const d = this.storageDraft();
+    if (!t || !d) return;
+    const packs = Math.max(0, Math.round(d.packs));
+    this.run(this.billing.setCustomerStorage(t.id, packs, d.price), packs > 0 ? 'storageSet' : 'storageRemoved', () =>
+      this.storageDraft.set(null),
+    );
   }
 
   // ---- Lifecycle

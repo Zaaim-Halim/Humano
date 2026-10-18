@@ -65,3 +65,29 @@ export interface StorageAddon {
   /** Plan types (`PublicPlan.type`) that can have it. */
   availableOnPlanTypes: string[];
 }
+
+/** One customer's add-on, as the owner console lists them (`GET /api/platform/billing/addons`). */
+export interface AddonRow {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  subdomain: string;
+  planName: string;
+  billingCycle: 'MONTHLY' | 'YEARLY';
+  subscriptionStatus: string;
+  featureCode: string;
+  quantity: number;
+  unitSize: number;
+  unitPrice: number;
+  monthlyTotal: number;
+  billedUntil: string | null;
+  since: string | null;
+}
+
+/** A customer's storage in the owner console: packs, limit with them, usage (null when unreadable). */
+export interface CustomerStorage {
+  planName: string | null;
+  addon: StorageAddon;
+  usedGb: number | null;
+  limitGb: number | null;
+}

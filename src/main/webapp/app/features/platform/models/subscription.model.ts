@@ -22,6 +22,8 @@ export interface Subscription extends AuditFields {
   trialEnd: string | null;
   /** Set while a trial that ended without a plan leaves the workspace read-only: when it gets suspended. */
   readOnlyUntil: string | null;
+  /** What its add-ons (extra storage) add per month, on top of the plan. */
+  addonsMonthly: number | null;
 }
 
 export interface UpdateSubscriptionRequest {

@@ -2,6 +2,7 @@ package com.humano.service.platform;
 
 import com.humano.domain.billing.Invoice;
 import com.humano.domain.billing.Subscription;
+import com.humano.domain.billing.SubscriptionAddon;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.billing.InvoiceStatus;
@@ -13,6 +14,7 @@ import com.humano.dto.platform.PlatformOverview.AttentionItem;
 import com.humano.dto.platform.PlatformOverview.MonthValue;
 import com.humano.dto.platform.PlatformOverview.PlanBreakdown;
 import com.humano.repository.billing.InvoiceRepository;
+import com.humano.repository.billing.SubscriptionAddonRepository;
 import com.humano.repository.billing.SubscriptionPlanRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
@@ -55,6 +57,7 @@ public class PlatformMetricsService {
 
     private final TenantRepository tenantRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionAddonRepository addonRepository;
     private final InvoiceRepository invoiceRepository;
     private final SubscriptionPlanRepository planRepository;
     private final String currency;
@@ -64,8 +67,10 @@ public class PlatformMetricsService {
         SubscriptionRepository subscriptionRepository,
         InvoiceRepository invoiceRepository,
         SubscriptionPlanRepository planRepository,
+        SubscriptionAddonRepository addonRepository,
         @Value("${humano.billing.currency:USD}") String currency
     ) {
+        this.addonRepository = addonRepository;
         this.tenantRepository = tenantRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.invoiceRepository = invoiceRepository;
@@ -96,7 +101,17 @@ public class PlatformMetricsService {
 
         // ---- Recurring revenue
         List<Subscription> billable = subscriptions.stream().filter(s -> BILLABLE.contains(s.getStatus())).toList();
-        BigDecimal mrr = billable.stream().map(PlatformMetricsService::monthlyValue).reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Add-ons (extra storage) are recurring too: billed monthly on top of the plan.
+        List<SubscriptionAddon> addons = addonRepository.findAll();
+        Map<UUID, BigDecimal> addonsBySubscription = new HashMap<>();
+        for (SubscriptionAddon a : addons) {
+            addonsBySubscription.merge(a.getSubscription().getId(), a.monthlyPrice(), BigDecimal::add);
+        }
+        BigDecimal addonMrr = billable
+            .stream()
+            .map(s -> addonsBySubscription.getOrDefault(s.getId(), BigDecimal.ZERO))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal mrr = billable.stream().map(PlatformMetricsService::monthlyValue).reduce(BigDecimal.ZERO, BigDecimal::add).add(addonMrr);
         long paying = billable.stream().filter(s -> monthlyValue(s).signum() > 0).map(s -> s.getTenant().getId()).distinct().count();
         BigDecimal arpa = paying == 0 ? BigDecimal.ZERO : mrr.divide(BigDecimal.valueOf(paying), 2, RoundingMode.HALF_UP);
 
@@ -109,7 +124,7 @@ public class PlatformMetricsService {
                 .filter(s -> s.getStatus() != SubscriptionStatus.TRIAL && s.getStatus() != SubscriptionStatus.PENDING_PAYMENT)
                 .filter(s -> s.getStartDate() != null && s.getStartDate().isBefore(end))
                 .filter(s -> !ENDED.contains(s.getStatus()) || (s.getEndDate() != null && s.getEndDate().isAfter(end)))
-                .map(PlatformMetricsService::monthlyValue)
+                .map(s -> monthlyValue(s).add(addonsBefore(addons, s, end)))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
             mrrByMonth.put(m, total);
         }
@@ -209,7 +224,8 @@ public class PlatformMetricsService {
                 scale(overdue),
                 overdueCount,
                 series(collected),
-                series(mrrByMonth)
+                series(mrrByMonth),
+                scale(addonMrr)
             ),
             new PlatformOverview.Subscriptions(subsByStatus, trials, trialsEnding, churned, churnRate),
             new PlatformOverview.SelfServe(selfServe.size(), ready, converted, failed),
@@ -253,6 +269,16 @@ public class PlatformMetricsService {
     static BigDecimal monthlyValue(Subscription s) {
         BigDecimal price = planPrice(s.getSubscriptionPlan());
         return s.getBillingCycle() == BillingCycle.YEARLY ? price.multiply(YEARLY_FACTOR) : price;
+    }
+
+    /** What a subscription's add-ons bought before {@code end} added per month. */
+    private static BigDecimal addonsBefore(List<SubscriptionAddon> addons, Subscription s, Instant end) {
+        return addons
+            .stream()
+            .filter(a -> a.getSubscription().getId().equals(s.getId()))
+            .filter(a -> a.getCreatedDate() == null || a.getCreatedDate().isBefore(end))
+            .map(SubscriptionAddon::monthlyPrice)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private static BigDecimal planPrice(SubscriptionPlan plan) {

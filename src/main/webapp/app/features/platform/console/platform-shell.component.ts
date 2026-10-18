@@ -82,6 +82,13 @@ const CONSOLE_NAV: { headingKey?: string; items: ConsoleNavItem[] }[] = [
         link: '/platform/billing/coupons',
         keywords: 'discount promo',
       },
+      {
+        id: 'addons',
+        labelKey: 'humano.console.nav.addons',
+        icon: 'hard-drive',
+        link: '/platform/billing/addons',
+        keywords: 'extra storage add-on packs',
+      },
     ],
   },
   {

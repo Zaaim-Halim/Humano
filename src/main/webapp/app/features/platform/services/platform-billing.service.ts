@@ -9,6 +9,7 @@ import { createRequestOption } from 'app/core/request/request-util';
 import { Invoice } from '../models/invoice.model';
 import { Coupon, CreateCouponRequest, FeatureRequest, PlanComparison, PlanFeatureCell, PlanFeatureDef } from '../models/platform.model';
 import { CreateSubscriptionPlanRequest, SubscriptionPlan, UpdateSubscriptionPlanRequest } from '../models/subscription-plan.model';
+import { AddonRow, CustomerStorage, StorageAddon } from '../models/entitlements.model';
 import { Subscription, UpdateSubscriptionRequest } from '../models/subscription.model';
 
 /**
@@ -26,6 +27,21 @@ export class PlatformBillingService {
   // ---- Reads
   subscriptions(size = 1000): Observable<Page<Subscription>> {
     return this.http.get<Page<Subscription>>(`${this.url}/subscriptions`, { params: createRequestOption({ size }) });
+  }
+
+  /** Every customer's add-ons (extra storage), newest first. */
+  addons(): Observable<AddonRow[]> {
+    return this.http.get<AddonRow[]>(`${this.url}/addons`);
+  }
+
+  /** A customer's storage: packs held, the limit with them, and what is used. */
+  customerStorage(tenantId: string): Observable<CustomerStorage> {
+    return this.http.get<CustomerStorage>(`${this.url}/addons/storage/by-tenant/${tenantId}`);
+  }
+
+  /** Sets a customer's extra storage packs (0 removes them), optionally at a negotiated monthly price per pack. */
+  setCustomerStorage(tenantId: string, packs: number, unitPrice: number | null): Observable<StorageAddon> {
+    return this.http.put<StorageAddon>(`${this.url}/addons/storage/by-tenant/${tenantId}`, { packs, unitPrice });
   }
 
   subscriptionByTenant(tenantId: string): Observable<Subscription> {

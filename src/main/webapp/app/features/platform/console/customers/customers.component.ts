@@ -36,7 +36,9 @@ export function monthlyValue(sub: Subscription | undefined, plans: Map<string, S
   if (!sub?.subscriptionPlanId || !['ACTIVE', 'PAST_DUE'].includes(sub.status)) return 0;
   const plan = plans.get(sub.subscriptionPlanId);
   const price = Number(plan?.basePrice ?? plan?.price ?? 0);
-  return sub.billingCycle === BillingCycle.YEARLY ? price * 0.85 : price;
+  const plan_ = sub.billingCycle === BillingCycle.YEARLY ? price * 0.85 : price;
+  // Add-ons (extra storage) are billed monthly on top of the plan.
+  return plan_ + (sub.addonsMonthly ?? 0);
 }
 
 interface CustomerRow extends Record<string, unknown> {

@@ -6,12 +6,14 @@ import com.humano.dto.billing.requests.CreateInvoiceRequest;
 import com.humano.dto.billing.requests.CreateSubscriptionPlanRequest;
 import com.humano.dto.billing.requests.CreateSubscriptionRequest;
 import com.humano.dto.billing.requests.PlanFeatureItem;
+import com.humano.dto.billing.requests.PlatformStorageAddonRequest;
 import com.humano.dto.billing.requests.UpdateSubscriptionPlanRequest;
 import com.humano.dto.billing.requests.UpdateSubscriptionRequest;
 import com.humano.dto.billing.responses.CouponResponse;
 import com.humano.dto.billing.responses.FeatureResponse;
 import com.humano.dto.billing.responses.InvoiceResponse;
 import com.humano.dto.billing.responses.PaymentResponse;
+import com.humano.dto.billing.responses.StorageAddonResponse;
 import com.humano.dto.billing.responses.SubscriptionPlanResponse;
 import com.humano.dto.billing.responses.SubscriptionResponse;
 import com.humano.security.PermissionsConstants;
@@ -22,6 +24,7 @@ import com.humano.service.billing.InvoiceService;
 import com.humano.service.billing.PaymentService;
 import com.humano.service.billing.SubscriptionPlanService;
 import com.humano.service.billing.SubscriptionService;
+import com.humano.service.billing.entitlement.StorageAddonService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.net.URI;
@@ -58,6 +61,7 @@ public class PlatformBillingAdminResource {
     private final InvoiceService invoiceService;
     private final PaymentService paymentService;
     private final FeatureService featureService;
+    private final StorageAddonService storageAddonService;
 
     public PlatformBillingAdminResource(
         SubscriptionPlanService planService,
@@ -65,9 +69,11 @@ public class PlatformBillingAdminResource {
         SubscriptionService subscriptionService,
         InvoiceService invoiceService,
         PaymentService paymentService,
-        FeatureService featureService
+        FeatureService featureService,
+        StorageAddonService storageAddonService
     ) {
         this.featureService = featureService;
+        this.storageAddonService = storageAddonService;
         this.planService = planService;
         this.couponService = couponService;
         this.subscriptionService = subscriptionService;
@@ -76,6 +82,12 @@ public class PlatformBillingAdminResource {
     }
 
     // ---- Plans
+
+    /** Sets a customer's extra storage packs (0 removes them), optionally at a negotiated price per pack. */
+    @PutMapping("/addons/storage/by-tenant/{tenantId}")
+    public StorageAddonResponse setCustomerStorage(@PathVariable UUID tenantId, @Valid @RequestBody PlatformStorageAddonRequest request) {
+        return storageAddonService.setPacksAsPlatform(tenantId, request.packs(), request.unitPrice());
+    }
 
     @PostMapping("/plans")
     public ResponseEntity<SubscriptionPlanResponse> createPlan(@Valid @RequestBody CreateSubscriptionPlanRequest request) {

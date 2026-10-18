@@ -13,6 +13,12 @@ import org.springframework.stereotype.Repository;
 public interface SubscriptionAddonRepository extends JpaRepository<SubscriptionAddon, UUID> {
     List<SubscriptionAddon> findBySubscriptionId(UUID subscriptionId);
 
+    /** Every add-on with its subscription, plan and customer, newest first (owner console). */
+    @Query(
+        "SELECT a FROM SubscriptionAddon a JOIN FETCH a.subscription s JOIN FETCH s.tenant JOIN FETCH s.subscriptionPlan ORDER BY a.createdDate DESC"
+    )
+    List<SubscriptionAddon> findAllWithSubscription();
+
     Optional<SubscriptionAddon> findBySubscriptionIdAndFeatureCode(UUID subscriptionId, String featureCode);
 
     /**

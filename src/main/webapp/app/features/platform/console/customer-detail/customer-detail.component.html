@@ -171,6 +171,68 @@
       </section>
     </div>
 
+    <!-- Storage -->
+    @if (storage(); as st) {
+      <section class="hum-set-card" style="margin-top: var(--space-4)">
+        <header class="hum-set-card__head-row">
+          <div>
+            <h3>{{ 'humano.console.customer.storage' | translate }}</h3>
+            <p>{{ 'humano.console.customer.storageHint' | translate }}</p>
+          </div>
+          @if (canManageBilling() && st.addon.available) {
+            <hum-button variant="secondary" size="sm" icon="hard-drive" (click)="openStorage()">{{
+              (st.addon.packs > 0 ? 'humano.console.customer.storageChange' : 'humano.console.customer.storageAdd') | translate
+            }}</hum-button>
+          }
+        </header>
+        <div class="hum-plan-meter" style="margin-bottom: var(--space-4)">
+          <div class="hum-plan-meter__head">
+            <strong>{{ 'humano.console.customer.storageUsed' | translate }}</strong>
+            <span class="tabular-nums">
+              {{ st.usedGb !== null ? st.usedGb + ' GB' : '—' }}
+              @if (st.limitGb !== null) {
+                / {{ st.limitGb }} GB
+              } @else {
+                · {{ 'humano.console.customer.noLimit' | translate }}
+              }
+            </span>
+          </div>
+          @if (st.limitGb !== null) {
+            <hum-progress [value]="storagePct()" [max]="100" [tone]="storagePct() >= 90 ? 'warning' : 'brand'" />
+          }
+        </div>
+        <dl class="hum-con-facts">
+          <div>
+            <dt>{{ 'humano.console.customer.extraStorage' | translate }}</dt>
+            <dd class="tabular-nums">
+              @if (st.addon.packs > 0) {
+                {{ st.addon.packs }} × {{ st.addon.packGb }} GB
+              } @else {
+                {{ 'humano.console.customer.none' | translate }}
+              }
+            </dd>
+          </div>
+          @if (st.addon.packs > 0) {
+            <div>
+              <dt>{{ 'humano.console.customer.perPack' | translate }}</dt>
+              <dd class="tabular-nums">{{ st.addon.packMonthlyPrice | money: currency() }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'humano.console.customer.addonMonthly' | translate }}</dt>
+              <dd class="tabular-nums">
+                <strong>{{ st.addon.monthlyTotal | money: currency() }}</strong>
+              </dd>
+            </div>
+          }
+        </dl>
+        @if (!st.addon.available) {
+          <p class="hum-kpi__hint" style="margin-top: var(--space-3)">
+            {{ 'humano.console.customer.storageNotOnPlan' | translate: { types: st.addon.availableOnPlanTypes.join(', ') } }}
+          </p>
+        }
+      </section>
+    }
+
     <!-- Invoices -->
     <section class="hum-set-card" style="margin-top: var(--space-4)">
       <header class="hum-set-card__head-row">
@@ -373,3 +435,35 @@
     <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
   }
 </div>
+
+<!-- Extra storage editor -->
+<hum-dialog
+  [open]="storageDraft() !== null"
+  [title]="'humano.console.customer.storageDialog' | translate"
+  [description]="'humano.console.customer.storageDialogHint' | translate: { size: storage()?.addon?.packGb }"
+  hasFooter
+  (closed)="storageDraft.set(null)"
+>
+  @if (storageDraft(); as d) {
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3)">
+      <hum-form-field [label]="'humano.console.customer.packs' | translate" controlId="cs-packs">
+        <hum-input inputId="cs-packs" type="number" [ngModel]="d.packs" (ngModelChange)="patchStorage('packs', $event)" name="packs" />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.console.customer.perPack' | translate" controlId="cs-price">
+        <hum-input inputId="cs-price" type="number" [ngModel]="d.price" (ngModelChange)="patchStorage('price', $event)" name="price" />
+      </hum-form-field>
+    </div>
+    <p class="hum-kpi__hint">
+      {{
+        'humano.console.customer.storageSummary'
+          | translate: { gb: d.packs * (storage()?.addon?.packGb ?? 0), monthly: (d.packs * d.price | money: currency()) }
+      }}
+    </p>
+  }
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" icon="x" (click)="storageDraft.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="busy()" (click)="saveStorage()">{{
+      'humano.console.customer.storageSave' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>

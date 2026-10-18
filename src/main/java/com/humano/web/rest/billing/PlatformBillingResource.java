@@ -1,5 +1,7 @@
 package com.humano.web.rest.billing;
 
+import com.humano.dto.billing.responses.AddonRowResponse;
+import com.humano.dto.billing.responses.CustomerStorageResponse;
 import com.humano.dto.billing.responses.InvoiceResponse;
 import com.humano.dto.billing.responses.PaymentResponse;
 import com.humano.dto.billing.responses.SubscriptionResponse;
@@ -8,6 +10,7 @@ import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.InvoiceService;
 import com.humano.service.billing.PaymentService;
 import com.humano.service.billing.SubscriptionService;
+import com.humano.service.billing.entitlement.StorageAddonService;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -30,7 +33,15 @@ public class PlatformBillingResource {
     private final InvoiceService invoiceService;
     private final PaymentService paymentService;
 
-    public PlatformBillingResource(SubscriptionService subscriptionService, InvoiceService invoiceService, PaymentService paymentService) {
+    private final StorageAddonService storageAddonService;
+
+    public PlatformBillingResource(
+        SubscriptionService subscriptionService,
+        InvoiceService invoiceService,
+        PaymentService paymentService,
+        StorageAddonService storageAddonService
+    ) {
+        this.storageAddonService = storageAddonService;
         this.subscriptionService = subscriptionService;
         this.invoiceService = invoiceService;
         this.paymentService = paymentService;
@@ -44,6 +55,18 @@ public class PlatformBillingResource {
     @GetMapping("/subscriptions/by-tenant/{tenantId}")
     public ResponseEntity<SubscriptionResponse> getSubscriptionByTenant(@PathVariable UUID tenantId) {
         return ResponseEntity.ok(subscriptionService.getSubscriptionByTenant(tenantId));
+    }
+
+    /** Every customer's add-ons (extra storage), newest first. */
+    @GetMapping("/addons")
+    public List<AddonRowResponse> listAddons() {
+        return storageAddonService.listAll();
+    }
+
+    /** A customer's storage: extra packs held, the plan's limit with them, and what is used. */
+    @GetMapping("/addons/storage/by-tenant/{tenantId}")
+    public CustomerStorageResponse getCustomerStorage(@PathVariable UUID tenantId) {
+        return storageAddonService.customerStorage(tenantId);
     }
 
     @GetMapping("/invoices")

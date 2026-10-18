@@ -14,6 +14,7 @@ import com.humano.domain.enumeration.billing.SubscriptionType;
 import com.humano.domain.tenant.Tenant;
 import com.humano.repository.billing.SubscriptionAddonRepository;
 import com.humano.repository.billing.SubscriptionRepository;
+import com.humano.repository.tenant.TenantRepository;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -33,8 +34,10 @@ class StorageAddonServiceTest {
     private final StorageQuotaService quota = mock(StorageQuotaService.class);
     private final EntitlementService entitlements = mock(EntitlementService.class);
     private final StorageAddonOffer offer = new StorageAddonOffer(100, new BigDecimal("25"), Set.of(SubscriptionType.ENTERPRISE));
+    private final TenantRepository tenants = mock(TenantRepository.class);
     private final StorageAddonService service = new StorageAddonService(
         subscriptions,
+        tenants,
         addons,
         offer,
         quota,
@@ -69,6 +72,19 @@ class StorageAddonServiceTest {
         assertThat(response.packs()).isEqualTo(2);
         assertThat(response.monthlyTotal()).isEqualByComparingTo("50");
         verify(entitlements).evict("acme");
+    }
+
+    @Test
+    void platformCanSetANegotiatedPrice() {
+        Tenant tenant = subscription.getTenant();
+        when(tenants.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(addons.findBySubscriptionIdAndFeatureCode(subscription.getId(), FeatureCodes.STORAGE)).thenReturn(Optional.empty());
+
+        var response = service.setPacksAsPlatform(tenantId, 4, new BigDecimal("15"));
+
+        assertThat(response.packs()).isEqualTo(4);
+        assertThat(response.packMonthlyPrice()).isEqualByComparingTo("15");
+        assertThat(response.monthlyTotal()).isEqualByComparingTo("60");
     }
 
     @Test

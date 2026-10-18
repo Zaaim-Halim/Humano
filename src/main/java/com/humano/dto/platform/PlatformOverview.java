@@ -37,7 +37,9 @@ public record PlatformOverview(
         BigDecimal overdue,
         long overdueInvoices,
         List<MonthValue> collectedByMonth,
-        List<MonthValue> mrrByMonth
+        List<MonthValue> mrrByMonth,
+        /** Of the MRR, what add-ons (extra storage) bring. */
+        BigDecimal addonMrr
     ) {}
 
     /** Subscription health: status mix, trials ending soon and churn over the last 30 days. */

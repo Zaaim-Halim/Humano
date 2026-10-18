@@ -21,7 +21,8 @@
           "revenue": "Revenue",
           "admin": "Administration"
         },
-        "demos": "Demos"
+        "demos": "Demos",
+        "addons": "Add-ons"
       },
       "cycle": {
         "MONTHLY": "Monthly",
@@ -74,7 +75,8 @@
         "churn": "Churn (30 days)",
         "churnHint": "{{ n }} cancelled",
         "outstanding": "Outstanding",
-        "overdue": "{{ amount }} overdue · {{ n }} invoices"
+        "overdue": "{{ amount }} overdue · {{ n }} invoices",
+        "mrrAddons": "incl. {{ amount }} add-ons"
       },
       "overview": {
         "greeting": {
@@ -200,8 +202,26 @@
             "pay": "Invoice marked as paid.",
             "overdue": "Invoice marked as overdue.",
             "void": "Invoice voided."
-          }
-        }
+          },
+          "storageSet": "Extra storage updated",
+          "storageRemoved": "Extra storage removed"
+        },
+        "storage": "Storage",
+        "storageHint": "What the workspace stores, its limit, and extra storage bought on top of the plan.",
+        "storageUsed": "Storage used",
+        "noLimit": "no limit",
+        "extraStorage": "Extra storage",
+        "none": "None",
+        "perPack": "Price per pack / month",
+        "addonMonthly": "Added each month",
+        "storageAdd": "Add storage",
+        "storageChange": "Change extra storage",
+        "storageNotOnPlan": "Extra storage can be added on these plans: {{ types }}. Change the plan first.",
+        "storageDialog": "Extra storage",
+        "storageDialogHint": "Packs of {{ size }} GB, billed monthly on top of the subscription. Set a price for a negotiated deal; it applies to all their packs. 0 packs removes it.",
+        "packs": "Packs",
+        "storageSummary": "{{ gb }} GB extra · {{ monthly }} a month",
+        "storageSave": "Save"
       },
       "invoices": {
         "number": "Invoice",
@@ -498,6 +518,23 @@
           "empty": "No open demo requests",
           "emptyHint": "Requests from the website's “Book a demo” form show up here."
         }
+      },
+      "addons": {
+        "mrr": "Add-on MRR",
+        "mrrHint": "Extra storage on running subscriptions, billed monthly",
+        "customers": "Customers with add-ons",
+        "sold": "Extra storage sold",
+        "hint": "Extra storage customers bought on top of their plan. Monthly plans carry it on their renewal invoice; yearly plans get a monthly add-on invoice.",
+        "customer": "Customer",
+        "plan": "Plan",
+        "storage": "Extra storage",
+        "perPack": "Per pack / month",
+        "monthly": "Monthly",
+        "billing": "Billing",
+        "ownInvoice": "Own monthly invoice · billed until {{ date }}",
+        "onRenewal": "On the monthly renewal invoice",
+        "empty": "No add-ons yet",
+        "emptyHint": "When customers buy extra storage, or you add it for them from their page, it shows here."
       }
     }
   }

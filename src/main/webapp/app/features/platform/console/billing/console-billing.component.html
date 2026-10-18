@@ -281,6 +281,79 @@
       }
 
       <!-- ======================= Coupons ======================= -->
+      @case ('addons') {
+        <div class="hum-insights__kpis" style="margin-bottom: var(--space-4)">
+          <div class="hum-kpi hum-kpi--hero">
+            <div class="hum-kpi__label"><lucide-icon name="hard-drive" [size]="14" />{{ 'humano.console.addons.mrr' | translate }}</div>
+            <div class="hum-kpi__value">{{ addonsMonthly() | money: currency() }}</div>
+            <div class="hum-kpi__hint">{{ 'humano.console.addons.mrrHint' | translate }}</div>
+          </div>
+          <div class="hum-kpi">
+            <div class="hum-kpi__label">
+              <lucide-icon name="building-2" [size]="14" />{{ 'humano.console.addons.customers' | translate }}
+            </div>
+            <div class="hum-kpi__value">{{ addons()?.length ?? 0 }}</div>
+          </div>
+          <div class="hum-kpi">
+            <div class="hum-kpi__label"><lucide-icon name="database" [size]="14" />{{ 'humano.console.addons.sold' | translate }}</div>
+            <div class="hum-kpi__value tabular-nums">{{ addonsGb() }} GB</div>
+          </div>
+        </div>
+        <p class="hum-kpi__hint" style="margin: 0 0 var(--space-3)">{{ 'humano.console.addons.hint' | translate }}</p>
+        @if (addons() === null) {
+          <hum-skeleton-row /><hum-skeleton-row />
+        } @else if (addonsError(); as e) {
+          <hum-alert tone="danger" [title]="e" />
+        } @else if (addons()!.length) {
+          <div class="hum-con-table-wrap hum-set-card" style="padding: 0">
+            <table class="hum-con-table">
+              <thead>
+                <tr>
+                  <th>{{ 'humano.console.addons.customer' | translate }}</th>
+                  <th>{{ 'humano.console.addons.plan' | translate }}</th>
+                  <th>{{ 'humano.console.addons.storage' | translate }}</th>
+                  <th class="hum-table__num">{{ 'humano.console.addons.perPack' | translate }}</th>
+                  <th class="hum-table__num">{{ 'humano.console.addons.monthly' | translate }}</th>
+                  <th>{{ 'humano.console.addons.billing' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of addons(); track a.id) {
+                  <tr>
+                    <td>
+                      <a class="hum-linkbtn" [routerLink]="['/platform/customers', a.tenantId]">{{ a.tenantName }}</a>
+                      <div class="hum-kpi__hint">{{ a.subdomain }}</div>
+                    </td>
+                    <td>
+                      {{ a.planName }} · {{ 'humano.console.cycle.' + a.billingCycle | translate }}
+                      <div><hum-badge [status]="a.subscriptionStatus" /></div>
+                    </td>
+                    <td class="tabular-nums">{{ a.quantity }} × {{ a.unitSize }} GB = {{ a.quantity * a.unitSize }} GB</td>
+                    <td class="hum-table__num tabular-nums">{{ a.unitPrice | money: currency() }}</td>
+                    <td class="hum-table__num tabular-nums">
+                      <strong>{{ a.monthlyTotal | money: currency() }}</strong>
+                    </td>
+                    <td>
+                      @if (a.billingCycle === 'YEARLY') {
+                        {{ 'humano.console.addons.ownInvoice' | translate: { date: (a.billedUntil | date: 'mediumDate') } }}
+                      } @else {
+                        {{ 'humano.console.addons.onRenewal' | translate }}
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <hum-empty-state
+            icon="hard-drive"
+            [title]="'humano.console.addons.empty' | translate"
+            [description]="'humano.console.addons.emptyHint' | translate"
+          />
+        }
+      }
+
       @case ('coupons') {
         <div class="hum-con-toolbar">
           <p class="hum-kpi__hint" style="margin: 0">{{ 'humano.console.coupons.hint' | translate }}</p>

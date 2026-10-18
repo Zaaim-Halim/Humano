@@ -1,6 +1,7 @@
 package com.humano.service.billing;
 
 import com.humano.domain.billing.Subscription;
+import com.humano.domain.billing.SubscriptionAddon;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.billing.SubscriptionStatus;
 import com.humano.domain.enumeration.tenant.TenantStatus;
@@ -8,6 +9,7 @@ import com.humano.domain.tenant.Tenant;
 import com.humano.dto.billing.requests.CreateSubscriptionRequest;
 import com.humano.dto.billing.requests.UpdateSubscriptionRequest;
 import com.humano.dto.billing.responses.SubscriptionResponse;
+import com.humano.repository.billing.SubscriptionAddonRepository;
 import com.humano.repository.billing.SubscriptionPlanRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
@@ -39,19 +41,22 @@ public class SubscriptionService {
     private final TenantRepository tenantRepository;
     private final CouponService couponService;
     private final EntitlementService entitlementService;
+    private final SubscriptionAddonRepository addonRepository;
 
     public SubscriptionService(
         SubscriptionRepository subscriptionRepository,
         SubscriptionPlanRepository subscriptionPlanRepository,
         TenantRepository tenantRepository,
         CouponService couponService,
-        EntitlementService entitlementService
+        EntitlementService entitlementService,
+        SubscriptionAddonRepository addonRepository
     ) {
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionPlanRepository = subscriptionPlanRepository;
         this.tenantRepository = tenantRepository;
         this.couponService = couponService;
         this.entitlementService = entitlementService;
+        this.addonRepository = addonRepository;
     }
 
     /**
@@ -275,6 +280,11 @@ public class SubscriptionService {
             subscription.getTrialStart(),
             subscription.getTrialEnd(),
             readOnlyUntil(subscription),
+            addonRepository
+                .findBySubscriptionId(subscription.getId())
+                .stream()
+                .map(SubscriptionAddon::monthlyPrice)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add),
             subscription.getCreatedBy(),
             subscription.getCreatedDate(),
             subscription.getLastModifiedBy(),

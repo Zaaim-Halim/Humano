@@ -16,6 +16,9 @@
             <span class="hum-delta" [class.is-up]="delta > 0" [class.is-down]="delta < 0">{{ delta > 0 ? '+' : '' }}{{ delta }}%</span>
           }
           {{ 'humano.console.kpi.mrrHint' | translate }}
+          @if (d.revenue.addonMrr > 0) {
+            · {{ 'humano.console.kpi.mrrAddons' | translate: { amount: (d.revenue.addonMrr | money: d.currency) } }}
+          }
         </div>
       </div>
       <div class="hum-kpi">
