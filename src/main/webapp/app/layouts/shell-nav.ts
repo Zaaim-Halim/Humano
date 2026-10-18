@@ -1,4 +1,5 @@
 import { Permission } from 'app/config/permission.constants';
+import { PlanFeature } from 'app/features/platform/models/entitlements.model';
 
 /**
  * Single source of truth for the authenticated navigation. Both the sidebar
@@ -25,6 +26,11 @@ export interface ShellNavItem {
   keywords?: string;
   /** Permissions allowed to see this item (any-of); omit = any authenticated user. */
   permissions?: string[];
+  /**
+   * Plan feature the screen belongs to (`PlanFeature`). Outside the plan the item stays (the module
+   * is read-only, its data still viewable) but is marked, and the screen says why.
+   */
+  feature?: string;
 }
 
 export interface ShellNavGroup {
@@ -121,7 +127,14 @@ export const SHELL_NAV: ShellNavGroup[] = [
     headingKey: 'humano.nav.groups.timeLeave',
     items: [
       { id: 'leave', labelKey: 'humano.nav.leave', icon: 'palmtree', link: '/leave', keywords: 'holiday vacation pto absence' },
-      { id: 'timesheets', labelKey: 'humano.nav.timesheets', icon: 'clock', link: '/timesheets', keywords: 'hours attendance' },
+      {
+        id: 'timesheets',
+        labelKey: 'humano.nav.timesheets',
+        icon: 'clock',
+        link: '/timesheets',
+        keywords: 'hours attendance',
+        feature: PlanFeature.TIMESHEETS,
+      },
     ],
   },
   {
@@ -135,6 +148,7 @@ export const SHELL_NAV: ShellNavGroup[] = [
         link: '/payroll/runs',
         keywords: 'payroll salary process',
         permissions: [Permission.VIEW_PAYROLL_RUN],
+        feature: PlanFeature.PAYROLL,
       },
       {
         id: 'pay-rules',
@@ -143,6 +157,7 @@ export const SHELL_NAV: ShellNavGroup[] = [
         link: '/payroll/pay-rules',
         keywords: 'formula rule pay component calculation tax',
         permissions: [Permission.MANAGE_PAY_COMPONENTS],
+        feature: PlanFeature.PAYROLL,
       },
       {
         id: 'payslips',
@@ -151,6 +166,7 @@ export const SHELL_NAV: ShellNavGroup[] = [
         link: '/payroll/payslips',
         keywords: 'salary slip pay statement',
         permissions: [Permission.VIEW_PAYSLIPS],
+        feature: PlanFeature.PAYROLL,
       },
     ],
   },

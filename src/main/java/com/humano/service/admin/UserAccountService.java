@@ -12,6 +12,8 @@ import com.humano.dto.admin.responses.UserResponse;
 import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.PersistentTokenRepository;
 import com.humano.repository.shared.UserRepository;
+import com.humano.service.billing.entitlement.EntitlementService;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Instant;
@@ -55,6 +57,7 @@ public class UserAccountService {
     private final PasswordEncoder passwordEncoder;
     private final TenantIteration tenantIteration;
     private final MeterRegistry meterRegistry;
+    private final EntitlementService entitlementService;
 
     public UserAccountService(
         UserRepository userRepository,
@@ -62,7 +65,8 @@ public class UserAccountService {
         PersistentTokenRepository persistentTokenRepository,
         PasswordEncoder passwordEncoder,
         TenantIteration tenantIteration,
-        MeterRegistry meterRegistry
+        MeterRegistry meterRegistry,
+        EntitlementService entitlementService
     ) {
         this.userRepository = userRepository;
         this.authorityRepository = authorityRepository;
@@ -70,6 +74,7 @@ public class UserAccountService {
         this.passwordEncoder = passwordEncoder;
         this.tenantIteration = tenantIteration;
         this.meterRegistry = meterRegistry;
+        this.entitlementService = entitlementService;
     }
 
     /**
@@ -103,7 +108,27 @@ public class UserAccountService {
         return target;
     }
 
+    /**
+     * Refuses (403, plan limit) when saving these roles would give one more person an HR or payroll
+     * admin seat than the plan allows. Someone who already holds a seat keeps it; deactivated people
+     * take none.
+     *
+     * @param userId      the person, or {@code null} for someone not created yet
+     * @param authorities the roles they will hold
+     * @param activated   whether they will be active
+     */
+    public void checkAdminSeat(java.util.UUID userId, java.util.Collection<String> authorities, boolean activated) {
+        if (!activated || authorities == null || java.util.Collections.disjoint(authorities, FeatureCodes.SEAT_ROLES)) {
+            return;
+        }
+        if (userId != null && userRepository.holdsActivatedAny(userId, FeatureCodes.SEAT_ROLES)) {
+            return;
+        }
+        entitlementService.checkOneMore(FeatureCodes.ADMIN_SEATS, userRepository.countActivatedHoldingAny(FeatureCodes.SEAT_ROLES));
+    }
+
     private void applyNewUserDefaults(User user, CreateUserRequest request) {
+        checkAdminSeat(null, request.authorities(), true);
         user.setLogin(request.login().toLowerCase());
         user.setFirstName(request.firstName());
         user.setLastName(request.lastName());
@@ -138,6 +163,7 @@ public class UserAccountService {
         return userRepository
             .findById(request.id())
             .map(user -> {
+                checkAdminSeat(user.getId(), request.authorities(), request.activated());
                 user.setLogin(request.login().toLowerCase());
                 user.setFirstName(request.firstName());
                 user.setLastName(request.lastName());

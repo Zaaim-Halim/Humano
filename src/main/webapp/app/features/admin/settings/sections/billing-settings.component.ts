@@ -17,10 +17,25 @@ import {
   Subscription,
   SubscriptionPlan,
   SubscriptionPlanService,
+  PLAN_COUNTERS,
+  PLAN_MODULES,
+  PlanFeature,
+  StorageAddon,
   Tenant,
 } from 'app/features/platform';
-import { AlertComponent, BadgeComponent, ButtonComponent, DialogComponent, SkeletonRowComponent, ToastService } from 'app/shared/ui';
+import {
+  AlertComponent,
+  BadgeComponent,
+  ButtonComponent,
+  DialogComponent,
+  IconButtonComponent,
+  ProgressComponent,
+  SkeletonRowComponent,
+  ToastService,
+} from 'app/shared/ui';
+import { SubscriptionStatus } from 'app/features/platform/models/enums/subscription-status.enum';
 import { MoneyPipe } from 'app/shared/util/format.pipes';
+import { formatPlanAmount } from 'app/shared/util/plan-units';
 
 /** Yearly billing: 12 months at 85%, as the server bills it. */
 const YEARLY_FACTOR = 0.85;
@@ -55,6 +70,8 @@ interface PlanOption {
     ButtonComponent,
     DialogComponent,
     SkeletonRowComponent,
+    ProgressComponent,
+    IconButtonComponent,
     MoneyPipe,
   ],
   templateUrl: './billing-settings.component.html',
@@ -78,9 +95,42 @@ export class BillingSettingsComponent {
 
   /** The cycle the plan picker shows prices for (defaults to the current one). */
   protected readonly cycle = signal<BillingCycle>(BillingCycle.MONTHLY);
+  /** Extra storage bought on top of the plan; null until loaded or when unavailable. */
+  protected readonly storageAddon = signal<StorageAddon | null>(null);
+  /** Packs being chosen in the storage dialog; null when it is closed. */
+  protected readonly storagePacks = signal<number | null>(null);
   protected readonly confirming = signal<{ kind: 'change'; option: PlanOption } | { kind: 'cancel' } | null>(null);
 
   protected readonly isDemo = computed(() => !!this.tenant()?.demo);
+
+  /** What the plan includes and what is used of it (shared with the shell). */
+  protected readonly entitlements = this.meBilling.entitlements;
+  /** Usage meters for the counted features; near = 80% or more. */
+  protected readonly counters = computed(() =>
+    (this.entitlements()?.features ?? [])
+      .filter(f => PLAN_COUNTERS.includes(f.code) && f.included)
+      .map(f => {
+        const used = f.used ?? 0;
+        return {
+          code: f.code,
+          name: f.name,
+          used,
+          limit: f.limit,
+          usedLabel: formatPlanAmount(used, f.unit).value,
+          limitLabel:
+            f.limit === null
+              ? null
+              : `${formatPlanAmount(f.limit, f.unit).value} ${f.unit ? formatPlanAmount(f.limit, f.unit).unit : ''}`.trim(),
+          unitLabel: f.unit === 'GB' ? 'GB' : '',
+          full: f.limit !== null && used >= f.limit,
+          near: f.limit !== null && used >= f.limit * 0.8,
+        };
+      }),
+  );
+  /** The enforced modules, included or read-only. */
+  protected readonly modules = computed(() =>
+    PLAN_MODULES.map(code => this.entitlements()?.features.find(f => f.code === code)).filter((f): f is NonNullable<typeof f> => !!f),
+  );
   protected readonly canManage = computed(() => !!this.account()?.permissions?.includes(Permission.MANAGE_SUBSCRIPTIONS));
   protected readonly running = computed(() => {
     const s = this.subscription();
@@ -89,12 +139,12 @@ export class BillingSettingsComponent {
   /** In a free trial that no plan was chosen for yet (it would end read-only). */
   protected readonly trialOpen = computed(() => {
     const s = this.subscription();
-    return s?.status === 'TRIAL' && !s.autoRenew;
+    return s?.status === SubscriptionStatus.TRIAL && !s.autoRenew;
   });
   /** In a free trial with a plan chosen: the paid plan starts when the trial ends. */
   protected readonly trialContinues = computed(() => {
     const s = this.subscription();
-    return s?.status === 'TRIAL' && !!s.autoRenew;
+    return s?.status === SubscriptionStatus.TRIAL && !!s.autoRenew;
   });
 
   /** When a cancelled subscription stops: a trial at its trial end, otherwise at the period end. */
@@ -135,7 +185,10 @@ export class BillingSettingsComponent {
             const unit = f.unit ?? f.name.toLowerCase();
             return it.limitValue === null
               ? this.t('humano.settings.billing.unlimited', { unit })
-              : this.t('humano.settings.billing.upTo', { n: it.limitValue, unit });
+              : this.t('humano.settings.billing.upTo', {
+                  n: formatPlanAmount(it.limitValue, f.unit).value,
+                  unit: f.unit ? formatPlanAmount(it.limitValue, f.unit).unit : unit,
+                });
           }
           return f.name;
         });
@@ -168,6 +221,9 @@ export class BillingSettingsComponent {
       error: () => this.subscription.set(null),
     });
     this.meBilling.plans().subscribe({ next: p => this.pricing.set(p), error: () => this.pricing.set(null) });
+    // A plan change changes what is included: refresh it for this screen and the shell.
+    this.meBilling.loadEntitlements();
+    this.meBilling.storageAddon().subscribe({ next: a => this.storageAddon.set(a), error: () => this.storageAddon.set(null) });
     this.invoiceService.list().subscribe({
       next: list => this.invoices.set(list),
       error: (err: unknown) => {
@@ -179,6 +235,33 @@ export class BillingSettingsComponent {
 
   protected price(o: PlanOption): number {
     return this.cycle() === BillingCycle.YEARLY ? Math.round(o.monthlyPrice * 12 * YEARLY_FACTOR * 100) / 100 : o.monthlyPrice;
+  }
+
+  /**
+   * What would stop working on the plan `planId` compared to today: counted features above its limit
+   * (nothing more can be added) and modules it does not include (they become read-only).
+   */
+  protected downgradeWarnings(planId: string): string[] {
+    const target = this.pricing()?.plans.find(p => p.id === planId);
+    const current = this.entitlements();
+    if (!target || !current) return [];
+    const warnings: string[] = [];
+    for (const f of current.features) {
+      const item = target.items.find(i => i.featureId === f.featureId);
+      const includedThere = item ? item.included : false;
+      if (PLAN_COUNTERS.includes(f.code) && f.used !== null && includedThere && item?.limitValue != null && f.used > item.limitValue) {
+        warnings.push(
+          this.t('humano.plan.downgradeOver', { used: f.used, unit: f.unit ?? f.name, plan: target.name, limit: item.limitValue }),
+        );
+      } else if (PLAN_MODULES.includes(f.code) && f.included && !includedThere) {
+        warnings.push(this.t('humano.plan.downgradeModule', { name: f.name, plan: target.name }));
+      }
+    }
+    const addon = this.storageAddon();
+    if (addon && addon.packs > 0 && !addon.availableOnPlanTypes.includes(target.type)) {
+      warnings.push(this.t('humano.plan.downgradeStorageAddon', { packs: addon.packs, size: addon.packGb, plan: target.name }));
+    }
+    return warnings;
   }
 
   /** What picking this plan means against the current subscription. */
@@ -197,6 +280,48 @@ export class BillingSettingsComponent {
     const c = this.confirming();
     if (c?.kind !== 'change') return;
     this.run(this.meBilling.changePlan(c.option.id, this.cycle()), 'humano.settings.billing.changed');
+  }
+
+  /** The storage limit with `packs` packs instead of today's (null = unlimited). */
+  protected storageLimitWith(packs: number): number | null {
+    const a = this.storageAddon();
+    const limit = this.entitlements()?.features.find(f => f.code === PlanFeature.STORAGE)?.limit ?? null;
+    if (limit === null || !a) return limit;
+    return limit + (packs - a.packs) * a.packGb;
+  }
+
+  protected storageLimitLabel(packs: number): string {
+    const limit = this.storageLimitWith(packs);
+    if (limit === null) return '';
+    const amount = formatPlanAmount(limit, 'GB');
+    return `${amount.value} ${amount.unit}`;
+  }
+
+  protected openStorage(): void {
+    this.storagePacks.set(Math.max(1, this.storageAddon()?.packs ?? 0));
+  }
+
+  protected stepPacks(delta: number): void {
+    this.storagePacks.update(n => Math.max(0, Math.min(1000, (n ?? 0) + delta)));
+  }
+
+  protected saveStorage(): void {
+    const packs = this.storagePacks();
+    if (packs === null) return;
+    this.busy.set(true);
+    this.meBilling.setStorageAddon(packs).subscribe({
+      next: a => {
+        this.busy.set(false);
+        this.storagePacks.set(null);
+        this.storageAddon.set(a);
+        this.meBilling.loadEntitlements();
+        this.toast.success(this.t(packs > 0 ? 'humano.plan.storageSaved' : 'humano.plan.storageRemoved'));
+      },
+      error: (err: unknown) => {
+        this.busy.set(false);
+        this.toast.danger(normalizeHttpError(err));
+      },
+    });
   }
 
   protected confirmCancel(): void {

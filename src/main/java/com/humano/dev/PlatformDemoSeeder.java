@@ -377,7 +377,8 @@ public class PlatformDemoSeeder {
             "Contracts, IDs and payslips.",
             FeatureLimitType.QUANTITY,
             "GB",
-            new Object[] { 1, 10, 100, null }
+            // Enterprise: 1 TB included; more can be added to a workspace.
+            new Object[] { 1, 10, 100, 1024 }
         ),
         new Row(
             "Core HR",

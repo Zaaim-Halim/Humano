@@ -5,7 +5,9 @@ import com.humano.domain.enumeration.payroll.PayComponentCode;
 import com.humano.dto.payroll.request.CreatePayComponentRequest;
 import com.humano.dto.payroll.response.PayComponentResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.payroll.PayComponentService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -25,6 +27,7 @@ import tech.jhipster.web.util.PaginationUtil;
  * Pay components &mdash; reusable earning/deduction/employer-charge buckets.
  * Their executable rules live on {@link PayRuleResource}.
  */
+@RequireFeature(FeatureCodes.PAYROLL)
 @RestController
 @RequestMapping("/api/payroll/pay-components")
 @RequirePermission(PermissionsConstants.MANAGE_PAY_COMPONENTS)

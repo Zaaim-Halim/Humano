@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!--
+        Add-ons bought on top of a subscription's plan: packs of a plan feature (e.g. 100 GB of
+        storage) that raise its limit and are billed on each renewal. The pack size and price are
+        snapshotted when bought, so later price changes do not alter what a customer pays.
+    -->
+    <changeSet id="20261018-subscription-addon" author="halimzaaim">
+        <createTable tableName="billing_subscription_addon">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_billing_subscription_addon"/>
+            </column>
+            <column name="subscription_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="feature_code" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="quantity" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit_size" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit_price" type="DECIMAL(19, 4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="${datetimeType}"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="${datetimeType}"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="billing_subscription_addon" baseColumnNames="subscription_id"
+                                 constraintName="fk_billing_subscription_addon_subscription"
+                                 referencedTableName="billing_subscription" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addUniqueConstraint tableName="billing_subscription_addon" columnNames="subscription_id, feature_code"
+                             constraintName="ux_billing_subscription_addon_feature"/>
+    </changeSet>
+
+    <!--
+        Add-ons are billed monthly on top of the subscription: with a monthly plan they ride on the
+        renewal invoice; with a yearly plan they get their own monthly invoice, and this records how
+        far they are billed.
+    -->
+    <changeSet id="20261018-subscription-addon-billed-until" author="halimzaaim">
+        <addColumn tableName="billing_subscription_addon">
+            <column name="billed_until" type="${datetimeType}"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

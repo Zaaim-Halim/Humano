@@ -82,6 +82,64 @@
     }
   </section>
 
+  <!-- What the plan includes, and how much of it is used -->
+  @if (entitlements()?.planName) {
+    <section class="hum-set-card" style="margin-top: var(--space-4)">
+      <header>
+        <h3>{{ 'humano.plan.usageTitle' | translate }}</h3>
+        <p>{{ 'humano.plan.usageHint' | translate: { plan: entitlements()!.planName } }}</p>
+      </header>
+      <div class="hum-plan-usage">
+        @for (c of counters(); track c.code) {
+          <div class="hum-plan-meter" [class.is-full]="c.full">
+            <div class="hum-plan-meter__head">
+              <strong>{{ c.name }}</strong>
+              <span class="tabular-nums">
+                @if (c.limitLabel === null) {
+                  {{ 'humano.plan.usedUnlimited' | translate: { used: (c.usedLabel + ' ' + c.unitLabel).trim() } }}
+                } @else {
+                  {{ 'humano.plan.usedOf' | translate: { used: (c.usedLabel + ' ' + c.unitLabel).trim(), limit: c.limitLabel } }}
+                }
+              </span>
+            </div>
+            @if (c.limit !== null) {
+              <hum-progress [value]="c.used" [max]="c.limit" [tone]="c.full ? 'warning' : 'brand'" />
+              @if (c.full) {
+                <span class="hum-kpi__hint">{{ 'humano.plan.limitReachedHint' | translate }}</span>
+              } @else if (c.near) {
+                <span class="hum-kpi__hint">{{ 'humano.plan.nearLimitHint' | translate }}</span>
+              }
+            }
+            @if (c.code === 'DOCUMENTS' && storageAddon(); as a) {
+              @if (a.packs > 0) {
+                <span class="hum-kpi__hint">{{
+                  'humano.plan.storageAddonHeld'
+                    | translate: { packs: a.packs, size: a.packGb, price: (a.monthlyTotal | money: a.currency) }
+                }}</span>
+              }
+              @if (a.available && canManage()) {
+                <hum-button variant="secondary" size="sm" icon="hard-drive" (click)="openStorage()">{{
+                  (a.packs > 0 ? 'humano.plan.storageChange' : 'humano.plan.storageAdd') | translate
+                }}</hum-button>
+              }
+            }
+          </div>
+        }
+      </div>
+      <ul class="hum-plan-modules">
+        @for (m of modules(); track m.code) {
+          <li [class.is-off]="!m.included">
+            <lucide-icon [name]="m.included ? 'circle-check' : 'lock'" [size]="15" />
+            <span>{{ m.name }}</span>
+            @if (!m.included) {
+              <span class="hum-kpi__hint">{{ 'humano.plan.readOnlyShort' | translate }}</span>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
   @if (canManage() && options().length) {
     <section class="hum-set-card" style="margin-top: var(--space-4)">
       <header class="hum-set-card__head-row">
@@ -239,6 +297,18 @@
   hasFooter
   (closed)="confirming.set(null)"
 >
+  @if (confirming()?.kind === 'change') {
+    @let warnings = downgradeWarnings($any(confirming()).option.id);
+    @if (warnings.length) {
+      <hum-alert tone="warning" [title]="'humano.plan.downgradeTitle' | translate">
+        <ul class="hum-plan-warnings">
+          @for (w of warnings; track w) {
+            <li>{{ w }}</li>
+          }
+        </ul>
+      </hum-alert>
+    }
+  }
   <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
     <hum-button variant="secondary" icon="x" (click)="confirming.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
     @if (confirming()?.kind === 'cancel') {
@@ -250,5 +320,52 @@
         'humano.settings.billing.changeConfirm' | translate
       }}</hum-button>
     }
+  </div>
+</hum-dialog>
+
+<!-- Extra storage -->
+<hum-dialog
+  [open]="storagePacks() !== null"
+  [title]="'humano.plan.storageDialogTitle' | translate"
+  [description]="
+    'humano.plan.storageDialogBody'
+      | translate
+        : { size: storageAddon()?.packGb, price: (storageAddon()?.offerMonthlyPrice ?? 0 | money: storageAddon()?.currency ?? 'USD') }
+  "
+  hasFooter
+  (closed)="storagePacks.set(null)"
+>
+  @if (storagePacks() !== null && storageAddon(); as a) {
+    <div class="hum-plan-packs">
+      <hum-icon-button
+        icon="minus"
+        variant="secondary"
+        [label]="'humano.plan.packsFewer' | translate"
+        [disabled]="storagePacks()! <= 0"
+        (click)="stepPacks(-1)"
+      />
+      <div class="hum-plan-packs__value">
+        <strong class="tabular-nums">{{ storagePacks() }}</strong>
+        <span>{{ 'humano.plan.packsOf' | translate: { size: a.packGb } }}</span>
+      </div>
+      <hum-icon-button icon="plus" variant="secondary" [label]="'humano.plan.packsMore' | translate" (click)="stepPacks(1)" />
+    </div>
+    <dl class="hum-plan-packs__summary">
+      <div>
+        <dt>{{ 'humano.plan.storageNewLimit' | translate }}</dt>
+        <dd class="tabular-nums">{{ storageLimitLabel(storagePacks()!) }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'humano.plan.storageMonthly' | translate }}</dt>
+        <dd class="tabular-nums">{{ storagePacks()! * a.offerMonthlyPrice | money: a.currency }}</dd>
+      </div>
+    </dl>
+    <p class="hum-kpi__hint">{{ 'humano.plan.storageBillingNote' | translate }}</p>
+  }
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" icon="x" (click)="storagePacks.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="busy()" (click)="saveStorage()">{{
+      'humano.plan.storageSave' | translate
+    }}</hum-button>
   </div>
 </hum-dialog>

@@ -6,6 +6,7 @@ import { ApplicationConfigService } from 'app/core/config/application-config.ser
 import { PublicPricing } from 'app/features/marketing/marketing.service';
 
 import { BillingCycle } from '../models/enums/billing-cycle.enum';
+import { Entitlements, StorageAddon } from '../models/entitlements.model';
 import { Subscription } from '../models/subscription.model';
 
 /**
@@ -25,6 +26,30 @@ export class MeBillingService {
    * every reload (e.g. billing settings after a plan change).
    */
   readonly current = signal<Subscription | null | undefined>(undefined);
+
+  /**
+   * What the plan allows, with current usage — `null` until loaded (or when it cannot be). Drives the
+   * locked nav items, the read-only notice on modules outside the plan and the usage meters.
+   */
+  readonly entitlements = signal<Entitlements | null>(null);
+
+  /** `GET /api/billing/me/entitlements`, kept in {@link entitlements}. */
+  loadEntitlements(): void {
+    this.http.get<Entitlements>(`${this.resourceUrl}/entitlements`).subscribe({
+      next: e => this.entitlements.set(e),
+      error: () => this.entitlements.set(null),
+    });
+  }
+
+  /** Extra storage on top of the plan: offer, price and packs held. */
+  storageAddon(): Observable<StorageAddon> {
+    return this.http.get<StorageAddon>(`${this.resourceUrl}/addons/storage`);
+  }
+
+  /** Sets the number of extra storage packs (0 removes them); billed monthly on top of the subscription. */
+  setStorageAddon(packs: number): Observable<StorageAddon> {
+    return this.http.put<StorageAddon>(`${this.resourceUrl}/addons/storage`, { packs });
+  }
 
   /** `GET /api/billing/me/current-subscription` (404 when there is none). */
   currentSubscription(): Observable<Subscription> {

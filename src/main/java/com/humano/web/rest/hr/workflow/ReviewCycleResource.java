@@ -5,9 +5,11 @@ import com.humano.dto.hr.workflow.requests.InitiateReviewCycleRequest;
 import com.humano.dto.hr.workflow.requests.ManagerReviewRequest;
 import com.humano.dto.hr.workflow.requests.SelfAssessmentRequest;
 import com.humano.dto.hr.workflow.responses.ReviewCycleResponse;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequireHrManager;
 import com.humano.security.annotation.RequireHrStaff;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.hr.workflow.PerformanceReviewCycleService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * REST controller for managing performance review cycle workflows.
  */
+@RequireFeature(FeatureCodes.PERFORMANCE)
 @RestController
 @RequestMapping("/api/hr/workflows/review-cycles")
 public class ReviewCycleResource {

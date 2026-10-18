@@ -5,7 +5,9 @@ import com.humano.dto.hr.requests.EnrollEmployeeTrainingRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeTrainingRequest;
 import com.humano.dto.hr.responses.EmployeeTrainingResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.hr.TrainingService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -26,6 +28,7 @@ import tech.jhipster.web.util.PaginationUtil;
 /**
  * REST controller for managing employee trainings.
  */
+@RequireFeature(FeatureCodes.TRAINING)
 @RestController
 @RequestMapping("/api/hr/employee-trainings")
 public class EmployeeTrainingResource {

@@ -22,6 +22,7 @@ import { countryOptions } from 'app/shared/util/countries';
 
 import { LandingShowcaseComponent } from './landing-showcase.component';
 import { DemoRequestForm, MarketingService, PublicPlan, PublicPricing } from './marketing.service';
+import { formatPlanAmount } from 'app/shared/util/plan-units';
 
 interface Persona {
   icon: string;
@@ -311,7 +312,9 @@ export default class LandingPageComponent {
       const f = featureById.get(it.featureId)!;
       const unit = f.unit ?? f.name.toLowerCase();
       if (f.limitType === 'QUANTITY') {
-        return it.limitValue === null ? `Unlimited ${unit}` : `Up to ${it.limitValue} ${unit}`;
+        if (it.limitValue === null) return `Unlimited ${unit}`;
+        const amount = formatPlanAmount(it.limitValue, f.unit);
+        return `Up to ${amount.value} ${f.unit ? amount.unit : unit}`;
       }
       return it.note ? `${f.name} — ${it.note}` : f.name;
     };

@@ -4,7 +4,9 @@ import com.humano.dto.payroll.request.BulkPayrollInputRequest;
 import com.humano.dto.payroll.request.CreatePayrollInputRequest;
 import com.humano.dto.payroll.response.PayrollInputResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.payroll.PayrollInputService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -23,6 +25,7 @@ import tech.jhipster.web.util.PaginationUtil;
 /**
  * Per-period payroll inputs &mdash; OT hours, allowances, ad-hoc overrides .
  */
+@RequireFeature(FeatureCodes.PAYROLL)
 @RestController
 @RequestMapping("/api/payroll/inputs")
 @RequirePermission(PermissionsConstants.MANAGE_PAYROLL_INPUTS)

@@ -8,7 +8,9 @@ import com.humano.dto.payroll.response.PayrollRunResponse;
 import com.humano.dto.payroll.response.PayrollRunSummaryResponse;
 import com.humano.dto.payroll.response.PayslipResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.payroll.PayrollProcessingService;
 import com.humano.service.payroll.PayslipService;
 import jakarta.validation.Valid;
@@ -43,6 +45,7 @@ import org.springframework.web.bind.annotation.*;
  *       a thin alias so the acceptance URL works.</li>
  * </ul>
  */
+@RequireFeature(FeatureCodes.PAYROLL)
 @RestController
 @RequestMapping("/api/payroll/runs")
 public class PayrollRunResource {

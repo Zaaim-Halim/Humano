@@ -56,6 +56,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
 
     long countByStartDateGreaterThanEqual(LocalDate date);
 
+    /** People who count against the plan's employee limit: everyone not terminated. */
+    long countByStatusNot(com.humano.domain.enumeration.hr.EmployeeStatus status);
+
     long countByDepartmentId(UUID departmentId);
 
     @Query(

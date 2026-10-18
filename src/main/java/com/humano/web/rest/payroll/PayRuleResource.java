@@ -4,7 +4,9 @@ import com.humano.dto.payroll.request.CreatePayRuleRequest;
 import com.humano.dto.payroll.response.FormulaMetadataResponse;
 import com.humano.dto.payroll.response.PayComponentResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.payroll.PayComponentService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
  * Pay rules . Rules are owned by their pay component; this resource exposes the
  * rule-only operations from {@link PayComponentService} under a dedicated path.
  */
+@RequireFeature(FeatureCodes.PAYROLL)
 @RestController
 @RequestMapping("/api/payroll/pay-rules")
 @RequirePermission(PermissionsConstants.MANAGE_PAY_COMPONENTS)

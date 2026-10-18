@@ -11,6 +11,7 @@ import com.humano.dto.billing.responses.PlanComparisonResponse;
 import com.humano.repository.billing.FeatureRepository;
 import com.humano.repository.billing.PlanFeatureRepository;
 import com.humano.repository.billing.SubscriptionPlanRepository;
+import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.util.ArrayList;
@@ -40,15 +41,18 @@ public class FeatureService {
     private final FeatureRepository featureRepository;
     private final PlanFeatureRepository planFeatureRepository;
     private final SubscriptionPlanRepository planRepository;
+    private final EntitlementService entitlementService;
 
     public FeatureService(
         FeatureRepository featureRepository,
         PlanFeatureRepository planFeatureRepository,
-        SubscriptionPlanRepository planRepository
+        SubscriptionPlanRepository planRepository,
+        EntitlementService entitlementService
     ) {
         this.featureRepository = featureRepository;
         this.planFeatureRepository = planFeatureRepository;
         this.planRepository = planRepository;
+        this.entitlementService = entitlementService;
     }
 
     /** The catalog (display order) and every plan's cells. */
@@ -88,6 +92,7 @@ public class FeatureService {
     }
 
     public FeatureResponse updateFeature(UUID id, CreateFeatureRequest request) {
+        entitlementService.evictAll();
         Feature feature = featureRepository.findById(id).orElseThrow(() -> EntityNotFoundException.create("Feature", id));
         apply(feature, request);
         return mapToResponse(featureRepository.save(feature));
@@ -95,6 +100,7 @@ public class FeatureService {
 
     /** Removes a feature from the catalog and from every plan. */
     public void deleteFeature(UUID id) {
+        entitlementService.evictAll();
         Feature feature = featureRepository.findById(id).orElseThrow(() -> EntityNotFoundException.create("Feature", id));
         planRepository.findAll().forEach(p -> p.getFeatures().removeIf(pf -> pf.getFeature().getId().equals(id)));
         featureRepository.delete(feature);
@@ -102,6 +108,7 @@ public class FeatureService {
 
     /** Replaces what a plan includes (features not listed are left out of the plan). */
     public void setPlanFeatures(UUID planId, List<PlanFeatureItem> items) {
+        entitlementService.evictAll();
         SubscriptionPlan plan = planRepository
             .findById(planId)
             .orElseThrow(() -> EntityNotFoundException.create("SubscriptionPlan", planId));

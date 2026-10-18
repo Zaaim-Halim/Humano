@@ -4,7 +4,9 @@ import com.humano.dto.payroll.request.CreatePayrollCalendarRequest;
 import com.humano.dto.payroll.response.PayrollCalendarResponse;
 import com.humano.dto.payroll.response.PayrollPeriodResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.payroll.PayrollCalendarService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * Payroll calendars . Periods are managed via {@link PayrollPeriodResource}.
  */
+@RequireFeature(FeatureCodes.PAYROLL)
 @RestController
 @RequestMapping("/api/payroll/calendars")
 @RequirePermission(PermissionsConstants.CONFIGURE_PAYROLL_CALENDAR)

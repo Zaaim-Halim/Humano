@@ -5,8 +5,10 @@ import com.humano.dto.hr.requests.TimesheetSearchRequest;
 import com.humano.dto.hr.requests.UpdateTimesheetRequest;
 import com.humano.dto.hr.responses.TimesheetResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.hr.TimesheetService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -27,6 +29,7 @@ import tech.jhipster.web.util.PaginationUtil;
 /**
  * REST controller for managing timesheets.
  */
+@RequireFeature(FeatureCodes.TIMESHEETS)
 @RestController
 @RequestMapping("/api/hr/timesheets")
 public class TimesheetResource {

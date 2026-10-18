@@ -2156,6 +2156,110 @@ dt {
   }
 }
 
+/* ---------- Plan usage (Settings → Plan & billing) ---------- */
+.hum-plan-usage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-4);
+}
+.hum-plan-meter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.hum-plan-meter__head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-default);
+}
+.hum-plan-meter__head strong {
+  color: var(--text-strong);
+}
+.hum-plan-meter.is-full .hum-plan-meter__head span {
+  color: var(--warning-fg);
+  font-weight: var(--weight-semibold);
+}
+.hum-plan-modules {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-2) var(--space-5);
+  margin: var(--space-5) 0 0;
+  padding: var(--space-4) 0 0;
+  list-style: none;
+  border-top: 1px solid var(--border-subtle);
+}
+.hum-plan-modules li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-default);
+}
+.hum-plan-modules li lucide-icon {
+  color: var(--success-fg);
+}
+.hum-plan-modules li.is-off {
+  color: var(--text-muted);
+}
+.hum-plan-modules li.is-off lucide-icon {
+  color: var(--text-subtle);
+}
+.hum-plan-meter .hum-btn {
+  align-self: flex-start;
+}
+.hum-plan-packs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  padding: var(--space-4) 0;
+}
+.hum-plan-packs__value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 140px;
+}
+.hum-plan-packs__value strong {
+  font-size: var(--text-3xl);
+  color: var(--text-strong);
+}
+.hum-plan-packs__value span {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.hum-plan-packs__summary {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--bg-muted);
+}
+.hum-plan-packs__summary > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+}
+.hum-plan-packs__summary dt {
+  color: var(--text-muted);
+}
+.hum-plan-packs__summary dd {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+  color: var(--text-strong);
+}
+.hum-plan-warnings {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+}
+.hum-plan-warnings li + li {
+  margin-top: var(--space-1);
+}
+
 /* ---------- App shell -------------------------------------- */
 .hum-shell {
   display: grid;

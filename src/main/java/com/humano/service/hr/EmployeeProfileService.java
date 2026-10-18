@@ -36,6 +36,8 @@ import com.humano.repository.shared.UserRepository;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.service.MailService;
 import com.humano.service.admin.UserAccountService;
+import com.humano.service.billing.entitlement.EntitlementService;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import com.humano.web.rest.errors.EmailAlreadyUsedException;
@@ -86,6 +88,7 @@ public class EmployeeProfileService {
     private final TerminationReasonRepository terminationReasonRepository;
     private final UserAccountService userAccountService;
     private final MailService mailService;
+    private final EntitlementService entitlementService;
 
     public EmployeeProfileService(
         EmployeeRepository employeeRepository,
@@ -102,7 +105,8 @@ public class EmployeeProfileService {
         EmployeeCategoryRepository employeeCategoryRepository,
         TerminationReasonRepository terminationReasonRepository,
         UserAccountService userAccountService,
-        MailService mailService
+        MailService mailService,
+        EntitlementService entitlementService
     ) {
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
@@ -119,6 +123,7 @@ public class EmployeeProfileService {
         this.terminationReasonRepository = terminationReasonRepository;
         this.userAccountService = userAccountService;
         this.mailService = mailService;
+        this.entitlementService = entitlementService;
     }
 
     /**
@@ -152,6 +157,9 @@ public class EmployeeProfileService {
         CreateEmployeeProfileRequest profile = request.toProfileRequest();
         Employee employee = userAccountService.prepareNewUser(new Employee(), request.toCreateUserRequest());
         mapRequestToEmployee(profile, employee);
+        if (employee.getStatus() != EmployeeStatus.TERMINATED) {
+            checkEmployeeLimit();
+        }
         setEmployeeRelationships(employee, profile);
         addEmployeeAuthority(employee);
 
@@ -300,6 +308,11 @@ public class EmployeeProfileService {
         return employeeRepository.findAll(specification, pageable).map(this::mapToSimpleEmployeeProfileResponse);
     }
 
+    /** Refuses (403, plan limit) when the plan's employee limit is reached. Terminated people do not count. */
+    private void checkEmployeeLimit() {
+        entitlementService.checkOneMore(FeatureCodes.EMPLOYEES, employeeRepository.countByStatusNot(EmployeeStatus.TERMINATED));
+    }
+
     /**
      * Add EMPLOYEE authority to the employee.
      *
@@ -329,6 +342,7 @@ public class EmployeeProfileService {
         if (authorityNames == null) {
             return;
         }
+        userAccountService.checkAdminSeat(employee.getId(), authorityNames, employee.isActivated());
         Set<Authority> managed = employee.getAuthorities();
         if (managed == null) {
             managed = new HashSet<>();
@@ -518,6 +532,10 @@ public class EmployeeProfileService {
             employee.setEndDate(request.endDate());
         }
         if (request.status() != null) {
+            // Bringing someone back from terminated counts against the plan again.
+            if (employee.getStatus() == EmployeeStatus.TERMINATED && request.status() != EmployeeStatus.TERMINATED) {
+                checkEmployeeLimit();
+            }
             employee.setStatus(request.status());
         }
         applyPersonalDetails(employee, request.personalDetails());

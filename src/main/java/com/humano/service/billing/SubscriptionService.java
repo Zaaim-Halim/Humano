@@ -11,6 +11,7 @@ import com.humano.dto.billing.responses.SubscriptionResponse;
 import com.humano.repository.billing.SubscriptionPlanRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
+import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.time.Instant;
@@ -37,17 +38,20 @@ public class SubscriptionService {
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final TenantRepository tenantRepository;
     private final CouponService couponService;
+    private final EntitlementService entitlementService;
 
     public SubscriptionService(
         SubscriptionRepository subscriptionRepository,
         SubscriptionPlanRepository subscriptionPlanRepository,
         TenantRepository tenantRepository,
-        CouponService couponService
+        CouponService couponService,
+        EntitlementService entitlementService
     ) {
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionPlanRepository = subscriptionPlanRepository;
         this.tenantRepository = tenantRepository;
         this.couponService = couponService;
+        this.entitlementService = entitlementService;
     }
 
     /**
@@ -114,6 +118,7 @@ public class SubscriptionService {
         }
 
         Subscription savedSubscription = subscriptionRepository.save(subscription);
+        entitlementService.evict(tenant.getSubdomain());
         log.info("Created subscription with ID: {}", savedSubscription.getId());
 
         return mapToResponse(savedSubscription);
@@ -151,7 +156,9 @@ public class SubscriptionService {
                 if (request.cancelAtPeriodEnd() != null) {
                     subscription.setCancelAtPeriodEnd(request.cancelAtPeriodEnd());
                 }
-                return mapToResponse(subscriptionRepository.save(subscription));
+                Subscription saved = subscriptionRepository.save(subscription);
+                entitlementService.evict(saved.getTenant().getSubdomain());
+                return mapToResponse(saved);
             })
             .orElseThrow(() -> EntityNotFoundException.create("Subscription", id));
     }

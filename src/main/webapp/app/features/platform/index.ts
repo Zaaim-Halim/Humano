@@ -34,3 +34,4 @@ export { PlatformConsoleService } from './services/platform-console.service';
 export { PlatformDemoService } from './services/platform-demo.service';
 export type * from './models/demo.model';
 export * from './models/platform.model';
+export * from './models/entitlements.model';

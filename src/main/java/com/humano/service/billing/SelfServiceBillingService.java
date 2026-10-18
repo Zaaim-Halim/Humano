@@ -2,6 +2,7 @@ package com.humano.service.billing;
 
 import com.humano.config.multitenancy.TenantAccessGuard;
 import com.humano.domain.billing.Subscription;
+import com.humano.domain.billing.SubscriptionAddon;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.billing.SubscriptionStatus;
@@ -9,9 +10,13 @@ import com.humano.domain.tenant.Tenant;
 import com.humano.dto.billing.requests.ChangeMyPlanRequest;
 import com.humano.dto.billing.requests.CreateSubscriptionRequest;
 import com.humano.dto.billing.responses.SubscriptionResponse;
+import com.humano.repository.billing.SubscriptionAddonRepository;
 import com.humano.repository.billing.SubscriptionPlanRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
+import com.humano.service.billing.entitlement.EntitlementService;
+import com.humano.service.billing.entitlement.FeatureCodes;
+import com.humano.service.billing.entitlement.StorageAddonOffer;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.web.rest.errors.BadRequestAlertException;
 import java.time.Instant;
@@ -57,6 +62,9 @@ public class SelfServiceBillingService {
     private final SubscriptionService subscriptionService;
     private final BillingLifecycleService lifecycleService;
     private final TenantAccessGuard accessGuard;
+    private final EntitlementService entitlementService;
+    private final SubscriptionAddonRepository addonRepository;
+    private final StorageAddonOffer storageAddonOffer;
 
     public SelfServiceBillingService(
         TenantRepository tenantRepository,
@@ -64,7 +72,10 @@ public class SelfServiceBillingService {
         SubscriptionPlanRepository planRepository,
         SubscriptionService subscriptionService,
         BillingLifecycleService lifecycleService,
-        TenantAccessGuard accessGuard
+        TenantAccessGuard accessGuard,
+        EntitlementService entitlementService,
+        SubscriptionAddonRepository addonRepository,
+        StorageAddonOffer storageAddonOffer
     ) {
         this.tenantRepository = tenantRepository;
         this.subscriptionRepository = subscriptionRepository;
@@ -72,6 +83,9 @@ public class SelfServiceBillingService {
         this.subscriptionService = subscriptionService;
         this.lifecycleService = lifecycleService;
         this.accessGuard = accessGuard;
+        this.entitlementService = entitlementService;
+        this.addonRepository = addonRepository;
+        this.storageAddonOffer = storageAddonOffer;
     }
 
     public SubscriptionResponse changePlan(UUID tenantId, ChangeMyPlanRequest request) {
@@ -114,13 +128,16 @@ public class SelfServiceBillingService {
             sub.setTrialEnd(null);
             sub.setDunningAttempt(0);
         }
+        boolean toYearly = sub.getBillingCycle() != BillingCycle.YEARLY && request.billingCycle() == BillingCycle.YEARLY;
         sub.setSubscriptionPlan(plan);
         sub.setBillingCycle(request.billingCycle());
+        adjustAddons(sub, plan, toYearly);
         sub.setCancelAtPeriodEnd(false);
         sub.setAutoRenew(true);
         subscriptionRepository.save(sub);
         tenant.setSubscriptionPlan(plan);
         tenantRepository.save(tenant);
+        entitlementService.evict(tenant.getSubdomain());
         if (restarted) {
             lifecycleService.issueFirstInvoice(sub.getId());
             // A trial that had ended left the workspace read-only; it is open again now.
@@ -128,6 +145,22 @@ public class SelfServiceBillingService {
         }
         log.info("Tenant {} moved to {} ({})", tenant.getSubdomain(), plan.getDisplayName(), request.billingCycle());
         return subscriptionService.getSubscriptionById(sub.getId());
+    }
+
+    /**
+     * A plan that cannot have extra storage drops it; moving to yearly billing starts the packs'
+     * own monthly invoices from today (a monthly plan carried them on its renewal).
+     */
+    private void adjustAddons(Subscription sub, SubscriptionPlan plan, boolean toYearly) {
+        for (SubscriptionAddon addon : addonRepository.findBySubscriptionId(sub.getId())) {
+            if (FeatureCodes.STORAGE.equals(addon.getFeatureCode()) && !storageAddonOffer.availableOn(plan)) {
+                addonRepository.delete(addon);
+                log.info("Removed extra storage of {}: not available on {}", sub.getTenant().getSubdomain(), plan.getDisplayName());
+            } else if (toYearly) {
+                addon.setBilledUntil(Instant.now());
+                addonRepository.save(addon);
+            }
+        }
     }
 
     /** Ends the subscription when the current period (or trial) ends; the workspace runs until then. */

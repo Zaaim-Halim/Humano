@@ -259,6 +259,13 @@ humano:
   billing:
     # Currency the platform bills customers in (plan prices, invoices, MRR on the owner console).
     currency: ${BILLING_CURRENCY:USD}
+    # Extra storage on sale on top of a plan: packs of pack-gb GB at monthly-price a month each,
+    # for plans of these types. Billed on each renewal; price snapshotted when bought.
+    addons:
+      storage:
+        pack-gb: 100
+        monthly-price: 25
+        plan-types: ENTERPRISE
     stripe:
       secret-key: ${STRIPE_SECRET_KEY:}
       webhook-secret: ${STRIPE_WEBHOOK_SECRET:}

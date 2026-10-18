@@ -5,7 +5,9 @@ import com.humano.dto.payroll.request.CreateDeductionRequest;
 import com.humano.dto.payroll.request.DeductionSearchRequest;
 import com.humano.dto.payroll.response.DeductionResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.payroll.DeductionService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -25,6 +27,7 @@ import tech.jhipster.web.util.PaginationUtil;
 /**
  * Deductions resource — manage employee deductions.
  */
+@RequireFeature(FeatureCodes.PAYROLL)
 @RestController
 @RequestMapping("/api/payroll/deductions")
 @RequirePermission(PermissionsConstants.MANAGE_DEDUCTIONS)

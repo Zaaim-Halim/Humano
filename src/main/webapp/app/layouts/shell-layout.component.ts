@@ -8,6 +8,7 @@ import { Authority } from 'app/config/authority.constants';
 import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
 import { CompanyService } from 'app/core/company/company.service';
+import { planIncludes } from 'app/features/platform/models/entitlements.model';
 import { MeBillingService } from 'app/features/platform/services/me-billing.service';
 import { CurrentEmployeeService } from 'app/features/employee';
 import { ThemeService } from 'app/core/theme/theme.service';
@@ -138,6 +139,11 @@ export default class ShellLayoutComponent {
     if (this.account()) untracked(() => this.company.load());
   });
 
+  /** What the plan allows: marks nav items whose module is outside it (read-only there). */
+  private readonly loadEntitlements = effect(() => {
+    if (this.account()) untracked(() => this.meBilling.loadEntitlements());
+  });
+
   /** Re-runs the label computeds when the language or loaded translations change. */
   private readonly i18nTick = toSignal(merge(this.translate.onLangChange, this.translate.onTranslationChange), { initialValue: null });
 
@@ -175,7 +181,14 @@ export default class ShellLayoutComponent {
   protected readonly nav = computed<NavGroup[]>(() =>
     this.visible().map(g => ({
       heading: this.t(g.headingKey),
-      items: g.items.map(it => ({ id: it.id, label: this.t(it.labelKey), icon: it.icon, badge: it.badge, link: it.link })),
+      items: g.items.map(it => ({
+        id: it.id,
+        label: this.t(it.labelKey),
+        icon: it.icon,
+        // Outside the plan the screen is read-only: say so where people look for it.
+        badge: it.feature && !planIncludes(this.meBilling.entitlements(), it.feature) ? this.t('humano.plan.navBadge') : it.badge,
+        link: it.link,
+      })),
     })),
   );
 
@@ -205,6 +218,7 @@ export default class ShellLayoutComponent {
       case 'logout':
         this.company.clear();
         this.meBilling.current.set(undefined);
+        this.meBilling.entitlements.set(null);
         this.loginService.logout();
         void this.router.navigate(['/login']);
         break;

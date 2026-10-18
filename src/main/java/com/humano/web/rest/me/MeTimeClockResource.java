@@ -6,6 +6,8 @@ import com.humano.dto.me.responses.TeamAttendance;
 import com.humano.dto.me.responses.TimeClockDay;
 import com.humano.security.SecurityExpressions;
 import com.humano.security.annotation.RequireAuthenticated;
+import com.humano.security.annotation.RequireFeature;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.me.MeService;
 import com.humano.service.me.TeamAttendanceService;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
  * The signed-in employee's time clock — {@code /api/me/attendance}. Clock in, start / end a
  * break, clock out; the server stamps the time. Always the caller's own record.
  */
+@RequireFeature(FeatureCodes.TIMESHEETS)
 @RestController
 @RequestMapping("/api/me/attendance")
 public class MeTimeClockResource {

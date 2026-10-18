@@ -13,6 +13,8 @@ import com.humano.repository.hr.OvertimeRecordRepository;
 import com.humano.repository.hr.workflow.ApprovalChainConfigRepository;
 import com.humano.repository.hr.workflow.ApprovalRequestRepository;
 import com.humano.repository.shared.EmployeeRepository;
+import com.humano.service.billing.entitlement.EntitlementService;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.workflow.infrastructure.DeadlineMonitorService;
 import com.humano.service.hr.workflow.infrastructure.NotificationOrchestrationService;
@@ -120,6 +122,7 @@ public class ApprovalWorkflowOrchestratorService {
     private final LeaveRequestRepository leaveRequestRepository;
     private final ExpenseClaimRepository expenseClaimRepository;
     private final OvertimeRecordRepository overtimeRecordRepository;
+    private final EntitlementService entitlementService;
 
     public ApprovalWorkflowOrchestratorService(
         WorkflowStateManager workflowStateManager,
@@ -130,7 +133,8 @@ public class ApprovalWorkflowOrchestratorService {
         EmployeeRepository employeeRepository,
         LeaveRequestRepository leaveRequestRepository,
         ExpenseClaimRepository expenseClaimRepository,
-        OvertimeRecordRepository overtimeRecordRepository
+        OvertimeRecordRepository overtimeRecordRepository,
+        EntitlementService entitlementService
     ) {
         this.workflowStateManager = workflowStateManager;
         this.notificationService = notificationService;
@@ -141,6 +145,7 @@ public class ApprovalWorkflowOrchestratorService {
         this.leaveRequestRepository = leaveRequestRepository;
         this.expenseClaimRepository = expenseClaimRepository;
         this.overtimeRecordRepository = overtimeRecordRepository;
+        this.entitlementService = entitlementService;
     }
 
     // ==================== GENERIC APPROVAL SUBMISSION ====================
@@ -681,7 +686,8 @@ public class ApprovalWorkflowOrchestratorService {
     /**
      * The approval steps for a request: the requester's department-specific chain when that
      * department has one, otherwise the tenant-wide chain (steps with no department). For
-     * amount-bearing requests only steps whose thresholds cover the amount are considered.
+     * amount-bearing requests only steps whose thresholds cover the amount are considered. Without
+     * multi-step chains in the plan, only the first step applies.
      */
     private List<ApprovalChainConfig> getApprovalChain(ApprovalType type, Double amount, UUID departmentId) {
         List<ApprovalChainConfig> candidates = amount != null
@@ -694,7 +700,11 @@ public class ApprovalWorkflowOrchestratorService {
         List<ApprovalChainConfig> chain = departmentChain.isEmpty()
             ? candidates.stream().filter(c -> c.getDepartmentId() == null).toList()
             : departmentChain;
-        return chain.stream().sorted(Comparator.comparing(ApprovalChainConfig::getSequenceOrder)).toList();
+        List<ApprovalChainConfig> sorted = chain.stream().sorted(Comparator.comparing(ApprovalChainConfig::getSequenceOrder)).toList();
+        if (sorted.size() > 1 && !entitlementService.current().includes(FeatureCodes.APPROVAL_CHAINS)) {
+            return sorted.subList(0, 1);
+        }
+        return sorted;
     }
 
     private List<ApprovalChainConfig> createDefaultApprovalChain(ApprovalType type) {

@@ -200,6 +200,36 @@
       "readOnly": "Your free trial has ended. This workspace is read-only until {{ date }}, then it is paused — nothing is deleted.",
       "choosePlan": "Choose a plan",
       "askAdmin": "Ask an administrator to choose a plan."
+    },
+    "plan": {
+      "navBadge": "Upgrade",
+      "moduleReadOnly": "{{ name }} isn't included in your {{ plan }} plan. You can view what's here, but not make changes.",
+      "moduleReadOnlyNoPlan": "{{ name }} isn't included in your plan. You can view what's here, but not make changes.",
+      "usageTitle": "What your plan includes",
+      "usageHint": "Your {{ plan }} plan, and how much of it you use.",
+      "usedOf": "{{ used }} of {{ limit }}",
+      "usedUnlimited": "{{ used }} · no limit",
+      "nearLimitHint": "Almost at your plan's limit.",
+      "limitReachedHint": "Limit reached: choose a bigger plan to add more.",
+      "readOnlyShort": "Not included · read-only",
+      "downgradeTitle": "Check before you switch",
+      "downgradeOver": "You have {{ used }} {{ unit }}; {{ plan }} allows {{ limit }}. You'll keep them, but can't add more.",
+      "downgradeModule": "{{ name }} isn't in {{ plan }}: it becomes read-only. Nothing is deleted.",
+      "storageAdd": "Add storage",
+      "storageChange": "Change extra storage",
+      "storageAddonHeld": "Includes {{ packs }} × {{ size }} GB extra · {{ price }} / month",
+      "storageDialogTitle": "Extra storage",
+      "storageDialogBody": "Add storage in packs of {{ size }} GB at {{ price }} a month each.",
+      "packsOf": "packs of {{ size }} GB",
+      "packsFewer": "One pack fewer",
+      "packsMore": "One pack more",
+      "storageNewLimit": "Your storage limit",
+      "storageMonthly": "Added to your monthly bill",
+      "storageBillingNote": "Available right away. Billed monthly on top of your subscription, from your next bill. Remove packs any time, as long as your files still fit.",
+      "storageSave": "Save",
+      "storageSaved": "Extra storage updated",
+      "storageRemoved": "Extra storage removed",
+      "downgradeStorageAddon": "Your extra storage ({{ packs }} × {{ size }} GB) isn't available on {{ plan }} and is removed."
     }
   }
 }

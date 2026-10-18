@@ -3,7 +3,9 @@ package com.humano.web.rest.payroll;
 import com.humano.dto.payroll.request.GeneratePayrollPeriodsRequest;
 import com.humano.dto.payroll.response.PayrollPeriodResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.payroll.PayrollCalendarService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -23,6 +25,7 @@ import tech.jhipster.web.util.PaginationUtil;
  * Payroll periods . All period operations live under {@link PayrollCalendarService};
  * this resource only exposes them under a stable path for the SPA.
  */
+@RequireFeature(FeatureCodes.PAYROLL)
 @RestController
 @RequestMapping("/api/payroll/periods")
 @RequirePermission(PermissionsConstants.CONFIGURE_PAYROLL_CALENDAR)

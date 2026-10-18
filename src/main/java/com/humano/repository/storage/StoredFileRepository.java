@@ -33,4 +33,8 @@ public interface StoredFileRepository extends JpaRepository<StoredFile, UUID> {
         "SELECT sf FROM StoredFile sf WHERE sf.context = :context AND sf.visibility = com.humano.domain.enumeration.storage.FileVisibility.PUBLIC AND sf.deletedAt IS NULL"
     )
     Page<StoredFile> findPublicByContext(@Param("context") com.humano.domain.enumeration.storage.FileContext context, Pageable pageable);
+
+    /** Bytes held for this workspace, soft-deleted files included (they take space until the purge removes them). */
+    @Query("SELECT COALESCE(SUM(f.sizeBytes), 0) FROM StoredFile f")
+    long totalSizeBytes();
 }

@@ -3,12 +3,14 @@ package com.humano.service.billing;
 import com.humano.config.multitenancy.TenantAccessGuard;
 import com.humano.domain.billing.Invoice;
 import com.humano.domain.billing.Subscription;
+import com.humano.domain.billing.SubscriptionAddon;
 import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.billing.InvoiceStatus;
 import com.humano.domain.enumeration.billing.SubscriptionStatus;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.repository.billing.InvoiceRepository;
+import com.humano.repository.billing.SubscriptionAddonRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -17,6 +19,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
@@ -44,6 +47,8 @@ public class BillingLifecycleService {
     private static final List<Integer> TRIAL_REMINDER_DAYS = List.of(7, 3, 1); // "Trial ends soon" emails, days before
     /** After a trial ends without a plan, the workspace stays read-only this long, then it is suspended. */
     public static final int READ_ONLY_DAYS = 14;
+    /** An add-on's own monthly invoice is due this many days after it is issued. */
+    private static final int ADDON_INVOICE_DUE_DAYS = 14;
     private static final int GRACE_PERIOD_DAYS = 7; // Days after due date before suspension
     private static final int SUSPENSION_TO_DELETION_DAYS = 30; // Days after suspension before deletion warning
 
@@ -58,6 +63,7 @@ public class BillingLifecycleService {
     private final CouponService couponService;
     private final MeterRegistry meterRegistry;
     private final TenantAccessGuard accessGuard;
+    private final SubscriptionAddonRepository addonRepository;
 
     public BillingLifecycleService(
         SubscriptionRepository subscriptionRepository,
@@ -68,7 +74,8 @@ public class BillingLifecycleService {
         TenantAdminEmailResolver adminEmailResolver,
         CouponService couponService,
         MeterRegistry meterRegistry,
-        TenantAccessGuard accessGuard
+        TenantAccessGuard accessGuard,
+        SubscriptionAddonRepository addonRepository
     ) {
         this.subscriptionRepository = subscriptionRepository;
         this.invoiceRepository = invoiceRepository;
@@ -79,6 +86,7 @@ public class BillingLifecycleService {
         this.couponService = couponService;
         this.meterRegistry = meterRegistry;
         this.accessGuard = accessGuard;
+        this.addonRepository = addonRepository;
     }
 
     private void timeTick(String name, Runnable body) {
@@ -292,6 +300,18 @@ public class BillingLifecycleService {
      */
     private Invoice generateRenewalInvoice(Subscription subscription) {
         BigDecimal amount = calculateRenewalAmount(subscription);
+        // A monthly plan carries its add-ons on the same invoice, on top of the plan.
+        BigDecimal addons = subscription.getBillingCycle() == BillingCycle.MONTHLY ? addonsMonthly(subscription) : BigDecimal.ZERO;
+        String notes = addons.signum() > 0 ? "Includes extra storage: " + addonsDescription(subscription) : null;
+        return createInvoice(subscription, amount.add(addons), true, subscription.getCurrentPeriodEnd(), notes);
+    }
+
+    /**
+     * Builds and saves an invoice for {@code amount}: the subscription's coupon re-applied when
+     * {@code applyCoupon} (plan renewals; add-ons are never discounted), country tax resolved at the
+     * issue date, due on {@code dueDate}.
+     */
+    private Invoice createInvoice(Subscription subscription, BigDecimal amount, boolean applyCoupon, Instant dueDate, String notes) {
         Instant issueDate = Instant.now();
 
         // P4.5 — re-apply the coupon the tenant signed up with, if still valid.
@@ -301,7 +321,7 @@ public class BillingLifecycleService {
         // sticker price is what's owed). Log + clear the snapshot so a future
         // tick doesn't keep trying.
         BigDecimal discountAmount = BigDecimal.ZERO;
-        String couponSnapshot = subscription.getCouponCode();
+        String couponSnapshot = applyCoupon ? subscription.getCouponCode() : null;
         String couponCodeOnInvoice = null;
         if (couponSnapshot != null && !couponSnapshot.isBlank()) {
             try {
@@ -346,9 +366,67 @@ public class BillingLifecycleService {
         invoice.setTotalAmount(totalAmount);
         invoice.setStatus(InvoiceStatus.PENDING);
         invoice.setIssueDate(issueDate);
-        invoice.setDueDate(subscription.getCurrentPeriodEnd());
+        invoice.setDueDate(dueDate);
+        invoice.setNotes(notes);
 
         return invoiceRepository.save(invoice);
+    }
+
+    // ========== ADD-ONS (billed monthly, on top of the subscription) ==========
+
+    /** What the subscription's add-ons cost a month. */
+    private BigDecimal addonsMonthly(Subscription subscription) {
+        return addonRepository
+            .findBySubscriptionId(subscription.getId())
+            .stream()
+            .map(SubscriptionAddon::monthlyPrice)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /** "2 × 100 GB" — for the invoice note. */
+    private String addonsDescription(Subscription subscription) {
+        return addonRepository
+            .findBySubscriptionId(subscription.getId())
+            .stream()
+            .filter(a -> a.getQuantity() > 0)
+            .map(a -> a.getQuantity() + " × " + a.getUnitSize() + " GB")
+            .collect(java.util.stream.Collectors.joining(", "));
+    }
+
+    /**
+     * Daily: add-ons of yearly subscriptions get their own invoice each month (a monthly plan
+     * carries them on its renewal instead). Each run bills one month per add-on that is due.
+     */
+    @Scheduled(cron = "0 30 2 * * *")
+    @Transactional
+    public void processAddonBilling() {
+        timeTick("processAddonBilling", this::processAddonBillingBody);
+    }
+
+    private void processAddonBillingBody() {
+        Instant now = Instant.now();
+        int billed = 0;
+        for (SubscriptionAddon addon : addonRepository.findDueForMonthlyInvoice(now)) {
+            try {
+                Subscription subscription = addon.getSubscription();
+                Instant from = addon.getBilledUntil() != null ? addon.getBilledUntil() : now;
+                Instant until = from.atZone(ZoneOffset.UTC).plusMonths(1).toInstant();
+                Invoice invoice = createInvoice(
+                    subscription,
+                    addon.monthlyPrice(),
+                    false,
+                    now.plus(ADDON_INVOICE_DUE_DAYS, ChronoUnit.DAYS),
+                    "Extra storage " + addon.getQuantity() + " × " + addon.getUnitSize() + " GB, one month"
+                );
+                addon.setBilledUntil(until);
+                addonRepository.save(addon);
+                sendInvoiceIssuedNotification(invoice);
+                billed++;
+            } catch (Exception e) {
+                log.error("Failed to bill add-on {}", addon.getId(), e);
+            }
+        }
+        log.info("Add-on billing completed. Invoiced: {}", billed);
     }
 
     /**

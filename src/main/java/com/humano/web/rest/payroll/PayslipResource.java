@@ -3,7 +3,9 @@ package com.humano.web.rest.payroll;
 import com.humano.dto.payroll.request.PayslipSearchRequest;
 import com.humano.dto.payroll.response.PayslipResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.payroll.PayslipService;
 import jakarta.validation.Valid;
 import java.util.Map;
@@ -31,6 +33,7 @@ import tech.jhipster.web.util.PaginationUtil;
  * &mdash; "GET my own payslips" with a {@code caller == employeeId} check &mdash; is a future enhancement.
  * Until then keep the class-level grant narrow.
  */
+@RequireFeature(FeatureCodes.PAYROLL)
 @RestController
 @RequestMapping("/api/payroll/payslips")
 @RequirePermission(PermissionsConstants.VIEW_PAYSLIPS)

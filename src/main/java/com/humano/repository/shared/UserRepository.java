@@ -67,4 +67,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      */
     @Query("SELECT u FROM User u JOIN u.authorities a WHERE a.name = :authority " + "AND u.activated = true ORDER BY u.createdDate ASC")
     List<User> findActivatedByAuthority(@Param("authority") String authority);
+
+    /** Activated people holding at least one of these roles (the plan's admin seats in use). */
+    @Query("SELECT COUNT(DISTINCT u.id) FROM User u JOIN u.authorities a WHERE u.activated = true AND a.name IN :names")
+    long countActivatedHoldingAny(@Param("names") java.util.Collection<String> names);
+
+    /** Whether this person is activated and already holds one of these roles (already takes a seat). */
+    @Query("SELECT COUNT(u) > 0 FROM User u JOIN u.authorities a WHERE u.id = :id AND u.activated = true AND a.name IN :names")
+    boolean holdsActivatedAny(@Param("id") java.util.UUID id, @Param("names") java.util.Collection<String> names);
 }

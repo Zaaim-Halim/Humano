@@ -7,6 +7,7 @@ import com.humano.dto.hr.requests.UpdateEmployeeDocumentRequest;
 import com.humano.dto.hr.responses.EmployeeDocumentResponse;
 import com.humano.repository.hr.EmployeeDocumentRepository;
 import com.humano.repository.shared.EmployeeRepository;
+import com.humano.service.billing.entitlement.StorageQuotaService;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.storage.FileStorageService;
 import com.humano.service.storage.StorageFactory;
@@ -39,15 +40,18 @@ public class EmployeeDocumentService {
     private final EmployeeDocumentRepository employeeDocumentRepository;
     private final EmployeeRepository employeeRepository;
     private final StorageFactory storageFactory;
+    private final StorageQuotaService storageQuotaService;
 
     public EmployeeDocumentService(
         EmployeeDocumentRepository employeeDocumentRepository,
         EmployeeRepository employeeRepository,
-        StorageFactory storageFactory
+        StorageFactory storageFactory,
+        StorageQuotaService storageQuotaService
     ) {
         this.employeeDocumentRepository = employeeDocumentRepository;
         this.employeeRepository = employeeRepository;
         this.storageFactory = storageFactory;
+        this.storageQuotaService = storageQuotaService;
     }
 
     private FileStorageService fileStorageService() {
@@ -74,6 +78,7 @@ public class EmployeeDocumentService {
 
         String type = request.type() == null || request.type().isBlank() ? "Other" : request.type().strip();
         validate(file);
+        storageQuotaService.checkFits(file.getSize());
 
         EmployeeDocument document = new EmployeeDocument();
         document.setEmployee(employee);
@@ -128,6 +133,7 @@ public class EmployeeDocumentService {
             .orElseThrow(() -> new EntityNotFoundException("Document not found with ID: " + id));
 
         validate(file);
+        storageQuotaService.checkFits(file.getSize() - (document.getSizeBytes() != null ? document.getSizeBytes() : 0));
         String fileReference = storeFile(document.getEmployee().getId(), document.getType(), file);
 
         // Delete the old file if possible

@@ -4,7 +4,9 @@ import com.humano.dto.hr.requests.CreateEmployeeCertificationRequest;
 import com.humano.dto.hr.requests.UpdateEmployeeCertificationRequest;
 import com.humano.dto.hr.responses.EmployeeCertificationResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.hr.EmployeeCertificationService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -21,6 +23,7 @@ import tech.jhipster.web.util.HeaderUtil;
 /**
  * REST controller for managing EmployeeCertification records.
  */
+@RequireFeature(FeatureCodes.TRAINING)
 @RestController
 @RequestMapping("/api/hr/employee-certifications")
 public class EmployeeCertificationResource {

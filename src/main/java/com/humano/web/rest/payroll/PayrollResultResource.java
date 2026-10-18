@@ -3,7 +3,9 @@ package com.humano.web.rest.payroll;
 import com.humano.dto.payroll.response.PayrollResultResponse;
 import com.humano.dto.payroll.response.PayslipResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.payroll.PayslipService;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
  * Per-employee payroll result detail . Results are produced by a run; this resource
  * exposes a single result's line breakdown and a payslip-generation entry point.
  */
+@RequireFeature(FeatureCodes.PAYROLL)
 @RestController
 @RequestMapping("/api/payroll/results")
 public class PayrollResultResource {

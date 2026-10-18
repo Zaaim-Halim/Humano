@@ -9,6 +9,7 @@ import com.humano.domain.tenant.TenantStorageConfig;
 import com.humano.domain.tenant.storage.StorageConfigDetails;
 import com.humano.repository.storage.StoredFileRepository;
 import com.humano.repository.tenant.TenantStorageConfigRepository;
+import com.humano.service.billing.entitlement.StorageQuotaService;
 import com.humano.service.errors.EntityNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,18 +50,21 @@ public class FileService {
     private final TenantStorageConfigRepository tenantStorageConfigRepository;
     private final TenantIdResolver tenantIdResolver;
     private final StorageFactory storageFactory;
+    private final StorageQuotaService storageQuotaService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public FileService(
         StoredFileRepository storedFileRepository,
         TenantStorageConfigRepository tenantStorageConfigRepository,
         TenantIdResolver tenantIdResolver,
-        StorageFactory storageFactory
+        StorageFactory storageFactory,
+        StorageQuotaService storageQuotaService
     ) {
         this.storedFileRepository = storedFileRepository;
         this.tenantStorageConfigRepository = tenantStorageConfigRepository;
         this.tenantIdResolver = tenantIdResolver;
         this.storageFactory = storageFactory;
+        this.storageQuotaService = storageQuotaService;
     }
 
     /**
@@ -97,6 +101,8 @@ public class FileService {
             .orElse(null);
 
         validateContentType(file, context);
+        // The plan's storage, before any byte reaches the provider.
+        storageQuotaService.checkFits(file.getSize());
         long effectiveCap = effectiveCap(context, activeDetails);
         if (file.getSize() > effectiveCap) {
             throw new StorageException(

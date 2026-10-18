@@ -5,8 +5,10 @@ import com.humano.dto.hr.requests.OvertimeRecordSearchRequest;
 import com.humano.dto.hr.requests.ProcessOvertimeRecordRequest;
 import com.humano.dto.hr.responses.OvertimeRecordResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.hr.OvertimeRecordService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -27,6 +29,7 @@ import tech.jhipster.web.util.PaginationUtil;
 /**
  * REST controller for managing overtime records.
  */
+@RequireFeature(FeatureCodes.TIMESHEETS)
 @RestController
 @RequestMapping("/api/hr/overtime-records")
 public class OvertimeRecordResource {

@@ -5,7 +5,9 @@ import com.humano.dto.payroll.request.EnrollBenefitRequest;
 import com.humano.dto.payroll.response.BenefitsSummaryResponse;
 import com.humano.dto.payroll.response.EmployeeBenefitResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.payroll.EmployeeBenefitService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
@@ -25,6 +27,7 @@ import tech.jhipster.web.util.PaginationUtil;
 /**
  * Employee benefits .
  */
+@RequireFeature(FeatureCodes.COMPENSATION)
 @RestController
 @RequestMapping("/api/payroll/employee-benefits")
 @RequirePermission(PermissionsConstants.MANAGE_BENEFITS)
