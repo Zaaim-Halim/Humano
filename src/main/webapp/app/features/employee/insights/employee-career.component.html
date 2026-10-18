@@ -1,0 +1,69 @@
+<section class="hum-card hum-insights__card hum-career">
+  <header class="hum-insights__head">
+    <span class="hum-records__icon"><lucide-icon name="briefcase" [size]="16" /></span>
+    <div>
+      <h3>{{ 'humano.positionChange.history' | translate }}</h3>
+      <p class="hum-insights__note">{{ 'humano.positionChange.historyHint' | translate }}</p>
+    </div>
+  </header>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e"
+      ><hum-button variant="outline" size="sm" icon="rotate-ccw" (click)="load()">{{
+        'humano.action.retry' | translate
+      }}</hum-button></hum-alert
+    >
+  } @else if (changes() === null) {
+    <hum-skeleton-row /><hum-skeleton-row />
+  } @else if (changes()!.length === 0) {
+    <p class="hum-insights__note">{{ 'humano.positionChange.empty' | translate }}</p>
+  } @else {
+    <ol class="hum-career__list">
+      @for (c of changes(); track c.id) {
+        <li class="hum-career__item" [class.is-cancelled]="c.status === 'CANCELLED'">
+          <span class="hum-career__dot" [attr.data-tone]="tones[c.changeType]" aria-hidden="true"></span>
+          <div class="hum-career__head">
+            <hum-badge [tone]="tones[c.changeType]" [label]="'humano.positionChange.types.' + c.changeType | translate" />
+            <span class="hum-career__date">{{
+              'humano.positionChange.from' | translate: { date: (c.effectiveDate | date: 'mediumDate') }
+            }}</span>
+            @if (c.status !== 'APPLIED') {
+              <hum-badge
+                [tone]="c.status === 'PENDING' ? 'warning' : 'neutral'"
+                [label]="'humano.positionChange.status.' + c.status | translate"
+              />
+            }
+          </div>
+          <dl class="hum-career__moves">
+            @for (m of moves(c); track m.labelKey) {
+              <dt>{{ m.labelKey | translate }}</dt>
+              <dd>
+                @if (m.from) {
+                  <span class="hum-career__from">{{ m.from }}</span>
+                  <lucide-icon name="arrow-right" [size]="14" aria-hidden="true" />
+                }
+                <strong>{{ m.to }}</strong>
+              </dd>
+            }
+            @if (c.newSalary !== null) {
+              <dt>{{ 'humano.positionChange.salary' | translate }}</dt>
+              <dd class="tabular-nums">
+                @if (c.oldSalary !== null) {
+                  <span class="hum-career__from">{{ c.oldSalary | money: currency() }}</span>
+                  <lucide-icon name="arrow-right" [size]="14" aria-hidden="true" />
+                }
+                <strong>{{ c.newSalary | money: currency() }}</strong>
+              </dd>
+            }
+          </dl>
+          @if (c.reason) {
+            <p class="hum-career__reason">{{ c.reason }}</p>
+          }
+          @if (c.recordedBy && !self()) {
+            <p class="hum-career__meta">{{ 'humano.positionChange.recordedBy' | translate: { who: c.recordedBy } }}</p>
+          }
+        </li>
+      }
+    </ol>
+  }
+</section>

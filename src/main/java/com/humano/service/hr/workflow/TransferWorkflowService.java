@@ -482,7 +482,7 @@ public class TransferWorkflowService {
         UUID oldUnitId = employee.getUnit() != null ? employee.getUnit().getId() : null;
         LocalDate effectiveDate = LocalDate.parse((String) context.get("effectiveDate"));
 
-        recordPositionHistory(employee, effectiveDate, context, newPos, newManager, newUnit);
+        recordPositionHistory(employee, effectiveDate, context, newPos, newDept, newManager, newUnit);
 
         if (newDept != null) employee.setDepartment(newDept);
         if (newPos != null) employee.setPosition(newPos);
@@ -582,10 +582,15 @@ public class TransferWorkflowService {
         LocalDate effectiveDate,
         Map<String, Object> context,
         Position newPosition,
+        Department newDepartment,
         Employee newManager,
         OrganizationalUnit newUnit
     ) {
         EmployeePositionHistory history = new EmployeePositionHistory();
+        if (newDepartment != null) {
+            history.setOldDepartment(employee.getDepartment());
+            history.setNewDepartment(newDepartment);
+        }
         history.setEmployee(employee);
         history.setOldPosition(employee.getPosition());
         history.setNewPosition(newPosition);

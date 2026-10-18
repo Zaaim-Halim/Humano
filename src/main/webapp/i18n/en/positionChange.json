@@ -1,0 +1,44 @@
+{
+  "humano": {
+    "positionChange": {
+      "cta": "Change position",
+      "title": "Change position",
+      "intro": "Promotions, transfers and corrections are dated and kept in the history. Payroll pays from the new position and salary from the date.",
+      "type": "Type of change",
+      "types": {
+        "PROMOTION": "Promotion",
+        "DEMOTION": "Demotion",
+        "TRANSFER": "Transfer",
+        "OTHER": "Other change"
+      },
+      "effectiveDate": "Effective from",
+      "effectiveHint": "Today or earlier, after payroll that is already approved.",
+      "newPosition": "New position",
+      "newDepartment": "New department",
+      "keep": "Keep {{ name }}",
+      "newSalary": "New salary",
+      "salaryHint": "Current {{ amount }} {{ basis }}. Leave empty to keep it.",
+      "reason": "Reason",
+      "reasonPlaceholder": "e.g. Annual review, new team lead",
+      "save": "Record change",
+      "saved": "Position change recorded",
+      "nothing": "Pick a new position, department or salary.",
+      "history": "Career history",
+      "historyHint": "Promotions, transfers and other changes, newest first.",
+      "empty": "No position changes recorded yet.",
+      "from": "from {{ date }}",
+      "position": "Position",
+      "department": "Department",
+      "unit": "Team",
+      "manager": "Manager",
+      "salary": "Salary",
+      "recordedBy": "Recorded by {{ who }}",
+      "status": {
+        "PENDING": "Pending",
+        "APPLIED": "In effect",
+        "CANCELLED": "Cancelled"
+      },
+      "lockedHint": "Changed with Change position on the employee page, so it is dated and kept in the history."
+    }
+  }
+}

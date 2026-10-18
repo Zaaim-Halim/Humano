@@ -109,11 +109,16 @@
               [label]="'humano.employeeForm.position' | translate"
               controlId="emp-position"
               required
+              [hint]="isEdit() ? ('humano.positionChange.lockedHint' | translate) : undefined"
               [error]="invalid('positionId') ? ('humano.employeeForm.required' | translate) : undefined"
             >
               <hum-select formControlName="positionId" [options]="positions()" [invalid]="invalid('positionId')" />
             </hum-form-field>
-            <hum-form-field [label]="'humano.employeeForm.department' | translate" controlId="emp-department">
+            <hum-form-field
+              [label]="'humano.employeeForm.department' | translate"
+              controlId="emp-department"
+              [hint]="isEdit() ? ('humano.positionChange.lockedHint' | translate) : undefined"
+            >
               <hum-select formControlName="departmentId" [options]="departments()" />
             </hum-form-field>
             <hum-form-field

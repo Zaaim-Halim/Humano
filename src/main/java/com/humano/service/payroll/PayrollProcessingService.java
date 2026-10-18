@@ -22,6 +22,7 @@ import com.humano.security.AuthorityPermissionService;
 import com.humano.security.PermissionsConstants;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
+import com.humano.service.hr.EmployeeRoleHistory;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -130,6 +131,7 @@ public class PayrollProcessingService {
     private static final int RATE_SCALE = 6;
 
     private final PayrollRunRepository payrollRunRepository;
+    private final EmployeeRoleHistory roleHistory;
     private final PayrollPeriodRepository payrollPeriodRepository;
     private final PayrollResultRepository payrollResultRepository;
     private final PayrollLineRepository payrollLineRepository;
@@ -187,8 +189,10 @@ public class PayrollProcessingService {
         TaxCalculationService taxCalculationService,
         ExchangeRateService exchangeRateService,
         AuthorityPermissionService authorityPermissionService,
-        PayrollEmployeeTransactionExecutor employeeTransactionExecutor
+        PayrollEmployeeTransactionExecutor employeeTransactionExecutor,
+        EmployeeRoleHistory roleHistory
     ) {
+        this.roleHistory = roleHistory;
         this.payrollRunRepository = payrollRunRepository;
         this.payrollPeriodRepository = payrollPeriodRepository;
         this.payrollResultRepository = payrollResultRepository;
@@ -1239,6 +1243,7 @@ public class PayrollProcessingService {
             currencyCode = results.isEmpty() ? null : results.get(0).getCurrency().getCode().getCode();
         }
 
+        Map<PayrollResult, String> departments = departmentsOf(results);
         return new PayrollRunSummaryResponse(
             runId,
             run.getPeriod().getCode(),
@@ -1255,8 +1260,8 @@ public class PayrollProcessingService {
             currencyCode,
             earningsByComponent,
             deductionsByComponent,
-            departmentBreakdown(results, useReporting),
-            topEarners(results, useReporting),
+            departmentBreakdown(results, useReporting, departments),
+            topEarners(results, useReporting, departments),
             comparisonWithPrevious(run, results.size(), totalGross, totalNet, useReporting)
         );
     }
@@ -1283,18 +1288,24 @@ public class PayrollProcessingService {
         return reporting ? coalesce(r.getReportingNet(), r.getNet()) : r.getNet();
     }
 
-    private static String departmentOf(PayrollResult r) {
-        return r.getEmployee() != null && r.getEmployee().getDepartment() != null ? r.getEmployee().getDepartment().getName() : "—";
+    /** Each result's department for the run's period (not today's: a later transfer must not regroup a past run). */
+    private Map<PayrollResult, String> departmentsOf(List<PayrollResult> results) {
+        EmployeeRoleHistory.Lookup roles = roleHistory.lookup(results.stream().map(PayrollResult::getEmployee).toList());
+        Map<PayrollResult, String> departments = new java.util.IdentityHashMap<>();
+        for (PayrollResult r : results) {
+            String name = r.getPayrollPeriod() != null ? roles.at(r.getEmployee(), r.getPayrollPeriod().getEndDate()).department() : null;
+            departments.put(r, name != null ? name : "—");
+        }
+        return departments;
     }
 
     /** Headcount, gross, net and average gross per department, largest gross first. */
     private Map<String, PayrollRunSummaryResponse.DepartmentPayrollSummary> departmentBreakdown(
         List<PayrollResult> results,
-        boolean reporting
+        boolean reporting,
+        Map<PayrollResult, String> departments
     ) {
-        Map<String, List<PayrollResult>> byDept = results
-            .stream()
-            .collect(java.util.stream.Collectors.groupingBy(PayrollProcessingService::departmentOf));
+        Map<String, List<PayrollResult>> byDept = results.stream().collect(java.util.stream.Collectors.groupingBy(departments::get));
         return byDept
             .entrySet()
             .stream()
@@ -1321,7 +1332,11 @@ public class PayrollProcessingService {
             );
     }
 
-    private List<PayrollRunSummaryResponse.EmployeePayrollSummary> topEarners(List<PayrollResult> results, boolean reporting) {
+    private List<PayrollRunSummaryResponse.EmployeePayrollSummary> topEarners(
+        List<PayrollResult> results,
+        boolean reporting,
+        Map<PayrollResult, String> departments
+    ) {
         return results
             .stream()
             .sorted(java.util.Comparator.comparing((PayrollResult r) -> grossOf(r, reporting)).reversed())
@@ -1330,7 +1345,7 @@ public class PayrollProcessingService {
                 new PayrollRunSummaryResponse.EmployeePayrollSummary(
                     r.getEmployee().getId(),
                     r.getEmployee().getFirstName() + " " + r.getEmployee().getLastName(),
-                    departmentOf(r),
+                    departments.get(r),
                     grossOf(r, reporting),
                     netOf(r, reporting)
                 )

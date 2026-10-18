@@ -540,6 +540,9 @@ export default class EmployeeFormComponent implements OnInit {
             placeOfBirth: p.personalDetails?.placeOfBirth ?? '',
             workPhone: p.personalDetails?.workPhone ?? '',
           });
+          // Position and department change through Change position (dated, kept in the history).
+          this.form.controls.positionId.disable();
+          this.form.controls.departmentId.disable();
           this.profile.set(p);
           this.refCurrent.set({
             employmentType: p.employmentType?.id ?? undefined,

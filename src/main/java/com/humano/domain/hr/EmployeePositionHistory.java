@@ -106,6 +106,15 @@ public class EmployeePositionHistory extends AbstractAuditingEntity<UUID> {
     @JoinColumn(name = "new_manager_id")
     private Employee newManager;
 
+    /** Department before the change; with {@code newDepartment}, only set when the change moved departments. */
+    @ManyToOne
+    @JoinColumn(name = "old_department_id")
+    private Department oldDepartment;
+
+    @ManyToOne
+    @JoinColumn(name = "new_department_id")
+    private Department newDepartment;
+
     @Override
     public UUID getId() {
         return id;
@@ -282,6 +291,22 @@ public class EmployeePositionHistory extends AbstractAuditingEntity<UUID> {
 
     public void setNewManager(Employee newManager) {
         this.newManager = newManager;
+    }
+
+    public Department getOldDepartment() {
+        return oldDepartment;
+    }
+
+    public void setOldDepartment(Department oldDepartment) {
+        this.oldDepartment = oldDepartment;
+    }
+
+    public Department getNewDepartment() {
+        return newDepartment;
+    }
+
+    public void setNewDepartment(Department newDepartment) {
+        this.newDepartment = newDepartment;
     }
 
     @Override

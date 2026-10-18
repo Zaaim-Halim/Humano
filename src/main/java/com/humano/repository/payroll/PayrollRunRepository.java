@@ -3,6 +3,8 @@ package com.humano.repository.payroll;
 import com.humano.domain.enumeration.payroll.RunStatus;
 import com.humano.domain.payroll.Currency;
 import com.humano.domain.payroll.PayrollRun;
+import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -11,6 +13,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -23,6 +26,10 @@ public interface PayrollRunRepository extends JpaRepository<PayrollRun, UUID>, J
     List<Currency> findDistinctReportingCurrencies();
 
     boolean existsByPeriodIdAndStatus(UUID periodId, RunStatus status);
+
+    /** The end of the latest period with a run in one of these states (e.g. approved or posted): payroll is settled up to it. */
+    @Query("select max(r.period.endDate) from PayrollRun r where r.status in :statuses")
+    LocalDate findLatestPeriodEndWithStatusIn(@Param("statuses") Collection<RunStatus> statuses);
 
     /** Run history page — period and reporting currency fetched in the same query. */
     @EntityGraph(attributePaths = { "period", "reportingCurrency", "approvedBy" })

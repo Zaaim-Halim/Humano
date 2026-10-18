@@ -15,6 +15,9 @@
         'humano.directory.showInTree' | translate
       }}</hum-button>
       @if (canEdit) {
+        <hum-button variant="secondary" size="sm" icon="trending-up" (click)="openPositionChange()">{{
+          'humano.positionChange.cta' | translate
+        }}</hum-button>
         <hum-button variant="secondary" size="sm" icon="pencil" (click)="goEdit()">{{
           'humano.employeeForm.editTitle' | translate
         }}</hum-button>
@@ -27,6 +30,11 @@
       @switch (activeTab()) {
         @case ('overview') {
           <hum-employee-overview [employee]="emp" />
+          <hum-employee-career
+            [employeeId]="id()"
+            [reloadKey]="careerReload()"
+            [currency]="compHistory()?.currentCompensation?.currencyCode ?? null"
+          />
         }
 
         @case ('compensation') {
@@ -143,5 +151,70 @@
   <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
     <hum-button variant="secondary" (click)="compFormOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
     <hum-button variant="primary" [loading]="compSaving()" (click)="saveCompensation()">{{ 'humano.action.save' | translate }}</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Position change: a promotion, transfer or correction, dated and kept in the history -->
+<hum-drawer [open]="changeOpen()" [title]="'humano.positionChange.title' | translate" hasFooter (closed)="changeOpen.set(false)">
+  <p class="hum-insights__note" style="margin-bottom: var(--space-4)">{{ 'humano.positionChange.intro' | translate }}</p>
+  <form [formGroup]="changeForm" style="display: grid; gap: var(--space-4)">
+    <hum-form-field [label]="'humano.positionChange.type' | translate" controlId="pc-type">
+      <hum-select formControlName="changeType" [options]="changeTypeOptions()" />
+    </hum-form-field>
+
+    <hum-form-field
+      [label]="'humano.positionChange.effectiveDate' | translate"
+      controlId="pc-date"
+      [hint]="'humano.positionChange.effectiveHint' | translate"
+      [error]="changeInvalid('effectiveDate') ? ('humano.employeeForm.required' | translate) : undefined"
+    >
+      <hum-input inputId="pc-date" type="date" formControlName="effectiveDate" [invalid]="changeInvalid('effectiveDate')" />
+    </hum-form-field>
+
+    <hum-form-field [label]="'humano.positionChange.newPosition' | translate" controlId="pc-position">
+      <hum-select formControlName="newPositionId" [options]="changePositionOptions()" />
+    </hum-form-field>
+
+    <hum-form-field [label]="'humano.positionChange.newDepartment' | translate" controlId="pc-department">
+      <hum-select formControlName="newDepartmentId" [options]="changeDepartmentOptions()" />
+    </hum-form-field>
+
+    @if (canManageCompensation) {
+      <hum-form-field
+        [label]="'humano.positionChange.newSalary' | translate"
+        controlId="pc-salary"
+        [hint]="
+          compHistory()?.currentCompensation
+            ? ('humano.positionChange.salaryHint'
+              | translate
+                : {
+                    amount: compHistory()!.currentCompensation!.baseAmount + ' ' + (compHistory()!.currentCompensation!.currencyCode ?? ''),
+                    basis: compHistory()!.currentCompensation!.basis,
+                  })
+            : undefined
+        "
+      >
+        <hum-input inputId="pc-salary" type="number" formControlName="newSalary" />
+      </hum-form-field>
+    }
+
+    <hum-form-field
+      [label]="'humano.positionChange.reason' | translate"
+      controlId="pc-reason"
+      [error]="changeInvalid('reason') ? ('humano.employeeForm.required' | translate) : undefined"
+    >
+      <hum-input
+        inputId="pc-reason"
+        formControlName="reason"
+        [placeholder]="'humano.positionChange.reasonPlaceholder' | translate"
+        [invalid]="changeInvalid('reason')"
+      />
+    </hum-form-field>
+  </form>
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" icon="x" (click)="changeOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="changeSaving()" (click)="savePositionChange()">{{
+      'humano.positionChange.save' | translate
+    }}</hum-button>
   </div>
 </hum-drawer>

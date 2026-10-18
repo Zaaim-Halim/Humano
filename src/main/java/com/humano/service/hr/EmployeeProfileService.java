@@ -72,6 +72,8 @@ public class EmployeeProfileService {
 
     private static final Logger log = LoggerFactory.getLogger(EmployeeProfileService.class);
     private static final String ENTITY_NAME = "employee";
+    /** What a request sends to mean "no department". */
+    private static final UUID NO_DEPARTMENT = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
     private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
@@ -549,12 +551,16 @@ public class EmployeeProfileService {
      * @param request the request containing updated relationship details
      */
     private void updateEmployeeRelationships(Employee employee, UpdateEmployeeProfileRequest request) {
-        // Update position if provided
-        if (request.positionId() != null) {
-            Position position = positionRepository
-                .findById(request.positionId())
-                .orElseThrow(() -> new EntityNotFoundException("Position not found with ID: " + request.positionId()));
-            employee.setPosition(position);
+        // Position and department change through a recorded position change (with a date, a reason,
+        // the history and the salary record): the profile only accepts them unchanged.
+        if (
+            request.positionId() != null && (employee.getPosition() == null || !request.positionId().equals(employee.getPosition().getId()))
+        ) {
+            throw new BadRequestAlertException(
+                "The position changes through Change position on the employee page, so it is dated and recorded.",
+                ENTITY_NAME,
+                "usepositionchange"
+            );
         }
 
         // Update unit if provided
@@ -565,15 +571,14 @@ public class EmployeeProfileService {
             employee.setUnit(unit);
         }
 
-        // Update department if provided
         if (request.departmentId() != null) {
-            if (request.departmentId().equals(UUID.fromString("00000000-0000-0000-0000-000000000000"))) {
-                employee.setDepartment(null);
-            } else {
-                Department department = departmentRepository
-                    .findById(request.departmentId())
-                    .orElseThrow(() -> new EntityNotFoundException("Department not found with ID: " + request.departmentId()));
-                employee.setDepartment(department);
+            UUID current = employee.getDepartment() != null ? employee.getDepartment().getId() : NO_DEPARTMENT;
+            if (!request.departmentId().equals(current)) {
+                throw new BadRequestAlertException(
+                    "The department changes through Change position on the employee page, so it is dated and recorded.",
+                    ENTITY_NAME,
+                    "usepositionchange"
+                );
             }
         }
 

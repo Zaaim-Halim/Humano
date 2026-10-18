@@ -6833,6 +6833,93 @@ button.hum-records__empty:hover {
   color: var(--text-muted);
 }
 
+/* Career history — promotions, transfers and other position changes, newest first */
+.hum-career {
+  margin-top: var(--space-4);
+}
+.hum-career__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.hum-career__item {
+  position: relative;
+  padding: 0 0 var(--space-4) var(--space-6);
+  border-left: 2px solid var(--border-subtle);
+  margin-left: 6px;
+}
+.hum-career__item:last-child {
+  border-left-color: transparent;
+  padding-bottom: 0;
+}
+.hum-career__item.is-cancelled {
+  opacity: 0.6;
+}
+.hum-career__dot {
+  position: absolute;
+  left: -7px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  border: 2px solid var(--text-subtle);
+}
+.hum-career__dot[data-tone='success'] {
+  border-color: var(--success-solid);
+}
+.hum-career__dot[data-tone='warning'] {
+  border-color: var(--warning-solid);
+}
+.hum-career__dot[data-tone='info'] {
+  border-color: var(--brand);
+}
+.hum-career__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.hum-career__date {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.hum-career__moves {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+}
+.hum-career__moves dt {
+  color: var(--text-muted);
+}
+.hum-career__moves dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--text-default);
+}
+.hum-career__moves strong {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.hum-career__from {
+  color: var(--text-muted);
+}
+.hum-career__reason {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-default);
+}
+.hum-career__meta {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+
 .hum-legend {
   display: inline-flex;
   align-items: center;

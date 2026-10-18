@@ -7,6 +7,7 @@ import { ApplicationConfigService } from 'app/core/config/application-config.ser
 import { createRequestOption } from 'app/core/request/request-util';
 import { SalaryHistory } from 'app/features/admin/models/compensation.model';
 import { Payslip, PayslipYtd } from 'app/features/admin/models/payslip.model';
+import { PositionChange } from 'app/features/admin/models/position-change.model';
 
 import { EmployeeTraining } from '../models/employee-training.model';
 import { PerformanceReview } from '../models/performance-review.model';
@@ -28,6 +29,11 @@ export class MeWorkService {
 
   payslip(id: string): Observable<Payslip> {
     return this.http.get<Payslip>(`${this.url}/payslips/${encodeURIComponent(id)}`);
+  }
+
+  /** `GET /api/me/position-history` — my promotions, transfers and other position changes. */
+  positionHistory(): Observable<PositionChange[]> {
+    return this.http.get<PositionChange[]>(`${this.url}/position-history`);
   }
 
   /** My year-to-date totals, up to `through` (a payslip's period end) when given. */

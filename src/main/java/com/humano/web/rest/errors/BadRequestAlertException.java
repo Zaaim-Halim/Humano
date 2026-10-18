@@ -1,11 +1,10 @@
 package com.humano.web.rest.errors;
 
+import java.net.URI;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.ErrorResponseException;
 import tech.jhipster.web.rest.errors.ProblemDetailWithCause;
 import tech.jhipster.web.rest.errors.ProblemDetailWithCause.ProblemDetailWithCauseBuilder;
-
-import java.net.URI;
 
 @SuppressWarnings("java:S110") // Inheritance tree of classes should not be too deep
 public class BadRequestAlertException extends ErrorResponseException {
@@ -27,6 +26,9 @@ public class BadRequestAlertException extends ErrorResponseException {
                 .withStatus(HttpStatus.BAD_REQUEST.value())
                 .withType(type)
                 .withTitle(defaultMessage)
+                // The title is replaced by the status reason when the response is built; the detail
+                // is kept, so it carries the message people are shown.
+                .withDetail(defaultMessage)
                 .withProperty("message", "error." + errorKey)
                 .withProperty("params", entityName)
                 .build(),

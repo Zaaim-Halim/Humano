@@ -5,6 +5,9 @@ import { LucideAngularModule } from 'lucide-angular';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable } from 'rxjs';
 
+import { PositionChangeRequest, PositionChangeType } from '../models/position-change.model';
+import { PositionChangeService } from '../services/position-change.service';
+
 import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
 import { normalizeHttpError } from 'app/core/api';
@@ -16,6 +19,7 @@ import { EmployeeHeroComponent } from 'app/features/employee/profile/employee-he
 import { EmployeeOverviewComponent } from 'app/features/employee/profile/employee-overview.component';
 import { EmployeeRecordsComponent } from 'app/features/employee/employee-records/employee-records.component';
 import { EmployeeLeaveComponent } from 'app/features/employee/insights/employee-leave.component';
+import { EmployeeCareerComponent } from 'app/features/employee/insights/employee-career.component';
 import { EmployeePayComponent } from 'app/features/employee/insights/employee-pay.component';
 import { EmployeePerformanceComponent } from 'app/features/employee/insights/employee-performance.component';
 import {
@@ -39,6 +43,8 @@ import {
   CreateCompensationRequest,
   Currency,
   CurrencyService,
+  Department,
+  DepartmentService,
   Position,
   PositionService,
   SalaryAdjustmentRequest,
@@ -86,6 +92,7 @@ const idle = <T>(): TabState<T> => ({ data: null, loading: false, error: null })
     EmployeeHeroComponent,
     EmployeeOverviewComponent,
     EmployeePayComponent,
+    EmployeeCareerComponent,
     EmployeeLeaveComponent,
     EmployeePerformanceComponent,
   ],
@@ -100,6 +107,8 @@ export default class EmployeeDetailComponent {
   private readonly employeeService = inject(EmployeeService);
   private readonly compensationService = inject(CompensationService);
   private readonly positionService = inject(PositionService);
+  private readonly departmentService = inject(DepartmentService);
+  private readonly positionChangeService = inject(PositionChangeService);
   private readonly currencyService = inject(CurrencyService);
   private readonly router = inject(Router);
   private readonly translate = inject(TranslateService);
@@ -158,6 +167,46 @@ export default class EmployeeDetailComponent {
     newBasis: [''],
     effectiveFrom: ['', Validators.required],
     reason: ['', [Validators.required, Validators.maxLength(1000)]],
+  });
+
+  // Position change — a promotion, transfer or correction, dated and kept in the history.
+  protected readonly changeOpen = signal(false);
+  protected readonly changeSaving = signal(false);
+  /** Bump to reload the career history after recording a change. */
+  protected readonly careerReload = signal(0);
+  private readonly departments = signal<Department[]>([]);
+  protected readonly today = new Date().toISOString().slice(0, 10);
+  protected readonly changeTypeOptions = computed<SelectOption[]>(() =>
+    (['PROMOTION', 'TRANSFER', 'DEMOTION', 'OTHER'] as PositionChangeType[]).map(t => ({
+      value: t,
+      label: this.translate.instant(`humano.positionChange.types.${t}`),
+    })),
+  );
+  protected readonly changePositionOptions = computed<SelectOption[]>(() => {
+    const current = this.identity().data;
+    return [
+      { value: '', label: this.translate.instant('humano.positionChange.keep', { name: current?.positionName ?? '—' }) },
+      ...this.positions()
+        .filter(p => p.id !== current?.positionId)
+        .map(p => ({ value: p.id, label: p.name })),
+    ];
+  });
+  protected readonly changeDepartmentOptions = computed<SelectOption[]>(() => {
+    const current = this.identity().data;
+    return [
+      { value: '', label: this.translate.instant('humano.positionChange.keep', { name: current?.departmentName ?? '—' }) },
+      ...this.departments()
+        .filter(d => d.id !== current?.departmentId)
+        .map(d => ({ value: d.id, label: d.name })),
+    ];
+  });
+  protected readonly changeForm = this.fb.nonNullable.group({
+    changeType: ['PROMOTION' as PositionChangeType, Validators.required],
+    effectiveDate: ['', Validators.required],
+    newPositionId: [''],
+    newDepartmentId: [''],
+    newSalary: [''],
+    reason: ['', [Validators.required, Validators.maxLength(255)]],
   });
 
   protected readonly activeTab = signal<TabId>('overview');
@@ -266,6 +315,68 @@ export default class EmployeeDetailComponent {
       error: (err: unknown) => {
         this.toast.danger(normalizeHttpError(err));
         this.compSaving.set(false);
+      },
+    });
+  }
+
+  protected openPositionChange(): void {
+    this.changeForm.reset({
+      changeType: 'PROMOTION',
+      effectiveDate: this.today,
+      newPositionId: '',
+      newDepartmentId: '',
+      newSalary: '',
+      reason: '',
+    });
+    if (this.positions().length === 0) this.loadPositions();
+    // The current salary, for the hint (the pay tab loads it only when opened).
+    if (this.canManageCompensation && !this.compHistory()) {
+      this.compensationService.history(this.id()).subscribe({ next: h => this.compHistory.set(h), error: () => undefined });
+    }
+    if (this.departments().length === 0) {
+      this.departmentService
+        .query({ page: 0, size: 200, sort: ['name,asc'] })
+        .subscribe({ next: res => this.departments.set(res.content) });
+    }
+    this.changeOpen.set(true);
+  }
+
+  protected changeInvalid(control: string): boolean {
+    const c = this.changeForm.get(control);
+    return !!c && c.invalid && (c.dirty || c.touched);
+  }
+
+  protected savePositionChange(): void {
+    if (this.changeForm.invalid) {
+      this.changeForm.markAllAsTouched();
+      return;
+    }
+    const raw = this.changeForm.getRawValue();
+    if (!raw.newPositionId && !raw.newDepartmentId && !raw.newSalary) {
+      this.toast.danger(this.translate.instant('humano.positionChange.nothing'));
+      return;
+    }
+    const body: PositionChangeRequest = {
+      changeType: raw.changeType,
+      effectiveDate: raw.effectiveDate,
+      reason: raw.reason.trim(),
+      ...(raw.newPositionId ? { newPositionId: raw.newPositionId } : {}),
+      ...(raw.newDepartmentId ? { newDepartmentId: raw.newDepartmentId } : {}),
+      ...(raw.newSalary ? { newSalary: Number(raw.newSalary) } : {}),
+    };
+    this.changeSaving.set(true);
+    this.positionChangeService.change(this.id(), body).subscribe({
+      next: () => {
+        this.toast.success(this.translate.instant('humano.positionChange.saved'));
+        this.changeOpen.set(false);
+        this.changeSaving.set(false);
+        this.careerReload.update(n => n + 1);
+        this.compReload.update(n => n + 1);
+        this.loadIdentity(this.id());
+      },
+      error: (err: unknown) => {
+        this.toast.danger(normalizeHttpError(err));
+        this.changeSaving.set(false);
       },
     });
   }

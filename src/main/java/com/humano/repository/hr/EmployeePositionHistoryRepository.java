@@ -1,7 +1,9 @@
 package com.humano.repository.hr;
 
+import com.humano.domain.enumeration.hr.PositionChangeStatus;
 import com.humano.domain.hr.EmployeePositionHistory;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -33,4 +35,10 @@ public interface EmployeePositionHistoryRepository extends JpaRepository<Employe
      * Find the latest position history entry for an employee.
      */
     EmployeePositionHistory findFirstByEmployeeIdOrderByEffectiveDateDesc(UUID employeeId);
+
+    /** The changes in effect ({@code APPLIED}) for these employees: what a date's position and department are worked out from. */
+    List<EmployeePositionHistory> findByEmployeeIdInAndStatus(Collection<UUID> employeeIds, PositionChangeStatus status);
+
+    /** An employee's changes, newest first, with what they changed from and to. */
+    List<EmployeePositionHistory> findByEmployeeIdOrderByEffectiveDateDescCreatedDateDesc(UUID employeeId);
 }

@@ -12,6 +12,7 @@ import {
   EmployeeCollectionComponent,
   RecordView,
 } from '../collection/employee-collection.component';
+import { EmployeeCareerComponent } from '../insights/employee-career.component';
 import { EmployeeLeaveComponent } from '../insights/employee-leave.component';
 import { EmployeePayComponent } from '../insights/employee-pay.component';
 import { EmployeePerformanceComponent } from '../insights/employee-performance.component';
@@ -59,6 +60,7 @@ interface EditableCollection {
     EmployeeHeroComponent,
     EmployeeOverviewComponent,
     EmployeePayComponent,
+    EmployeeCareerComponent,
     EmployeeLeaveComponent,
     EmployeePerformanceComponent,
   ],

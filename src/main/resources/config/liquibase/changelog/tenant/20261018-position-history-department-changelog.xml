@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- A position change can move someone to another department too: record it with the rest of
+         the change, so the history (and a payslip's department for its period) can show it.
+         Nullable: the department is only set on changes that involved one. -->
+    <changeSet id="tenant-position-history-department-001" author="halimzaaim">
+        <addColumn tableName="employee_position_history">
+            <column name="old_department_id" type="${uuidType}"/>
+            <column name="new_department_id" type="${uuidType}"/>
+        </addColumn>
+        <addForeignKeyConstraint baseColumnNames="old_department_id" baseTableName="employee_position_history"
+                                 constraintName="FK_POSITION_HISTORY_ON_OLD_DEPARTMENT" referencedColumnNames="id"
+                                 referencedTableName="department"/>
+        <addForeignKeyConstraint baseColumnNames="new_department_id" baseTableName="employee_position_history"
+                                 constraintName="FK_POSITION_HISTORY_ON_NEW_DEPARTMENT" referencedColumnNames="id"
+                                 referencedTableName="department"/>
+    </changeSet>
+</databaseChangeLog>

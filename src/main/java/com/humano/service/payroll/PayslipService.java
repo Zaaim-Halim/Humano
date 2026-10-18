@@ -11,6 +11,7 @@ import com.humano.repository.payroll.specification.PayslipSpecification;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
+import com.humano.service.hr.EmployeeRoleHistory;
 import com.humano.service.storage.FileStorageService;
 import com.humano.service.storage.StorageFactory;
 import java.io.ByteArrayInputStream;
@@ -52,6 +53,7 @@ public class PayslipService {
 
     private final com.humano.service.tenant.TenantService tenantService;
     private final com.humano.config.multitenancy.TenantIdResolver tenantIdResolver;
+    private final EmployeeRoleHistory roleHistory;
 
     public PayslipService(
         PayslipRepository payslipRepository,
@@ -62,8 +64,10 @@ public class PayslipService {
         PayslipPdfGenerator pdfGenerator,
         StorageFactory storageFactory,
         com.humano.service.tenant.TenantService tenantService,
-        com.humano.config.multitenancy.TenantIdResolver tenantIdResolver
+        com.humano.config.multitenancy.TenantIdResolver tenantIdResolver,
+        EmployeeRoleHistory roleHistory
     ) {
+        this.roleHistory = roleHistory;
         this.tenantService = tenantService;
         this.tenantIdResolver = tenantIdResolver;
         this.payslipRepository = payslipRepository;
@@ -126,7 +130,7 @@ public class PayslipService {
         List<Payslip> savedPayslips = payslipRepository.saveAll(payslips);
         log.info("Generated {} payslips for run {}", savedPayslips.size(), runId);
 
-        return savedPayslips.stream().map(this::toSummaryResponse).toList();
+        return summaries(savedPayslips);
     }
 
     /**
@@ -192,8 +196,8 @@ public class PayslipService {
     public Page<PayslipResponse> getEmployeePayslips(UUID employeeId, Pageable pageable) {
         Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new EntityNotFoundException("Employee", employeeId));
 
-        return payslipRepository
-            .findAll(
+        return summaries(
+            payslipRepository.findAll(
                 (Specification<Payslip>) (root, query, cb) -> {
                     if (query != null) {
                         query.orderBy(cb.desc(root.get("createdDate")));
@@ -202,7 +206,7 @@ public class PayslipService {
                 },
                 pageable
             )
-            .map(this::toSummaryResponse);
+        );
     }
 
     /**
@@ -210,12 +214,12 @@ public class PayslipService {
      */
     @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Page<PayslipResponse> getPayslipsForPeriod(UUID periodId, Pageable pageable) {
-        return payslipRepository
-            .findAll(
+        return summaries(
+            payslipRepository.findAll(
                 (Specification<Payslip>) (root, query, cb) -> cb.equal(root.get("result").get("payrollPeriod").get("id"), periodId),
                 pageable
             )
-            .map(this::toSummaryResponse);
+        );
     }
 
     /**
@@ -423,13 +427,14 @@ public class PayslipService {
             }
         }
         Currency reporting = run.getReportingCurrency();
+        EmployeeRoleHistory.Role role = roleHistory.at(employee, period.getEndDate());
         return new PayslipPdfGenerator.PayslipPdfModel(
             payslip.getNumber(),
             run.getId(),
             employee.getFirstName() + " " + employee.getLastName(),
             employee.getLogin(),
-            employee.getDepartment() != null ? employee.getDepartment().getName() : null,
-            employee.getPosition() != null ? employee.getPosition().getName() : null,
+            role.department(),
+            role.position(),
             period.getCode(),
             period.getStartDate(),
             period.getEndDate(),
@@ -515,8 +520,8 @@ public class PayslipService {
         LocalDate toDate,
         Pageable pageable
     ) {
-        return payslipRepository
-            .findAll(
+        return summaries(
+            payslipRepository.findAll(
                 (Specification<Payslip>) (root, query, cb) -> {
                     List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
 
@@ -546,7 +551,7 @@ public class PayslipService {
                 },
                 pageable
             )
-            .map(this::toSummaryResponse);
+        );
     }
 
     /**
@@ -621,7 +626,7 @@ public class PayslipService {
             specification = specification.and(PayslipSpecification.matchesSearchTerm(searchRequest.query()));
         }
 
-        return payslipRepository.findAll(specification, pageable).map(this::toSummaryResponse);
+        return summaries(payslipRepository.findAll(specification, pageable));
     }
 
     /**
@@ -654,7 +659,7 @@ public class PayslipService {
             searchRequest.createdDateTo()
         );
 
-        return payslipRepository.findAll(specification, pageable).map(this::toSummaryResponse);
+        return summaries(payslipRepository.findAll(specification, pageable));
     }
 
     private String generatePayslipNumber(String periodPrefix, long sequence) {
@@ -685,22 +690,34 @@ public class PayslipService {
         );
     }
 
+    /** List rows, with each payslip's position and department for its period (looked up in two queries). */
+    private List<PayslipResponse> summaries(List<Payslip> payslips) {
+        EmployeeRoleHistory.Lookup roles = roleHistory.lookup(payslips.stream().map(p -> p.getResult().getEmployee()).toList());
+        return payslips.stream().map(p -> toSummaryResponse(p, roles)).toList();
+    }
+
+    private Page<PayslipResponse> summaries(Page<Payslip> page) {
+        EmployeeRoleHistory.Lookup roles = roleHistory.lookup(page.getContent().stream().map(p -> p.getResult().getEmployee()).toList());
+        return page.map(p -> toSummaryResponse(p, roles));
+    }
+
     /**
      * List-row mapping: header figures only, no line breakdown (which costs a query per payslip).
      * Lists are fetched with their result, employee and period in one query (see the repository).
      */
-    private PayslipResponse toSummaryResponse(Payslip payslip) {
+    private PayslipResponse toSummaryResponse(Payslip payslip, EmployeeRoleHistory.Lookup roles) {
         PayrollResult result = payslip.getResult();
         Employee employee = result.getEmployee();
         PayrollPeriod period = result.getPayrollPeriod();
+        EmployeeRoleHistory.Role role = roles.at(employee, period.getEndDate());
         return new PayslipResponse(
             payslip.getId(),
             payslip.getNumber(),
             employee.getId(),
             employee.getFirstName() + " " + employee.getLastName(),
             employee.getLogin(),
-            employee.getDepartment() != null ? employee.getDepartment().getName() : null,
-            employee.getPosition() != null ? employee.getPosition().getName() : null,
+            role.department(),
+            role.position(),
             result.getId(),
             period.getId(),
             period.getCode(),
@@ -733,6 +750,8 @@ public class PayslipService {
         );
 
         PayrollResultResponse details = buildResultDetails(result, run, period, lines);
+        // As they were for the period, not as they are now (a later promotion must not rewrite it).
+        EmployeeRoleHistory.Role role = roleHistory.at(employee, period.getEndDate());
 
         return new PayslipResponse(
             payslip.getId(),
@@ -740,8 +759,8 @@ public class PayslipService {
             employee.getId(),
             employee.getFirstName() + " " + employee.getLastName(),
             employee.getLogin(), // Using login as employee code
-            employee.getDepartment() != null ? employee.getDepartment().getName() : null,
-            employee.getPosition() != null ? employee.getPosition().getName() : null,
+            role.department(),
+            role.position(),
             result.getId(),
             period.getId(),
             period.getCode(),

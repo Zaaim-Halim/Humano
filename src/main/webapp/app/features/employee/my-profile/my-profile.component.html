@@ -17,6 +17,7 @@
       @switch (tab()) {
         @case ('overview') {
           <hum-employee-overview [employee]="p" [revealable]="true" />
+          <hum-employee-career [employeeId]="p.id" [self]="true" />
           <p class="hum-myprofile__note"><lucide-icon name="info" [size]="14" />{{ 'humano.myProfile.readOnlyNote' | translate }}</p>
         }
         @case ('pay') {

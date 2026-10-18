@@ -6,6 +6,7 @@ import com.humano.dto.hr.requests.EmployeeTrainingSearchRequest;
 import com.humano.dto.hr.requests.PerformanceReviewSearchRequest;
 import com.humano.dto.hr.responses.EmployeeTrainingResponse;
 import com.humano.dto.hr.responses.PerformanceReviewResponse;
+import com.humano.dto.hr.responses.PositionChangeResponse;
 import com.humano.dto.me.responses.CompanyProfile;
 import com.humano.dto.payroll.response.OrganizationSettingsResponse;
 import com.humano.dto.payroll.response.PayslipResponse;
@@ -14,6 +15,7 @@ import com.humano.dto.tenant.responses.TenantResponse;
 import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.PerformanceReviewService;
+import com.humano.service.hr.PositionChangeService;
 import com.humano.service.hr.TrainingService;
 import com.humano.service.me.MeService;
 import com.humano.service.payroll.CompensationService;
@@ -21,6 +23,7 @@ import com.humano.service.payroll.OrganizationSettingsService;
 import com.humano.service.payroll.PayslipService;
 import com.humano.service.tenant.TenantService;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.core.io.InputStreamResource;
@@ -53,6 +56,7 @@ public class MeWorkResource {
     private final OrganizationSettingsService organizationSettingsService;
     private final TenantService tenantService;
     private final TenantIdResolver tenantIdResolver;
+    private final PositionChangeService positionChangeService;
 
     public MeWorkResource(
         MeService meService,
@@ -62,8 +66,10 @@ public class MeWorkResource {
         TrainingService trainingService,
         OrganizationSettingsService organizationSettingsService,
         TenantService tenantService,
-        TenantIdResolver tenantIdResolver
+        TenantIdResolver tenantIdResolver,
+        PositionChangeService positionChangeService
     ) {
+        this.positionChangeService = positionChangeService;
         this.organizationSettingsService = organizationSettingsService;
         this.tenantService = tenantService;
         this.tenantIdResolver = tenantIdResolver;
@@ -95,6 +101,13 @@ public class MeWorkResource {
             s.defaultOvertimeMultiplier(),
             s.defaultBasis()
         );
+    }
+
+    /** {@code GET /api/me/position-history} : my promotions, transfers and other position changes, with my pay in them. */
+    @GetMapping("/position-history")
+    @RequireAuthenticated
+    public List<PositionChangeResponse> positionHistory() {
+        return positionChangeService.history(me(), true);
     }
 
     /** {@code GET /api/me/compensation/history} : my salary history and current pay. */

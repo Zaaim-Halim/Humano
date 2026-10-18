@@ -89,6 +89,7 @@
     <!-- Original file name, media type and size on employee_document -->
     <include file="config/liquibase/changelog/tenant/20261014-employee-document-file-metadata-changelog.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/tenant/20261015-revoke-platform-billing-permissions-changelog.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/tenant/20261018-position-history-department-changelog.xml" relativeToChangelogFile="false"/>
 
     <!--  will add tenant liquibase changelogs here -->
 
