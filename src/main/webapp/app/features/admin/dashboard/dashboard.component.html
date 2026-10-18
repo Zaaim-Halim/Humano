@@ -1,6 +1,40 @@
 <div class="hum-page">
   <hum-page-header [title]="greeting()" [subtitle]="(today | date: 'fullDate') ?? ''" />
 
+  <!-- Get started (free trial) -->
+  @if (showSetup()) {
+    <section class="hum-card hum-insights__card" style="margin-bottom: var(--space-4)">
+      <header class="hum-insights__head">
+        <span class="hum-records__icon"><lucide-icon name="list-checks" [size]="16" /></span>
+        <h3>{{ 'humano.dashboard.setup.title' | translate }}</h3>
+        <span class="hum-records__spacer"></span>
+        <span class="hum-kpi__hint">{{
+          'humano.dashboard.setup.progress' | translate: { done: setupDone(), total: setupSteps().length }
+        }}</span>
+        <button type="button" class="hum-linkbtn" (click)="dismissSetup()">{{ 'humano.dashboard.setup.dismiss' | translate }}</button>
+      </header>
+      <hum-progress [value]="setupDone()" [max]="setupSteps().length" tone="success" />
+      <ul class="hum-con-reports">
+        @for (step of setupSteps(); track step.id) {
+          <li>
+            <span class="hum-records__icon" [style.color]="step.done ? 'var(--success-solid)' : null">
+              <lucide-icon [name]="step.done ? 'circle-check' : step.icon" [size]="16" />
+            </span>
+            <span class="hum-person__text" style="flex: 1">
+              <span class="hum-person__name" [style.textDecoration]="step.done ? 'line-through' : null">{{
+                'humano.dashboard.setup.' + step.id + '.title' | translate
+              }}</span>
+              <span class="hum-person__sub">{{ 'humano.dashboard.setup.' + step.id + '.hint' | translate }}</span>
+            </span>
+            @if (!step.done) {
+              <a class="hum-linkbtn" [routerLink]="step.link">{{ 'humano.dashboard.setup.' + step.id + '.action' | translate }}</a>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
   <!-- Figures -->
   <div class="hum-insights__kpis hum-dash-kpis">
     <a class="hum-kpi hum-kpi--link" routerLink="/employees">

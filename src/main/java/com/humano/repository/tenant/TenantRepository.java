@@ -39,6 +39,9 @@ public interface TenantRepository extends JpaRepository<Tenant, UUID>, JpaSpecif
     @EntityGraph(attributePaths = "subscriptionPlan")
     List<Tenant> findByDemoTrueOrderByCreatedDateDesc();
 
+    /** Self-serve workspaces signed up with this address (the demo contact fields record who signed up). */
+    List<Tenant> findByDemoContactEmailIgnoreCaseAndDemoFalse(String email);
+
     /** Ready demo workspaces past their expiry, still open — the expiry job suspends them. */
     @Query("SELECT t FROM Tenant t WHERE t.demo = true AND t.status = 'ACTIVE' AND t.demoExpiresAt <= :now")
     List<Tenant> findExpiredDemos(@Param("now") Instant now);

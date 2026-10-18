@@ -1,7 +1,9 @@
 package com.humano.service.billing;
 
+import com.humano.config.multitenancy.TenantAccessGuard;
 import com.humano.domain.billing.Invoice;
 import com.humano.domain.billing.Subscription;
+import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.billing.InvoiceStatus;
 import com.humano.domain.enumeration.billing.SubscriptionStatus;
 import com.humano.domain.enumeration.tenant.TenantStatus;
@@ -13,6 +15,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -38,7 +41,9 @@ public class BillingLifecycleService {
     private static final Logger log = LoggerFactory.getLogger(BillingLifecycleService.class);
 
     private static final int RENEWAL_DAYS_BEFORE = 3; // Generate renewal invoice 3 days before period end
-    private static final int TRIAL_EXPIRY_WARNING_DAYS = 3; // Warn 3 days before trial expires
+    private static final List<Integer> TRIAL_REMINDER_DAYS = List.of(7, 3, 1); // "Trial ends soon" emails, days before
+    /** After a trial ends without a plan, the workspace stays read-only this long, then it is suspended. */
+    public static final int READ_ONLY_DAYS = 14;
     private static final int GRACE_PERIOD_DAYS = 7; // Days after due date before suspension
     private static final int SUSPENSION_TO_DELETION_DAYS = 30; // Days after suspension before deletion warning
 
@@ -52,6 +57,7 @@ public class BillingLifecycleService {
     private final TenantAdminEmailResolver adminEmailResolver;
     private final CouponService couponService;
     private final MeterRegistry meterRegistry;
+    private final TenantAccessGuard accessGuard;
 
     public BillingLifecycleService(
         SubscriptionRepository subscriptionRepository,
@@ -61,7 +67,8 @@ public class BillingLifecycleService {
         BillingMailService billingMailService,
         TenantAdminEmailResolver adminEmailResolver,
         CouponService couponService,
-        MeterRegistry meterRegistry
+        MeterRegistry meterRegistry,
+        TenantAccessGuard accessGuard
     ) {
         this.subscriptionRepository = subscriptionRepository;
         this.invoiceRepository = invoiceRepository;
@@ -71,6 +78,7 @@ public class BillingLifecycleService {
         this.adminEmailResolver = adminEmailResolver;
         this.couponService = couponService;
         this.meterRegistry = meterRegistry;
+        this.accessGuard = accessGuard;
     }
 
     private void timeTick(String name, Runnable body) {
@@ -133,18 +141,22 @@ public class BillingLifecycleService {
         log.info("Starting trial expiration processing");
 
         Instant now = Instant.now();
-        List<Subscription> expiringTrials = subscriptionRepository.findExpiringTrials(now);
+        int furthest = TRIAL_REMINDER_DAYS.stream().max(Integer::compare).orElse(0);
+        List<Subscription> expiringTrials = subscriptionRepository.findExpiringTrials(now.plus(furthest, ChronoUnit.DAYS));
 
         int expired = 0;
         int warned = 0;
 
         for (Subscription subscription : expiringTrials) {
             try {
-                if (subscription.getTrialEnd().isBefore(now)) {
-                    expireTrial(subscription);
+                if (!subscription.getTrialEnd().isAfter(now)) {
+                    if (Boolean.TRUE.equals(subscription.getAutoRenew())) {
+                        startPaidPlan(subscription);
+                    } else {
+                        expireTrial(subscription);
+                    }
                     expired++;
-                } else {
-                    // Trial expiring soon - send warning
+                } else if (!Boolean.TRUE.equals(subscription.getAutoRenew()) && reminderDue(subscription.getTrialEnd(), now)) {
                     sendTrialExpiryWarning(subscription);
                     warned++;
                 }
@@ -359,19 +371,83 @@ public class BillingLifecycleService {
     /**
      * Expire a trial subscription.
      */
+    /**
+     * The trial ended and a plan was chosen during it ({@code autoRenew}): the paid plan starts now
+     * and its first invoice is issued.
+     */
+    private void startPaidPlan(Subscription subscription) {
+        log.info("Trial of subscription {} ended with a plan chosen; starting it", subscription.getId());
+        Instant now = Instant.now();
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        subscription.setCurrentPeriodStart(now);
+        subscription.setCurrentPeriodEnd(now.plus(subscription.getBillingCycle() == BillingCycle.YEARLY ? 365 : 30, ChronoUnit.DAYS));
+        subscriptionRepository.save(subscription);
+        issueFirstInvoice(subscription.getId());
+    }
+
+    /**
+     * The trial ended without a plan. The workspace is not suspended yet: while the subscription is
+     * {@code EXPIRED} it is read-only ({@link com.humano.config.multitenancy.TenantAccessGuard}), so
+     * people can still sign in and an admin can pick a plan; {@link #suspendLapsedTrials()} pauses
+     * it {@link #READ_ONLY_DAYS} days later.
+     */
     private void expireTrial(Subscription subscription) {
         log.info("Expiring trial for subscription: {}", subscription.getId());
 
+        Instant now = Instant.now();
         subscription.setStatus(SubscriptionStatus.EXPIRED);
+        subscription.setEndDate(now);
         subscriptionRepository.save(subscription);
+        accessGuard.evict(subscription.getTenant().getSubdomain());
 
-        // Deactivate tenant
-        Tenant tenant = subscription.getTenant();
-        tenant.setStatus(TenantStatus.SUSPENDED);
-        tenantRepository.save(tenant);
+        Instant readOnlyUntil = now.plus(READ_ONLY_DAYS, ChronoUnit.DAYS);
+        resolveEmail(subscription.getTenant()).ifPresent(email ->
+            billingMailService.sendTrialEnded(email, subscription.getTenant().getName(), readOnlyUntil)
+        );
+    }
 
-        // Send trial expired notification
-        sendTrialExpiredNotification(subscription);
+    /**
+     * Whether today's run is the one for a "trial ends soon" reminder: the trial ends within the
+     * day that is 7, 3 or 1 days away, so a once-a-day run sends each reminder once.
+     */
+    private static boolean reminderDue(Instant trialEnd, Instant now) {
+        for (int days : TRIAL_REMINDER_DAYS) {
+            Instant to = now.plus(days, ChronoUnit.DAYS);
+            if (trialEnd.isAfter(to.minus(1, ChronoUnit.DAYS)) && !trialEnd.isAfter(to)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Daily: trials that ended without a plan and whose read-only period is over are suspended (nothing is deleted). */
+    @Scheduled(cron = "0 30 3 * * *")
+    @Transactional
+    public void suspendLapsedTrials() {
+        timeTick("suspendLapsedTrials", this::suspendLapsedTrialsBody);
+    }
+
+    private void suspendLapsedTrialsBody() {
+        Instant cutoff = Instant.now().minus(READ_ONLY_DAYS, ChronoUnit.DAYS);
+        int suspended = 0;
+        for (Subscription subscription : subscriptionRepository.findByStatus(SubscriptionStatus.EXPIRED)) {
+            Tenant tenant = subscription.getTenant();
+            if (
+                tenant.getStatus() != TenantStatus.ACTIVE || subscription.getEndDate() == null || subscription.getEndDate().isAfter(cutoff)
+            ) {
+                continue;
+            }
+            try {
+                tenant.setStatus(TenantStatus.SUSPENDED);
+                tenantRepository.save(tenant);
+                accessGuard.evict(tenant.getSubdomain());
+                sendSuspensionNotification(tenant, subscription);
+                suspended++;
+            } catch (Exception e) {
+                log.error("Failed to suspend lapsed trial of tenant: {}", tenant.getId(), e);
+            }
+        }
+        log.info("Lapsed trial processing completed. Suspended: {}", suspended);
     }
 
     // ========== SUSPENSION PROCESSING ==========
@@ -487,19 +563,10 @@ public class BillingLifecycleService {
         log.debug("Sending trial expiry warning for subscription: {}", subscription.getId());
         Instant trialEnd = subscription.getTrialEnd();
         if (trialEnd == null) return;
-        long daysRemaining = Math.max(0, ChronoUnit.DAYS.between(Instant.now(), trialEnd));
+        // Rounded up: a trial ending in 6 days and 20 hours "ends in 7 days".
+        long daysRemaining = Math.max(1, (Duration.between(Instant.now(), trialEnd).toHours() + 23) / 24);
         resolveEmail(subscription.getTenant()).ifPresent(email ->
             billingMailService.sendTrialEnding(email, subscription.getTenant().getName(), trialEnd, daysRemaining)
-        );
-    }
-
-    private void sendTrialExpiredNotification(Subscription subscription) {
-        log.debug("Sending trial expired notification for subscription: {}", subscription.getId());
-        // Reuse the trial-ending template with daysRemaining=0; the wording in the
-        // template covers both "ends soon" and "ended" cases via the formatted date.
-        Instant trialEnd = subscription.getTrialEnd();
-        resolveEmail(subscription.getTenant()).ifPresent(email ->
-            billingMailService.sendTrialEnding(email, subscription.getTenant().getName(), trialEnd, 0L)
         );
     }
 

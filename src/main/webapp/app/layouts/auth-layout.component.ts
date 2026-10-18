@@ -6,86 +6,97 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ThemeService } from 'app/core/theme/theme.service';
 import { IconButtonComponent } from 'app/shared/ui';
 
+import { AuthSceneComponent } from './auth-scene.component';
+
+interface LedgerRow {
+  /** Amount bars on the row: left offset and width in %, and whether it is a highlighted (brand) figure. */
+  cells: { left: number; width: number; brand: boolean }[];
+  /** Stagger of this row's fill, in ms. */
+  delay: number;
+}
+
+const ROWS = 18;
+
+/** Deterministic pseudo-random sequence, so the ledger looks the same on every visit. */
+function sequence(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+}
+
+/** A payroll register's rows: a name column, a couple of figures, and a total at the right edge. */
+function ledger(): LedgerRow[] {
+  const next = sequence(17);
+  return Array.from({ length: ROWS }, (_, i) => ({
+    delay: 120 + i * 45,
+    cells: [
+      { left: 4, width: 10 + next() * 10, brand: false },
+      { left: 32 + next() * 4, width: 6 + next() * 8, brand: false },
+      { left: 54 + next() * 4, width: 5 + next() * 7, brand: false },
+      { left: 82, width: 6 + next() * 8, brand: i % 5 === 2 },
+    ],
+  }));
+}
+
 /**
- * AuthLayoutComponent — shared chrome for the public auth screens (sign in,
- * sign up, forgot/reset password, activate). Split-screen: a scrollable form
- * column on the left hosting the routed screen in `<router-outlet>`, and a
- * fixed indigo brand panel on the right (hidden below 880px). The screens
- * themselves stay wired to their JHipster services; this only supplies the
- * surrounding layout, top bar (wordmark + theme toggle) and footer.
+ * AuthLayoutComponent — the shared frame of the public account screens (sign in, start a trial,
+ * confirm a sign-up, reset a password, activate). One centred column on a quiet canvas: the routed
+ * screen renders on a single surface, with the wordmark and theme toggle above and a small footer
+ * below. Behind it, a faint payroll register fills in on load and a few everyday HR moments
+ * ({@link AuthSceneComponent}) appear around the form; all still when reduced motion is preferred.
  */
 @Component({
   selector: 'hum-auth-layout',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, TranslatePipe, LucideAngularModule, IconButtonComponent],
+  imports: [RouterOutlet, RouterLink, TranslatePipe, LucideAngularModule, IconButtonComponent, AuthSceneComponent],
   template: `
     <div class="hum-auth">
-      <!-- Form side -->
-      <div class="hum-auth__form-side">
-        <header class="hum-auth__bar">
-          <a routerLink="/" class="hum-auth__wordmark">humano<span class="hum-auth__dot" aria-hidden="true"></span></a>
-          <hum-icon-button
-            [icon]="theme.theme() === 'dark' ? 'sun' : 'moon'"
-            [label]="'humano.shell.toggleTheme' | translate"
-            variant="ghost"
-            (click)="theme.toggleTheme()"
-          />
-        </header>
-
-        <main class="hum-auth__main">
-          <div class="hum-auth__col">
-            <router-outlet />
+      <div class="hum-auth__ledger" aria-hidden="true">
+        @for (row of rows; track $index) {
+          <div class="hum-auth__ledger-row" [style.--d]="row.delay + 'ms'">
+            @for (cell of row.cells; track $index) {
+              <span
+                class="hum-auth__ledger-cell"
+                [class.is-brand]="cell.brand"
+                [style.left.%]="cell.left"
+                [style.width.%]="cell.width"
+              ></span>
+            }
           </div>
-        </main>
-
-        <footer class="hum-auth__foot">
-          <lucide-icon name="shield-check" [size]="14" aria-hidden="true" />
-          <span>SOC 2 Type II · Encrypted in transit &amp; at rest</span>
-        </footer>
+        }
       </div>
 
-      <!-- Brand side -->
-      <aside class="hum-auth__brand-side" aria-hidden="true">
-        <div class="hum-auth__brand-grid"></div>
-        <div class="hum-auth__brand-inner">
-          <div class="hum-auth__wordmark hum-auth__wordmark--brand">humano<span class="hum-auth__dot" aria-hidden="true"></span></div>
+      <hum-auth-scene />
 
-          <div class="hum-auth__pitch">
-            <h2 class="hum-auth__pitch-title">The calm system of record for HR &amp; payroll.</h2>
-            <ul class="hum-auth__points">
-              @for (point of points; track point.title) {
-                <li class="hum-auth__point">
-                  <span class="hum-auth__point-icon"><lucide-icon [name]="point.icon" [size]="18" /></span>
-                  <span>
-                    <span class="hum-auth__point-title">{{ point.title }}</span>
-                    <span class="hum-auth__point-desc">{{ point.desc }}</span>
-                  </span>
-                </li>
-              }
-            </ul>
-          </div>
+      <header class="hum-auth__bar">
+        <a routerLink="/" class="hum-auth__wordmark">humano<span class="hum-auth__dot" aria-hidden="true"></span></a>
+        <hum-icon-button
+          [icon]="theme.theme() === 'dark' ? 'sun' : 'moon'"
+          [label]="'humano.shell.toggleTheme' | translate"
+          variant="ghost"
+          (click)="theme.toggleTheme()"
+        />
+      </header>
 
-          <figure class="hum-auth__quote">
-            <blockquote>“Humano replaced three tools and a spreadsheet. Payroll went from two days to two hours.”</blockquote>
-            <figcaption>
-              <span class="hum-auth__quote-avatar">RA</span>
-              <span>
-                <span class="hum-auth__quote-name">Renata Alves</span>
-                <span class="hum-auth__quote-role">Head of People · Lumen Labs</span>
-              </span>
-            </figcaption>
-          </figure>
+      <main class="hum-auth__main">
+        <div class="hum-auth__panel">
+          <router-outlet />
         </div>
-      </aside>
+      </main>
+
+      <footer class="hum-auth__foot">
+        <span class="hum-auth__foot-item"
+          ><lucide-icon name="database" [size]="13" aria-hidden="true" />{{ 'login.footer.isolated' | translate }}</span
+        >
+        <span>© {{ year }} Humano</span>
+      </footer>
     </div>
   `,
 })
 export default class AuthLayoutComponent {
   protected readonly theme = inject(ThemeService);
-
-  protected readonly points = [
-    { icon: 'wallet', title: 'Payroll', desc: 'Multi-country runs, automated taxes and payslips.' },
-    { icon: 'check-check', title: 'Approvals', desc: 'Time off and expenses, routed and auditable.' },
-    { icon: 'network', title: 'Source of truth', desc: 'One directory every team trusts.' },
-  ];
+  protected readonly rows = ledger();
+  protected readonly year = new Date().getFullYear();
 }

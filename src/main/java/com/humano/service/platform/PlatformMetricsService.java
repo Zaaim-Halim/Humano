@@ -6,6 +6,7 @@ import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.billing.InvoiceStatus;
 import com.humano.domain.enumeration.billing.SubscriptionStatus;
+import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.dto.platform.PlatformOverview;
 import com.humano.dto.platform.PlatformOverview.AttentionItem;
@@ -24,6 +25,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -155,6 +157,23 @@ public class PlatformMetricsService {
         long base = billable.size() + churned;
         double churnRate = base == 0 ? 0 : Math.round((churned * 1000.0) / base) / 10.0;
 
+        // ---- Self-serve sign-ups (the demo contact fields record who signed up)
+        Map<UUID, Subscription> subByTenant = new HashMap<>();
+        for (Subscription s : subscriptions) {
+            subByTenant.put(s.getTenant().getId(), s);
+        }
+        List<Tenant> selfServe = tenants
+            .stream()
+            .filter(t -> t.getDemoContactEmail() != null && t.getCreatedDate() != null && t.getCreatedDate().isAfter(monthAgo))
+            .toList();
+        long ready = selfServe.stream().filter(t -> subByTenant.containsKey(t.getId())).count();
+        long converted = selfServe
+            .stream()
+            .map(t -> subByTenant.get(t.getId()))
+            .filter(s -> s != null && BILLABLE.contains(s.getStatus()))
+            .count();
+        long failed = selfServe.stream().filter(t -> t.getStatus() == TenantStatus.PROVISIONING_FAILED).count();
+
         // ---- Plans
         List<PlanBreakdown> plans = new ArrayList<>();
         for (SubscriptionPlan plan : planRepository.findAll()) {
@@ -193,6 +212,7 @@ public class PlatformMetricsService {
                 series(mrrByMonth)
             ),
             new PlatformOverview.Subscriptions(subsByStatus, trials, trialsEnding, churned, churnRate),
+            new PlatformOverview.SelfServe(selfServe.size(), ready, converted, failed),
             plans,
             attention(tenants, subscriptions, invoices, now)
         );

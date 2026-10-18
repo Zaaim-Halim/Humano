@@ -28,6 +28,11 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantResolutionFilter.class);
     private static final String PLATFORM_PREFIX = "/api/platform/";
+    private static final String SIGN_IN_PATH = "/api/authentication";
+    /** What a read-only workspace may still write: sign in/out, the person's own account, and choosing a plan. */
+    private static final java.util.regex.Pattern READ_ONLY_ALLOWED = java.util.regex.Pattern.compile(
+        "/api/(authentication|logout|account|billing/me/)"
+    );
 
     private final TenantResolver tenantResolver;
     private final MultiTenantProperties properties;
@@ -104,6 +109,16 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                     );
                     return;
                 }
+                // A trial that ended without a plan: reads only, apart from signing in/out, the
+                // person's own account and picking a plan.
+                if (isWrite(request) && !READ_ONLY_ALLOWED.matcher(path).lookingAt() && accessGuard.readOnly(tenantId)) {
+                    writeError(
+                        response,
+                        HttpServletResponse.SC_FORBIDDEN,
+                        "This workspace is read-only because its trial has ended. An admin can choose a plan in Settings → Billing."
+                    );
+                    return;
+                }
             }
 
             // Pin sessions to the tenant they authenticated against. If a previously
@@ -112,6 +127,13 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             HttpSession existing = request.getSession(false);
             if (existing != null) {
                 Object sessionTenant = existing.getAttribute(TenantContext.SESSION_TENANT_ATTRIBUTE);
+                // Signing in to another organization from the same browser starts over: the old
+                // session is dropped rather than refusing the sign-in (it gets a fresh session).
+                if (sessionTenant != null && !sessionTenant.equals(tenantId) && SIGN_IN_PATH.equals(path)) {
+                    LOG.info("Sign-in to tenant {} replaces a session of tenant {}", tenantId, sessionTenant);
+                    existing.invalidate();
+                    sessionTenant = null;
+                }
                 if (sessionTenant != null && !sessionTenant.equals(tenantId)) {
                     LOG.warn("Session/tenant mismatch: session={} request={} uri={}", sessionTenant, tenantId, request.getRequestURI());
                     writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "Session is bound to a different tenant");
@@ -124,6 +146,11 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             TenantContext.clear();
             MDC.remove(TenantContext.MDC_TENANT_KEY);
         }
+    }
+
+    private static boolean isWrite(HttpServletRequest request) {
+        String method = request.getMethod();
+        return !("GET".equals(method) || "HEAD".equals(method) || "OPTIONS".equals(method));
     }
 
     /**
@@ -146,7 +173,6 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
         // can resolve the admin principal from that tenant's DB.
         return (
             path.startsWith("/management/") ||
-            path.startsWith("/api/tenant-registration") ||
             path.startsWith("/api/public/") ||
             // P4.2 — Stripe webhooks carry no tenant header; the resource resolves the
             // target tenant transitively through Payment → Invoice → Tenant after

@@ -1,5 +1,6 @@
 package com.humano.service.billing;
 
+import com.humano.config.multitenancy.TenantAccessGuard;
 import com.humano.domain.billing.Subscription;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.billing.BillingCycle;
@@ -29,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
  * (upgrade or downgrade, effective now; the new price applies from the next invoice), cancel at
  * the end of the current period (or trial), take a scheduled cancellation back, or pick a plan
  * again once the subscription has ended — which starts a new period and bills it right away.
+ * During a free trial, choosing a plan (even the trial's own) sets it to continue: the paid plan
+ * starts when the trial ends ({@code autoRenew}), see {@link BillingLifecycleService}.
  * <p>
  * Demo workspaces have no subscription and cannot start one themselves — the platform team
  * converts them. Only plans on sale to everyone (active and publicly listed) can be chosen, besides
@@ -53,19 +56,22 @@ public class SelfServiceBillingService {
     private final SubscriptionPlanRepository planRepository;
     private final SubscriptionService subscriptionService;
     private final BillingLifecycleService lifecycleService;
+    private final TenantAccessGuard accessGuard;
 
     public SelfServiceBillingService(
         TenantRepository tenantRepository,
         SubscriptionRepository subscriptionRepository,
         SubscriptionPlanRepository planRepository,
         SubscriptionService subscriptionService,
-        BillingLifecycleService lifecycleService
+        BillingLifecycleService lifecycleService,
+        TenantAccessGuard accessGuard
     ) {
         this.tenantRepository = tenantRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.planRepository = planRepository;
         this.subscriptionService = subscriptionService;
         this.lifecycleService = lifecycleService;
+        this.accessGuard = accessGuard;
     }
 
     public SubscriptionResponse changePlan(UUID tenantId, ChangeMyPlanRequest request) {
@@ -90,8 +96,10 @@ public class SelfServiceBillingService {
         Subscription sub = existing.get();
         boolean restarted = !RUNNING.contains(sub.getStatus());
         boolean sameTerms = sub.getSubscriptionPlan().getId().equals(plan.getId()) && sub.getBillingCycle() == request.billingCycle();
+        // During a trial that is not set to continue, choosing even the trial's own plan means "keep it after the trial".
+        boolean keepsTrialPlan = sub.getStatus() == SubscriptionStatus.TRIAL && !Boolean.TRUE.equals(sub.getAutoRenew());
         if (RUNNING.contains(sub.getStatus())) {
-            if (sameTerms && !Boolean.TRUE.equals(sub.getCancelAtPeriodEnd())) {
+            if (sameTerms && !Boolean.TRUE.equals(sub.getCancelAtPeriodEnd()) && !keepsTrialPlan) {
                 throw new BadRequestAlertException("You are already on this plan", ENTITY_NAME, "sameplan");
             }
         } else {
@@ -115,6 +123,8 @@ public class SelfServiceBillingService {
         tenantRepository.save(tenant);
         if (restarted) {
             lifecycleService.issueFirstInvoice(sub.getId());
+            // A trial that had ended left the workspace read-only; it is open again now.
+            accessGuard.evict(tenant.getSubdomain());
         }
         log.info("Tenant {} moved to {} ({})", tenant.getSubdomain(), plan.getDisplayName(), request.billingCycle());
         return subscriptionService.getSubscriptionById(sub.getId());

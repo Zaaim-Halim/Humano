@@ -13,10 +13,23 @@ import { TeamAttendance, TeamPresence } from 'app/features/employee/models/time-
 import { CurrentEmployeeService } from 'app/features/employee/services/current-employee.service';
 import { MeWorkService } from 'app/features/employee/services/me-work.service';
 import { ApprovalService } from 'app/features/manager';
-import { AvatarComponent, PageHeaderComponent, SkeletonComponent } from 'app/shared/ui';
+import { CompanyService } from 'app/core/company/company.service';
+import { SubscriptionStatus } from 'app/features/platform/models/enums/subscription-status.enum';
+import { MeBillingService } from 'app/features/platform/services/me-billing.service';
+import { AvatarComponent, PageHeaderComponent, ProgressComponent, SkeletonComponent } from 'app/shared/ui';
 import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
 
 import { PayrollRun, PayrollRunService, RunStatus } from '../index';
+
+const SETUP_DISMISSED_KEY = 'humano-setup-dismissed';
+
+function readDismissed(): boolean {
+  try {
+    return localStorage.getItem(SETUP_DISMISSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -66,6 +79,7 @@ const LOCATION_COLOR: Record<string, string> = {
     PayPeriodPipe,
     PageHeaderComponent,
     AvatarComponent,
+    ProgressComponent,
     SkeletonComponent,
   ],
   templateUrl: './dashboard.component.html',
@@ -158,6 +172,47 @@ export default class DashboardComponent {
     return list.map(r => ({ run: r, pct: (r.totalNet / max) * 100 }));
   });
   protected readonly stages = [RunStatus.DRAFT, RunStatus.CALCULATED, RunStatus.APPROVED, RunStatus.POSTED];
+
+  // ---- Get started: shown to workspace admins during the free trial, until done or dismissed
+  private readonly company = inject(CompanyService);
+  private readonly meBilling = inject(MeBillingService);
+  private readonly canConfigure = this.account.hasPermission(Permission.CONFIGURE_TENANT_SETTINGS);
+  protected readonly setupDismissed = signal(readDismissed());
+
+  /** Each step is done when the workspace data says so; nothing is tracked separately. */
+  protected readonly setupSteps = computed(() => {
+    const profile = this.company.profile();
+    const sub = this.meBilling.current();
+    const steps = [
+      { id: 'company', icon: 'building-2', link: '/settings/company', done: !!profile && (!!profile.logo || !!profile.defaultCurrencyId) },
+      { id: 'people', icon: 'user-plus', link: '/employees/new', done: (this.stats()?.total ?? 0) > 0 },
+      ...(this.canPayroll ? [{ id: 'payroll', icon: 'wallet', link: '/payroll/runs', done: (this.runs()?.length ?? 0) > 0 }] : []),
+      {
+        id: 'plan',
+        icon: 'credit-card',
+        link: '/settings/billing',
+        done: !!sub && (sub.status !== SubscriptionStatus.TRIAL || !!sub.autoRenew),
+      },
+    ];
+    return steps;
+  });
+  protected readonly setupDone = computed(() => this.setupSteps().filter(s => s.done).length);
+  protected readonly showSetup = computed(
+    () =>
+      this.canConfigure &&
+      !this.setupDismissed() &&
+      this.meBilling.current()?.status === SubscriptionStatus.TRIAL &&
+      this.setupDone() < this.setupSteps().length,
+  );
+
+  protected dismissSetup(): void {
+    this.setupDismissed.set(true);
+    try {
+      localStorage.setItem(SETUP_DISMISSED_KEY, '1');
+    } catch {
+      // Private mode / blocked storage: hidden for this visit only.
+    }
+  }
 
   constructor() {
     this.currentEmployee.resolve();

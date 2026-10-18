@@ -24,6 +24,8 @@ public record SubscriptionResponse(
     Boolean cancelAtPeriodEnd,
     Instant trialStart,
     Instant trialEnd,
+    /** Set while a trial that ended without a plan leaves the workspace read-only: when it gets suspended. */
+    Instant readOnlyUntil,
     String createdBy,
     Instant createdDate,
     String lastModifiedBy,

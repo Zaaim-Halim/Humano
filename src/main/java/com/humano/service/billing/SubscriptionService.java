@@ -3,6 +3,7 @@ package com.humano.service.billing;
 import com.humano.domain.billing.Subscription;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.billing.SubscriptionStatus;
+import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.dto.billing.requests.CreateSubscriptionRequest;
 import com.humano.dto.billing.requests.UpdateSubscriptionRequest;
@@ -241,6 +242,14 @@ public class SubscriptionService {
         log.info("Deleted subscription with ID: {}", id);
     }
 
+    private static Instant readOnlyUntil(Subscription subscription) {
+        boolean readOnly =
+            subscription.getStatus() == SubscriptionStatus.EXPIRED &&
+            subscription.getEndDate() != null &&
+            subscription.getTenant().getStatus() == TenantStatus.ACTIVE;
+        return readOnly ? subscription.getEndDate().plus(BillingLifecycleService.READ_ONLY_DAYS, ChronoUnit.DAYS) : null;
+    }
+
     private SubscriptionResponse mapToResponse(Subscription subscription) {
         return new SubscriptionResponse(
             subscription.getId(),
@@ -258,6 +267,7 @@ public class SubscriptionService {
             subscription.getCancelAtPeriodEnd(),
             subscription.getTrialStart(),
             subscription.getTrialEnd(),
+            readOnlyUntil(subscription),
             subscription.getCreatedBy(),
             subscription.getCreatedDate(),
             subscription.getLastModifiedBy(),

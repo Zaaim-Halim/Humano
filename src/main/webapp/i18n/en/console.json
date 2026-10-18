@@ -97,7 +97,12 @@
         "customersByStatus": "Workspaces",
         "subscriptionsByStatus": "Subscriptions",
         "trialsEnding": "{{ n }} trials end in the next 14 days.",
-        "signups": "New customers"
+        "signups": "New customers",
+        "selfServe": "Self-serve trials · last 30 days",
+        "selfServeConfirmed": "Email confirmed",
+        "selfServeReady": "Workspace ready",
+        "selfServeConverted": "Chose a paid plan",
+        "selfServeFailed": "Setup failed"
       },
       "reports": {
         "title": "Reports",

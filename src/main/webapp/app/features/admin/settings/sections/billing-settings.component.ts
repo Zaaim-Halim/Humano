@@ -86,6 +86,17 @@ export class BillingSettingsComponent {
     const s = this.subscription();
     return !!s && RUNNING.includes(s.status);
   });
+  /** In a free trial that no plan was chosen for yet (it would end read-only). */
+  protected readonly trialOpen = computed(() => {
+    const s = this.subscription();
+    return s?.status === 'TRIAL' && !s.autoRenew;
+  });
+  /** In a free trial with a plan chosen: the paid plan starts when the trial ends. */
+  protected readonly trialContinues = computed(() => {
+    const s = this.subscription();
+    return s?.status === 'TRIAL' && !!s.autoRenew;
+  });
+
   /** When a cancelled subscription stops: a trial at its trial end, otherwise at the period end. */
   protected readonly endDate = computed(() => {
     const s = this.subscription();
@@ -174,7 +185,11 @@ export class BillingSettingsComponent {
   protected relation(o: PlanOption): 'current' | 'upgrade' | 'downgrade' | 'switch' | 'choose' {
     const s = this.subscription();
     if (!s || !this.running()) return 'choose';
-    if (s.subscriptionPlanId === o.id) return s.billingCycle === this.cycle() ? 'current' : 'switch';
+    if (s.subscriptionPlanId === o.id) {
+      // A free trial not yet set to continue: its own plan can be chosen to keep it after the trial.
+      if (this.trialOpen()) return 'choose';
+      return s.billingCycle === this.cycle() ? 'current' : 'switch';
+    }
     return o.monthlyPrice > this.monthlyPrice() ? 'upgrade' : 'downgrade';
   }
 

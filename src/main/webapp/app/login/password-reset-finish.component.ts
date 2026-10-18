@@ -10,7 +10,8 @@ import { AlertComponent, ButtonComponent, FormFieldComponent, InputComponent } f
 import { AuthPublicService } from './auth-public.service';
 import { PasswordStrengthComponent } from './password-strength.component';
 
-function passwordsMatch(group: AbstractControl): ValidationErrors | null {
+/** `newPassword` and `confirmPassword` agree (also used by the sign-up confirmation). */
+export function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   return group.get('newPassword')!.value === group.get('confirmPassword')!.value ? null : { dontmatch: true };
 }
 

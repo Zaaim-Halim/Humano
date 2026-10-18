@@ -208,6 +208,21 @@ dt {
   border-color: var(--brand);
   box-shadow: 0 0 0 3px var(--brand-subtle);
 }
+/* Browser autofill paints its own light background, which ignores the theme (white fields in dark
+   mode): cover it with an inset shadow in the field's colours, keeping the focus ring. */
+.hum-input:-webkit-autofill,
+.hum-input:-webkit-autofill:hover {
+  -webkit-text-fill-color: var(--text-strong);
+  caret-color: var(--text-strong);
+  box-shadow: 0 0 0 1000px var(--bg-surface) inset;
+  transition: background-color 9999s ease-out 0s;
+}
+.hum-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-strong);
+  box-shadow:
+    0 0 0 1000px var(--bg-surface) inset,
+    0 0 0 3px var(--brand-subtle);
+}
 .hum-input:disabled,
 .hum-textarea:disabled,
 .hum-select:disabled {
@@ -673,7 +688,7 @@ dt {
   padding: var(--space-3) var(--space-3) 0;
   display: grid;
   gap: var(--space-2);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 70%, transparent);
 }
 .hum-formula-ref__title {
   display: flex;
@@ -1487,26 +1502,25 @@ dt {
 
 /* ============================================================
    Auth surfaces (sign in / sign up / reset / activate)
-   Split-screen: scrollable form side + fixed indigo brand panel.
-   Shared chrome lives in AuthLayoutComponent; the routed screens
-   render their content into .hum-auth__col using the classes below.
+   One centred column on a quiet canvas. Shared chrome lives in
+   AuthLayoutComponent; the routed screens render on .hum-auth__panel
+   using the classes below. Behind it, a faint payroll register fills
+   in once on load — the page's single animated moment.
    ============================================================ */
 .hum-auth {
+  position: relative;
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  background: var(--bg-app);
-}
-
-/* ---- form side ---- */
-.hum-auth__form-side {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  padding: var(--space-6) var(--space-6) var(--space-5);
-  overflow-y: auto;
+  padding: var(--space-5) var(--space-6);
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--bg-app);
 }
-.hum-auth__bar {
+.hum-auth__bar,
+.hum-auth__foot {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1525,48 +1539,430 @@ dt {
   height: 6px;
   margin-left: 2px;
   border-radius: var(--radius-full);
-  background: var(--indigo-500);
+  background: var(--brand);
 }
 .hum-auth__main {
+  position: relative;
+  z-index: 1;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-10) 0;
 }
-.hum-auth__col {
+/* The one surface the screen sits on: solid, so the register behind never
+   competes with the form. */
+.hum-auth__panel {
   width: 100%;
-  max-width: 380px;
-  display: flex;
-  flex-direction: column;
+  max-width: 420px;
+  padding: var(--space-8);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 24px 48px -24px rgba(15, 23, 42, 0.18);
 }
 /* The routed screen (login, reset, activate…) renders into its own host
    element, so the vertical rhythm between its head / alert / form / meta
-   blocks lives here rather than on .hum-auth__col. */
+   blocks lives here rather than on .hum-auth__panel. */
 .hum-auth-screen {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
 }
+.hum-auth__foot {
+  gap: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+.hum-auth__foot-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1_5);
+}
+
+/* ---- the payroll register behind the panel ---- */
+.hum-auth__ledger {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  pointer-events: none;
+  opacity: 0.7;
+  /* Fades toward the edges so the register frames the panel rather than filling the page. */
+  -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 50%, #000 25%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 65% at 50% 50%, #000 25%, transparent 75%);
+}
+.hum-auth__ledger-row {
+  position: relative;
+  height: 44px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.hum-auth__ledger-cell {
+  position: absolute;
+  top: 50%;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: var(--radius-full);
+  background: var(--border-subtle);
+  transform-origin: left center;
+}
+.hum-auth__ledger-cell.is-brand {
+  background: var(--brand-border);
+}
 @media (prefers-reduced-motion: no-preference) {
-  .hum-auth__col {
-    animation: hum-auth-settle var(--dur-slow) var(--ease-out);
+  /* Each row's figures fill in left to right, row after row, like a run being calculated. */
+  .hum-auth__ledger-cell {
+    transform: scaleX(0);
+    animation: hum-ledger-fill 700ms var(--ease-out) forwards;
+    animation-delay: var(--d);
+  }
+  .hum-auth__ledger-cell:nth-child(2) {
+    animation-delay: calc(var(--d) + 90ms);
+  }
+  .hum-auth__ledger-cell:nth-child(3) {
+    animation-delay: calc(var(--d) + 180ms);
+  }
+  .hum-auth__ledger-cell:nth-child(4) {
+    animation-delay: calc(var(--d) + 300ms);
+  }
+  /* The panel settles in once the first rows are drawn. */
+  .hum-auth__panel {
+    opacity: 0;
+    animation: hum-auth-settle 520ms var(--ease-out) 260ms forwards;
+  }
+  /* Feedback motion: an error appears where it happened. */
+  .hum-auth-screen > hum-alert {
+    animation: hum-auth-alert 240ms var(--ease-out);
+  }
+}
+@keyframes hum-ledger-fill {
+  to {
+    transform: scaleX(1);
   }
 }
 @keyframes hum-auth-settle {
   from {
-    transform: translateY(7px);
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
   }
   to {
-    transform: translateY(0);
+    opacity: 1;
+    transform: none;
   }
 }
-.hum-auth__foot {
+@keyframes hum-auth-alert {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- the HR scene around the panel (AuthSceneComponent) ---- */
+.hum-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.hum-scene__item {
+  position: absolute;
+  width: 248px;
+}
+.hum-scene__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2_5, 10px);
+  padding: var(--space-3) var(--space-3_5, 14px);
+  background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 28px -18px rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(6px);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  opacity: 0.92;
+}
+.hum-scene__card--slim {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2_5, 10px) var(--space-3);
+}
+.hum-scene__row,
+.hum-scene__person,
+.hum-scene__sub {
   display: flex;
   align-items: center;
-  gap: var(--space-1_5);
-  font-size: var(--text-xs);
-  color: var(--text-subtle);
+  gap: var(--space-2);
+}
+.hum-scene__sub {
+  justify-content: space-between;
+}
+.hum-scene__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-md);
+  background: var(--bg-muted);
+  color: var(--text-default);
+}
+.hum-scene__icon.is-brand {
+  background: var(--brand-subtle);
+  color: var(--brand-text);
+}
+.hum-scene__title {
+  flex: 1;
+  font-weight: var(--weight-semibold);
+  color: var(--text-strong);
+}
+.hum-scene__name,
+.hum-scene__text {
+  flex: 1;
+  color: var(--text-default);
+}
+.hum-scene__text strong {
+  font-weight: var(--weight-semibold);
+  color: var(--text-strong);
+}
+.hum-scene__amount {
+  font-family: var(--font-numeric);
+  font-weight: var(--weight-semibold);
+  color: var(--text-strong);
+}
+.hum-scene__muted,
+.hum-scene__time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+}
+.hum-scene__time {
+  font-family: var(--font-numeric);
+}
+.hum-scene__avatar {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  color: hsl(var(--hue) 55% 32%);
+  background: hsl(var(--hue) 70% 92%);
+}
+.hum-scene__badge {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+.hum-scene__badge.is-success {
+  background: var(--success-bg);
+  color: var(--success-fg);
+}
+.hum-scene__badge.is-warning {
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+}
+.hum-scene__badge.is-info {
+  background: var(--info-bg);
+  color: var(--info-fg);
+}
+[data-theme='dark'] .hum-scene__avatar {
+  color: hsl(var(--hue) 70% 82%);
+  background: hsl(var(--hue) 35% 24%);
+}
+/* A status that changes once: the second badge replaces the first. */
+.hum-scene__swap {
+  display: inline-grid;
+  justify-items: end;
+}
+.hum-scene__swap > * {
+  grid-area: 1 / 1;
+}
+.hum-scene__swap-to {
+  opacity: 0;
+}
+.hum-scene__meter {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-muted);
+  overflow: hidden;
+}
+.hum-scene__meter-fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+  transform-origin: left center;
+}
+.hum-scene__live {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--success-solid);
+}
+.hum-scene__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--success-bg);
+  color: var(--success-fg);
+}
+/* Team: a lead and three reports, joined by drawn lines. */
+.hum-scene__org {
+  position: relative;
+}
+.hum-scene__links {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 64px;
+  width: calc(100% - 28px);
+  height: 44px;
+  fill: none;
+  stroke: var(--border-default);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.hum-scene__links path {
+  stroke-dasharray: 320;
+  stroke-dashoffset: 0;
+}
+.hum-scene__org-lead,
+.hum-scene__org-team {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.hum-scene__org-team {
+  justify-content: space-between;
+  padding: 0 4px;
+  margin-top: var(--space-4);
+}
+.hum-scene__org .hum-scene__avatar {
+  width: 28px;
+  height: 28px;
+  box-shadow: 0 0 0 3px var(--bg-surface);
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Cards appear one after another once the register has started… */
+  .hum-scene__item {
+    opacity: 0;
+    animation: hum-scene-in 700ms var(--ease-out) forwards;
+    animation-delay: calc(500ms + var(--i) * 160ms);
+  }
+  /* …then drift very slowly, each on its own phase. */
+  .hum-scene__float {
+    animation: hum-scene-float 9s ease-in-out var(--f) infinite alternate;
+  }
+  /* The run fills, then posts; the request gets approved. */
+  .hum-scene__meter-fill {
+    transform: scaleX(0);
+    animation: hum-ledger-fill 2400ms cubic-bezier(0.4, 0, 0.2, 1) 1300ms forwards;
+  }
+  .hum-scene__swap-from {
+    animation: hum-scene-out 300ms ease forwards 3700ms;
+  }
+  .hum-scene__swap-to {
+    animation: hum-scene-pop 360ms var(--ease-out) forwards 3750ms;
+  }
+  .hum-scene__item:nth-child(4) .hum-scene__swap-from {
+    animation-delay: 2600ms;
+  }
+  .hum-scene__item:nth-child(4) .hum-scene__swap-to {
+    animation-delay: 2650ms;
+  }
+  .hum-scene__links path {
+    stroke-dashoffset: 320;
+    animation: hum-scene-draw 1200ms var(--ease-out) forwards 1400ms;
+  }
+  .hum-scene__live {
+    animation: hum-scene-pulse 2.4s ease-out infinite;
+  }
+}
+@keyframes hum-scene-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hum-scene-float {
+  from {
+    transform: translateY(-5px);
+  }
+  to {
+    transform: translateY(5px);
+  }
+}
+@keyframes hum-scene-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes hum-scene-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hum-scene-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes hum-scene-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--success-solid) 45%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+/* Reduced motion: everything in its final state. */
+@media (prefers-reduced-motion: reduce) {
+  .hum-scene__swap-from {
+    opacity: 0;
+  }
+  .hum-scene__swap-to {
+    opacity: 1;
+  }
+}
+/* The scene needs room on both sides of the panel. */
+@media (max-width: 1180px) {
+  .hum-scene {
+    display: none;
+  }
 }
 
 /* ---- screen content (used by the routed screens) ---- */
@@ -1575,12 +1971,10 @@ dt {
   flex-direction: column;
   gap: var(--space-2);
 }
-.hum-auth__eyebrow {
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--brand-text);
+.hum-auth__note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
 }
 .hum-auth__title {
   margin: 0;
@@ -1749,123 +2143,15 @@ dt {
   color: var(--success-fg);
 }
 
-/* ---- brand side ---- */
-.hum-auth__brand-side {
-  position: relative;
-  overflow: hidden;
-  background: var(--indigo-900);
-  color: #fff;
-}
-.hum-auth__brand-grid {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px);
-  background-size: 26px 26px;
-  -webkit-mask-image: linear-gradient(135deg, #000, transparent 70%);
-  mask-image: linear-gradient(135deg, #000, transparent 70%);
-}
-.hum-auth__brand-inner {
-  position: relative;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: var(--space-12);
-  padding: var(--space-10);
-}
-.hum-auth__wordmark--brand {
-  color: #fff;
-}
-.hum-auth__wordmark--brand .hum-auth__dot {
-  background: var(--indigo-300);
-}
-.hum-auth__pitch {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
-  max-width: 30rem;
-}
-.hum-auth__pitch-title {
-  margin: 0;
-  font: var(--weight-semibold) var(--text-3xl) / var(--leading-tight) var(--font-sans);
-  letter-spacing: var(--tracking-tight);
-}
-.hum-auth__points {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-}
-.hum-auth__point {
-  display: flex;
-  gap: var(--space-3);
-}
-.hum-auth__point-icon {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-.hum-auth__point-title {
-  display: block;
-  font-weight: var(--weight-semibold);
-}
-.hum-auth__point-desc {
-  display: block;
-  font-size: var(--text-sm);
-  color: rgba(255, 255, 255, 0.7);
-}
-.hum-auth__quote {
-  margin: 0;
-  padding: var(--space-5);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.06);
-}
-.hum-auth__quote blockquote {
-  margin: 0 0 var(--space-4);
-  font-size: var(--text-md);
-  line-height: var(--leading-relaxed);
-}
-.hum-auth__quote figcaption {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-.hum-auth__quote-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.16);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-}
-.hum-auth__quote-name {
-  display: block;
-  font-weight: var(--weight-semibold);
-}
-.hum-auth__quote-role {
-  display: block;
-  font-size: var(--text-xs);
-  color: rgba(255, 255, 255, 0.7);
-}
-
-/* collapse the brand panel on narrow viewports */
-@media (max-width: 880px) {
+/* phones: the panel becomes the page */
+@media (max-width: 560px) {
   .hum-auth {
-    grid-template-columns: 1fr;
+    padding: var(--space-4);
   }
-  .hum-auth__brand-side {
+  .hum-auth__panel {
+    padding: var(--space-6) var(--space-5);
+  }
+  .hum-auth__ledger {
     display: none;
   }
 }
@@ -2564,6 +2850,449 @@ dt {
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-5);
 }
+/* ---- "Everything in Humano": one card per area, each headed by a small picture of it ---- */
+.lp-bento {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+.lp-bento__card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xs);
+}
+.lp-bento__card--wide {
+  grid-column: span 2;
+}
+.lp-bento__visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 190px;
+  padding: var(--space-5);
+  background: radial-gradient(120% 90% at 0% 0%, var(--brand-subtle), transparent 60%), var(--bg-app);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  color: var(--text-default);
+}
+.lp-bento__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+}
+.lp-bento__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font: var(--weight-semibold) var(--text-lg) / var(--leading-snug) var(--font-display);
+  color: var(--text-strong);
+}
+.lp-bento__title lucide-icon {
+  color: var(--brand-text);
+}
+.lp-bento__summary {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--text-muted);
+}
+.lp-checklist.lp-bento__items li {
+  font-size: var(--text-sm);
+}
+.lp-bento__card--wide .lp-checklist.lp-bento__items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-6);
+}
+.lp-catalog__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-10);
+}
+
+/* shared bits of the mini visuals */
+.lp-vis-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1_5);
+}
+.lp-vis-chips > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  font-size: var(--text-xs);
+  color: var(--text-default);
+}
+.lp-vis-chips > span.is-on {
+  border-color: var(--brand-border);
+  background: var(--brand-subtle);
+  color: var(--brand-text);
+}
+.lp-vis-run,
+.lp-vis-profile,
+.lp-vis-time,
+.lp-vis-self,
+.lp-vis-admin {
+  width: 100%;
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 24px -16px rgba(15, 23, 42, 0.25);
+}
+
+/* payroll: the run steps, then net pay and pay by department */
+.lp-vis-run__steps {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+}
+.lp-vis-run__steps li {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 0;
+  border-radius: var(--radius-full);
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+.lp-vis-run__steps li.is-done {
+  background: var(--success-bg);
+  color: var(--success-fg);
+}
+.lp-vis-run__steps li.is-current {
+  background: var(--brand);
+  color: var(--brand-fg);
+  font-weight: var(--weight-semibold);
+}
+.lp-vis-run__body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-6);
+}
+.lp-vis-run__kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lp-vis-run__kpi strong {
+  font-size: var(--text-2xl);
+  color: var(--text-strong);
+}
+.lp-vis-run__kpi .hum-delta {
+  align-self: flex-start;
+}
+.lp-vis-run__bars {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lp-vis-run__bars li {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* people: a profile with its records and an expiry warning */
+.lp-vis-profile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.lp-vis-profile__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.lp-vis-profile__head > span {
+  display: flex;
+  flex-direction: column;
+}
+.lp-vis-profile__head strong {
+  color: var(--text-strong);
+}
+.lp-vis-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+/* organization: a lead and three teams */
+.lp-vis-org {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 260px;
+}
+.lp-vis-org svg {
+  width: 72%;
+  height: 36px;
+  fill: none;
+  stroke: var(--border-default);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.lp-vis-org svg path {
+  vector-effect: non-scaling-stroke;
+}
+.lp-vis-org__row {
+  display: flex;
+  justify-content: space-between;
+  width: 86%;
+}
+.lp-vis-org__row > span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.lp-vis-org__row small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* time: three people's day */
+.lp-vis-time {
+  display: grid;
+  gap: var(--space-3);
+}
+.lp-vis-time__row {
+  display: grid;
+  grid-template-columns: 150px 130px 1fr;
+  align-items: center;
+  gap: var(--space-3);
+}
+.lp-vis-time__row .hum-person__name {
+  font-size: var(--text-sm);
+}
+
+/* approvals: a stack of requests */
+.lp-vis-queue {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 280px;
+}
+.lp-vis-queue__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--c);
+  border-radius: var(--radius-md);
+  box-shadow: 0 6px 16px -12px rgba(15, 23, 42, 0.3);
+  font-size: var(--text-sm);
+}
+.lp-vis-queue__item lucide-icon {
+  color: var(--c);
+}
+.lp-vis-queue__item span {
+  flex: 1;
+  color: var(--text-strong);
+}
+.lp-vis-queue__item small {
+  color: var(--text-muted);
+}
+.lp-vis-queue__item:nth-child(2) {
+  margin-left: var(--space-3);
+}
+.lp-vis-queue__item:nth-child(3) {
+  margin-left: var(--space-6);
+}
+
+/* self-service: a payslip and the time off left */
+.lp-vis-self {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 280px;
+}
+.lp-vis-self__pay {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.lp-vis-self__pay strong {
+  font-size: var(--text-2xl);
+  color: var(--text-strong);
+}
+.lp-vis-self__leave {
+  display: grid;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.lp-vis-self__leave strong {
+  color: var(--text-strong);
+}
+
+/* administration: roles, and one database per company */
+.lp-vis-admin {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 300px;
+}
+.lp-vis-db {
+  display: flex;
+  gap: var(--space-2);
+}
+.lp-vis-db > span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-2);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.lp-vis-db lucide-icon {
+  color: var(--brand-text);
+}
+
+/* ---- "See Humano at work": real screens in a browser frame, one tab per screen ---- */
+.lp-show__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.lp-show__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  font: var(--weight-medium) var(--text-sm) var(--font-sans);
+  color: var(--text-default);
+  cursor: pointer;
+  transition: var(--transition-colors);
+}
+.lp-show__tab:hover {
+  border-color: var(--border-default);
+  color: var(--text-strong);
+}
+.lp-show__tab.is-active {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--brand-fg);
+}
+.lp-show__tab:focus-visible {
+  outline: var(--ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.lp-show__window {
+  overflow: hidden;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 30px 60px -30px rgba(15, 23, 42, 0.35);
+}
+.lp-show__body {
+  padding: var(--space-6);
+}
+.lp-show__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .lp-show__panel {
+    animation: hum-auth-alert 260ms var(--ease-out);
+  }
+}
+.lp-show__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.lp-show__title h3 {
+  margin: 0;
+  font: var(--weight-semibold) var(--text-xl) var(--font-display);
+  color: var(--text-strong);
+}
+.lp-show__split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: var(--space-4);
+}
+/* The results table shares its row with the department chart here: tighter columns than in the app. */
+.lp-show__body .hum-pay-results__row {
+  grid-template-columns: minmax(150px, 1.5fr) minmax(60px, 1fr) repeat(3, 76px);
+  gap: var(--space-2) var(--space-3);
+  min-width: 560px;
+}
+.lp-show__scroll {
+  overflow-x: auto;
+}
+.lp-show__trend {
+  height: 200px;
+}
+.lp-show__note {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+  text-align: right;
+}
+@media (max-width: 960px) {
+  .lp-bento {
+    grid-template-columns: 1fr;
+  }
+  .lp-bento__card--wide {
+    grid-column: auto;
+  }
+  .lp-bento__card--wide .lp-checklist.lp-bento__items {
+    grid-template-columns: 1fr;
+  }
+  .lp-show__split {
+    grid-template-columns: 1fr;
+  }
+  .lp-vis-time__row {
+    grid-template-columns: 1fr auto;
+  }
+  .lp-vis-time__row .hum-clock-week__track {
+    grid-column: 1 / -1;
+  }
+  .lp-show__body {
+    padding: var(--space-4);
+  }
+}
+
 .lp-card {
   display: flex;
   flex-direction: column;
@@ -2635,79 +3364,6 @@ dt {
 }
 
 /* testimonials */
-.lp-quotes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-5);
-  align-items: stretch;
-}
-.lp-quote {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: var(--space-5);
-  margin: 0;
-  padding: var(--space-6);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-}
-.lp-quote blockquote {
-  margin: 0;
-  font-size: var(--text-md);
-  line-height: 1.55;
-  color: var(--text-strong);
-}
-.lp-quote figcaption {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-.lp-quote__name {
-  display: block;
-  font-weight: var(--weight-semibold);
-  color: var(--text-strong);
-}
-.lp-quote__role {
-  display: block;
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-}
-.lp-quote--feature {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
-}
-.lp-quote--feature blockquote {
-  font-size: var(--text-lg);
-  line-height: var(--leading-snug);
-  color: #fff;
-}
-.lp-quote--feature .lp-quote__name {
-  color: #fff;
-}
-.lp-quote--feature .lp-quote__role {
-  color: rgba(255, 255, 255, 0.75);
-}
-.lp-quote__avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-}
-.lp-quote__avatar--light {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-}
-.lp-quote-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-}
 
 /* pricing */
 /* Book-a-demo dialog */
@@ -2901,7 +3557,7 @@ dt {
 /* footer */
 .lp-footer__top {
   display: grid;
-  grid-template-columns: 1.6fr repeat(4, 1fr);
+  grid-template-columns: 2fr repeat(2, 1fr);
   gap: var(--space-8);
 }
 .lp-footer__tagline {
@@ -2942,18 +3598,6 @@ dt {
   font-size: var(--text-sm);
   color: var(--text-muted);
 }
-.lp-footer__status {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.lp-footer__status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: var(--success-solid);
-  box-shadow: 0 0 0 3px var(--success-bg);
-}
 
 /* responsive */
 @media (max-width: 940px) {
@@ -2971,8 +3615,7 @@ dt {
     grid-template-columns: repeat(2, 1fr);
     gap: var(--space-6);
   }
-  .lp-grid-3,
-  .lp-quotes {
+  .lp-grid-3 {
     grid-template-columns: 1fr;
   }
   .lp-footer__top {

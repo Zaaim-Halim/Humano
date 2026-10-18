@@ -1,5 +1,4 @@
 <div class="hum-auth__head">
-  <span class="hum-auth__eyebrow">{{ 'login.eyebrow' | translate }}</span>
   <h1 class="hum-auth__title">{{ 'login.heading' | translate }}</h1>
   <p class="hum-auth__desc">{{ 'login.subtitle' | translate }}</p>
 </div>
@@ -12,6 +11,7 @@
   <hum-form-field [label]="'login.form.organization' | translate" controlId="login-organization">
     <hum-input
       inputId="login-organization"
+      autocomplete="organization"
       formControlName="organization"
       [placeholder]="'login.form.organization.placeholder' | translate"
       [invalid]="invalid('organization')"
@@ -21,6 +21,7 @@
   <hum-form-field [label]="'login.form.email' | translate" controlId="login-username">
     <hum-input
       inputId="login-username"
+      autocomplete="username"
       formControlName="username"
       [placeholder]="'login.form.email.placeholder' | translate"
       [invalid]="invalid('username')"
@@ -35,6 +36,7 @@
     <div class="hum-auth__pw">
       <hum-input
         inputId="login-password"
+        autocomplete="current-password"
         [type]="showPassword() ? 'text' : 'password'"
         formControlName="password"
         [placeholder]="'login.form.password.placeholder' | translate"
@@ -56,7 +58,11 @@
     <span>{{ 'login.form.rememberme' | translate }}</span>
   </label>
 
-  <hum-button type="submit" variant="primary" size="lg" [block]="true" [loading]="loading()" [disabled]="form.invalid">
+  <hum-button type="submit" variant="primary" size="lg" icon="log-in" [block]="true" [loading]="loading()" [disabled]="form.invalid">
     {{ 'login.form.button' | translate }}
   </hum-button>
 </form>
+
+<p class="hum-auth__meta">
+  {{ 'login.noAccount' | translate }} <a routerLink="/signup">{{ 'login.startTrial' | translate }}</a>
+</p>

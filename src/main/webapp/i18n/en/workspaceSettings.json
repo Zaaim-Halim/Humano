@@ -188,8 +188,18 @@
         "demoHint": "This workspace is a demo set up by Humano, with a sample company to explore.",
         "demoBadge": "Demo",
         "demoEnds": "Demo ends {{ date }}",
-        "demoKeep": "Want to keep it? Talk to your Humano contact — we can turn this workspace into your own, on the plan you choose."
+        "demoKeep": "Want to keep it? Talk to your Humano contact — we can turn this workspace into your own, on the plan you choose.",
+        "trialThenPlan": "Free until {{ date }}, then this plan starts",
+        "trialChooseConfirmBody": "Your free trial continues until {{ date }}. Then this plan starts and you are billed {{ amount }} {{ cycle }}.",
+        "trialKeepConfirmTitle": "Keep {{ name }} after the trial?"
       }
+    },
+    "trial": {
+      "daysLeft": "{{ n }} days left in your free trial.",
+      "lastDay": "Your free trial ends today.",
+      "readOnly": "Your free trial has ended. This workspace is read-only until {{ date }}, then it is paused — nothing is deleted.",
+      "choosePlan": "Choose a plan",
+      "askAdmin": "Ask an administrator to choose a plan."
     }
   }
 }

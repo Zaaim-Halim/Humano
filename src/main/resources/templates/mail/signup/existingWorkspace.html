@@ -1,0 +1,20 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}" lang="en">
+  <head>
+    <title th:text="#{email.signup.existing.title}">You already have a workspace</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  </head>
+  <body>
+    <p th:text="#{email.signup.existing.greeting}">Hi,</p>
+    <p th:text="#{email.signup.existing.body(${tenantName}, ${subdomain})}">This email already has a workspace.</p>
+    <p>
+      <a th:with="url=(@{|${baseUrl}/login|})" th:href="${url}" th:text="${url}">Sign in</a>
+    </p>
+    <p th:text="#{email.signup.existing.reset}">Forgot your password?</p>
+    <p>
+      <span th:text="#{email.billing.text2}">Regards,</span>
+      <br />
+      <em th:text="#{email.signature}">Humano Team.</em>
+    </p>
+  </body>
+</html>

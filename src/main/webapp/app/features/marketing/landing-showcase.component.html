@@ -1,0 +1,297 @@
+<div class="lp-show__tabs" role="tablist" aria-label="Screens" (keydown)="onKey($event)">
+  @for (t of tabs; track t.id) {
+    <button
+      type="button"
+      role="tab"
+      class="lp-show__tab"
+      [attr.data-tab]="t.id"
+      [class.is-active]="tab() === t.id"
+      [attr.aria-selected]="tab() === t.id"
+      [attr.tabindex]="tab() === t.id ? 0 : -1"
+      (click)="select(t.id)"
+    >
+      <lucide-icon [name]="t.icon" [size]="16" /> {{ t.label }}
+    </button>
+  }
+</div>
+
+<div class="lp-show__window">
+  <div class="lp-mock__bar">
+    <span class="lp-mock__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="lp-mock__addr"><lucide-icon name="lock" [size]="11" /> app.humano.com/{{ path() }}</span>
+  </div>
+
+  <div class="lp-show__body" role="tabpanel" [attr.aria-label]="tab()">
+    @switch (tab()) {
+      <!-- ================= Payroll run ================= -->
+      @case ('payroll') {
+        <div class="lp-show__panel">
+          <div class="lp-show__title">
+            <h3>March 2026 payroll</h3>
+            <hum-badge tone="success" label="Posted" />
+          </div>
+          <div class="hum-insights__kpis">
+            <div class="hum-kpi hum-kpi--hero">
+              <div class="hum-kpi__label"><lucide-icon name="wallet" [size]="14" />Net pay</div>
+              <div class="hum-kpi__value">
+                {{ money(run.net) }} <span class="hum-delta is-up">+{{ run.netChange }}%</span>
+              </div>
+              <div class="hum-kpi__hint">Paid to {{ run.employees }} employees</div>
+            </div>
+            <div class="hum-kpi">
+              <div class="hum-kpi__label"><lucide-icon name="trending-up" [size]="14" />Gross</div>
+              <div class="hum-kpi__value">
+                {{ money(run.gross) }} <span class="hum-delta is-up">+{{ run.grossChange }}%</span>
+              </div>
+              <div class="hum-kpi__hint">{{ money(629900) }} last month</div>
+            </div>
+            <div class="hum-kpi">
+              <div class="hum-kpi__label"><lucide-icon name="landmark" [size]="14" />Deductions</div>
+              <div class="hum-kpi__value">{{ money(run.deductions) }}</div>
+              <div class="hum-kpi__hint">24% of gross</div>
+            </div>
+            <div class="hum-kpi">
+              <div class="hum-kpi__label"><lucide-icon name="building-2" [size]="14" />Employer cost</div>
+              <div class="hum-kpi__value">{{ money(run.cost) }}</div>
+              <div class="hum-kpi__hint">{{ money(run.cost - run.gross) }} in employer charges</div>
+            </div>
+          </div>
+
+          <div class="lp-show__split">
+            <section class="hum-card hum-insights__card">
+              <header class="hum-insights__head">
+                <span class="hum-records__icon"><lucide-icon name="layers" [size]="16" /></span>
+                <h3>By department</h3>
+              </header>
+              <ul class="hum-dept-pay">
+                @for (d of departments; track d.name) {
+                  <li>
+                    <div class="hum-dept-pay__head">
+                      <strong>{{ d.name }}</strong>
+                      <span class="hum-kpi__hint">{{ d.count }} people · avg {{ money(d.avg) }}</span>
+                      <span class="hum-records__spacer"></span>
+                      <span class="tabular-nums">{{ money(d.gross) }}</span>
+                    </div>
+                    <span class="hum-dept-pay__bar">
+                      <span class="is-net" [style.width.%]="(d.net / maxDeptGross) * 100"></span>
+                      <span class="is-ded" [style.width.%]="((d.gross - d.net) / maxDeptGross) * 100"></span>
+                    </span>
+                  </li>
+                }
+              </ul>
+              <div class="hum-kpi__hint" style="margin-top: var(--space-2)">
+                <span class="hum-legend"><i style="background: var(--brand)"></i>Net</span>
+                <span class="hum-legend"><i style="background: var(--warning-solid)"></i>Deductions</span>
+              </div>
+            </section>
+
+            <section class="hum-card hum-insights__card">
+              <header class="hum-insights__head">
+                <span class="hum-records__icon"><lucide-icon name="users" [size]="16" /></span>
+                <h3>Per-employee results</h3>
+                <span class="hum-records__count">{{ run.employees }}</span>
+              </header>
+              <div class="hum-pay-results">
+                <div class="hum-pay-results__row hum-pay-results__row--head">
+                  <span>Employee</span>
+                  <span>Split</span>
+                  <span class="hum-team-att__num">Gross</span>
+                  <span class="hum-team-att__num">Deductions</span>
+                  <span class="hum-team-att__num">Net</span>
+                </div>
+                @for (r of results; track r.ref) {
+                  <div class="hum-pay-results__row">
+                    <span class="hum-person">
+                      <hum-avatar [name]="r.name" size="sm" />
+                      <span class="hum-person__text">
+                        <span class="hum-person__name">{{ r.name }}</span>
+                        <span class="hum-person__sub">{{ r.ref }}</span>
+                      </span>
+                    </span>
+                    <span class="hum-dept-pay__bar">
+                      <span class="is-net" [style.width.%]="((r.gross - r.deductions) / maxGross) * 100"></span>
+                      <span class="is-ded" [style.width.%]="(r.deductions / maxGross) * 100"></span>
+                    </span>
+                    <span class="hum-team-att__num tabular-nums">{{ money(r.gross) }}</span>
+                    <span class="hum-team-att__num tabular-nums">{{ money(r.deductions) }}</span>
+                    <span class="hum-team-att__num tabular-nums"
+                      ><strong>{{ money(r.gross - r.deductions) }}</strong></span
+                    >
+                  </div>
+                }
+              </div>
+            </section>
+          </div>
+        </div>
+      }
+
+      <!-- ================= Team attendance ================= -->
+      @case ('attendance') {
+        <div class="lp-show__panel">
+          <div class="lp-show__title">
+            <h3>Team attendance</h3>
+            <span class="hum-kpi__hint">Thursday, 14:42</span>
+          </div>
+          <div class="hum-presence-chips">
+            @for (p of presence; track p.label) {
+              <span class="hum-presence-chip" [attr.data-tone]="p.tone">
+                <span class="hum-presence-chip__count tabular-nums">{{ p.count }}</span>
+                <span>{{ p.label }}</span>
+              </span>
+            }
+          </div>
+          <section class="hum-card hum-team-att lp-show__scroll">
+            <div class="hum-team-att__row hum-team-att__row--head">
+              <span>Person</span>
+              <span>Status</span>
+              <span class="hum-team-att__scale">
+                @for (s of scaleHours; track s.h) {
+                  <span [style.left.%]="s.left">{{ s.h }}h</span>
+                }
+              </span>
+              <span>In – out</span>
+              <span class="hum-team-att__num">Worked</span>
+            </div>
+            @for (r of team; track r.name) {
+              <div class="hum-team-att__row" [class.is-alert]="r.tone === 'danger'">
+                <span class="hum-person">
+                  <hum-avatar [name]="r.name" size="sm" />
+                  <span class="hum-person__text">
+                    <span class="hum-person__name">{{ r.name }}</span>
+                    <span class="hum-person__sub">{{ r.role }}</span>
+                  </span>
+                </span>
+                <span><hum-badge [tone]="r.tone" [label]="r.status" /></span>
+                <span class="hum-clock-week__track" aria-hidden="true">
+                  @for (s of r.segs; track $index) {
+                    <span
+                      class="hum-clock-track__seg"
+                      [class.is-break]="s.brk"
+                      [class.is-open]="s.open"
+                      [style.left.%]="s.left"
+                      [style.width.%]="s.width"
+                    ></span>
+                  }
+                </span>
+                <span class="tabular-nums">{{ r.inOut }}</span>
+                <span class="hum-team-att__num tabular-nums">
+                  @if (r.worked) {
+                    <strong>{{ r.worked }}</strong>
+                  }
+                  @if (r.breakShort) {
+                    <span class="hum-kpi__hint">{{ r.breakShort }}</span>
+                  }
+                </span>
+              </div>
+            }
+          </section>
+        </div>
+      }
+
+      <!-- ================= Approvals ================= -->
+      @case ('approvals') {
+        <div class="lp-show__panel">
+          <div class="lp-show__title">
+            <h3>Approvals</h3>
+            <span class="hum-kpi__hint">Waiting on you</span>
+          </div>
+          <section class="hum-dir-stats hum-dir-stats--even">
+            @for (s of approvalStats; track s.label) {
+              <div class="hum-dir-stat" [class.hum-dir-stat--warn]="s.warn">
+                <div class="hum-dir-stat__label">{{ s.label }}</div>
+                <div class="hum-dir-stat__value tabular-nums">{{ s.value }}</div>
+                @if (s.sub) {
+                  <div class="hum-dir-stat__sub">{{ s.sub }}</div>
+                }
+              </div>
+            }
+          </section>
+          <div class="hum-request-list">
+            @for (a of approvals; track a.name) {
+              <div class="hum-approval" [class.is-overdue]="a.overdue" [style.--hum-accent]="a.color">
+                <span class="hum-approval__icon"><lucide-icon [name]="a.icon" [size]="16" /></span>
+                <span class="hum-request__who">
+                  <span class="hum-request__name">{{ a.name }}</span>
+                  <span class="hum-request__type">{{ a.type }}</span>
+                </span>
+                <span class="hum-request__reason">{{ a.reason }}</span>
+                <span class="hum-approval__figure tabular-nums">{{ a.figure }}</span>
+                <span class="hum-approval__wait" [class.is-overdue]="a.overdue">
+                  @if (a.overdue) {
+                    <lucide-icon name="circle-alert" [size]="12" />
+                  }
+                  {{ a.wait }}
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- ================= Insights ================= -->
+      @case ('insights') {
+        <div class="lp-show__panel">
+          <div class="lp-show__title">
+            <h3>Company insights</h3>
+            <span class="hum-kpi__hint">Last 6 months</span>
+          </div>
+          <div class="lp-show__split">
+            <section class="hum-card hum-insights__card">
+              <header class="hum-insights__head">
+                <span class="hum-records__icon"><lucide-icon name="chart-line" [size]="16" /></span>
+                <h3>Net pay per run</h3>
+                <span class="hum-records__spacer"></span>
+                <strong class="tabular-nums">{{ money(run.net) }}</strong>
+              </header>
+              <div class="hum-dash-trend lp-show__trend">
+                @for (t of netTrend; track t.label) {
+                  <div class="hum-dash-trend__col" [title]="t.label + ': ' + money(t.value)">
+                    <span class="hum-kpi__hint tabular-nums">{{ money(t.value / 1000) }}k</span>
+                    <span class="hum-dash-trend__bar" [style.height.%]="barHeight(t.value)"></span>
+                    <span class="hum-dash-trend__label">{{ t.label }}</span>
+                  </div>
+                }
+              </div>
+            </section>
+
+            <section class="hum-card hum-insights__card">
+              <header class="hum-insights__head">
+                <span class="hum-records__icon"><lucide-icon name="users" [size]="16" /></span>
+                <h3>Headcount</h3>
+                <span class="hum-records__spacer"></span>
+                <strong class="tabular-nums">{{ total }}</strong>
+              </header>
+              <div class="hum-kpi__label">By department</div>
+              <div class="hum-stackbar hum-stackbar--lg" style="margin-top: var(--space-2)">
+                @for (d of headcount; track d.label) {
+                  <span [style.width.%]="pct(d.count)" [style.background]="d.color"></span>
+                }
+              </div>
+              <ul class="hum-dash-legend">
+                @for (d of headcount; track d.label) {
+                  <li>
+                    <i [style.background]="d.color"></i>{{ d.label }}<strong class="tabular-nums">{{ d.count }}</strong>
+                  </li>
+                }
+              </ul>
+              <div class="hum-kpi__label" style="margin-top: var(--space-4)">By work location</div>
+              <div class="hum-stackbar" style="margin-top: var(--space-2)">
+                @for (d of locations; track d.label) {
+                  <span [style.width.%]="pct(d.count)" [style.background]="d.color"></span>
+                }
+              </div>
+              <ul class="hum-dash-legend">
+                @for (d of locations; track d.label) {
+                  <li>
+                    <i [style.background]="d.color"></i>{{ d.label }}<strong class="tabular-nums">{{ d.count }}</strong>
+                  </li>
+                }
+              </ul>
+            </section>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>
+<p class="lp-show__note">Screens shown with sample data.</p>

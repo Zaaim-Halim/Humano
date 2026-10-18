@@ -41,6 +41,8 @@ import tech.jhipster.config.JHipsterProperties;
  *   <li>{@code mail/billing/subscriptionCancelled}</li>
  *   <li>{@code mail/billing/subscriptionRenewed}</li>
  *   <li>{@code mail/billing/trialEnding}</li>
+ *   <li>{@code mail/billing/trialEnded}</li>
+ *   <li>{@code mail/signup/confirm}, {@code mail/signup/existingWorkspace}</li>
  * </ul>
  */
 @Service
@@ -158,6 +160,31 @@ public class BillingMailService {
         vars.put("trialEndsAt", formatInstant(trialEndsAt));
         vars.put("daysRemaining", daysRemaining);
         dispatch(to, "mail/billing/trialEnding", "email.billing.trial-ending.title", vars);
+    }
+
+    /** The trial ended without a plan: the workspace is read-only until {@code readOnlyUntil}, then paused. */
+    public void sendTrialEnded(String to, String tenantName, Instant readOnlyUntil) {
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("tenantName", tenantName);
+        vars.put("readOnlyUntil", formatInstant(readOnlyUntil));
+        dispatch(to, "mail/billing/trialEnded", "email.billing.trial-ended.title", vars);
+    }
+
+    /** Self-serve sign-up: the link that confirms the email and starts the workspace setup. */
+    public void sendSignupConfirmation(String to, String companyName, String subdomain, String confirmUrl) {
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("companyName", companyName);
+        vars.put("subdomain", subdomain);
+        vars.put("confirmUrl", confirmUrl);
+        dispatch(to, "mail/signup/confirm", "email.signup.confirm.title", vars);
+    }
+
+    /** Self-serve sign-up with an address that already has a workspace: points to it instead. */
+    public void sendSignupExistingWorkspace(String to, String tenantName, String subdomain) {
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("tenantName", tenantName);
+        vars.put("subdomain", subdomain);
+        dispatch(to, "mail/signup/existingWorkspace", "email.signup.existing.title", vars);
     }
 
     private void dispatch(String to, String templateName, String titleKey, Map<String, Object> vars) {

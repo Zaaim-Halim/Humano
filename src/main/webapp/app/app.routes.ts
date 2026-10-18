@@ -62,6 +62,16 @@ const routes: Routes = [
         title: 'reset.finish.title',
         loadComponent: () => import('./login/password-reset-finish.component'),
       },
+      {
+        path: 'signup',
+        title: 'register.title',
+        loadComponent: () => import('./login/signup.component'),
+      },
+      {
+        path: 'signup/verify',
+        title: 'register.verify.title',
+        loadComponent: () => import('./login/signup-verify.component'),
+      },
     ],
   },
   {

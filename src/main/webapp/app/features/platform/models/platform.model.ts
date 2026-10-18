@@ -29,6 +29,8 @@ export interface PlatformOverview {
     /** Percent, one decimal. */
     churnRate: number;
   };
+  /** Self-serve sign-ups confirmed in the last 30 days and how far they got. */
+  selfServe: { confirmed: number; ready: number; converted: number; failed: number };
   plans: PlanBreakdown[];
   attention: AttentionItem[];
 }

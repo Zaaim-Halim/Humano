@@ -215,6 +215,23 @@
             </div>
           }
         </div>
+        <div class="hum-kpi__label" style="margin-top: var(--space-4)">{{ 'humano.console.overview.selfServe' | translate }}</div>
+        <ul class="hum-dash-legend">
+          <li>
+            {{ 'humano.console.overview.selfServeConfirmed' | translate }}<strong class="tabular-nums">{{ d.selfServe.confirmed }}</strong>
+          </li>
+          <li>
+            {{ 'humano.console.overview.selfServeReady' | translate }}<strong class="tabular-nums">{{ d.selfServe.ready }}</strong>
+          </li>
+          <li>
+            {{ 'humano.console.overview.selfServeConverted' | translate }}<strong class="tabular-nums">{{ d.selfServe.converted }}</strong>
+          </li>
+          @if (d.selfServe.failed) {
+            <li>
+              {{ 'humano.console.overview.selfServeFailed' | translate }}<strong class="tabular-nums">{{ d.selfServe.failed }}</strong>
+            </li>
+          }
+        </ul>
       </section>
 
       <!-- Reports -->

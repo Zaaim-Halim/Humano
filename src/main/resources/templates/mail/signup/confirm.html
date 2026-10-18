@@ -1,0 +1,20 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}" lang="en">
+  <head>
+    <title th:text="#{email.signup.confirm.title}">Confirm your email</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  </head>
+  <body>
+    <p th:text="#{email.signup.confirm.greeting}">Hi,</p>
+    <p th:text="#{email.signup.confirm.body(${companyName}, ${subdomain})}">Confirm your email to create your workspace.</p>
+    <p>
+      <a th:href="${confirmUrl}" th:text="${confirmUrl}">Confirm my email</a>
+    </p>
+    <p th:text="#{email.signup.confirm.expiry}">The link works for 48 hours.</p>
+    <p>
+      <span th:text="#{email.billing.text2}">Regards,</span>
+      <br />
+      <em th:text="#{email.signature}">Humano Team.</em>
+    </p>
+  </body>
+</html>

@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Injectable, inject, signal } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 
 import { ApplicationConfigService } from 'app/core/config/application-config.service';
 import { PublicPricing } from 'app/features/marketing/marketing.service';
@@ -19,9 +19,21 @@ export class MeBillingService {
   private readonly config = inject(ApplicationConfigService);
   private readonly resourceUrl = this.config.getEndpointFor('api/billing/me');
 
+  /**
+   * The last subscription fetched by {@link currentSubscription} — `null` when there is none (demo
+   * workspaces), `undefined` until first fetched. Drives the shell's trial banner, and so follows
+   * every reload (e.g. billing settings after a plan change).
+   */
+  readonly current = signal<Subscription | null | undefined>(undefined);
+
   /** `GET /api/billing/me/current-subscription` (404 when there is none). */
   currentSubscription(): Observable<Subscription> {
-    return this.http.get<Subscription>(`${this.resourceUrl}/current-subscription`);
+    return this.http.get<Subscription>(`${this.resourceUrl}/current-subscription`).pipe(
+      tap({
+        next: s => this.current.set(s),
+        error: () => this.current.set(null),
+      }),
+    );
   }
 
   /** The plans on sale, with what each includes (the public pricing data). */

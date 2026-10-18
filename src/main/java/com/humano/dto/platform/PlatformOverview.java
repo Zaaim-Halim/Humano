@@ -15,6 +15,7 @@ public record PlatformOverview(
     Customers customers,
     Revenue revenue,
     Subscriptions subscriptions,
+    SelfServe selfServe,
     List<PlanBreakdown> plans,
     List<AttentionItem> attention
 ) {
@@ -47,6 +48,12 @@ public record PlatformOverview(
         long churnedLast30Days,
         double churnRate
     ) {}
+
+    /**
+     * Self-serve sign-ups confirmed in the last 30 days, and how far they got: workspace ready (trial
+     * started), now on a paid plan, or setup failed (the person can retry from their link).
+     */
+    public record SelfServe(long confirmed, long ready, long converted, long failed) {}
 
     /** One plan: how many customers are on it and the MRR it brings. */
     public record PlanBreakdown(

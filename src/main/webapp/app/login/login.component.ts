@@ -46,7 +46,8 @@ export default class LoginComponent {
     // Organization = the tenant the user belongs to. Interim until production resolves the tenant from
     // the subdomain; sent as the X-Tenant-ID header so the backend knows which tenant DB to authenticate against.
     organization: [this.tenantContext.tenantId() ?? '', [Validators.required]],
-    username: ['', [Validators.required]],
+    // Prefilled when arriving from a just-created workspace (navigation state; the sign-up page also pins the tenant).
+    username: [(history.state as { email?: string } | null)?.email ?? '', [Validators.required]],
     password: ['', [Validators.required]],
     rememberMe: [false],
   });

@@ -1,0 +1,111 @@
+@if (sentTo(); as email) {
+  <div class="hum-auth__head">
+    <span class="hum-auth__icon"><lucide-icon name="mail-check" [size]="22" /></span>
+    <h1 class="hum-auth__title">{{ 'register.sent.heading' | translate }}</h1>
+    <p class="hum-auth__desc">
+      {{ 'register.sent.body' | translate }} <span class="hum-auth__email">{{ email }}</span
+      >. {{ 'register.sent.expiry' | translate }}
+    </p>
+  </div>
+  <hum-button variant="secondary" size="lg" icon="pencil" [block]="true" (click)="restart()">{{
+    'register.sent.different' | translate
+  }}</hum-button>
+  <p class="hum-auth__meta">
+    {{ 'register.haveAccount' | translate }} <a routerLink="/login">{{ 'register.signIn' | translate }}</a>
+  </p>
+} @else {
+  <div class="hum-auth__head">
+    <h1 class="hum-auth__title">{{ 'register.heading' | translate }}</h1>
+    <p class="hum-auth__desc">{{ 'register.subtitle' | translate }}</p>
+  </div>
+
+  @if (errorKey(); as key) {
+    <hum-alert tone="danger">{{ key | translate }}</hum-alert>
+  }
+
+  <form class="hum-auth__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <hum-form-field [label]="'register.form.plan' | translate" controlId="su-plan" [hint]="'register.form.planHint' | translate">
+      <hum-select [options]="planOptions()" formControlName="planId" [invalid]="invalid('planId')" />
+    </hum-form-field>
+
+    <hum-form-field [label]="'register.form.company' | translate" controlId="su-company">
+      <hum-input
+        inputId="su-company"
+        autocomplete="organization"
+        formControlName="companyName"
+        [placeholder]="'register.form.companyPlaceholder' | translate"
+        [invalid]="invalid('companyName')"
+      />
+    </hum-form-field>
+
+    <hum-form-field
+      [label]="'register.form.workspace' | translate"
+      controlId="su-workspace"
+      [hint]="
+        subdomainUnavailable()
+          ? undefined
+          : check()?.available
+            ? ('register.form.workspaceFree' | translate)
+            : ('register.form.workspaceHint' | translate)
+      "
+      [error]="
+        subdomainUnavailable()
+          ? ('register.form.workspace_' + check()!.reason | translate)
+          : invalid('subdomain')
+            ? ('register.form.workspaceFormat' | translate)
+            : undefined
+      "
+    >
+      <hum-input
+        inputId="su-workspace"
+        autocomplete="off"
+        formControlName="subdomain"
+        [mono]="true"
+        [placeholder]="'register.form.workspacePlaceholder' | translate"
+        [invalid]="invalid('subdomain') || subdomainUnavailable()"
+        (input)="onSubdomainInput()"
+      />
+    </hum-form-field>
+
+    <hum-form-field
+      [label]="'register.form.email' | translate"
+      controlId="su-email"
+      [error]="invalid('email') ? ('global.messages.validate.email.invalid' | translate) : undefined"
+    >
+      <hum-input
+        inputId="su-email"
+        autocomplete="email"
+        type="email"
+        formControlName="email"
+        [placeholder]="'login.form.email.placeholder' | translate"
+        [invalid]="invalid('email')"
+      />
+    </hum-form-field>
+
+    <hum-form-field [label]="'register.form.country' | translate" controlId="su-country">
+      <hum-select [options]="countryOptions" formControlName="country" [invalid]="invalid('country')" />
+    </hum-form-field>
+
+    <!-- Honeypot: hidden from people; bots that fill it in are ignored. -->
+    <div class="lp-demo-form__hp" aria-hidden="true">
+      <label for="su-website">Website</label>
+      <input id="su-website" type="text" tabindex="-1" autocomplete="off" formControlName="website" />
+    </div>
+
+    <hum-button
+      type="submit"
+      icon="mail"
+      variant="primary"
+      size="lg"
+      [block]="true"
+      [loading]="loading()"
+      [disabled]="form.invalid || subdomainUnavailable()"
+    >
+      {{ 'register.form.button' | translate }}
+    </hum-button>
+  </form>
+
+  <p class="hum-auth__meta">
+    {{ 'register.haveAccount' | translate }} <a routerLink="/login">{{ 'register.signIn' | translate }}</a>
+  </p>
+}

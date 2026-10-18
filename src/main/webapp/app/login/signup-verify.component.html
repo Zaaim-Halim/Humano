@@ -1,0 +1,118 @@
+@if (linkError(); as key) {
+  <div class="hum-auth__head">
+    <span class="hum-auth__icon"><lucide-icon name="triangle-alert" [size]="22" /></span>
+    <h1 class="hum-auth__title">{{ 'register.verify.badLinkHeading' | translate }}</h1>
+    <p class="hum-auth__desc">{{ key | translate }}</p>
+  </div>
+  <hum-button variant="primary" size="lg" icon="rotate-ccw" [block]="true" routerLink="/signup">{{
+    'register.verify.startAgain' | translate
+  }}</hum-button>
+} @else if (view(); as v) {
+  @switch (v.stage) {
+    @case ('SETTING_UP') {
+      <div class="hum-auth__head">
+        <span class="hum-auth__icon"><lucide-icon name="loader-circle" [size]="22" /></span>
+        <h1 class="hum-auth__title">{{ 'register.verify.settingUpHeading' | translate }}</h1>
+        <p class="hum-auth__desc">{{ 'register.verify.settingUpBody' | translate: { company: v.companyName } }}</p>
+      </div>
+      <hum-progress [value]="progress()" [label]="'register.verify.settingUpHeading' | translate" />
+      <p class="hum-auth__meta">{{ 'register.verify.settingUpHint' | translate }}</p>
+    }
+    @case ('READY') {
+      <div class="hum-auth__head">
+        <span class="hum-auth__icon"><lucide-icon name="check-circle-2" [size]="22" /></span>
+        <h1 class="hum-auth__title">{{ 'register.verify.readyHeading' | translate }}</h1>
+        <p class="hum-auth__desc">{{ 'register.verify.readyBody' | translate: { days: v.trialDays, plan: v.planName } }}</p>
+      </div>
+      <hum-alert tone="info">
+        {{ 'register.verify.workspaceId' | translate }} <strong class="tabular-nums">{{ v.subdomain }}</strong>
+      </hum-alert>
+      <hum-button variant="primary" size="lg" icon="log-in" [block]="true" (click)="signIn()">
+        {{ 'register.verify.signIn' | translate }}
+      </hum-button>
+    }
+    @default {
+      <div class="hum-auth__head">
+        <h1 class="hum-auth__title">
+          {{ (v.stage === 'FAILED' ? 'register.verify.failedHeading' : 'register.verify.confirmHeading') | translate }}
+        </h1>
+        <p class="hum-auth__desc">
+          {{
+            (v.stage === 'FAILED' ? 'register.verify.failedBody' : 'register.verify.confirmBody')
+              | translate: { email: v.email, days: v.trialDays }
+          }}
+        </p>
+        <p class="hum-auth__note">{{ 'register.verify.forWorkspace' | translate: { company: v.companyName, id: v.subdomain } }}</p>
+      </div>
+
+      @if (submitError(); as key) {
+        <hum-alert tone="danger">{{ key | translate }}</hum-alert>
+      }
+
+      <form class="hum-auth__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3)">
+          <hum-form-field [label]="'register.verify.firstName' | translate" controlId="sv-first">
+            <hum-input inputId="sv-first" autocomplete="given-name" formControlName="firstName" [invalid]="invalid('firstName')" />
+          </hum-form-field>
+          <hum-form-field [label]="'register.verify.lastName' | translate" controlId="sv-last">
+            <hum-input inputId="sv-last" autocomplete="family-name" formControlName="lastName" [invalid]="invalid('lastName')" />
+          </hum-form-field>
+        </div>
+
+        <hum-form-field [label]="'global.form.newpassword.label' | translate" controlId="sv-password">
+          <div class="hum-auth__pw">
+            <hum-input
+              inputId="sv-password"
+              autocomplete="new-password"
+              [type]="showPassword() ? 'text' : 'password'"
+              formControlName="newPassword"
+              [placeholder]="'global.form.newpassword.placeholder' | translate"
+              [invalid]="invalid('newPassword')"
+            />
+            <button
+              type="button"
+              class="hum-auth__eye"
+              [attr.aria-label]="'login.form.togglePassword' | translate"
+              (click)="showPassword.set(!showPassword())"
+            >
+              <lucide-icon [name]="showPassword() ? 'eye-off' : 'eye'" [size]="16" />
+            </button>
+          </div>
+          <hum-password-strength [value]="passwordValue()" />
+        </hum-form-field>
+
+        <hum-form-field
+          [label]="'global.form.confirmpassword.label' | translate"
+          controlId="sv-confirm"
+          [error]="mismatch() ? ('global.messages.error.dontmatch' | translate) : undefined"
+        >
+          <hum-input
+            inputId="sv-confirm"
+            autocomplete="new-password"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="confirmPassword"
+            [placeholder]="'global.form.confirmpassword.placeholder' | translate"
+            [invalid]="mismatch()"
+          />
+        </hum-form-field>
+
+        <hum-button
+          type="submit"
+          variant="primary"
+          size="lg"
+          [icon]="v.stage === 'FAILED' ? 'rotate-ccw' : 'building-2'"
+          [block]="true"
+          [loading]="loading()"
+          [disabled]="form.invalid"
+        >
+          {{ (v.stage === 'FAILED' ? 'register.verify.retry' : 'register.verify.create') | translate }}
+        </hum-button>
+      </form>
+    }
+  }
+} @else {
+  <div class="hum-auth__head">
+    <h1 class="hum-auth__title">{{ 'register.verify.loading' | translate }}</h1>
+  </div>
+  <hum-progress [value]="30" />
+}

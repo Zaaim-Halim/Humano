@@ -41,7 +41,7 @@
               ><strong class="tabular-nums">{{ cyclePrice() | money: currency() }}</strong>
               {{ (s.billingCycle === 'YEARLY' ? 'humano.settings.billing.perYear' : 'humano.settings.billing.perMonth') | translate }}</span
             >
-            @if (running() && s.currentPeriodEnd) {
+            @if (running() && s.currentPeriodEnd && s.status !== 'TRIAL') {
               <span
                 ><lucide-icon name="calendar" [size]="14" />{{
                   (s.cancelAtPeriodEnd ? 'humano.settings.billing.endsOn' : 'humano.settings.billing.renews')
@@ -52,7 +52,8 @@
             @if (s.trialEnd && s.status === 'TRIAL') {
               <span
                 ><lucide-icon name="hourglass" [size]="14" />{{
-                  'humano.settings.billing.trialEnds' | translate: { date: (s.trialEnd | date: 'mediumDate') }
+                  (trialContinues() ? 'humano.settings.billing.trialThenPlan' : 'humano.settings.billing.trialEnds')
+                    | translate: { date: (s.trialEnd | date: 'mediumDate') }
                 }}</span
               >
             }
@@ -214,16 +215,25 @@
   [title]="
     confirming()?.kind === 'cancel'
       ? ('humano.settings.billing.cancelConfirmTitle' | translate)
-      : ('humano.settings.billing.changeConfirmTitle' | translate: { name: $any(confirming())?.option?.name ?? '' })
+      : ((trialOpen() && $any(confirming())?.option?.id === subscription()?.subscriptionPlanId
+          ? 'humano.settings.billing.trialKeepConfirmTitle'
+          : 'humano.settings.billing.changeConfirmTitle'
+        ) | translate: { name: $any(confirming())?.option?.name ?? '' })
   "
   [description]="
     confirming()?.kind === 'cancel'
       ? ('humano.settings.billing.cancelConfirmBody' | translate: { date: (endDate() | date: 'mediumDate') })
-      : ((running() ? 'humano.settings.billing.changeConfirmBody' : 'humano.settings.billing.chooseConfirmBody')
+      : ((subscription()?.status === 'TRIAL'
+          ? 'humano.settings.billing.trialChooseConfirmBody'
+          : running()
+            ? 'humano.settings.billing.changeConfirmBody'
+            : 'humano.settings.billing.chooseConfirmBody'
+        )
         | translate
           : {
               amount: $any(confirming())?.option ? (price($any(confirming()).option) | money: currency()) : '',
               cycle: ((cycle() === 'YEARLY' ? 'humano.settings.billing.perYear' : 'humano.settings.billing.perMonth') | translate),
+              date: (subscription()?.trialEnd | date: 'mediumDate'),
             })
   "
   hasFooter

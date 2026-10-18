@@ -20,6 +20,8 @@ export interface Subscription extends AuditFields {
   cancelAtPeriodEnd: boolean | null;
   trialStart: string | null;
   trialEnd: string | null;
+  /** Set while a trial that ended without a plan leaves the workspace read-only: when it gets suspended. */
+  readOnlyUntil: string | null;
 }
 
 export interface UpdateSubscriptionRequest {

@@ -44,7 +44,32 @@
       "startsIn": "Starts in {{ days }} days",
       "startsToday": "Starts today",
       "joinedDays": "Joined {{ days }} d ago",
-      "joinedMonths": "Joined {{ months }} mo ago"
+      "joinedMonths": "Joined {{ months }} mo ago",
+      "setup": {
+        "title": "Get started with Humano",
+        "progress": "{{ done }} of {{ total }} done",
+        "dismiss": "Hide",
+        "company": {
+          "title": "Complete your company profile",
+          "hint": "Add your logo and default currency.",
+          "action": "Open company settings"
+        },
+        "people": {
+          "title": "Add your first employees",
+          "hint": "Build your directory, one profile at a time.",
+          "action": "Add an employee"
+        },
+        "payroll": {
+          "title": "Run your first payroll",
+          "hint": "Start a draft run; nothing is paid until you post it.",
+          "action": "Open payroll runs"
+        },
+        "plan": {
+          "title": "Choose a plan",
+          "hint": "Keep your workspace when the free trial ends.",
+          "action": "Choose a plan"
+        }
+      }
     }
   }
 }

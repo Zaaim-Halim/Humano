@@ -24,6 +24,7 @@ import { LucideAngularModule } from 'lucide-angular';
         [type]="type()"
         [value]="value()"
         [attr.placeholder]="placeholder()"
+        [attr.autocomplete]="autocomplete() ?? null"
         [attr.aria-invalid]="invalid() ? 'true' : null"
         [disabled]="isDisabled()"
         (input)="onInput($event)"
@@ -50,6 +51,8 @@ export class InputComponent implements ControlValueAccessor {
   readonly inputId = input<string>();
   readonly type = input('text');
   readonly placeholder = input<string>();
+  /** Browser autofill hint (`email`, `new-password`, `given-name`…), so saved logins don't land in the wrong field. */
+  readonly autocomplete = input<string>();
   readonly icon = input<string>();
   readonly suffix = input<string>();
   readonly invalid = input(false, { transform: booleanAttribute });

@@ -3,7 +3,6 @@ package com.humano.events.listeners;
 import com.humano.events.PaymentCompletedEvent;
 import com.humano.events.PaymentFailedEvent;
 import com.humano.events.SubscriptionCancelledEvent;
-import com.humano.events.TenantOnboardedEvent;
 import com.humano.events.TenantStatusChangedEvent;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.MailService;
@@ -39,31 +38,6 @@ public class TenantEventListener {
         this.billingMailService = billingMailService;
         this.adminEmailResolver = adminEmailResolver;
         this.tenantRepository = tenantRepository;
-    }
-
-    /**
-     * Handle tenant onboarded event.
-     * Sends welcome email and triggers provisioning tasks.
-     */
-    @EventListener
-    @Async
-    public void handleTenantOnboarded(TenantOnboardedEvent event) {
-        log.info("Handling tenant onboarded event for: {} (ID: {})", event.tenantName(), event.tenantId());
-
-        try {
-            // Send welcome email
-            sendWelcomeEmail(event);
-
-            // Set up default data for the tenant
-            provisionTenantDefaults(event);
-
-            // Notify admin about new signup
-            notifyAdminNewSignup(event);
-
-            log.info("Successfully processed onboarding event for tenant: {}", event.tenantId());
-        } catch (Exception e) {
-            log.error("Error processing tenant onboarded event for: {}", event.tenantId(), e);
-        }
     }
 
     /**
@@ -105,57 +79,6 @@ public class TenantEventListener {
     }
 
     // ========== HELPER METHODS ==========
-
-    private void sendWelcomeEmail(TenantOnboardedEvent event) {
-        log.debug("Sending welcome email to: {}", event.adminEmail());
-        billingMailService.sendWelcome(
-            event.adminEmail(),
-            event.tenantName(),
-            event.tenantSubdomain(),
-            extractFirstName(event.adminEmail()),
-            event.isTrial()
-        );
-    }
-
-    /** Best-effort first-name lift from an email login when we don't have a User row to read. */
-    private static String extractFirstName(String email) {
-        if (email == null || email.isBlank()) return "there";
-        int at = email.indexOf('@');
-        String local = at > 0 ? email.substring(0, at) : email;
-        String token = local.split("[._-]")[0];
-        if (token.isEmpty()) return "there";
-        return Character.toUpperCase(token.charAt(0)) + token.substring(1);
-    }
-
-    private void provisionTenantDefaults(TenantOnboardedEvent event) {
-        log.debug("Provisioning default data for tenant: {}", event.tenantId());
-
-        // TODO: Create default data for new tenant:
-        // - Default departments
-        // - Default leave types
-        // - Default pay schedules
-        // - Default document templates
-        // - Sample data (if requested)
-
-        log.info("Default data provisioned for tenant: {}", event.tenantId());
-    }
-
-    private void notifyAdminNewSignup(TenantOnboardedEvent event) {
-        log.debug("Notifying admin about new signup: {}", event.tenantName());
-
-        // TODO: Send notification to system administrators about new tenant
-        // This could be Slack, email, or internal notification system
-
-        String message = String.format(
-            "New tenant signed up: %s (%s) - Plan: %s - Trial: %s",
-            event.tenantName(),
-            event.tenantSubdomain(),
-            event.subscriptionPlanName(),
-            event.isTrial()
-        );
-
-        log.info("Admin notification: {}", message);
-    }
 
     private void handleTenantActivated(TenantStatusChangedEvent event) {
         log.debug("Processing tenant activation: {}", event.tenantId());

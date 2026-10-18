@@ -100,10 +100,10 @@ public class SecurityConfiguration {
                 csrf
                     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                     .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
-                    // Public tenant signup is hit by non-SPA clients that don't carry a CSRF cookie.
-                    .ignoringRequestMatchers(antMatcher("/api/tenant-registration"))
                     // The public "Book a demo" form: anonymous visitors of the marketing page.
                     .ignoringRequestMatchers(antMatcher("/api/public/demo-requests"))
+                    // The public self-serve sign-up (form, emailed link, setup progress).
+                    .ignoringRequestMatchers(antMatcher("/api/public/signup/**"))
                     // P4.2 — Stripe POSTs webhook events with its own signed envelope; no CSRF cookie.
                     .ignoringRequestMatchers(antMatcher("/api/billing/webhooks/**"))
             )
@@ -133,9 +133,10 @@ public class SecurityConfiguration {
                     .requestMatchers(mvc.pattern("/swagger-ui/**")).permitAll()
                     .requestMatchers(mvc.pattern("/api/authenticate")).permitAll()
                     .requestMatchers(mvc.pattern("/api/activate")).permitAll()
-                    .requestMatchers(mvc.pattern("/api/tenant-registration")).permitAll()
                     .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/public/pricing")).permitAll()
                     .requestMatchers(mvc.pattern(HttpMethod.POST, "/api/public/demo-requests")).permitAll()
+                    .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/public/signup/subdomains/*")).permitAll()
+                    .requestMatchers(mvc.pattern(HttpMethod.POST, "/api/public/signup"), mvc.pattern(HttpMethod.POST, "/api/public/signup/link"), mvc.pattern(HttpMethod.POST, "/api/public/signup/complete")).permitAll()
                     .requestMatchers(mvc.pattern("/api/billing/webhooks/**")).permitAll()
                     .requestMatchers(mvc.pattern("/api/account/reset-password/init")).permitAll()
                     .requestMatchers(mvc.pattern("/api/account/reset-password/finish")).permitAll()

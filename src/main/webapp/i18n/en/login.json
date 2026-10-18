@@ -1,7 +1,6 @@
 {
   "login": {
     "title": "Sign in",
-    "eyebrow": "Welcome back",
     "heading": "Sign in to Humano",
     "subtitle": "Enter your details to access your workspace.",
     "form": {
@@ -22,6 +21,11 @@
     },
     "password": {
       "forgot": "Forgot password?"
+    },
+    "noAccount": "New to Humano?",
+    "startTrial": "Start a free trial",
+    "footer": {
+      "isolated": "Each company has its own database"
     }
   }
 }

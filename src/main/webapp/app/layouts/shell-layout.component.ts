@@ -8,6 +8,7 @@ import { Authority } from 'app/config/authority.constants';
 import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
 import { CompanyService } from 'app/core/company/company.service';
+import { MeBillingService } from 'app/features/platform/services/me-billing.service';
 import { CurrentEmployeeService } from 'app/features/employee';
 import { ThemeService } from 'app/core/theme/theme.service';
 import { LoginService } from 'app/login/login.service';
@@ -25,6 +26,7 @@ import {
 } from 'app/shared/ui';
 
 import { SHELL_NAV } from './shell-nav';
+import { TrialBannerComponent } from './trial-banner.component';
 
 /**
  * ShellLayoutComponent — the authenticated app frame and the real consumer of
@@ -41,7 +43,16 @@ import { SHELL_NAV } from './shell-nav';
 @Component({
   selector: 'hum-shell-layout',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, TranslatePipe, AppShellComponent, CommandPaletteComponent, IconButtonComponent, MenuComponent, AvatarComponent],
+  imports: [
+    RouterOutlet,
+    TranslatePipe,
+    AppShellComponent,
+    CommandPaletteComponent,
+    IconButtonComponent,
+    MenuComponent,
+    AvatarComponent,
+    TrialBannerComponent,
+  ],
   template: `
     <hum-app-shell
       [nav]="nav()"
@@ -90,6 +101,7 @@ import { SHELL_NAV } from './shell-nav';
         }
       </div>
 
+      <hum-trial-banner />
       <router-outlet />
     </hum-app-shell>
 
@@ -110,6 +122,7 @@ export default class ShellLayoutComponent {
   private readonly currentEmployee = inject(CurrentEmployeeService);
 
   private readonly company = inject(CompanyService);
+  private readonly meBilling = inject(MeBillingService);
 
   private readonly account = this.accountService.trackCurrentAccount();
   protected readonly userMenuOpen = signal(false);
@@ -191,6 +204,7 @@ export default class ShellLayoutComponent {
     switch (id) {
       case 'logout':
         this.company.clear();
+        this.meBilling.current.set(undefined);
         this.loginService.logout();
         void this.router.navigate(['/login']);
         break;

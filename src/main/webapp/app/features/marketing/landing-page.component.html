@@ -24,7 +24,7 @@
           <hum-button variant="primary" routerLink="/dashboard" trailingIcon="arrow-right">Open app</hum-button>
         } @else {
           <hum-button variant="ghost" icon="log-in" routerLink="/login">Sign in</hum-button>
-          <hum-button variant="primary" icon="calendar" (click)="openDemo()">Book a demo</hum-button>
+          <hum-button variant="primary" trailingIcon="arrow-right" routerLink="/signup">Start free trial</hum-button>
         }
       </div>
     </div>
@@ -37,20 +37,19 @@
         <div class="lp-hero__copy">
           <span class="lp-chip">
             <span class="lp-chip__tag">New</span>
-            <span>Multi-country payroll, now in 150+ regions</span>
+            <span>Free 14-day trial, your workspace ready in about a minute</span>
           </span>
           <h1 class="lp-hero__title">HR &amp; payroll your team can <span class="lp-accent">actually trust</span>.</h1>
           <p class="lp-hero__sub">
-            Humano is the calm system of record for people, payroll and time — one workspace for HR, managers and employees, in every
-            country you operate.
+            Humano is the calm system of record for people, payroll and time — one workspace for HR, managers and employees.
           </p>
           <div class="lp-hero__cta">
-            <hum-button variant="primary" size="lg" icon="calendar" (click)="openDemo()">Book a demo</hum-button>
-            <a class="hum-btn hum-btn--secondary hum-btn--lg" href="#pricing"><lucide-icon name="tag" [size]="18" /> See pricing</a>
+            <hum-button variant="primary" size="lg" trailingIcon="arrow-right" routerLink="/signup">Start free trial</hum-button>
+            <hum-button variant="secondary" size="lg" icon="calendar" (click)="openDemo()">Book a demo</hum-button>
           </div>
           <p class="lp-trust">
             <lucide-icon name="check" [size]="16" class="lp-trust__check" />
-            No credit card required · 14-day trial · SOC 2 Type II
+            No credit card required · 14-day free trial · A separate database for each company
           </p>
         </div>
 
@@ -158,60 +157,210 @@
       </div>
     </section>
 
-    <!-- ============ Features ============ -->
-    <section class="lp-section lp-section--surface" id="product">
+    <!-- ============ Everything in Humano ============ -->
+    <section class="lp-section" id="features">
       <div class="lp-container">
         <div class="lp-head">
-          <span class="lp-eyebrow">The platform</span>
-          <h2 class="lp-h2">Everything HR &amp; payroll needs</h2>
-          <p class="lp-head__sub">A complete suite that replaces the spreadsheets and point tools your team has outgrown.</p>
+          <span class="lp-eyebrow">Features</span>
+          <h2 class="lp-h2">Everything in Humano</h2>
+          <p class="lp-head__sub">What your team gets, area by area. Plans differ in limits and extras; see pricing below.</p>
         </div>
-        <div class="lp-grid-3">
-          @for (f of features; track f.title) {
-            <article class="lp-card">
-              <span class="lp-tile"><lucide-icon [name]="f.icon" [size]="20" /></span>
-              <h3 class="lp-card__title">{{ f.title }}</h3>
-              <p class="lp-card__desc">{{ f.desc }}</p>
+
+        <div class="lp-bento">
+          @for (c of capabilities; track c.area) {
+            <article class="lp-bento__card" [class.lp-bento__card--wide]="c.wide">
+              <div class="lp-bento__visual" aria-hidden="true">
+                @switch (c.visual) {
+                  @case ('payroll') {
+                    <div class="lp-vis-run">
+                      <ol class="lp-vis-run__steps">
+                        <li class="is-done"><lucide-icon name="check" [size]="12" />Draft</li>
+                        <li class="is-done"><lucide-icon name="check" [size]="12" />Calculated</li>
+                        <li class="is-done"><lucide-icon name="check" [size]="12" />Approved</li>
+                        <li class="is-current">Posted</li>
+                      </ol>
+                      <div class="lp-vis-run__body">
+                        <div class="lp-vis-run__kpi">
+                          <span class="hum-kpi__label">Net pay</span>
+                          <strong class="tabular-nums">$486,204</strong>
+                          <span class="hum-delta is-up">+2.4%</span>
+                        </div>
+                        <ul class="lp-vis-run__bars">
+                          @for (
+                            d of [
+                              { n: 'Engineering', net: 74, ded: 26 },
+                              { n: 'Sales', net: 51, ded: 16 },
+                              { n: 'Operations', net: 43, ded: 13 },
+                              { n: 'Support', net: 36, ded: 10 },
+                            ];
+                            track d.n
+                          ) {
+                            <li>
+                              <span>{{ d.n }}</span>
+                              <span class="hum-dept-pay__bar"
+                                ><span class="is-net" [style.width.%]="d.net"></span><span class="is-ded" [style.width.%]="d.ded"></span
+                              ></span>
+                            </li>
+                          }
+                        </ul>
+                      </div>
+                    </div>
+                  }
+                  @case ('people') {
+                    <div class="lp-vis-profile">
+                      <div class="lp-vis-profile__head">
+                        <hum-avatar name="Mei Chen" size="md" />
+                        <span>
+                          <strong>Mei Chen</strong>
+                          <span class="hum-kpi__hint">Account executive · Sales</span>
+                        </span>
+                      </div>
+                      <div class="lp-vis-chips">
+                        <span><lucide-icon name="file-text" [size]="12" />Contract</span>
+                        <span><lucide-icon name="landmark" [size]="12" />Bank account</span>
+                        <span><lucide-icon name="graduation-cap" [size]="12" />Education</span>
+                      </div>
+                      <div class="lp-vis-alert"><lucide-icon name="triangle-alert" [size]="13" />Work permit expires in 30 days</div>
+                    </div>
+                  }
+                  @case ('org') {
+                    <div class="lp-vis-org">
+                      <hum-avatar name="Renata Alves" size="sm" />
+                      <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                        <path d="M100 0 V16 M30 16 H170 M30 16 V36 M100 16 V36 M170 16 V36" />
+                      </svg>
+                      <div class="lp-vis-org__row">
+                        <span><hum-avatar name="James Okoro" size="sm" /><small>Sales</small></span>
+                        <span><hum-avatar name="Sofia Marin" size="sm" /><small>People</small></span>
+                        <span><hum-avatar name="Omar Haddad" size="sm" /><small>Ops</small></span>
+                      </div>
+                    </div>
+                  }
+                  @case ('time') {
+                    <div class="lp-vis-time">
+                      @for (
+                        r of [
+                          {
+                            n: 'Ava Romano',
+                            s: 'Working',
+                            t: 'success',
+                            segs: [
+                              { l: 12, w: 30, b: false },
+                              { l: 42, w: 4, b: true },
+                              { l: 46, w: 20, b: false },
+                            ],
+                          },
+                          {
+                            n: 'Diego Santos',
+                            s: 'On break',
+                            t: 'warning',
+                            segs: [
+                              { l: 17, w: 42, b: false },
+                              { l: 59, w: 7, b: true },
+                            ],
+                          },
+                          {
+                            n: 'Omar Haddad',
+                            s: 'Done for today',
+                            t: 'brand',
+                            segs: [
+                              { l: 0, w: 27, b: false },
+                              { l: 27, w: 4, b: true },
+                              { l: 31, w: 19, b: false },
+                            ],
+                          },
+                        ];
+                        track r.n
+                      ) {
+                        <div class="lp-vis-time__row">
+                          <span class="hum-person"
+                            ><hum-avatar [name]="r.n" size="xs" /><span class="hum-person__name">{{ r.n }}</span></span
+                          >
+                          <hum-badge [tone]="$any(r.t)" [label]="r.s" />
+                          <span class="hum-clock-week__track">
+                            @for (g of r.segs; track $index) {
+                              <span class="hum-clock-track__seg" [class.is-break]="g.b" [style.left.%]="g.l" [style.width.%]="g.w"></span>
+                            }
+                          </span>
+                        </div>
+                      }
+                    </div>
+                  }
+                  @case ('approvals') {
+                    <div class="lp-vis-queue">
+                      <div class="lp-vis-queue__item" style="--c: var(--brand)">
+                        <lucide-icon name="palmtree" [size]="14" /><span>Time off · 5 days</span><small>Mei</small>
+                      </div>
+                      <div class="lp-vis-queue__item" style="--c: var(--success-solid)">
+                        <lucide-icon name="receipt" [size]="14" /><span>Expense · $642</span><small>Diego</small>
+                      </div>
+                      <div class="lp-vis-queue__item" style="--c: var(--warning-solid)">
+                        <lucide-icon name="clock" [size]="14" /><span>Overtime · 6 h</span><small>Omar</small>
+                      </div>
+                    </div>
+                  }
+                  @case ('self') {
+                    <div class="lp-vis-self">
+                      <div class="lp-vis-self__pay">
+                        <span class="hum-kpi__label"><lucide-icon name="receipt" [size]="12" />March payslip</span>
+                        <strong class="tabular-nums">$4,186.40</strong>
+                        <span class="hum-kpi__hint">$48,210 net paid this year</span>
+                      </div>
+                      <div class="lp-vis-self__leave">
+                        <span>Time off left</span>
+                        <span class="hum-stackbar"><span style="width: 62%; background: var(--brand)"></span></span>
+                        <strong class="tabular-nums">16 of 26 days</strong>
+                      </div>
+                    </div>
+                  }
+                  @case ('admin') {
+                    <div class="lp-vis-admin">
+                      <div class="lp-vis-chips">
+                        <span class="is-on"><lucide-icon name="shield-check" [size]="12" />Admin</span>
+                        <span><lucide-icon name="users" [size]="12" />HR manager</span>
+                        <span><lucide-icon name="wallet" [size]="12" />Payroll admin</span>
+                        <span><lucide-icon name="user" [size]="12" />Employee</span>
+                      </div>
+                      <div class="lp-vis-db">
+                        <span><lucide-icon name="database" [size]="14" />acme</span>
+                        <span><lucide-icon name="database" [size]="14" />northwind</span>
+                        <span><lucide-icon name="database" [size]="14" />lumen</span>
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+              <div class="lp-bento__text">
+                <h3 class="lp-bento__title"><lucide-icon [name]="c.icon" [size]="18" /> {{ c.area }}</h3>
+                <p class="lp-bento__summary">{{ c.summary }}</p>
+                <ul class="lp-checklist lp-bento__items">
+                  @for (item of c.items; track item) {
+                    <li>
+                      <lucide-icon name="check" [size]="16" /> <span>{{ item }}</span>
+                    </li>
+                  }
+                </ul>
+              </div>
             </article>
           }
         </div>
       </div>
     </section>
 
-    <!-- ============ Testimonials ============ -->
-    <section class="lp-section">
-      <div class="lp-container lp-quotes">
-        <figure class="lp-quote lp-quote--feature">
-          <blockquote>“We consolidated three tools into Humano and cut our monthly payroll close from two days to two hours.”</blockquote>
-          <figcaption>
-            <span class="lp-quote__avatar lp-quote__avatar--light">RA</span>
-            <span>
-              <span class="lp-quote__name">Renata Alves</span>
-              <span class="lp-quote__role">Head of People · Lumen Labs</span>
-            </span>
-          </figcaption>
-        </figure>
-        <div class="lp-quote-stack">
-          <figure class="lp-quote">
-            <blockquote>“Approvals that used to live in my inbox now route themselves. My managers actually use it.”</blockquote>
-            <figcaption>
-              <hum-avatar name="James Okoro" size="sm" />
-              <span>
-                <span class="lp-quote__name">James Okoro</span>
-                <span class="lp-quote__role">COO · Northwind</span>
-              </span>
-            </figcaption>
-          </figure>
-          <figure class="lp-quote">
-            <blockquote>“Onboarding a new country took an afternoon, not a quarter. Compliance just works.”</blockquote>
-            <figcaption>
-              <hum-avatar name="Sofia Marin" size="sm" />
-              <span>
-                <span class="lp-quote__name">Sofia Marin</span>
-                <span class="lp-quote__role">People Ops · Vela</span>
-              </span>
-            </figcaption>
-          </figure>
+    <!-- ============ See it at work ============ -->
+    <section class="lp-section lp-section--surface" id="tour">
+      <div class="lp-container">
+        <div class="lp-head">
+          <span class="lp-eyebrow">Inside the app</span>
+          <h2 class="lp-h2">See Humano at work</h2>
+          <p class="lp-head__sub">
+            The screens your team uses every day: a payroll run, today's attendance, the approvals queue and company insights.
+          </p>
+        </div>
+        <hum-landing-showcase />
+        <div class="lp-catalog__cta">
+          <hum-button variant="primary" size="lg" icon="arrow-right" routerLink="/signup">Start free trial</hum-button>
+          <hum-button variant="secondary" size="lg" icon="calendar" (click)="openDemo()">Book a demo</hum-button>
         </div>
       </div>
     </section>
@@ -222,7 +371,7 @@
         <div class="lp-head">
           <span class="lp-eyebrow">Pricing</span>
           <h2 class="lp-h2">Simple, transparent pricing</h2>
-          <p class="lp-head__sub">One flat monthly price per workspace. Book a demo and we'll set up a workspace for you to try.</p>
+          <p class="lp-head__sub">One flat monthly price per workspace. Try any plan free for 14 days — no credit card.</p>
         </div>
         <div class="lp-grid-3 lp-pricing">
           @for (tier of tiers(); track tier.name) {
@@ -246,15 +395,28 @@
                   </li>
                 }
               </ul>
-              <button
-                type="button"
-                class="hum-btn hum-btn--lg hum-btn--block"
-                [class.hum-btn--primary]="tier.featured"
-                [class.hum-btn--secondary]="!tier.featured"
-                (click)="openDemo(tier.name)"
-              >
-                <lucide-icon name="calendar" [size]="16" /> {{ tier.cta }}
-              </button>
+              @if (tier.signup; as su) {
+                <a
+                  class="hum-btn hum-btn--lg hum-btn--block"
+                  [class.hum-btn--primary]="tier.featured"
+                  [class.hum-btn--secondary]="!tier.featured"
+                  routerLink="/signup"
+                  [queryParams]="su.plan ? { plan: su.plan } : {}"
+                >
+                  {{ tier.cta }} <lucide-icon name="arrow-right" [size]="16" />
+                </a>
+                <button type="button" class="hum-linkbtn" style="align-self: center" (click)="openDemo(tier.name)">or book a demo</button>
+              } @else {
+                <button
+                  type="button"
+                  class="hum-btn hum-btn--lg hum-btn--block"
+                  [class.hum-btn--primary]="tier.featured"
+                  [class.hum-btn--secondary]="!tier.featured"
+                  (click)="openDemo(tier.name)"
+                >
+                  <lucide-icon name="calendar" [size]="16" /> {{ tier.cta }}
+                </button>
+              }
             </article>
           }
         </div>
@@ -289,12 +451,14 @@
       <div class="lp-container">
         <div class="lp-cta">
           <h2 class="lp-cta__title">Ready to run people ops with confidence?</h2>
-          <p class="lp-cta__sub">See it with your own eyes — we'll set up a workspace with a sample company for you to explore.</p>
+          <p class="lp-cta__sub">Start your free 14-day trial in a minute, or book a demo and we'll show you around a sample company.</p>
           <div class="lp-cta__actions">
-            <button type="button" class="hum-btn hum-btn--lg lp-btn-on-brand" (click)="openDemo()">
+            <a class="hum-btn hum-btn--lg lp-btn-on-brand" routerLink="/signup">
+              Start free trial <lucide-icon name="arrow-right" [size]="18" />
+            </a>
+            <button type="button" class="hum-btn hum-btn--lg lp-btn-ghost-brand" (click)="openDemo()">
               <lucide-icon name="calendar" [size]="18" /> Book a demo
             </button>
-            <a class="hum-btn hum-btn--lg lp-btn-ghost-brand" href="#pricing"><lucide-icon name="tag" [size]="18" /> See pricing</a>
           </div>
         </div>
       </div>
@@ -312,15 +476,18 @@
         @for (col of footerColumns; track col.heading) {
           <div class="lp-footer__col">
             <h4 class="lp-footer__heading">{{ col.heading }}</h4>
-            @for (link of col.links; track link) {
-              <a class="lp-footer__link" href="#">{{ link }}</a>
+            @for (link of col.links; track link.label) {
+              @if (link.href.startsWith('#')) {
+                <a class="lp-footer__link" [href]="link.href">{{ link.label }}</a>
+              } @else {
+                <a class="lp-footer__link" [routerLink]="link.href">{{ link.label }}</a>
+              }
             }
           </div>
         }
       </div>
       <div class="lp-footer__bottom">
-        <span>© {{ year }} Humano, Inc. All rights reserved.</span>
-        <span class="lp-footer__status"><span class="lp-footer__status-dot" aria-hidden="true"></span> All systems operational</span>
+        <span>© {{ year }} Humano</span>
       </div>
     </div>
   </footer>
