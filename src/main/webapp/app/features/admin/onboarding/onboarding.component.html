@@ -1,0 +1,164 @@
+<div class="hum-page">
+  <hum-page-header
+    [title]="'humano.onboarding.title' | translate"
+    [subtitle]="'humano.onboarding.subtitle' | translate"
+    [hasActions]="canStart || canManage"
+  >
+    <div hum-page-actions style="display: flex; gap: var(--space-2)">
+      @if (canManage) {
+        <hum-button variant="secondary" icon="list-checks" routerLink="/onboarding/checklist">{{
+          'humano.onboarding.editChecklist' | translate
+        }}</hum-button>
+      }
+      @if (canStart) {
+        <hum-button variant="primary" icon="user-plus" (click)="openStart()">{{ 'humano.onboarding.start' | translate }}</hum-button>
+      }
+    </div>
+  </hum-page-header>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (rows() === null) {
+    <div class="hum-dir-stats hum-dir-stats--even">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="hum-dir-stat"><hum-skeleton [height]="56" /></div>
+      }
+    </div>
+    <hum-skeleton [height]="200" />
+  } @else if (!rows()!.length) {
+    <hum-empty-state
+      icon="user-plus"
+      [title]="'humano.onboarding.emptyTitle' | translate"
+      [description]="'humano.onboarding.emptyBody' | translate"
+    >
+      <ng-container hum-empty-action>
+        @if (canStart) {
+          <hum-button variant="primary" icon="user-plus" (click)="openStart()">{{ 'humano.onboarding.start' | translate }}</hum-button>
+        }
+      </ng-container>
+    </hum-empty-state>
+  } @else {
+    <section class="hum-dir-stats hum-dir-stats--even">
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.onboarding.active' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().active }}</div>
+      </div>
+      <div class="hum-dir-stat" [class.hum-dir-stat--warn]="stats().overdue > 0">
+        <div class="hum-dir-stat__label">{{ 'humano.onboarding.overdue' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().overdue }}</div>
+        <div class="hum-dir-stat__sub">{{ 'humano.onboarding.overdueHint' | translate }}</div>
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.onboarding.dueSoon' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().dueSoon }}</div>
+        <div class="hum-dir-stat__sub">{{ 'humano.onboarding.dueSoonHint' | translate }}</div>
+      </div>
+      <div class="hum-dir-stat">
+        <div class="hum-dir-stat__label">{{ 'humano.onboarding.average' | translate }}</div>
+        <div class="hum-dir-stat__value tabular-nums">{{ stats().average }}%</div>
+      </div>
+    </section>
+
+    <h3 class="hum-section-title">{{ 'humano.onboarding.inProgress' | translate }}</h3>
+    <div class="hum-run-list">
+      @for (r of rows(); track r.processId) {
+        <a class="hum-run" [routerLink]="['/onboarding', r.processId]">
+          <div class="hum-run__period">
+            <span class="hum-run__title">{{ r.employeeName }}</span>
+            <span class="hum-run__sub">
+              <lucide-icon name="calendar" [size]="12" />{{
+                'humano.onboarding.startedOn' | translate: { date: (r.startDate | date: 'mediumDate') }
+              }}
+            </span>
+          </div>
+          <div class="hum-run__progress">
+            <hum-progress
+              style="flex: 1"
+              [value]="r.completionPercentage"
+              [tone]="r.completionPercentage === 100 ? 'success' : isOverdue(r) ? 'warning' : 'brand'"
+              showValue
+            />
+            <hum-badge [status]="r.status" />
+          </div>
+          <div class="hum-run__figure">
+            <span class="hum-run__label">{{ 'humano.onboarding.tasks' | translate }}</span>
+            <span class="tabular-nums">{{ r.completedTasks }} / {{ r.totalTasks }}</span>
+          </div>
+          <div class="hum-run__figure">
+            <span class="hum-run__label">{{ 'humano.onboarding.due' | translate }}</span>
+            <span class="tabular-nums">{{ r.dueDate | date: 'mediumDate' }}</span>
+          </div>
+          <div class="hum-run__figure">
+            <span class="hum-run__label">{{ 'humano.onboarding.timing' | translate }}</span>
+            @if (r.overdueTasks > 0) {
+              <strong class="hum-onb-overdue">{{ 'humano.onboarding.tasksOverdue' | translate: { count: r.overdueTasks } }}</strong>
+            } @else if (isOverdue(r)) {
+              <strong class="hum-onb-overdue">{{ 'humano.onboarding.overdueTag' | translate }}</strong>
+            } @else {
+              <span>{{ 'humano.onboarding.onTrack' | translate }}</span>
+            }
+          </div>
+          <lucide-icon name="chevron-right" [size]="16" class="hum-run__chevron" />
+        </a>
+      }
+    </div>
+  }
+</div>
+
+<hum-drawer [open]="formOpen()" [title]="'humano.onboarding.start' | translate" width="440px" hasFooter (closed)="formOpen.set(false)">
+  <form [formGroup]="form" (ngSubmit)="submit()" style="display: grid; gap: var(--space-4)">
+    <p style="margin: 0; color: var(--text-muted); font-size: var(--text-sm)">{{ 'humano.onboarding.startIntro' | translate }}</p>
+    <hum-form-field
+      [label]="'humano.onboarding.employee' | translate"
+      controlId="onb-employee"
+      required
+      [error]="invalid('employeeId') ? ('humano.employeeForm.required' | translate) : undefined"
+    >
+      <hum-autocomplete
+        formControlName="employeeId"
+        [searchFn]="searchEmployees"
+        [placeholder]="'humano.onboarding.employeePlaceholder' | translate"
+        [loadingText]="'humano.employeeForm.searching' | translate"
+        [noResultsText]="'humano.employeeForm.noResults' | translate"
+        [invalid]="invalid('employeeId')"
+      />
+    </hum-form-field>
+    <hum-form-field
+      [label]="'humano.onboarding.startDate' | translate"
+      controlId="onb-start"
+      required
+      [error]="invalid('startDate') ? ('humano.employeeForm.required' | translate) : undefined"
+    >
+      <hum-input inputId="onb-start" type="date" formControlName="startDate" [invalid]="invalid('startDate')" />
+    </hum-form-field>
+    <hum-form-field
+      [label]="'humano.onboarding.targetDate' | translate"
+      controlId="onb-target"
+      required
+      [hint]="
+        windowDays() !== null && windowDays()! >= 0 ? ('humano.onboarding.targetHint' | translate: { count: windowDays() }) : undefined
+      "
+      [error]="form.hasError('targetBeforeStart') ? ('humano.onboarding.targetBeforeStart' | translate) : undefined"
+    >
+      <div class="hum-onb-presets" role="group" [attr.aria-label]="'humano.onboarding.presetsLabel' | translate">
+        @for (days of presets(); track days) {
+          <button type="button" class="hum-chip" [class.is-active]="windowDays() === days" (click)="setWindow(days)">
+            {{ presetLabel(days) }}
+          </button>
+        }
+      </div>
+      <hum-input inputId="onb-target" type="date" formControlName="targetDate" [invalid]="form.hasError('targetBeforeStart')" />
+    </hum-form-field>
+    <hum-form-field [label]="'humano.onboarding.notes' | translate" controlId="onb-notes">
+      <hum-textarea inputId="onb-notes" formControlName="notes" [rows]="3" />
+    </hum-form-field>
+  </form>
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="formOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="user-plus" [loading]="submitting()" [disabled]="form.invalid" (click)="submit()">{{
+      'humano.onboarding.startSubmit' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>

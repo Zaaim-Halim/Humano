@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Company onboarding policy: the default onboarding length (a singleton row, created lazily
+         on the first save; reads fall back to 30 days) and the checklist every new onboarding is
+         built from. An empty template table means "not customised yet": onboarding uses the
+         built-in checklist in com.humano.service.hr.workflow.OnboardingChecklistService. Each
+         template's due_day is days after the start on a default-length onboarding; shorter or
+         longer onboardings scale it. -->
+    <changeSet id="20261018-onboarding-settings" author="halimzaaim">
+        <createTable tableName="onboarding_settings">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_onboarding_settings"/>
+            </column>
+            <column name="default_days" type="integer" defaultValueNumeric="30">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="20261018-onboarding-task-template" author="halimzaaim">
+        <createTable tableName="onboarding_task_template">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_onboarding_task_template"/>
+            </column>
+            <column name="title" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(1000)"/>
+            <column name="due_day" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sort_order" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

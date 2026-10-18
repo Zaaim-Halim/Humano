@@ -15,4 +15,6 @@ public interface EmployeeDocumentRepository extends JpaRepository<EmployeeDocume
     /** Bytes held by employee documents. */
     @Query("SELECT COALESCE(SUM(d.sizeBytes), 0) FROM EmployeeDocument d")
     long totalSizeBytes();
+
+    boolean existsByEmployeeId(UUID employeeId);
 }

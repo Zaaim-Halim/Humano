@@ -20,6 +20,7 @@ export const STATUS_MAP: Record<string, StatusMeta> = {
   // approval workflows (WorkflowStatus) — APPROVED/REJECTED/ON_HOLD/CANCELLED/DRAFT shared above
   IN_PROGRESS: { tone: 'info', label: 'In progress' },
   PLANNED: { tone: 'info', label: 'Planned' },
+  DELAYED: { tone: 'warning', label: 'Delayed' },
   PENDING_APPROVAL: { tone: 'warning', label: 'Pending approval' },
   COMPLETED: { tone: 'success', label: 'Completed' },
   ESCALATED: { tone: 'warning', label: 'Escalated' },

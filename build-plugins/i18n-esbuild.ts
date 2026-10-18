@@ -38,10 +38,15 @@ export default {
 
     build.onLoad({ filter: /^i18n\//, namespace: 'i18n-json' }, async ({ path }) => {
       const match = /^i18n\/(?<lang>.*)\.json/.exec(path);
-      const data = await prepareLanguage(match!.groups!.lang);
+      const lang = match!.groups!.lang;
+      const data = await prepareLanguage(lang);
+      const languageDir = join(i18nSourceDir, lang);
       return {
         contents: JSON.stringify(data),
         loader: 'json',
+        // Rebuild on edits to (or new files in) this language's folder under `ng serve`.
+        watchFiles: (await glob('*.json', { cwd: languageDir })).map(file => join(languageDir, file)),
+        watchDirs: [languageDir],
       };
     });
   },

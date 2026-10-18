@@ -1,0 +1,341 @@
+package com.humano.service.hr.workflow;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.humano.domain.enumeration.hr.EmployeeProcessStatus;
+import com.humano.domain.enumeration.hr.EmployeeProcessType;
+import com.humano.domain.enumeration.hr.OnboardingTaskOwner;
+import com.humano.domain.enumeration.hr.WorkflowStatus;
+import com.humano.domain.enumeration.hr.WorkflowType;
+import com.humano.domain.hr.EmployeeProcess;
+import com.humano.domain.hr.EmployeeProcessTask;
+import com.humano.domain.hr.OnboardingSettings;
+import com.humano.domain.hr.OnboardingTaskTemplate;
+import com.humano.domain.hr.WorkflowInstance;
+import com.humano.domain.shared.Employee;
+import com.humano.dto.hr.workflow.requests.CompleteTaskRequest;
+import com.humano.dto.hr.workflow.requests.InitiateOnboardingRequest;
+import com.humano.dto.hr.workflow.responses.EmployeeProcessSummary;
+import com.humano.dto.hr.workflow.responses.OnboardingProcessResponse;
+import com.humano.repository.hr.EmployeeDocumentRepository;
+import com.humano.repository.hr.EmployeeProcessRepository;
+import com.humano.repository.hr.EmployeeProcessTaskRepository;
+import com.humano.repository.hr.EmployeeTrainingRepository;
+import com.humano.repository.hr.ExpenseClaimRepository;
+import com.humano.repository.hr.LeaveRequestRepository;
+import com.humano.repository.hr.OnboardingSettingsRepository;
+import com.humano.repository.hr.OnboardingTaskTemplateRepository;
+import com.humano.repository.payroll.EmployeeBenefitRepository;
+import com.humano.repository.shared.EmployeeRepository;
+import com.humano.service.hr.workflow.infrastructure.DeadlineMonitorService;
+import com.humano.service.hr.workflow.infrastructure.NotificationOrchestrationService;
+import com.humano.service.hr.workflow.infrastructure.WorkflowStateManager;
+import com.humano.web.rest.errors.BadRequestAlertException;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
+/** Onboarding creates a tracked checklist whose process and workflow stay in step. */
+class EmployeeLifecycleWorkflowServiceTest {
+
+    private final WorkflowStateManager workflows = mock(WorkflowStateManager.class);
+    private final EmployeeRepository employees = mock(EmployeeRepository.class);
+    private final EmployeeProcessRepository processes = mock(EmployeeProcessRepository.class);
+    private final EmployeeProcessTaskRepository tasks = mock(EmployeeProcessTaskRepository.class);
+    private final EmployeeTrainingRepository trainings = mock(EmployeeTrainingRepository.class);
+    private final EmployeeBenefitRepository benefits = mock(EmployeeBenefitRepository.class);
+    private final EmployeeDocumentRepository documents = mock(EmployeeDocumentRepository.class);
+    private final ExpenseClaimRepository expenses = mock(ExpenseClaimRepository.class);
+    private final OnboardingSettingsRepository settings = mock(OnboardingSettingsRepository.class);
+    private final OnboardingTaskTemplateRepository templates = mock(OnboardingTaskTemplateRepository.class);
+    private final EmployeeLifecycleWorkflowService service = new EmployeeLifecycleWorkflowService(
+        workflows,
+        mock(NotificationOrchestrationService.class),
+        mock(DeadlineMonitorService.class),
+        employees,
+        processes,
+        tasks,
+        trainings,
+        benefits,
+        documents,
+        mock(LeaveRequestRepository.class),
+        expenses,
+        new OnboardingChecklistService(settings, templates)
+    );
+
+    private static final LocalDate START = LocalDate.of(2026, 10, 1);
+
+    private final Employee nadia = new Employee();
+    private final List<WorkflowInstance> nadiasWorkflows = new ArrayList<>();
+    private EmployeeProcess saved;
+
+    @BeforeEach
+    void setUp() {
+        nadia.setId(UUID.randomUUID());
+        nadia.setFirstName("Nadia");
+        nadia.setLastName("Benali");
+        nadia.setActivated(true);
+
+        when(employees.findById(nadia.getId())).thenReturn(Optional.of(nadia));
+        when(processes.findByEmployeeIdAndProcessTypeAndStatusIn(any(), any(), any())).thenReturn(Optional.empty());
+        when(processes.save(any())).thenAnswer(inv -> {
+            EmployeeProcess p = inv.getArgument(0);
+            if (p.getId() == null) p.setId(UUID.randomUUID());
+            saved = p;
+            return p;
+        });
+        when(processes.findById(any())).thenAnswer(inv -> Optional.ofNullable(saved).filter(p -> p.getId().equals(inv.getArgument(0))));
+        when(tasks.save(any())).thenAnswer(inv -> {
+            EmployeeProcessTask t = inv.getArgument(0);
+            if (t.getId() == null) t.setId(UUID.randomUUID());
+            return t;
+        });
+        when(tasks.findById(any())).thenAnswer(inv ->
+            saved.getTasks().stream().filter(t -> t.getId().equals(inv.getArgument(0))).findFirst()
+        );
+        when(workflows.createWorkflow(eq(WorkflowType.ONBOARDING), eq(nadia.getId()), anyString(), any(), isNull())).thenAnswer(inv -> {
+            WorkflowInstance w = new WorkflowInstance();
+            w.setId(UUID.randomUUID());
+            w.setWorkflowType(WorkflowType.ONBOARDING);
+            w.setStatus(WorkflowStatus.DRAFT);
+            nadiasWorkflows.add(w);
+            return w;
+        });
+        when(workflows.updateContext(any(), anyString(), any())).thenAnswer(inv -> {
+            WorkflowInstance w = workflow(inv.getArgument(0));
+            w.addContext(inv.getArgument(1), inv.getArgument(2));
+            return w;
+        });
+        when(workflows.completeWorkflow(any(), any())).thenAnswer(inv -> {
+            WorkflowInstance w = workflow(inv.getArgument(0));
+            w.setStatus(WorkflowStatus.COMPLETED);
+            return w;
+        });
+        when(workflows.findByEntityId(nadia.getId())).thenReturn(nadiasWorkflows);
+    }
+
+    @Test
+    void initiatingOnboardingReturnsTheFullChecklist() {
+        OnboardingProcessResponse response = service.initiateOnboarding(onboard());
+
+        assertThat(response.tasks()).hasSize(7);
+        assertThat(response.progress().totalTasks()).isEqualTo(7);
+        assertThat(response.workflowId()).isEqualTo(nadiasWorkflows.get(0).getId());
+        assertThat(nadiasWorkflows.get(0).getContext()).containsEntry("processId", response.processId().toString());
+    }
+
+    @Test
+    void progressReflectsTheEmployeesRealRecords() {
+        when(documents.existsByEmployeeId(nadia.getId())).thenReturn(true);
+
+        OnboardingProcessResponse.OnboardingProgress progress = service.initiateOnboarding(onboard()).progress();
+
+        assertThat(progress.documentsUploaded()).isTrue();
+        assertThat(progress.benefitsSetup()).isFalse();
+        assertThat(progress.trainingsAssigned()).isFalse();
+        assertThat(progress.systemAccessGranted()).isTrue();
+    }
+
+    @Test
+    void completingEveryTaskReportsTheCompletedWorkflow() {
+        OnboardingProcessResponse started = service.initiateOnboarding(onboard());
+
+        OnboardingProcessResponse done = started;
+        for (OnboardingProcessResponse.OnboardingTaskResponse task : started.tasks()) {
+            done = service.completeOnboardingTask(started.processId(), new CompleteTaskRequest(task.taskId(), null, true, null));
+        }
+
+        assertThat(done.processStatus()).isEqualTo(EmployeeProcessStatus.COMPLETED);
+        assertThat(done.completionPercentage()).isEqualTo(100);
+        assertThat(done.workflowId()).isEqualTo(started.workflowId());
+        assertThat(done.workflowStatus()).isEqualTo(WorkflowStatus.COMPLETED);
+    }
+
+    @Test
+    void aCancelledOnboardingCannotBeCompleted() {
+        OnboardingProcessResponse started = service.initiateOnboarding(onboard());
+        service.cancelOnboarding(started.processId(), "Offer withdrawn");
+        UUID taskId = started.tasks().get(0).taskId();
+
+        assertThatThrownBy(() -> service.completeOnboardingTask(started.processId(), new CompleteTaskRequest(taskId, null, true, null)))
+            .isInstanceOf(BadRequestAlertException.class)
+            .hasMessageContaining("CANCELLED");
+        assertThat(saved.getStatus()).isEqualTo(EmployeeProcessStatus.CANCELLED);
+        verify(workflows, never()).completeWorkflow(any(), any());
+    }
+
+    @Test
+    void activeProcessesExcludeCancelledAndCompletedOnes() {
+        service.initiateOnboarding(onboard(LocalDate.now(), null)); // starts today: nothing overdue yet
+        Pageable pageable = Pageable.ofSize(20);
+        when(processes.findByProcessTypeAndStatusIn(eq(EmployeeProcessType.ONBOARDING), any(), eq(pageable))).thenAnswer(inv -> {
+            List<EmployeeProcessStatus> statuses = inv.getArgument(1);
+            assertThat(statuses).doesNotContain(EmployeeProcessStatus.CANCELLED, EmployeeProcessStatus.COMPLETED);
+            return new PageImpl<>(List.of(saved));
+        });
+
+        Page<EmployeeProcessSummary> page = service.getActiveProcesses(EmployeeProcessType.ONBOARDING, pageable);
+
+        assertThat(page.getContent())
+            .singleElement()
+            .satisfies(row -> {
+                assertThat(row.employeeName()).isEqualTo("Nadia Benali");
+                assertThat(row.totalTasks()).isEqualTo(7);
+                assertThat(row.overdueTasks()).isZero();
+            });
+    }
+
+    @Test
+    void byDefaultTheChecklistRunsThirtyDays() {
+        OnboardingProcessResponse response = service.initiateOnboarding(onboard());
+
+        assertThat(response.dueDate()).isEqualTo(START.plusDays(30));
+        assertThat(response.tasks())
+            .extracting(OnboardingProcessResponse.OnboardingTaskResponse::dueDate)
+            .allSatisfy(due -> assertThat(due).isBetween(START, START.plusDays(30)));
+        assertThat(lastDue(response)).isEqualTo(START.plusDays(30));
+    }
+
+    @Test
+    void aShorterTargetCompressesTheScheduleInOrder() {
+        OnboardingProcessResponse thirtyDays = service.initiateOnboarding(onboard());
+        saved = null;
+        nadiasWorkflows.clear();
+        OnboardingProcessResponse oneWeek = service.initiateOnboarding(onboard(START, START.plusDays(7)));
+
+        assertThat(oneWeek.dueDate()).isEqualTo(START.plusDays(7));
+        assertThat(lastDue(oneWeek)).isEqualTo(START.plusDays(7));
+        assertThat(oneWeek.tasks()).allSatisfy(t -> assertThat(t.dueDate()).isBetween(START, START.plusDays(7)));
+        // Compressing may put tasks on the same day, but never reorders them.
+        Map<String, LocalDate> weekDue = new HashMap<>();
+        oneWeek.tasks().forEach(t -> weekDue.put(t.title(), t.dueDate()));
+        List<LocalDate> inThirtyDayOrder = order(thirtyDays).stream().map(weekDue::get).toList();
+        assertThat(inThirtyDayOrder).isSortedAccordingTo(LocalDate::compareTo);
+    }
+
+    @Test
+    void theCompanyChecklistAndDefaultLengthAreUsed() {
+        OnboardingSettings tenDays = new OnboardingSettings();
+        tenDays.setDefaultDays(10);
+        when(settings.findAll()).thenReturn(List.of(tenDays));
+        when(templates.findAllByOrderBySortOrderAsc()).thenReturn(
+            List.of(template("Laptop handover", 0, OnboardingTaskOwner.HR), template("Team lunch", 10, OnboardingTaskOwner.MANAGER))
+        );
+        Employee kenji = new Employee();
+        kenji.setId(UUID.randomUUID());
+        kenji.setFirstName("Kenji");
+        kenji.setLastName("Watanabe");
+        nadia.setManager(kenji);
+
+        OnboardingProcessResponse byDefault = service.initiateOnboarding(onboard());
+        assertThat(byDefault.dueDate()).isEqualTo(START.plusDays(10));
+        assertThat(byDefault.tasks())
+            .extracting(OnboardingProcessResponse.OnboardingTaskResponse::title)
+            .containsExactlyInAnyOrder("Laptop handover", "Team lunch");
+
+        saved = null;
+        nadiasWorkflows.clear();
+        OnboardingProcessResponse fiveDays = service.initiateOnboarding(onboard(START, START.plusDays(5)));
+        Map<String, OnboardingProcessResponse.OnboardingTaskResponse> byTitle = new HashMap<>();
+        fiveDays.tasks().forEach(t -> byTitle.put(t.title(), t));
+        assertThat(byTitle.get("Laptop handover").dueDate()).isEqualTo(START);
+        assertThat(byTitle.get("Laptop handover").assignedToId()).isNull();
+        assertThat(byTitle.get("Team lunch").dueDate()).isEqualTo(START.plusDays(5));
+        assertThat(byTitle.get("Team lunch").assignedToName()).isEqualTo("Kenji Watanabe");
+    }
+
+    @Test
+    void aTargetBeforeTheStartIsRejected() {
+        assertThatThrownBy(() -> service.initiateOnboarding(onboard(START, START.minusDays(1))))
+            .isInstanceOf(BadRequestAlertException.class)
+            .hasMessageContaining("Target date");
+    }
+
+    @Test
+    void settlementOnlyTotalsComponentsItCanCompute() {
+        when(expenses.findByEmployeeId(eq(nadia.getId()), any())).thenReturn(Page.empty());
+
+        var settlement = service.calculateFinalSettlement(nadia.getId());
+
+        assertThat(settlement.remainingLeaveDays()).isNull();
+        assertThat(settlement.leaveEncashment()).isNull();
+        assertThat(settlement.pendingOvertimePay()).isNull();
+        assertThat(settlement.totalSettlement()).isEqualByComparingTo(settlement.pendingExpenseReimbursements());
+    }
+
+    private InitiateOnboardingRequest onboard() {
+        return onboard(START, null);
+    }
+
+    private InitiateOnboardingRequest onboard(LocalDate startDate, LocalDate targetDate) {
+        return new InitiateOnboardingRequest(
+            nadia.getId(),
+            null,
+            null,
+            null,
+            null,
+            startDate,
+            targetDate,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        );
+    }
+
+    private static OnboardingTaskTemplate template(String title, int dueDay, OnboardingTaskOwner owner) {
+        OnboardingTaskTemplate t = new OnboardingTaskTemplate();
+        t.setTitle(title);
+        t.setDueDay(dueDay);
+        t.setOwner(owner);
+        return t;
+    }
+
+    private static LocalDate lastDue(OnboardingProcessResponse response) {
+        return response
+            .tasks()
+            .stream()
+            .map(OnboardingProcessResponse.OnboardingTaskResponse::dueDate)
+            .max(LocalDate::compareTo)
+            .orElseThrow();
+    }
+
+    /** Task titles by due date (ties by title), to compare schedules. */
+    private static List<String> order(OnboardingProcessResponse response) {
+        return response
+            .tasks()
+            .stream()
+            .sorted(
+                java.util.Comparator.comparing(OnboardingProcessResponse.OnboardingTaskResponse::dueDate).thenComparing(
+                    OnboardingProcessResponse.OnboardingTaskResponse::title
+                )
+            )
+            .map(OnboardingProcessResponse.OnboardingTaskResponse::title)
+            .toList();
+    }
+
+    private WorkflowInstance workflow(UUID id) {
+        return nadiasWorkflows.stream().filter(w -> w.getId().equals(id)).findFirst().orElseThrow();
+    }
+}

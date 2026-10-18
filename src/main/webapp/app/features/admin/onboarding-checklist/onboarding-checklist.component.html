@@ -1,0 +1,172 @@
+<div class="hum-page">
+  <a class="hum-onb-back" routerLink="/onboarding"
+    ><lucide-icon name="arrow-left" [size]="14" />{{ 'humano.onboarding.backToList' | translate }}</a
+  >
+
+  <header class="hum-onbc-head">
+    <div>
+      <h1 class="hum-onbc-head__title">{{ 'humano.onboardingChecklist.title' | translate }}</h1>
+      <p class="hum-onbc-head__lead">{{ 'humano.onboardingChecklist.lead' | translate }}</p>
+    </div>
+    <div class="hum-onbc-head__actions">
+      @if (dirty()) {
+        <hum-button variant="ghost" size="sm" icon="rotate-ccw" (click)="discard()">{{
+          'humano.onboardingChecklist.discard' | translate
+        }}</hum-button>
+      }
+      <hum-button variant="primary" size="sm" icon="save" [loading]="saving()" [disabled]="!dirty() || !valid()" (click)="save()">{{
+        'humano.onboardingChecklist.save' | translate
+      }}</hum-button>
+    </div>
+  </header>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (!loaded()) {
+    <hum-skeleton [height]="160" />
+    <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+  } @else {
+    @if (!loaded()!.customized) {
+      <hum-alert tone="info" [title]="'humano.onboardingChecklist.builtInTitle' | translate">{{
+        'humano.onboardingChecklist.builtInBody' | translate
+      }}</hum-alert>
+    }
+
+    <!-- Length + where the tasks fall -->
+    <section class="hum-onb-hero hum-onbc-length">
+      <div class="hum-onbc-length__row">
+        <div>
+          <h2 class="hum-onb-h2">{{ 'humano.onboardingChecklist.length' | translate }}</h2>
+          <p class="hum-onbc-muted">{{ 'humano.onboardingChecklist.lengthHint' | translate }}</p>
+        </div>
+        <div class="hum-onbc-length__controls">
+          <div class="hum-onb-presets" style="margin: 0">
+            @for (days of presets; track days) {
+              <button type="button" class="hum-chip" [class.is-active]="defaultDays() === days" (click)="setLength(days)">
+                {{ 'humano.onboarding.preset.' + days | translate }}
+              </button>
+            }
+          </div>
+          <div class="hum-onbc-days">
+            <hum-input
+              inputId="onbc-length"
+              type="number"
+              [ngModel]="defaultDays()"
+              (ngModelChange)="defaultDays.set(+$event)"
+              [invalid]="lengthInvalid()"
+              [suffix]="'humano.onboardingChecklist.days' | translate"
+            />
+          </div>
+        </div>
+      </div>
+      @if (lengthInvalid()) {
+        <p class="hum-onbc-error">{{ 'humano.onboardingChecklist.lengthInvalid' | translate }}</p>
+      }
+
+      <div class="hum-onb-journey" style="margin-top: var(--space-5)">
+        <div class="hum-onb-track" role="img" [attr.aria-label]="'humano.onboardingChecklist.previewLabel' | translate">
+          <span class="hum-onb-track__rail"></span>
+          @for (m of markers(); track m.day) {
+            <span class="hum-onb-track__dot" [class.is-multi]="m.count > 1" [style.left.%]="m.pct" [title]="m.titles">
+              @if (m.count > 1) {
+                {{ m.count }}
+              }
+            </span>
+          }
+        </div>
+        <div class="hum-onb-track__scale tabular-nums">
+          <span>{{ 'humano.onboardingChecklist.startDay' | translate }}</span>
+          <span>{{ 'humano.onboardingChecklist.dayN' | translate: { day: defaultDays() } }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tasks -->
+    <section class="hum-onbc-tasks">
+      <div class="hum-onb-filter">
+        <h2 class="hum-onb-h2">
+          {{ 'humano.onboardingChecklist.tasks' | translate }}
+          <span class="hum-onb-phase__count tabular-nums">{{ rows().length }}</span>
+        </h2>
+        <hum-button variant="secondary" size="sm" icon="plus" (click)="add()">{{
+          'humano.onboardingChecklist.add' | translate
+        }}</hum-button>
+      </div>
+
+      @if (!rows().length) {
+        <p class="hum-onbc-error">{{ 'humano.onboardingChecklist.needOne' | translate }}</p>
+      }
+
+      <ol class="hum-onb-list hum-onbc-list">
+        @for (r of rows(); track r.key; let i = $index, first = $first, last = $last) {
+          <li class="hum-onbc-row">
+            <div class="hum-onbc-row__main">
+              <input
+                class="hum-onbc-title"
+                [class.is-invalid]="rowErrors()[i].title"
+                [attr.aria-label]="'humano.onboardingChecklist.taskTitle' | translate"
+                [placeholder]="'humano.onboardingChecklist.titlePlaceholder' | translate"
+                [ngModel]="r.title"
+                (ngModelChange)="update(r.key, { title: $event })"
+              />
+              <input
+                class="hum-onbc-desc"
+                [attr.aria-label]="'humano.onboardingChecklist.taskDescription' | translate"
+                [placeholder]="'humano.onboardingChecklist.descriptionPlaceholder' | translate"
+                [ngModel]="r.description"
+                (ngModelChange)="update(r.key, { description: $event })"
+              />
+            </div>
+            <div class="hum-onbc-row__meta">
+              <div class="hum-onbc-field">
+                <span aria-hidden="true">{{ 'humano.onboardingChecklist.ownerLabel' | translate }}</span>
+                <hum-select
+                  [options]="ownerOptions"
+                  [ariaLabel]="'humano.onboardingChecklist.ownerLabel' | translate"
+                  [ngModel]="r.owner"
+                  (ngModelChange)="update(r.key, { owner: $event })"
+                />
+              </div>
+              <div class="hum-onbc-field hum-onbc-field--day">
+                <label [for]="'onbc-day-' + r.key">{{ 'humano.onboardingChecklist.dueDay' | translate }}</label>
+                <hum-input
+                  type="number"
+                  [inputId]="'onbc-day-' + r.key"
+                  [ngModel]="r.dueDay"
+                  (ngModelChange)="update(r.key, { dueDay: +$event })"
+                  [invalid]="rowErrors()[i].dueDay"
+                  [suffix]="'humano.onboardingChecklist.ofDays' | translate: { days: defaultDays() }"
+                />
+              </div>
+            </div>
+            <div class="hum-onbc-row__tools">
+              <hum-icon-button
+                icon="chevron-up"
+                size="sm"
+                [label]="'humano.onboardingChecklist.moveUp' | translate"
+                [disabled]="first"
+                (click)="move(i, -1)"
+              />
+              <hum-icon-button
+                icon="chevron-down"
+                size="sm"
+                [label]="'humano.onboardingChecklist.moveDown' | translate"
+                [disabled]="last"
+                (click)="move(i, 1)"
+              />
+              <hum-icon-button icon="trash-2" size="sm" [label]="'humano.onboardingChecklist.remove' | translate" (click)="remove(r.key)" />
+            </div>
+            @if (rowErrors()[i].dueDay) {
+              <p class="hum-onbc-error hum-onbc-row__error">
+                {{ 'humano.onboardingChecklist.dueDayInvalid' | translate: { days: defaultDays() } }}
+              </p>
+            }
+          </li>
+        }
+      </ol>
+      <p class="hum-onbc-muted" style="margin-top: var(--space-3)">{{ 'humano.onboardingChecklist.appliesHint' | translate }}</p>
+    </section>
+  }
+</div>

@@ -6,9 +6,12 @@ import com.humano.domain.shared.Employee;
 import com.humano.dto.hr.workflow.requests.CompleteTaskRequest;
 import com.humano.dto.hr.workflow.requests.InitiateOffboardingRequest;
 import com.humano.dto.hr.workflow.requests.InitiateOnboardingRequest;
+import com.humano.dto.hr.workflow.responses.EmployeeProcessSummary;
 import com.humano.dto.hr.workflow.responses.OffboardingProcessResponse;
+import com.humano.dto.hr.workflow.responses.OnboardingChecklistResponse;
 import com.humano.dto.hr.workflow.responses.OnboardingProcessResponse;
 import com.humano.repository.hr.*;
+import com.humano.repository.payroll.EmployeeBenefitRepository;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.workflow.infrastructure.DeadlineMonitorService;
@@ -19,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -55,6 +59,17 @@ import org.springframework.transaction.annotation.Transactional;
  *      (created) → IN_PROGRESS → PENDING_REQUESTS_PROCESSING → COMPLETED
  * </pre>
  *
+ * An onboarding runs from its start date to a target date chosen when it is
+ * started (default: the company's default length, see
+ * {@link OnboardingChecklistService}). The tasks come from the company
+ * checklist, whose due days are written for a default-length onboarding and
+ * scaled to this one's window, so a shorter onboarding keeps the same order with
+ * proportionally earlier due dates.
+ *
+ * The workflow is linked to its process through the {@value #CONTEXT_PROCESS_ID}
+ * context key, so an employee's historical processes each resolve to their
+ * own workflow.
+ *
  * Each {@code initiate} call is idempotent on (employeeId, processType):
  * an active process for the same employee will reject the call. Completing
  * an already-completed task is a no-op.
@@ -73,6 +88,9 @@ public class EmployeeLifecycleWorkflowService {
     public static final String STATE_PENDING_REQUESTS_PROCESSING = "PENDING_REQUESTS_PROCESSING";
     public static final String STATE_EXIT_TASKS = "EXIT_TASKS";
 
+    /** Workflow context key holding the id of the {@code EmployeeProcess} it drives. */
+    public static final String CONTEXT_PROCESS_ID = "processId";
+
     // Statuses that indicate an in-flight process (used for idempotency checks).
     private static final List<EmployeeProcessStatus> ACTIVE_PROCESS_STATUSES = List.of(
         EmployeeProcessStatus.PLANNED,
@@ -87,9 +105,11 @@ public class EmployeeLifecycleWorkflowService {
     private final EmployeeProcessRepository processRepository;
     private final EmployeeProcessTaskRepository taskRepository;
     private final EmployeeTrainingRepository employeeTrainingRepository;
+    private final EmployeeBenefitRepository employeeBenefitRepository;
+    private final EmployeeDocumentRepository employeeDocumentRepository;
     private final LeaveRequestRepository leaveRequestRepository;
     private final ExpenseClaimRepository expenseClaimRepository;
-    private final OvertimeRecordRepository overtimeRecordRepository;
+    private final OnboardingChecklistService checklistService;
 
     public EmployeeLifecycleWorkflowService(
         WorkflowStateManager workflowStateManager,
@@ -99,9 +119,11 @@ public class EmployeeLifecycleWorkflowService {
         EmployeeProcessRepository processRepository,
         EmployeeProcessTaskRepository taskRepository,
         EmployeeTrainingRepository employeeTrainingRepository,
+        EmployeeBenefitRepository employeeBenefitRepository,
+        EmployeeDocumentRepository employeeDocumentRepository,
         LeaveRequestRepository leaveRequestRepository,
         ExpenseClaimRepository expenseClaimRepository,
-        OvertimeRecordRepository overtimeRecordRepository
+        OnboardingChecklistService checklistService
     ) {
         this.workflowStateManager = workflowStateManager;
         this.notificationService = notificationService;
@@ -110,9 +132,11 @@ public class EmployeeLifecycleWorkflowService {
         this.processRepository = processRepository;
         this.taskRepository = taskRepository;
         this.employeeTrainingRepository = employeeTrainingRepository;
+        this.employeeBenefitRepository = employeeBenefitRepository;
+        this.employeeDocumentRepository = employeeDocumentRepository;
         this.leaveRequestRepository = leaveRequestRepository;
         this.expenseClaimRepository = expenseClaimRepository;
-        this.overtimeRecordRepository = overtimeRecordRepository;
+        this.checklistService = checklistService;
     }
 
     // ==================== ONBOARDING ====================
@@ -135,12 +159,20 @@ public class EmployeeLifecycleWorkflowService {
                 throw new BadRequestAlertException("Active onboarding process already exists for employee", "process", "duplicate");
             });
 
+        LocalDate startDate = request.startDate() != null ? request.startDate() : LocalDate.now();
+        OnboardingChecklistResponse checklist = checklistService.get();
+        LocalDate targetDate = request.targetDate() != null ? request.targetDate() : startDate.plusDays(checklist.defaultDays());
+        if (targetDate.isBefore(startDate)) {
+            throw new BadRequestAlertException("Target date must not be before the start date", "process", "invaliddates");
+        }
+
         // Create workflow instance — caller-supplied context is overlaid first
         // so trusted keys (employeeId, dates, ids) cannot be overridden.
         Map<String, Object> context = new HashMap<>();
         if (request.additionalContext() != null) context.putAll(request.additionalContext());
         context.put("employeeId", request.employeeId().toString());
-        context.put("startDate", request.startDate() != null ? request.startDate().toString() : LocalDate.now().toString());
+        context.put("startDate", startDate.toString());
+        context.put("targetDate", targetDate.toString());
         if (request.departmentId() != null) context.put("departmentId", request.departmentId().toString());
         if (request.positionId() != null) context.put("positionId", request.positionId().toString());
         if (request.managerId() != null) context.put("managerId", request.managerId().toString());
@@ -154,18 +186,18 @@ public class EmployeeLifecycleWorkflowService {
         );
 
         // Create employee process
-        EmployeeProcess process = createOnboardingProcess(employee, request, workflow);
+        EmployeeProcess process = createOnboardingProcess(employee, request, startDate, targetDate);
+        workflowStateManager.updateContext(workflow.getId(), CONTEXT_PROCESS_ID, process.getId().toString());
 
         // Create onboarding tasks
-        createOnboardingTasks(process, request);
+        createOnboardingTasks(process, request, checklist);
 
         // Start the workflow
         workflowStateManager.startWorkflow(workflow.getId());
         workflowStateManager.transitionState(workflow.getId(), STATE_PROFILE_SETUP, "Starting onboarding process");
 
-        // Set due date (default 30 days from start)
-        LocalDate startDate = request.startDate() != null ? request.startDate() : LocalDate.now();
-        Instant dueDate = startDate.plusDays(30).atStartOfDay(ZoneId.systemDefault()).toInstant();
+        // Due on the target date
+        Instant dueDate = targetDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
         workflowStateManager.updateDueDate(workflow.getId(), dueDate);
 
         // Register deadline
@@ -174,7 +206,8 @@ public class EmployeeLifecycleWorkflowService {
             "ONBOARDING_COMPLETION",
             "Complete onboarding for " + employee.getFirstName() + " " + employee.getLastName(),
             dueDate,
-            72, // 3 days warning
+            // 3 days warning, capped to the window so short onboardings don't warn before they start
+            (int) Math.min(72, Math.max(1, ChronoUnit.DAYS.between(startDate, targetDate)) * 24),
             employee.getManager() != null ? employee.getManager().getId() : null
         );
 
@@ -244,6 +277,8 @@ public class EmployeeLifecycleWorkflowService {
             return getOnboardingStatus(processId);
         }
 
+        requireActive(process);
+
         // Complete the task
         task.complete(request.completionNotes());
         taskRepository.save(task);
@@ -295,11 +330,9 @@ public class EmployeeLifecycleWorkflowService {
         processRepository.save(process);
 
         // Cancel workflow if exists
-        List<WorkflowInstance> workflows = workflowStateManager.findActiveWorkflowsByEntityId(process.getEmployee().getId());
-        for (WorkflowInstance workflow : workflows) {
-            if (workflow.getWorkflowType() == WorkflowType.ONBOARDING) {
-                workflowStateManager.cancelWorkflow(workflow.getId(), reason);
-            }
+        WorkflowInstance workflow = findWorkflowForProcess(process);
+        if (workflow != null && isActive(workflow)) {
+            workflowStateManager.cancelWorkflow(workflow.getId(), reason);
         }
 
         // Notify stakeholders
@@ -352,6 +385,7 @@ public class EmployeeLifecycleWorkflowService {
 
         // Create employee process
         EmployeeProcess process = createOffboardingProcess(employee, request, workflow);
+        workflowStateManager.updateContext(workflow.getId(), CONTEXT_PROCESS_ID, process.getId().toString());
 
         // Create offboarding tasks
         createOffboardingTasks(process, request);
@@ -445,6 +479,8 @@ public class EmployeeLifecycleWorkflowService {
             return getOffboardingStatus(processId);
         }
 
+        requireActive(process);
+
         task.complete(request.completionNotes());
         taskRepository.save(task);
 
@@ -457,6 +493,11 @@ public class EmployeeLifecycleWorkflowService {
 
     /**
      * Calculate final settlement for an employee.
+     *
+     * <p>Only approved expense claims are computed. Leave encashment and
+     * overtime pay are returned as {@code null} because there is no leave
+     * balance or overtime pay-rate model to derive them from yet; the total
+     * covers the known components only.
      */
     @Transactional(value = "tenantTransactionManager", readOnly = true)
     public OffboardingProcessResponse.FinalSettlementSummary calculateFinalSettlement(UUID employeeId) {
@@ -466,12 +507,6 @@ public class EmployeeLifecycleWorkflowService {
             .findById(employeeId)
             .orElseThrow(() -> EntityNotFoundException.create("Employee", employeeId));
 
-        // Calculate remaining leave days (simplified - would need leave balance tracking)
-        int remainingLeaveDays = 15; // Placeholder - should come from leave balance
-
-        // Calculate leave encashment
-        BigDecimal leaveEncashment = BigDecimal.valueOf(remainingLeaveDays * 100); // Placeholder calculation
-
         // Calculate pending expense reimbursements
         BigDecimal pendingExpenses = expenseClaimRepository
             .findByEmployeeId(employeeId, Pageable.unpaged())
@@ -480,47 +515,35 @@ public class EmployeeLifecycleWorkflowService {
             .map(ExpenseClaim::getAmount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Calculate pending overtime pay
-        BigDecimal pendingOvertime = overtimeRecordRepository
-            .findByEmployeeId(employeeId, Pageable.unpaged())
-            .stream()
-            .filter(o -> o.getApprovalStatus() == OvertimeApprovalStatus.APPROVED)
-            .map(o -> o.getHours().multiply(BigDecimal.valueOf(25))) // Placeholder rate
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalSettlement = leaveEncashment.add(pendingExpenses).add(pendingOvertime);
-
-        return new OffboardingProcessResponse.FinalSettlementSummary(
-            remainingLeaveDays,
-            leaveEncashment,
-            pendingExpenses,
-            pendingOvertime,
-            totalSettlement
-        );
+        return new OffboardingProcessResponse.FinalSettlementSummary(null, null, pendingExpenses, null, pendingExpenses);
     }
 
     // ==================== COMMON ====================
 
     /**
-     * Get all active processes with pagination.
+     * Get all active (planned, in-progress or delayed) processes with pagination.
      */
     @Transactional(value = "tenantTransactionManager", readOnly = true)
-    public Page<EmployeeProcess> getActiveProcesses(EmployeeProcessType type, Pageable pageable) {
-        if (type != null) {
-            return processRepository.findByProcessTypeAndStatusNot(type, EmployeeProcessStatus.COMPLETED, pageable);
-        }
-        return processRepository.findByStatusNot(EmployeeProcessStatus.COMPLETED, pageable);
+    public Page<EmployeeProcessSummary> getActiveProcesses(EmployeeProcessType type, Pageable pageable) {
+        Page<EmployeeProcess> page = type != null
+            ? processRepository.findByProcessTypeAndStatusIn(type, ACTIVE_PROCESS_STATUSES, pageable)
+            : processRepository.findByStatusIn(ACTIVE_PROCESS_STATUSES, pageable);
+        return page.map(this::mapToSummary);
     }
 
     /**
-     * Escalate overdue tasks.
+     * Escalate overdue tasks of a process of the given type.
      */
-    public void escalateOverdueTasks(UUID processId) {
+    public void escalateOverdueTasks(UUID processId, EmployeeProcessType type) {
         log.info("Escalating overdue tasks for process {}", processId);
 
         EmployeeProcess process = processRepository
             .findById(processId)
             .orElseThrow(() -> EntityNotFoundException.create("EmployeeProcess", processId));
+
+        if (process.getProcessType() != type) {
+            throw new BadRequestAlertException("Process is not an " + type.name().toLowerCase() + " process", "process", "invalidtype");
+        }
 
         LocalDate today = LocalDate.now();
         List<EmployeeProcessTask> overdueTasks = process
@@ -552,83 +575,62 @@ public class EmployeeLifecycleWorkflowService {
 
     // ==================== PRIVATE HELPER METHODS ====================
 
-    private EmployeeProcess createOnboardingProcess(Employee employee, InitiateOnboardingRequest request, WorkflowInstance workflow) {
+    private EmployeeProcess createOnboardingProcess(
+        Employee employee,
+        InitiateOnboardingRequest request,
+        LocalDate startDate,
+        LocalDate targetDate
+    ) {
         EmployeeProcess process = new EmployeeProcess();
         process.setEmployee(employee);
         process.setProcessType(EmployeeProcessType.ONBOARDING);
         process.setStatus(EmployeeProcessStatus.IN_PROGRESS);
-        process.setStartDate(request.startDate() != null ? request.startDate() : LocalDate.now());
-        process.setDueDate(process.getStartDate().plusDays(30));
+        process.setStartDate(startDate);
+        process.setDueDate(targetDate);
         process.setNotes(request.notes());
 
         return processRepository.save(process);
     }
 
-    private void createOnboardingTasks(EmployeeProcess process, InitiateOnboardingRequest request) {
-        LocalDate startDate = process.getStartDate();
+    /**
+     * Copies the company checklist into this process's tasks. Due days are on a
+     * {@code checklist.defaultDays()}-day onboarding; {@link #scheduled} scales
+     * them to the process's own start → due window.
+     */
+    private void createOnboardingTasks(EmployeeProcess process, InitiateOnboardingRequest request, OnboardingChecklistResponse checklist) {
         Employee employee = process.getEmployee();
+        int baselineDays = checklist.defaultDays();
 
-        // Task 1: Complete profile information
-        createTask(
-            process,
-            "Complete Profile Information",
-            "Update personal details, emergency contacts, and upload profile photo",
-            startDate.plusDays(3),
-            employee
-        );
+        for (OnboardingChecklistResponse.Task task : checklist.tasks()) {
+            Employee assignee =
+                switch (task.owner()) {
+                    case NEW_HIRE -> employee;
+                    case MANAGER -> employee.getManager();
+                    case HR -> null;
+                };
+            createTask(process, task.title(), task.description(), scheduled(process, task.dueDay(), baselineDays), assignee);
+        }
 
-        // Task 2: Department orientation
-        createTask(
-            process,
-            "Department Orientation",
-            "Meet with team members and understand department structure",
-            startDate.plusDays(5),
-            employee
-        );
-
-        // Task 3: IT setup
-        createTask(
-            process,
-            "IT Systems Setup",
-            "Get system access, email setup, and necessary software installations",
-            startDate.plusDays(2),
-            null
-        );
-
-        // Task 4: Benefits enrollment
-        createTask(process, "Benefits Enrollment", "Review and enroll in company benefits programs", startDate.plusDays(14), employee);
-
-        // Task 5: Policy acknowledgment
-        createTask(process, "Policy Acknowledgment", "Read and acknowledge company policies and handbook", startDate.plusDays(7), employee);
-
-        // Task 6: Mandatory trainings
+        // Mandatory trainings, when the request names any (70% of the way in)
         if (request.requiredTrainingIds() != null && !request.requiredTrainingIds().isEmpty()) {
             createTask(
                 process,
                 "Complete Mandatory Trainings",
                 "Complete all assigned mandatory training programs",
-                startDate.plusDays(21),
+                scheduled(process, (int) Math.round(baselineDays * 0.7), baselineDays),
                 employee
             );
         }
+    }
 
-        // Task 7: First week check-in with manager
-        createTask(
-            process,
-            "First Week Check-in",
-            "Schedule and complete first week check-in meeting with manager",
-            startDate.plusDays(7),
-            employee.getManager()
-        );
-
-        // Task 8: 30-day review meeting
-        createTask(
-            process,
-            "30-Day Review Meeting",
-            "Schedule and complete 30-day onboarding review",
-            startDate.plusDays(30),
-            employee.getManager()
-        );
+    /**
+     * Due date for a task {@code dueDay} days into a {@code baselineDays}-day
+     * onboarding, scaled to this process and kept within its start → due window.
+     */
+    private static LocalDate scheduled(EmployeeProcess process, int dueDay, int baselineDays) {
+        long window = ChronoUnit.DAYS.between(process.getStartDate(), process.getDueDate());
+        long offset = Math.round(((double) dueDay * window) / Math.max(1, baselineDays));
+        return process.getStartDate().plusDays(Math.min(window, Math.max(0, offset)));
     }
 
     private EmployeeProcess createOffboardingProcess(Employee employee, InitiateOffboardingRequest request, WorkflowInstance workflow) {
@@ -722,7 +724,11 @@ public class EmployeeLifecycleWorkflowService {
         task.setCompleted(false);
         task.setAssignedTo(assignedTo);
 
-        return taskRepository.save(task);
+        // Add after save: equals/hashCode are id-based, and the response is
+        // built from process.getTasks() in this same persistence context.
+        EmployeeProcessTask saved = taskRepository.save(task);
+        process.getTasks().add(saved);
+        return saved;
     }
 
     private void updateProcessProgress(EmployeeProcess process) {
@@ -747,18 +753,70 @@ public class EmployeeLifecycleWorkflowService {
             );
         }
 
-        WorkflowType matchingType = process.getProcessType() == EmployeeProcessType.ONBOARDING
-            ? WorkflowType.ONBOARDING
-            : WorkflowType.OFFBOARDING;
-        List<WorkflowInstance> workflows = workflowStateManager.findActiveWorkflowsByEntityId(process.getEmployee().getId());
-        for (WorkflowInstance workflow : workflows) {
-            if (workflow.getWorkflowType() == matchingType) {
-                workflowStateManager.updateContext(workflow.getId(), "completionPercentage", completionPercentage);
-                if (allDone) {
-                    workflowStateManager.completeWorkflow(workflow.getId(), "All tasks completed");
-                }
+        WorkflowInstance workflow = findWorkflowForProcess(process);
+        if (workflow != null && isActive(workflow)) {
+            workflowStateManager.updateContext(workflow.getId(), "completionPercentage", completionPercentage);
+            if (allDone) {
+                workflowStateManager.completeWorkflow(workflow.getId(), "All tasks completed");
             }
         }
+    }
+
+    private void requireActive(EmployeeProcess process) {
+        if (!ACTIVE_PROCESS_STATUSES.contains(process.getStatus())) {
+            throw new BadRequestAlertException(
+                "Cannot complete tasks on a process that is " + process.getStatus(),
+                "process",
+                "invalidstatus"
+            );
+        }
+    }
+
+    /**
+     * Resolve the workflow that drives {@code process}, in any status. Workflows
+     * carrying {@link #CONTEXT_PROCESS_ID} match exactly; workflows created
+     * before that key existed fall back to the employee's most recent
+     * unlinked workflow of the matching type.
+     */
+    private WorkflowInstance findWorkflowForProcess(EmployeeProcess process) {
+        WorkflowType type = process.getProcessType() == EmployeeProcessType.ONBOARDING ? WorkflowType.ONBOARDING : WorkflowType.OFFBOARDING;
+        String processId = process.getId().toString();
+        List<WorkflowInstance> candidates = workflowStateManager
+            .findByEntityId(process.getEmployee().getId())
+            .stream()
+            .filter(w -> w.getWorkflowType() == type)
+            .toList();
+        return candidates
+            .stream()
+            .filter(w -> processId.equals(linkedProcessId(w)))
+            .findFirst()
+            .orElseGet(() ->
+                candidates
+                    .stream()
+                    .filter(w -> linkedProcessId(w) == null)
+                    .max(Comparator.comparing(WorkflowInstance::getCreatedDate, Comparator.nullsFirst(Comparator.naturalOrder())))
+                    .orElse(null)
+            );
+    }
+
+    private static Object linkedProcessId(WorkflowInstance workflow) {
+        return workflow.getContext() != null ? workflow.getContext().get(CONTEXT_PROCESS_ID) : null;
+    }
+
+    private static boolean isActive(WorkflowInstance workflow) {
+        return switch (workflow.getStatus()) {
+            case COMPLETED, CANCELLED, REJECTED, FAILED -> false;
+            default -> true;
+        };
+    }
+
+    /** Workflow status to report when no backing workflow can be found. */
+    private static WorkflowStatus fallbackWorkflowStatus(EmployeeProcess process) {
+        return switch (process.getStatus()) {
+            case COMPLETED -> WorkflowStatus.COMPLETED;
+            case CANCELLED -> WorkflowStatus.CANCELLED;
+            default -> WorkflowStatus.IN_PROGRESS;
+        };
     }
 
     private void processPendingRequests(Employee employee) {
@@ -775,11 +833,32 @@ public class EmployeeLifecycleWorkflowService {
         log.debug("Processed pending requests for employee {}", employee.getId());
     }
 
+    private EmployeeProcessSummary mapToSummary(EmployeeProcess process) {
+        Employee employee = process.getEmployee();
+        Set<EmployeeProcessTask> tasks = process.getTasks();
+        return new EmployeeProcessSummary(
+            process.getId(),
+            process.getProcessType(),
+            process.getStatus(),
+            employee.getId(),
+            employee.getFirstName() + " " + employee.getLastName(),
+            process.getStartDate(),
+            process.getDueDate(),
+            process.getCompletionDate(),
+            process.getCompletionPercentage(),
+            tasks.size(),
+            (int) tasks.stream().filter(EmployeeProcessTask::getCompleted).count(),
+            (int) tasks
+                .stream()
+                .filter(t -> !Boolean.TRUE.equals(t.getCompleted()) && t.getDueDate() != null && t.getDueDate().isBefore(LocalDate.now()))
+                .count()
+        );
+    }
+
     private OnboardingProcessResponse mapToOnboardingResponse(EmployeeProcess process) {
         Employee employee = process.getEmployee();
 
-        List<WorkflowInstance> workflows = workflowStateManager.findActiveWorkflowsByEntityId(employee.getId());
-        WorkflowInstance workflow = workflows.stream().filter(w -> w.getWorkflowType() == WorkflowType.ONBOARDING).findFirst().orElse(null);
+        WorkflowInstance workflow = findWorkflowForProcess(process);
 
         List<OnboardingProcessResponse.OnboardingTaskResponse> taskResponses = process
             .getTasks()
@@ -800,12 +879,12 @@ public class EmployeeLifecycleWorkflowService {
             .collect(Collectors.toList());
 
         OnboardingProcessResponse.OnboardingProgress progress = new OnboardingProcessResponse.OnboardingProgress(
-            true, // profileCreated
+            true, // profileCreated: the employee record exists
             employee.getDepartment() != null,
-            false, // benefitsSetup - would need to check benefit enrollments
-            !employeeTrainingRepository.findByEmployeeId(employee.getId(), Pageable.unpaged()).isEmpty(),
-            false, // documentsUploaded
-            true, // systemAccessGranted
+            employeeBenefitRepository.existsByEmployeeId(employee.getId()),
+            employeeTrainingRepository.existsByEmployeeId(employee.getId()),
+            employeeDocumentRepository.existsByEmployeeId(employee.getId()),
+            employee.isActivated(),
             process.getTasks().size(),
             (int) process.getTasks().stream().filter(EmployeeProcessTask::getCompleted).count()
         );
@@ -816,7 +895,7 @@ public class EmployeeLifecycleWorkflowService {
             employee.getId(),
             employee.getFirstName() + " " + employee.getLastName(),
             employee.getEmail(),
-            workflow != null ? workflow.getStatus() : WorkflowStatus.IN_PROGRESS,
+            workflow != null ? workflow.getStatus() : fallbackWorkflowStatus(process),
             process.getStatus(),
             workflow != null ? workflow.getCurrentState() : STATE_TASKS_IN_PROGRESS,
             process.getStartDate(),
@@ -832,12 +911,7 @@ public class EmployeeLifecycleWorkflowService {
     private OffboardingProcessResponse mapToOffboardingResponse(EmployeeProcess process) {
         Employee employee = process.getEmployee();
 
-        List<WorkflowInstance> workflows = workflowStateManager.findActiveWorkflowsByEntityId(employee.getId());
-        WorkflowInstance workflow = workflows
-            .stream()
-            .filter(w -> w.getWorkflowType() == WorkflowType.OFFBOARDING)
-            .findFirst()
-            .orElse(null);
+        WorkflowInstance workflow = findWorkflowForProcess(process);
 
         List<OffboardingProcessResponse.OffboardingTaskResponse> taskResponses = process
             .getTasks()
@@ -860,7 +934,7 @@ public class EmployeeLifecycleWorkflowService {
         Set<EmployeeProcessTask> tasks = process.getTasks();
         OffboardingProcessResponse.OffboardingProgress progress = new OffboardingProcessResponse.OffboardingProgress(
             tasks.stream().anyMatch(t -> t.getTitle().contains("Pending") && t.getCompleted()),
-            tasks.stream().anyMatch(t -> t.getTitle().contains("Settlement") && t.getCompleted()),
+            tasks.stream().anyMatch(t -> t.getTitle().contains("Final Paycheck") && t.getCompleted()),
             tasks.stream().anyMatch(t -> t.getTitle().contains("Benefits") && t.getCompleted()),
             tasks.stream().anyMatch(t -> t.getTitle().contains("Knowledge Transfer") && t.getCompleted()),
             tasks.stream().anyMatch(t -> t.getTitle().contains("Assets") && t.getCompleted()),
@@ -878,7 +952,7 @@ public class EmployeeLifecycleWorkflowService {
             employee.getId(),
             employee.getFirstName() + " " + employee.getLastName(),
             employee.getEmail(),
-            workflow != null ? workflow.getStatus() : WorkflowStatus.IN_PROGRESS,
+            workflow != null ? workflow.getStatus() : fallbackWorkflowStatus(process),
             process.getStatus(),
             workflow != null ? workflow.getCurrentState() : STATE_EXIT_TASKS,
             process.getDueDate(),

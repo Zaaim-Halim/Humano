@@ -215,6 +215,28 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
       },
       {
+        path: 'onboarding',
+        title: 'humano.nav.onboarding',
+        loadComponent: () => import('./features/admin/onboarding/onboarding.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.VIEW_ONBOARDING_PROGRESS, Permission.MANAGE_ONBOARDING] },
+      },
+      {
+        // Before `onboarding/:id`, so "checklist" isn't read as a process id.
+        path: 'onboarding/checklist',
+        title: 'humano.onboardingChecklist.title',
+        loadComponent: () => import('./features/admin/onboarding-checklist/onboarding-checklist.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.MANAGE_ONBOARDING] },
+      },
+      {
+        path: 'onboarding/:id',
+        title: 'humano.nav.onboarding',
+        loadComponent: () => import('./features/admin/onboarding-detail/onboarding-detail.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.VIEW_ONBOARDING_PROGRESS, Permission.MANAGE_ONBOARDING] },
+      },
+      {
         path: 'org',
         title: 'humano.nav.org',
         loadComponent: () => import('./features/admin/org-units/org-units.component'),

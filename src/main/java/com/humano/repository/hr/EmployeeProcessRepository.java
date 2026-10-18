@@ -59,6 +59,16 @@ public interface EmployeeProcessRepository extends JpaRepository<EmployeeProcess
     Page<EmployeeProcess> findByStatusNot(EmployeeProcessStatus status, Pageable pageable);
 
     /**
+     * Find processes by type within a set of statuses.
+     */
+    Page<EmployeeProcess> findByProcessTypeAndStatusIn(EmployeeProcessType type, List<EmployeeProcessStatus> statuses, Pageable pageable);
+
+    /**
+     * Find processes within a set of statuses.
+     */
+    Page<EmployeeProcess> findByStatusIn(List<EmployeeProcessStatus> statuses, Pageable pageable);
+
+    /**
      * Find processes starting in date range.
      */
     @Query("SELECT p FROM EmployeeProcess p WHERE p.startDate BETWEEN :startDate AND :endDate")

@@ -21,6 +21,7 @@ export interface SelectOption {
       class="hum-select"
       [value]="value()"
       [attr.aria-invalid]="invalid() ? 'true' : null"
+      [attr.aria-label]="ariaLabel() ?? null"
       [disabled]="isDisabled()"
       (change)="onSelect($event)"
       (blur)="onTouched()"
@@ -40,6 +41,8 @@ export class SelectComponent implements ControlValueAccessor {
   readonly options = input<SelectOption[]>();
   readonly invalid = input(false, { transform: booleanAttribute });
   readonly disabled = input(false, { transform: booleanAttribute });
+  /** Accessible name when no visible `<label>` can point at the select (e.g. inside table rows). */
+  readonly ariaLabel = input<string>();
 
   protected readonly value = signal('');
   protected readonly isDisabled = computed(() => this.disabled() || this.disabledByForm());

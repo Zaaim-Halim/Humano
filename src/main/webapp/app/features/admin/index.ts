@@ -78,3 +78,20 @@ export type {
   CreatePayRuleRequest,
   FormulaValidationResult,
 } from './models/pay-rule.model';
+
+// Onboarding
+export { EmployeeProcessStatus, ACTIVE_PROCESS_STATUSES } from './models/enums/employee-process-status.enum';
+export { OnboardingService } from './services/onboarding.service';
+export type {
+  EmployeeProcessSummary,
+  OnboardingProcess,
+  OnboardingTask,
+  OnboardingProgress,
+  InitiateOnboardingRequest,
+  CompleteTaskRequest,
+  OnboardingChecklist,
+  OnboardingChecklistTask,
+  OnboardingTaskOwner,
+  UpdateOnboardingChecklistRequest,
+} from './models/onboarding.model';
+export { addDays, daysBetween, localIsoDate } from './models/onboarding.model';

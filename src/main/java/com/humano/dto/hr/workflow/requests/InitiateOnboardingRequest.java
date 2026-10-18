@@ -22,6 +22,9 @@ public record InitiateOnboardingRequest(
 
     LocalDate startDate,
 
+    /** Day the onboarding should be finished by; defaults to 30 days after the start. Task due dates are spread across this window. */
+    LocalDate targetDate,
+
     String employeeNumber,
 
     String workEmail,

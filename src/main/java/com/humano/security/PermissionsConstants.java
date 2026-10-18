@@ -79,7 +79,7 @@ public final class PermissionsConstants {
 
     /**
      * Permission to view employee records.
-     * <p>Typically granted to: {@link AuthoritiesConstants#HR_MANAGER}, {@link AuthoritiesConstants#HR_SPECIALIST}, {@link AuthoritiesConstants#MANAGER}</p>
+     * <p>Typically granted to: {@link AuthoritiesConstants#HR_MANAGER}, {@link AuthoritiesConstants#HR_SPECIALIST}, {@link AuthoritiesConstants#MANAGER}, {@link AuthoritiesConstants#ONBOARDING_SPECIALIST}</p>
      */
     public static final String READ_EMPLOYEE = "READ_EMPLOYEE";
 
@@ -181,7 +181,7 @@ public final class PermissionsConstants {
 
     /**
      * Permission to manage onboarding checklists and tasks.
-     * <p>Typically granted to: {@link AuthoritiesConstants#ONBOARDING_SPECIALIST}, {@link AuthoritiesConstants#HR_SPECIALIST}</p>
+     * <p>Typically granted to: {@link AuthoritiesConstants#ONBOARDING_SPECIALIST}, {@link AuthoritiesConstants#HR_SPECIALIST}, {@link AuthoritiesConstants#HR_MANAGER}</p>
      */
     public static final String MANAGE_ONBOARDING = "MANAGE_ONBOARDING";
 

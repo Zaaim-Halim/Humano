@@ -88,6 +88,14 @@ export const SHELL_NAV: ShellNavGroup[] = [
         permissions: [Permission.READ_EMPLOYEE],
       },
       {
+        id: 'onboarding',
+        labelKey: 'humano.nav.onboarding',
+        icon: 'user-plus',
+        link: '/onboarding',
+        keywords: 'new hire joiner checklist welcome start',
+        permissions: [Permission.VIEW_ONBOARDING_PROGRESS, Permission.MANAGE_ONBOARDING],
+      },
+      {
         id: 'people-tree',
         labelKey: 'humano.nav.peopleTree',
         icon: 'git-fork',

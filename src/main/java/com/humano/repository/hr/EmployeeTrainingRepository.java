@@ -16,4 +16,6 @@ public interface EmployeeTrainingRepository extends JpaRepository<EmployeeTraini
     Page<EmployeeTraining> findByEmployeeId(UUID employeeId, Pageable pageable);
 
     Page<EmployeeTraining> findByTrainingId(UUID trainingId, Pageable pageable);
+
+    boolean existsByEmployeeId(UUID employeeId);
 }

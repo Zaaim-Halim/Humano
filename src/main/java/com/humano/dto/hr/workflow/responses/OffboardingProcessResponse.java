@@ -53,8 +53,13 @@ public record OffboardingProcessResponse(
         int completedTasks
     ) {}
 
+    /**
+     * Final settlement breakdown. {@code null} components are not computed yet
+     * (no leave-balance / overtime pay-rate model) and are excluded from
+     * {@code totalSettlement}.
+     */
     public record FinalSettlementSummary(
-        int remainingLeaveDays,
+        Integer remainingLeaveDays,
         BigDecimal leaveEncashment,
         BigDecimal pendingExpenseReimbursements,
         BigDecimal pendingOvertimePay,

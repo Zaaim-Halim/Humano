@@ -68,7 +68,9 @@ public final class DefaultRolePermissions {
             AuthoritiesConstants.HR_MANAGER,
             AuthoritiesConstants.HR_SPECIALIST,
             AuthoritiesConstants.MANAGER,
-            AuthoritiesConstants.PAYROLL_ADMIN
+            AuthoritiesConstants.PAYROLL_ADMIN,
+            // Onboarding specialists create employees and pick them when starting onboarding.
+            AuthoritiesConstants.ONBOARDING_SPECIALIST
         );
         grant(PermissionsConstants.UPDATE_EMPLOYEE, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.HR_SPECIALIST);
         grant(PermissionsConstants.DELETE_EMPLOYEE, AuthoritiesConstants.HR_MANAGER);
@@ -114,7 +116,12 @@ public final class DefaultRolePermissions {
         grant(PermissionsConstants.GENERATE_OFFER_LETTERS, AuthoritiesConstants.RECRUITER, AuthoritiesConstants.HR_MANAGER);
 
         // ---- Onboarding ----
-        grant(PermissionsConstants.MANAGE_ONBOARDING, AuthoritiesConstants.ONBOARDING_SPECIALIST, AuthoritiesConstants.HR_SPECIALIST);
+        grant(
+            PermissionsConstants.MANAGE_ONBOARDING,
+            AuthoritiesConstants.ONBOARDING_SPECIALIST,
+            AuthoritiesConstants.HR_SPECIALIST,
+            AuthoritiesConstants.HR_MANAGER
+        );
         grant(
             PermissionsConstants.VIEW_ONBOARDING_PROGRESS,
             AuthoritiesConstants.ONBOARDING_SPECIALIST,
