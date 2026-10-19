@@ -92,6 +92,7 @@
       "statusValue": {
         "ACTIVE": "Active",
         "ONBOARDING": "Onboarding",
+        "OFFBOARDING": "Offboarding",
         "INACTIVE": "Inactive",
         "TERMINATED": "Terminated"
       },

@@ -9,8 +9,6 @@ import com.humano.dto.hr.workflow.responses.EmployeeProcessSummary;
 import com.humano.dto.hr.workflow.responses.OffboardingProcessResponse;
 import com.humano.dto.hr.workflow.responses.OnboardingProcessResponse;
 import com.humano.security.PermissionsConstants;
-import com.humano.security.annotation.RequireHrManager;
-import com.humano.security.annotation.RequireHrStaff;
 import com.humano.security.annotation.RequirePermission;
 import com.humano.service.hr.workflow.EmployeeLifecycleWorkflowService;
 import jakarta.validation.Valid;
@@ -31,9 +29,9 @@ import tech.jhipster.web.util.PaginationUtil;
  * REST controller for employee lifecycle workflows (onboarding + offboarding).
  *
  * <p>Onboarding is gated by {@code MANAGE_ONBOARDING} (writes) and
- * {@code VIEW_ONBOARDING_PROGRESS} / {@code MANAGE_ONBOARDING} (reads).
- * Offboarding has no dedicated permission and follows the transfer workflow's
- * HR-manager gating.
+ * {@code VIEW_ONBOARDING_PROGRESS} / {@code MANAGE_ONBOARDING} (reads);
+ * offboarding by {@code MANAGE_OFFBOARDING} (writes) and
+ * {@code VIEW_OFFBOARDING} / {@code MANAGE_OFFBOARDING} (reads).
  */
 @RestController
 @RequestMapping("/api/hr/workflows")
@@ -46,6 +44,13 @@ public class EmployeeLifecycleResource {
         PermissionsConstants.VIEW_ONBOARDING_PROGRESS +
         "', '" +
         PermissionsConstants.MANAGE_ONBOARDING +
+        "')";
+
+    private static final String CAN_VIEW_OFFBOARDING =
+        "@securityExpressions.hasAnyPermission('" +
+        PermissionsConstants.VIEW_OFFBOARDING +
+        "', '" +
+        PermissionsConstants.MANAGE_OFFBOARDING +
         "')";
 
     private final EmployeeLifecycleWorkflowService lifecycleService;
@@ -135,7 +140,7 @@ public class EmployeeLifecycleResource {
      * {@code POST  /offboarding} : Initiate offboarding for an employee.
      */
     @PostMapping("/offboarding")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_OFFBOARDING)
     public ResponseEntity<OffboardingProcessResponse> initiateOffboarding(@Valid @RequestBody InitiateOffboardingRequest request) {
         LOG.debug("REST request to initiate offboarding for employee: {}", request.employeeId());
         OffboardingProcessResponse result = lifecycleService.initiateOffboarding(request);
@@ -143,20 +148,25 @@ public class EmployeeLifecycleResource {
     }
 
     /**
-     * {@code GET  /offboarding} : Get active offboarding processes.
+     * {@code GET  /offboarding?status=&employeeId=} : Offboarding processes — active ones by
+     * default; pass {@code status} (repeatable) for history, {@code employeeId} for one person.
      */
     @GetMapping("/offboarding")
-    @RequireHrStaff
-    public ResponseEntity<Page<EmployeeProcessSummary>> getActiveOffboardings(Pageable pageable) {
-        LOG.debug("REST request to get active offboarding processes");
-        return paged(lifecycleService.getActiveProcesses(EmployeeProcessType.OFFBOARDING, pageable));
+    @PreAuthorize(CAN_VIEW_OFFBOARDING)
+    public ResponseEntity<Page<EmployeeProcessSummary>> getOffboardings(
+        @RequestParam(required = false) List<EmployeeProcessStatus> status,
+        @RequestParam(required = false) UUID employeeId,
+        Pageable pageable
+    ) {
+        LOG.debug("REST request to get offboarding processes (status {}, employee {})", status, employeeId);
+        return paged(lifecycleService.getProcesses(EmployeeProcessType.OFFBOARDING, status, employeeId, pageable));
     }
 
     /**
      * {@code GET  /offboarding/:processId} : Get offboarding process status.
      */
     @GetMapping("/offboarding/{processId}")
-    @RequireHrStaff
+    @PreAuthorize(CAN_VIEW_OFFBOARDING)
     public ResponseEntity<OffboardingProcessResponse> getOffboardingStatus(@PathVariable UUID processId) {
         LOG.debug("REST request to get offboarding status: {}", processId);
         OffboardingProcessResponse result = lifecycleService.getOffboardingStatus(processId);
@@ -167,7 +177,7 @@ public class EmployeeLifecycleResource {
      * {@code POST  /offboarding/:processId/tasks/complete} : Complete an offboarding task.
      */
     @PostMapping("/offboarding/{processId}/tasks/complete")
-    @RequireHrStaff
+    @RequirePermission(PermissionsConstants.MANAGE_OFFBOARDING)
     public ResponseEntity<OffboardingProcessResponse> completeOffboardingTask(
         @PathVariable UUID processId,
         @Valid @RequestBody CompleteTaskRequest request
@@ -180,8 +190,22 @@ public class EmployeeLifecycleResource {
     /**
      * {@code POST  /offboarding/:processId/escalate} : Escalate overdue offboarding tasks.
      */
+    /**
+     * {@code POST  /offboarding/:processId/cancel?reason=} : Cancel an offboarding (status restored unless they've already left).
+     */
+    @PostMapping("/offboarding/{processId}/cancel")
+    @RequirePermission(PermissionsConstants.MANAGE_OFFBOARDING)
+    public ResponseEntity<Void> cancelOffboarding(@PathVariable UUID processId, @RequestParam String reason) {
+        LOG.debug("REST request to cancel offboarding: {}", processId);
+        lifecycleService.cancelOffboarding(processId, reason);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * {@code POST  /offboarding/:processId/escalate} : Escalate overdue offboarding tasks.
+     */
     @PostMapping("/offboarding/{processId}/escalate")
-    @RequireHrManager
+    @RequirePermission(PermissionsConstants.MANAGE_OFFBOARDING)
     public ResponseEntity<Void> escalateOffboarding(@PathVariable UUID processId) {
         LOG.debug("REST request to escalate overdue offboarding tasks: {}", processId);
         lifecycleService.escalateOverdueTasks(processId, EmployeeProcessType.OFFBOARDING);
@@ -192,7 +216,7 @@ public class EmployeeLifecycleResource {
      * {@code GET  /offboarding/settlement/:employeeId} : Preview an employee's final settlement.
      */
     @GetMapping("/offboarding/settlement/{employeeId}")
-    @RequireHrManager
+    @PreAuthorize(CAN_VIEW_OFFBOARDING)
     public ResponseEntity<OffboardingProcessResponse.FinalSettlementSummary> getFinalSettlement(@PathVariable UUID employeeId) {
         LOG.debug("REST request to calculate final settlement for employee: {}", employeeId);
         return ResponseEntity.ok(lifecycleService.calculateFinalSettlement(employeeId));

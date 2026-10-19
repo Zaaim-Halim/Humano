@@ -191,6 +191,20 @@ public final class PermissionsConstants {
      */
     public static final String VIEW_ONBOARDING_PROGRESS = "VIEW_ONBOARDING_PROGRESS";
 
+    // ==================== OFFBOARDING PERMISSIONS ====================
+
+    /**
+     * Permission to start, run and cancel offboardings (leavers' checklists and terminations).
+     * <p>Typically granted to: {@link AuthoritiesConstants#HR_MANAGER}, {@link AuthoritiesConstants#HR_SPECIALIST}</p>
+     */
+    public static final String MANAGE_OFFBOARDING = "MANAGE_OFFBOARDING";
+
+    /**
+     * Permission to view offboardings and final settlements.
+     * <p>Typically granted to: {@link AuthoritiesConstants#HR_MANAGER}, {@link AuthoritiesConstants#HR_SPECIALIST}</p>
+     */
+    public static final String VIEW_OFFBOARDING = "VIEW_OFFBOARDING";
+
     // ==================== EMPLOYEE SELF-SERVICE PERMISSIONS ====================
 
     /**

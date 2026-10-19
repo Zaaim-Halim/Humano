@@ -1,0 +1,321 @@
+<div class="hum-page">
+  <a class="hum-onb-back" routerLink="/offboarding" [queryParams]="process() && !active() ? { view: 'history' } : {}"
+    ><lucide-icon name="arrow-left" [size]="14" />{{ 'humano.offboarding.backToList' | translate }}</a
+  >
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (!process()) {
+    <hum-skeleton [height]="180" />
+    <div class="hum-onb-layout">
+      <div><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+      <hum-skeleton [height]="240" />
+    </div>
+  } @else {
+    @let p = process()!;
+    @let tl = timeline()!;
+
+    <section class="hum-onb-hero hum-off-hero" [class.is-cancelled]="p.processStatus === 'CANCELLED'">
+      <div class="hum-onb-hero__top">
+        <hum-avatar [name]="p.employeeName" [src]="employee()?.imageUrl ?? null" size="xl" />
+        <div class="hum-onb-hero__who">
+          <h1 class="hum-onb-hero__name">
+            @if (canOpenProfile) {
+              <a [routerLink]="['/employees', p.employeeId]">{{ p.employeeName }}</a>
+            } @else {
+              {{ p.employeeName }}
+            }
+          </h1>
+          <p class="hum-onb-hero__role">
+            @if (employee(); as e) {
+              @if (e.jobTitle) {
+                <span>{{ e.jobTitle }}</span>
+              }
+              @if (e.departmentName) {
+                <span><lucide-icon name="building-2" [size]="13" />{{ e.departmentName }}</span>
+              }
+              @if (e.managerName) {
+                <span><lucide-icon name="user" [size]="13" />{{ 'humano.onboarding.reportsTo' | translate: { name: e.managerName } }}</span>
+              }
+            } @else {
+              <span>{{ p.employeeEmail }}</span>
+            }
+          </p>
+        </div>
+        <div class="hum-onb-hero__actions">
+          <hum-badge [status]="p.processStatus" />
+          @if (canManage && active()) {
+            <hum-button variant="ghost" size="sm" icon="ban" (click)="openCancel()">{{
+              'humano.offboarding.cancel' | translate
+            }}</hum-button>
+          }
+        </div>
+      </div>
+
+      <div class="hum-onb-journey">
+        <div class="hum-onb-journey__head">
+          <p class="hum-onb-journey__day">
+            @if (p.processStatus === 'CANCELLED') {
+              {{ 'humano.offboarding.journeyCancelled' | translate }}
+            } @else if (daysToLastDay() > 0) {
+              {{ 'humano.offboarding.lastDayIn' | translate: { count: daysToLastDay(), date: (p.lastWorkingDate | date: 'EEE, MMM d') } }}
+            } @else if (daysToLastDay() === 0) {
+              {{ 'humano.offboarding.lastDayIsToday' | translate }}
+            } @else {
+              {{ 'humano.offboarding.leftOn' | translate: { date: (p.lastWorkingDate | date: 'EEE, MMM d') } }}
+            }
+          </p>
+          <p class="hum-onb-journey__tally tabular-nums">
+            {{ 'humano.onboarding.tasksDone' | translate: { done: p.progress.completedTasks, total: p.progress.totalTasks } }}
+          </p>
+        </div>
+        <div
+          class="hum-onb-track"
+          role="img"
+          [attr.aria-label]="
+            'humano.onboarding.trackLabel'
+              | translate: { done: p.progress.completedTasks, total: p.progress.totalTasks, overdue: overdue().length }
+          "
+        >
+          <span class="hum-onb-track__rail"></span>
+          @if (active() && daysToLastDay() >= 0) {
+            <span class="hum-onb-track__elapsed" [style.width.%]="tl.todayPct"></span>
+            <span class="hum-onb-track__today" [style.left.%]="tl.todayPct"
+              ><span class="hum-onb-track__today-label">{{ 'humano.onboarding.today' | translate }}</span></span
+            >
+          }
+          @for (m of markers(); track m.day) {
+            <span
+              class="hum-onb-track__dot"
+              [class.is-done]="m.done"
+              [class.is-overdue]="m.overdue"
+              [class.is-multi]="m.count > 1"
+              [style.left.%]="m.pct"
+              [title]="m.titles"
+            >
+              @if (m.done) {
+                <lucide-icon name="check" [size]="10" />
+              } @else if (m.count > 1) {
+                {{ m.count }}
+              }
+            </span>
+          }
+        </div>
+        <div class="hum-onb-track__scale tabular-nums">
+          <span>{{ p.startDate | date: 'MMM d' }}</span>
+          <span>{{ 'humano.offboarding.lastDayShort' | translate: { date: (p.lastWorkingDate | date: 'MMM d') } }}</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="hum-onb-layout">
+      <section>
+        <div class="hum-onb-filter">
+          <h2 class="hum-onb-h2">{{ 'humano.offboarding.checklist' | translate }}</h2>
+          <div class="hum-chips" style="margin: 0">
+            <button type="button" class="hum-chip" [class.is-active]="ownerFilter() === ''" (click)="ownerFilter.set('')">
+              {{ 'humano.onboarding.everyone' | translate }}<span class="hum-chip__count tabular-nums">{{ tasks().length }}</span>
+            </button>
+            @for (o of owners(); track o.value) {
+              <button type="button" class="hum-chip" [class.is-active]="ownerFilter() === o.value" (click)="ownerFilter.set(o.value)">
+                {{ o.name }}<span class="hum-chip__count tabular-nums">{{ o.open }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        @for (group of groups(); track group.key) {
+          <div class="hum-onb-phase">
+            <h3 class="hum-onb-phase__title" [class.is-overdue]="group.key === 'overdue'">
+              {{ 'humano.onboarding.group.' + group.key | translate }}
+              <span class="hum-onb-phase__count tabular-nums">{{ group.tasks.length }}</span>
+            </h3>
+            <ul class="hum-onb-list">
+              @for (t of group.tasks; track t.taskId) {
+                <li class="hum-onb-item" [class.is-done]="t.completed" [class.is-overdue]="isOverdue(t)">
+                  <button
+                    type="button"
+                    class="hum-onb-check"
+                    [disabled]="t.completed || !canManage || !active()"
+                    [attr.aria-label]="
+                      (t.completed ? 'humano.onboarding.isDone' : 'humano.onboarding.markTask') | translate: { task: t.title }
+                    "
+                    (click)="openComplete(t)"
+                  >
+                    <lucide-icon name="check" [size]="14" />
+                  </button>
+                  <div class="hum-onb-item__body">
+                    <div class="hum-onb-item__head">
+                      <span class="hum-onb-item__title">{{ t.title }}</span>
+                      @if (t.completed) {
+                        <span class="hum-onb-pill hum-onb-pill--done">{{
+                          'humano.onboarding.doneOn' | translate: { date: (t.completionDate | date: 'MMM d') }
+                        }}</span>
+                      } @else if (t.dueDate) {
+                        <span class="hum-onb-pill" [class.hum-onb-pill--late]="isOverdue(t)" [title]="t.dueDate | date: 'fullDate'">{{
+                          dueLabel(t)
+                        }}</span>
+                      }
+                    </div>
+                    @if (t.description) {
+                      <p class="hum-onb-item__desc">{{ t.description }}</p>
+                    }
+                    <div class="hum-onb-item__owner">
+                      @if (t.assignedToName) {
+                        <hum-avatar [name]="t.assignedToName" size="xs" />{{ t.assignedToName }}
+                      } @else {
+                        <span class="hum-onb-item__team"><lucide-icon name="laptop" [size]="11" /></span
+                        >{{ 'humano.onboarding.hrOwned' | translate }}
+                      }
+                    </div>
+                    @if (t.completionNotes) {
+                      <p class="hum-onb-item__note">{{ t.completionNotes }}</p>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          </div>
+        } @empty {
+          <p class="hum-onb-muted">{{ 'humano.onboarding.noTasksForOwner' | translate }}</p>
+        }
+      </section>
+
+      <aside class="hum-onb-aside">
+        @if (p.processStatus === 'CANCELLED') {
+          <hum-alert tone="info" [title]="'humano.offboarding.cancelledTitle' | translate">{{
+            'humano.offboarding.cancelledBody' | translate
+          }}</hum-alert>
+        } @else if (p.processStatus === 'COMPLETED') {
+          <hum-alert tone="success" [title]="'humano.offboarding.completedTitle' | translate">{{
+            'humano.offboarding.completedBody' | translate: { name: p.employeeName }
+          }}</hum-alert>
+        } @else if (overdue().length) {
+          <section class="hum-onb-panel hum-onb-panel--attention">
+            <h2 class="hum-onb-panel__title">
+              <lucide-icon name="circle-alert" [size]="16" />{{ 'humano.onboarding.overdueTitle' | translate: { count: overdue().length } }}
+            </h2>
+            <ul class="hum-onb-owners">
+              @for (o of overdueByOwner(); track o.name) {
+                <li>
+                  <span>{{ o.name }}</span
+                  ><span class="tabular-nums">{{ o.count }}</span>
+                </li>
+              }
+            </ul>
+            @if (canManage) {
+              <hum-button variant="secondary" size="sm" icon="bell" [loading]="escalating()" (click)="escalate()">{{
+                'humano.onboarding.escalate' | translate
+              }}</hum-button>
+            }
+          </section>
+        }
+
+        <section class="hum-onb-panel">
+          <h2 class="hum-onb-panel__title">{{ 'humano.offboarding.departure' | translate }}</h2>
+          <dl class="hum-onb-dates">
+            <dt>{{ 'humano.offboarding.lastDay' | translate }}</dt>
+            <dd class="tabular-nums">{{ p.lastWorkingDate | date: 'EEE, MMM d' }}</dd>
+            @if (p.terminationReasonName) {
+              <dt>{{ 'humano.offboarding.terminationReason' | translate }}</dt>
+              <dd>{{ p.terminationReasonName }}</dd>
+            }
+            <dt>{{ 'humano.offboarding.exitInterviewShort' | translate }}</dt>
+            <dd>{{ (p.exitInterview ? 'humano.offboarding.yes' : 'humano.offboarding.no') | translate }}</dd>
+          </dl>
+          @if (p.offboardingReason) {
+            <p class="hum-off-reason">{{ p.offboardingReason }}</p>
+          }
+        </section>
+
+        <section class="hum-onb-panel">
+          <h2 class="hum-onb-panel__title">{{ 'humano.offboarding.settlement' | translate }}</h2>
+          <dl class="hum-onb-dates">
+            <dt>{{ 'humano.offboarding.expenses' | translate }}</dt>
+            <dd class="tabular-nums">{{ p.settlement.pendingExpenseReimbursements | money }}</dd>
+            <dt>{{ 'humano.offboarding.leavePayout' | translate }}</dt>
+            <dd class="hum-onb-muted">
+              {{
+                p.settlement.leaveEncashment !== null
+                  ? (p.settlement.leaveEncashment | money)
+                  : ('humano.offboarding.notTracked' | translate)
+              }}
+            </dd>
+            <dt>{{ 'humano.offboarding.overtime' | translate }}</dt>
+            <dd class="hum-onb-muted">
+              {{
+                p.settlement.pendingOvertimePay !== null
+                  ? (p.settlement.pendingOvertimePay | money)
+                  : ('humano.offboarding.notTracked' | translate)
+              }}
+            </dd>
+            <dt>
+              <strong>{{ 'humano.offboarding.total' | translate }}</strong>
+            </dt>
+            <dd class="tabular-nums">
+              <strong>{{ p.settlement.totalSettlement | money }}</strong>
+            </dd>
+          </dl>
+          <p class="hum-onb-ready__hint">{{ 'humano.offboarding.settlementHint' | translate }}</p>
+        </section>
+
+        <section class="hum-onb-panel">
+          <h2 class="hum-onb-panel__title">{{ 'humano.offboarding.handover' | translate }}</h2>
+          <ul class="hum-onb-ready">
+            @for (h of handover(); track h.key) {
+              <li [class.is-done]="h.done">
+                <lucide-icon [name]="h.icon" [size]="15" />
+                <span>{{ 'humano.offboarding.handoverItem.' + h.key | translate }}</span>
+                <lucide-icon class="hum-onb-ready__state" [name]="h.done ? 'circle-check' : 'circle'" [size]="15" />
+              </li>
+            }
+          </ul>
+        </section>
+      </aside>
+    </div>
+  }
+</div>
+
+<hum-dialog
+  [open]="completing() !== null"
+  [title]="'humano.onboarding.markDoneTitle' | translate"
+  [description]="completing()?.title ?? ''"
+  hasFooter
+  (closed)="completing.set(null)"
+>
+  <hum-form-field [label]="'humano.onboarding.note' | translate" controlId="off-note">
+    <hum-textarea
+      inputId="off-note"
+      [rows]="3"
+      [placeholder]="'humano.onboarding.notePlaceholder' | translate"
+      [ngModel]="note()"
+      (ngModelChange)="note.set($event)"
+    />
+  </hum-form-field>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="completing.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" (click)="complete()">{{
+      'humano.onboarding.markDone' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>
+
+<hum-dialog
+  [open]="cancelOpen()"
+  [title]="'humano.offboarding.cancelTitle' | translate"
+  [description]="(daysToLastDay() >= 0 ? 'humano.offboarding.cancelBody' : 'humano.offboarding.cancelBodyAfter') | translate"
+  hasFooter
+  (closed)="cancelOpen.set(false)"
+>
+  <hum-form-field [label]="'humano.onboarding.reason' | translate" controlId="off-cancel-reason" required>
+    <hum-textarea inputId="off-cancel-reason" [rows]="3" [ngModel]="cancelReason()" (ngModelChange)="cancelReason.set($event)" />
+  </hum-form-field>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="cancelOpen.set(false)">{{ 'humano.offboarding.keep' | translate }}</hum-button>
+    <hum-button variant="destructive" icon="ban" [loading]="saving()" [disabled]="!cancelReason().trim()" (click)="cancel()">{{
+      'humano.offboarding.cancel' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>

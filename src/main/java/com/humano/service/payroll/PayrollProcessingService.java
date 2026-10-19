@@ -1427,9 +1427,21 @@ public class PayrollProcessingService {
 
     private List<Employee> getEmployeesForScope(String scope, PayrollPeriod period) {
         if ("ALL".equals(scope)) {
+            // Working people, plus anyone who left during or after this period (their final pay).
             return employeeRepository.findAll(
-                (Specification<Employee>) (root, query, cb) ->
-                    root.get("status").in(com.humano.domain.enumeration.hr.EmployeeStatus.WORKING)
+                (Specification<Employee>) (root, query, cb) -> {
+                    var working = root.get("status").in(com.humano.domain.enumeration.hr.EmployeeStatus.WORKING);
+                    if (period == null || period.getStartDate() == null) {
+                        return working;
+                    }
+                    return cb.or(
+                        working,
+                        cb.and(
+                            cb.equal(root.get("status"), com.humano.domain.enumeration.hr.EmployeeStatus.TERMINATED),
+                            cb.greaterThanOrEqualTo(root.<LocalDate>get("endDate"), period.getStartDate())
+                        )
+                    );
+                }
             );
         }
         // Handle other scopes (UNIT, DEPARTMENT, etc.)

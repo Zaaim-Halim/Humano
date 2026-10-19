@@ -98,3 +98,13 @@ export type {
 export { addDays, daysBetween, localIsoDate } from './models/onboarding.model';
 export { TrainingService } from './services/training.service';
 export type { Training } from './models/training.model';
+
+// Offboarding
+export { OffboardingService } from './services/offboarding.service';
+export type {
+  OffboardingProcess,
+  OffboardingTask,
+  OffboardingProgress,
+  FinalSettlement,
+  InitiateOffboardingRequest,
+} from './models/offboarding.model';

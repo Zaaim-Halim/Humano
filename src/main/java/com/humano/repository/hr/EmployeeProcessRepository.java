@@ -74,6 +74,17 @@ public interface EmployeeProcessRepository extends JpaRepository<EmployeeProcess
     );
 
     /**
+     * Offboardings past their last working day whose employee is still marked OFFBOARDING —
+     * the daily job turns those into terminations (catching up on any missed day).
+     */
+    List<EmployeeProcess> findByProcessTypeAndStatusInAndDueDateBeforeAndEmployeeStatus(
+        EmployeeProcessType type,
+        List<EmployeeProcessStatus> statuses,
+        LocalDate date,
+        com.humano.domain.enumeration.hr.EmployeeStatus employeeStatus
+    );
+
+    /**
      * Find processes within a set of statuses.
      */
     Page<EmployeeProcess> findByStatusIn(List<EmployeeProcessStatus> statuses, Pageable pageable);

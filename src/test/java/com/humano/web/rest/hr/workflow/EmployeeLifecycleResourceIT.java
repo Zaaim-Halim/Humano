@@ -60,6 +60,7 @@ class EmployeeLifecycleResourceIT {
 
     private static final String ONBOARDING = "/api/hr/workflows/onboarding";
     private static final String CHECKLIST = "/api/hr/workflows/onboarding-checklist";
+    private static final String OFFBOARDING = "/api/hr/workflows/offboarding";
 
     @Autowired
     private MockMvc mvc;
@@ -262,6 +263,96 @@ class EmployeeLifecycleResourceIT {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.customized").value(true))
             .andExpect(jsonPath("$.defaultDays").value(14));
+    }
+
+    @Test
+    void theAdminOffboardsSomeoneAndCanCancelBeforeTheyLeave() throws Exception {
+        JsonNode started = offboard(LocalDate.now().plusDays(10));
+        String processId = started.get("processId").asText();
+        assertThat(started.get("startDate").asText()).isEqualTo(LocalDate.now().toString());
+        assertThat(started.get("offboardingReason").asText()).isEqualTo("Moving abroad");
+        assertThat(employees.findById(hire.getId()).orElseThrow().getStatus()).isEqualTo(EmployeeStatus.OFFBOARDING);
+
+        mvc
+            .perform(get(OFFBOARDING))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[?(@.processId == '" + processId + "')]").exists());
+
+        mvc
+            .perform(post(OFFBOARDING + "/" + processId + "/cancel").param("reason", "Decided to stay").with(csrf()))
+            .andExpect(status().isNoContent());
+        assertThat(employees.findById(hire.getId()).orElseThrow().getStatus()).isEqualTo(EmployeeStatus.ACTIVE);
+        mvc
+            .perform(get(OFFBOARDING).param("status", "CANCELLED"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[?(@.processId == '" + processId + "')].status").value("CANCELLED"));
+    }
+
+    @Test
+    void aLastDayInThePastEndsEmploymentAtOnce() throws Exception {
+        offboard(LocalDate.now().minusDays(1));
+
+        Employee left = employees.findById(hire.getId()).orElseThrow();
+        assertThat(left.getStatus()).isEqualTo(EmployeeStatus.TERMINATED);
+        assertThat(left.getEndDate()).isEqualTo(LocalDate.now().minusDays(1));
+        assertThat(left.isActivated()).isFalse();
+
+        // Someone who has left can't be offboarded again.
+        mvc
+            .perform(
+                post(OFFBOARDING).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(offboardingBody(LocalDate.now().plusDays(3)))
+            )
+            .andExpect(status().isBadRequest());
+
+        // Reinstating them on their profile clears the leaving date.
+        mvc
+            .perform(
+                put("/api/hr/employees/" + hire.getId())
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"status\":\"ACTIVE\"}")
+            )
+            .andExpect(status().isOk());
+        Employee back = employees.findById(hire.getId()).orElseThrow();
+        assertThat(back.getStatus()).isEqualTo(EmployeeStatus.ACTIVE);
+        assertThat(back.getEndDate()).isNull();
+    }
+
+    @Test
+    @WithMockUser(authorities = { "ROLE_EMPLOYEE" })
+    void aPlainEmployeeCannotOffboardAnyone() throws Exception {
+        mvc
+            .perform(
+                post(OFFBOARDING).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(offboardingBody(LocalDate.now().plusDays(3)))
+            )
+            .andExpect(status().isForbidden());
+        mvc.perform(get(OFFBOARDING)).andExpect(status().isForbidden());
+    }
+
+    private JsonNode offboard(LocalDate lastDay) throws Exception {
+        return read(
+            mvc
+                .perform(post(OFFBOARDING).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(offboardingBody(lastDay)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString()
+        );
+    }
+
+    private String offboardingBody(LocalDate lastDay) throws Exception {
+        return json.writeValueAsString(
+            Map.of(
+                "employeeId",
+                hire.getId().toString(),
+                "lastWorkingDate",
+                lastDay.toString(),
+                "reason",
+                "Moving abroad",
+                "conductExitInterview",
+                false
+            )
+        );
     }
 
     private JsonNode start(LocalDate targetDate) throws Exception {

@@ -534,9 +534,13 @@ public class EmployeeProfileService {
             employee.setEndDate(request.endDate());
         }
         if (request.status() != null) {
-            // Bringing someone back from terminated counts against the plan again.
+            // Bringing someone back from terminated counts against the plan again, and ends their
+            // leaving date unless a new one is given.
             if (employee.getStatus() == EmployeeStatus.TERMINATED && request.status() != EmployeeStatus.TERMINATED) {
                 checkEmployeeLimit();
+                if (request.endDate() == null) {
+                    employee.setEndDate(null);
+                }
             }
             employee.setStatus(request.status());
         }

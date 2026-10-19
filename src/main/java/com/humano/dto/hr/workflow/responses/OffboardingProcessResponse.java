@@ -20,8 +20,13 @@ public record OffboardingProcessResponse(
     WorkflowStatus workflowStatus,
     EmployeeProcessStatus processStatus,
     String currentState,
+    LocalDate startDate,
     LocalDate lastWorkingDate,
     String offboardingReason,
+    /** Termination reason from the company's list, if one was chosen. */
+    UUID terminationReasonId,
+    String terminationReasonName,
+    boolean exitInterview,
     int completionPercentage,
     List<OffboardingTaskResponse> tasks,
     OffboardingProgress progress,

@@ -13,8 +13,10 @@ import com.humano.dto.hr.workflow.responses.OnboardingProcessResponse;
 import com.humano.repository.hr.*;
 import com.humano.repository.payroll.EmployeeBenefitRepository;
 import com.humano.repository.shared.EmployeeRepository;
+import com.humano.repository.shared.PersistentTokenRepository;
 import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.billing.entitlement.FeatureCodes;
+import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.workflow.infrastructure.DeadlineMonitorService;
 import com.humano.service.hr.workflow.infrastructure.NotificationOrchestrationService;
@@ -93,8 +95,13 @@ public class EmployeeLifecycleWorkflowService {
     /** Workflow context key holding the id of the {@code EmployeeProcess} it drives. */
     public static final String CONTEXT_PROCESS_ID = "processId";
 
-    /** Workflow context key holding the employee's status before onboarding switched it to ONBOARDING. */
+    /** Workflow context key holding the employee's status before onboarding/offboarding switched it. */
     public static final String CONTEXT_STATUS_BEFORE = "employeeStatusBefore";
+
+    /** Offboarding workflow context keys: why they leave and the company termination reason. */
+    public static final String CONTEXT_REASON = "reason";
+    public static final String CONTEXT_TERMINATION_REASON_ID = "terminationReasonId";
+    public static final String CONTEXT_EXIT_INTERVIEW = "conductExitInterview";
 
     // Statuses that indicate an in-flight process (used for idempotency checks).
     private static final List<EmployeeProcessStatus> ACTIVE_PROCESS_STATUSES = List.of(
@@ -117,6 +124,8 @@ public class EmployeeLifecycleWorkflowService {
     private final OnboardingChecklistService checklistService;
     private final TrainingRepository trainingRepository;
     private final EntitlementService entitlementService;
+    private final TerminationReasonRepository terminationReasonRepository;
+    private final PersistentTokenRepository persistentTokenRepository;
 
     public EmployeeLifecycleWorkflowService(
         WorkflowStateManager workflowStateManager,
@@ -132,7 +141,9 @@ public class EmployeeLifecycleWorkflowService {
         ExpenseClaimRepository expenseClaimRepository,
         OnboardingChecklistService checklistService,
         TrainingRepository trainingRepository,
-        EntitlementService entitlementService
+        EntitlementService entitlementService,
+        TerminationReasonRepository terminationReasonRepository,
+        PersistentTokenRepository persistentTokenRepository
     ) {
         this.workflowStateManager = workflowStateManager;
         this.notificationService = notificationService;
@@ -148,6 +159,8 @@ public class EmployeeLifecycleWorkflowService {
         this.checklistService = checklistService;
         this.trainingRepository = trainingRepository;
         this.entitlementService = entitlementService;
+        this.terminationReasonRepository = terminationReasonRepository;
+        this.persistentTokenRepository = persistentTokenRepository;
     }
 
     // ==================== ONBOARDING ====================
@@ -378,6 +391,7 @@ public class EmployeeLifecycleWorkflowService {
             .ifPresent(existing -> {
                 throw new BadRequestAlertException("Active offboarding process already exists for employee", "process", "duplicate");
             });
+        validateOffboardingStart(employee, request);
 
         // Create workflow context — caller-supplied context is overlaid first
         // so trusted keys cannot be overridden.
@@ -385,9 +399,12 @@ public class EmployeeLifecycleWorkflowService {
         if (request.additionalContext() != null) context.putAll(request.additionalContext());
         context.put("employeeId", request.employeeId().toString());
         context.put("lastWorkingDate", request.lastWorkingDate().toString());
-        context.put("reason", request.reason());
+        context.put(CONTEXT_REASON, request.reason());
         context.put("offboardingType", request.offboardingType());
-        context.put("conductExitInterview", request.conductExitInterview());
+        context.put(CONTEXT_EXIT_INTERVIEW, request.conductExitInterview());
+        if (request.terminationReasonId() != null) {
+            context.put(CONTEXT_TERMINATION_REASON_ID, request.terminationReasonId().toString());
+        }
 
         WorkflowInstance workflow = workflowStateManager.createWorkflow(
             WorkflowType.OFFBOARDING,
@@ -400,6 +417,7 @@ public class EmployeeLifecycleWorkflowService {
         // Create employee process
         EmployeeProcess process = createOffboardingProcess(employee, request, workflow);
         workflowStateManager.updateContext(workflow.getId(), CONTEXT_PROCESS_ID, process.getId().toString());
+        markOffboarding(employee, workflow);
 
         // Create offboarding tasks
         createOffboardingTasks(process, request);
@@ -422,8 +440,8 @@ public class EmployeeLifecycleWorkflowService {
             employee.getManager() != null ? employee.getManager().getId() : null
         );
 
-        // Process pending requests
-        processPendingRequests(employee);
+        // Leave that would fall after they've gone is withdrawn
+        processPendingRequests(employee, request.lastWorkingDate());
 
         // Notify employee
         notificationService.sendReminder(
@@ -446,6 +464,9 @@ public class EmployeeLifecycleWorkflowService {
         }
 
         log.info("Offboarding initiated successfully for employee {} with workflow {}", request.employeeId(), workflow.getId());
+
+        // A last working day already in the past means they have left: terminate now.
+        terminateIfPastLastDay(process);
 
         return getOffboardingStatus(process.getId());
     }
@@ -701,68 +722,93 @@ public class EmployeeLifecycleWorkflowService {
         return processRepository.save(process);
     }
 
+    /**
+     * Creates the leaver's checklist. Each task is written as "N days before the last working
+     * day" on a {@value #OFFBOARDING_BASELINE_DAYS}-day notice period and scaled to this
+     * offboarding's own start → last-day window, so a short notice keeps the same order without
+     * tasks falling due before it started.
+     */
     private void createOffboardingTasks(EmployeeProcess process, InitiateOffboardingRequest request) {
-        LocalDate lastDate = request.lastWorkingDate();
         Employee employee = process.getEmployee();
 
-        // Task 1: Knowledge transfer documentation
         createTask(
             process,
             "Knowledge Transfer Documentation",
             "Document all ongoing projects, processes, and key contacts",
-            lastDate.minusDays(14),
+            beforeLastDay(process, 14),
             employee
         );
-
-        // Task 2: Project handover
         createTask(
             process,
             "Project Handover",
             "Complete handover of all assigned projects to designated colleagues",
-            lastDate.minusDays(7),
+            beforeLastDay(process, 7),
             employee
         );
-
-        // Task 3: Return company assets
-        createTask(process, "Return Company Assets", "Return laptop, ID card, keys, and other company property", lastDate, employee);
-
-        // Task 4: Clear pending expenses
+        createTask(
+            process,
+            "Return Company Assets",
+            "Return laptop, ID card, keys, and other company property",
+            beforeLastDay(process, 0),
+            employee
+        );
         createTask(
             process,
             "Submit Pending Expenses",
             "Submit all pending expense claims for reimbursement",
-            lastDate.minusDays(10),
+            beforeLastDay(process, 10),
             employee
         );
-
-        // Task 5: Benefits termination review
-        createTask(process, "Benefits Termination Review", "Review benefits termination and COBRA options", lastDate.minusDays(7), null);
-
-        // Task 6: IT access revocation
-        createTask(process, "IT Access Revocation", "Revoke all system access and collect credentials", lastDate, null);
-
-        // Task 7: Exit interview
+        createTask(
+            process,
+            "Benefits Termination Review",
+            "Review when benefits end and any options to continue them",
+            beforeLastDay(process, 7),
+            null
+        );
+        createTask(process, "IT Access Revocation", "Revoke all system access and collect credentials", beforeLastDay(process, 0), null);
         if (request.conductExitInterview()) {
             createTask(
                 process,
                 "Exit Interview",
                 "Conduct exit interview to gather feedback",
-                lastDate.minusDays(3),
+                beforeLastDay(process, 3),
                 request.exitInterviewerId() != null ? employeeRepository.findById(request.exitInterviewerId()).orElse(null) : null
             );
         }
-
-        // Task 8: Final paycheck processing
-        createTask(process, "Final Paycheck Processing", "Process final paycheck including any settlements", lastDate, null);
-
-        // Task 9: Send farewell communication
+        createTask(
+            process,
+            "Final Paycheck Processing",
+            "Process final paycheck including any settlements",
+            beforeLastDay(process, 0),
+            null
+        );
         createTask(
             process,
             "Farewell Communication",
             "Send farewell email to team and relevant stakeholders",
-            lastDate.minusDays(1),
+            beforeLastDay(process, 1),
             employee
         );
+    }
+
+    /** Notice period the offboarding checklist's "days before the last day" are written for. */
+    static final int OFFBOARDING_BASELINE_DAYS = 30;
+
+    /**
+     * Due date for a task {@code daysBefore} the last working day on a
+     * {@value #OFFBOARDING_BASELINE_DAYS}-day notice, scaled to this process and kept
+     * within its start → last-day window (a backdated last day puts everything on that day).
+     */
+    private static LocalDate beforeLastDay(EmployeeProcess process, int daysBefore) {
+        LocalDate lastDay = process.getDueDate();
+        long window = ChronoUnit.DAYS.between(process.getStartDate(), lastDay);
+        if (window <= 0) {
+            return lastDay;
+        }
+        int fromStart = Math.max(0, OFFBOARDING_BASELINE_DAYS - daysBefore);
+        long offset = Math.round(((double) fromStart * window) / OFFBOARDING_BASELINE_DAYS);
+        return process.getStartDate().plusDays(Math.min(window, Math.max(0, offset)));
     }
 
     private EmployeeProcessTask createTask(
@@ -834,6 +880,156 @@ public class EmployeeLifecycleWorkflowService {
     }
 
     /**
+     * Cancel an offboarding. Someone still OFFBOARDING gets back the status they had before it
+     * started; someone already terminated (past their last day) stays terminated — reinstating
+     * them is a decision for their profile, not a side effect of closing the checklist.
+     */
+    public void cancelOffboarding(UUID processId, String reason) {
+        log.info("Cancelling offboarding process {} with reason: {}", processId, reason);
+
+        EmployeeProcess process = processRepository
+            .findById(processId)
+            .orElseThrow(() -> EntityNotFoundException.create("EmployeeProcess", processId));
+        if (process.getProcessType() != EmployeeProcessType.OFFBOARDING) {
+            throw new BusinessRuleViolationException("PROCESS_INVALID_TYPE", "Process is not an offboarding process");
+        }
+        if (!ACTIVE_PROCESS_STATUSES.contains(process.getStatus())) {
+            throw new BusinessRuleViolationException(
+                "PROCESS_INVALID_STATUS",
+                "Cannot cancel a process that is already " + process.getStatus()
+            );
+        }
+
+        process.setStatus(EmployeeProcessStatus.CANCELLED);
+        process.setNotes(reason);
+        processRepository.save(process);
+
+        WorkflowInstance workflow = findWorkflowForProcess(process);
+        endProcessStatus(process.getEmployee(), EmployeeStatus.OFFBOARDING, statusBefore(workflow));
+        if (workflow != null && isActive(workflow)) {
+            workflowStateManager.cancelWorkflow(workflow.getId(), reason);
+        }
+        log.info("Cancelled offboarding process {}", processId);
+    }
+
+    /**
+     * Daily: everyone whose last working day has passed and who is still OFFBOARDING becomes
+     * TERMINATED (see {@link #terminateIfPastLastDay}). Selecting "before today" rather than
+     * "yesterday" lets a missed run catch up. Runs within the current tenant.
+     *
+     * @return how many employees were terminated
+     */
+    public int terminateDueOffboardings() {
+        List<EmployeeProcessStatus> notCancelled = List.of(
+            EmployeeProcessStatus.PLANNED,
+            EmployeeProcessStatus.IN_PROGRESS,
+            EmployeeProcessStatus.DELAYED,
+            EmployeeProcessStatus.COMPLETED
+        );
+        int terminated = 0;
+        for (EmployeeProcess process : processRepository.findByProcessTypeAndStatusInAndDueDateBeforeAndEmployeeStatus(
+            EmployeeProcessType.OFFBOARDING,
+            notCancelled,
+            LocalDate.now(),
+            EmployeeStatus.OFFBOARDING
+        )) {
+            if (terminateIfPastLastDay(process)) {
+                terminated++;
+            }
+        }
+        return terminated;
+    }
+
+    /**
+     * Ends employment once the last working day is over: an employee still OFFBOARDING becomes
+     * TERMINATED, with the last working day as end date (unless one is already set) and the
+     * chosen termination reason and stated reason recorded. Their account is deactivated (sign-in
+     * and "remember me" refused) and their remembered sign-ins are removed. Idempotent; leaves a
+     * status changed by hand (or a cancelled offboarding) alone.
+     *
+     * @return whether the employee was terminated by this call
+     */
+    boolean terminateIfPastLastDay(EmployeeProcess process) {
+        Employee employee = process.getEmployee();
+        LocalDate lastDay = process.getDueDate();
+        if (
+            process.getProcessType() != EmployeeProcessType.OFFBOARDING ||
+            process.getStatus() == EmployeeProcessStatus.CANCELLED ||
+            lastDay == null ||
+            !lastDay.isBefore(LocalDate.now()) ||
+            employee.getStatus() != EmployeeStatus.OFFBOARDING
+        ) {
+            return false;
+        }
+        WorkflowInstance workflow = findWorkflowForProcess(process);
+        Map<String, Object> context = workflow != null && workflow.getContext() != null ? workflow.getContext() : Map.of();
+
+        employee.setStatus(EmployeeStatus.TERMINATED);
+        employee.setActivated(false);
+        persistentTokenRepository.deleteAll(persistentTokenRepository.findByUser(employee));
+        if (employee.getEndDate() == null) {
+            employee.setEndDate(lastDay);
+        }
+        Object reasonId = context.get(CONTEXT_TERMINATION_REASON_ID);
+        if (reasonId != null && employee.getTerminationReason() == null) {
+            terminationReasonRepository.findById(UUID.fromString(reasonId.toString())).ifPresent(employee::setTerminationReason);
+        }
+        Object reason = context.get(CONTEXT_REASON);
+        if (reason != null && (employee.getTerminationNotes() == null || employee.getTerminationNotes().isBlank())) {
+            employee.setTerminationNotes(reason.toString());
+        }
+        employeeRepository.save(employee);
+        log.info("Employee {} terminated after their last working day {}", employee.getId(), lastDay);
+        return true;
+    }
+
+    /**
+     * Refuses an offboarding for someone who has already left, or that names a termination
+     * reason or exit interviewer that doesn't exist.
+     */
+    private void validateOffboardingStart(Employee employee, InitiateOffboardingRequest request) {
+        if (employee.getStatus() == EmployeeStatus.TERMINATED) {
+            throw new BusinessRuleViolationException("OFFBOARDING_ALREADY_TERMINATED", "This employee has already left");
+        }
+        if (request.terminationReasonId() != null && !terminationReasonRepository.existsById(request.terminationReasonId())) {
+            throw new BusinessRuleViolationException(
+                "OFFBOARDING_UNKNOWN_REASON",
+                "Unknown termination reason " + request.terminationReasonId()
+            );
+        }
+        if (
+            request.conductExitInterview() &&
+            request.exitInterviewerId() != null &&
+            !employeeRepository.existsById(request.exitInterviewerId())
+        ) {
+            throw new BusinessRuleViolationException(
+                "OFFBOARDING_UNKNOWN_INTERVIEWER",
+                "Unknown exit interviewer " + request.exitInterviewerId()
+            );
+        }
+    }
+
+    /**
+     * Offboarding starts: the employee becomes OFFBOARDING (still employed — paid and on team
+     * views — until their last day). The previous status is kept on the workflow so a
+     * cancellation can restore it. An onboarding still running is left as it is.
+     */
+    private void markOffboarding(Employee employee, WorkflowInstance workflow) {
+        EmployeeStatus before = employee.getStatus();
+        workflowStateManager.updateContext(
+            workflow.getId(),
+            CONTEXT_STATUS_BEFORE,
+            (before == null || before == EmployeeStatus.ONBOARDING || before == EmployeeStatus.OFFBOARDING
+                    ? EmployeeStatus.ACTIVE
+                    : before).name()
+        );
+        if (before != EmployeeStatus.OFFBOARDING) {
+            employee.setStatus(EmployeeStatus.OFFBOARDING);
+            employeeRepository.save(employee);
+        }
+    }
+
+    /**
      * Onboarding starts: an active employee (or one with no status yet) becomes ONBOARDING; the
      * previous status is kept on the workflow so a cancellation can restore it. Inactive or
      * terminated employees keep their status.
@@ -859,7 +1055,12 @@ public class EmployeeLifecycleWorkflowService {
      * {@code next}. A status HR changed by hand in the meantime is left alone.
      */
     private void endOnboardingStatus(Employee employee, EmployeeStatus next) {
-        if (employee.getStatus() == EmployeeStatus.ONBOARDING) {
+        endProcessStatus(employee, EmployeeStatus.ONBOARDING, next);
+    }
+
+    /** Moves an employee still in {@code expected} to {@code next}; any other status is left alone. */
+    private void endProcessStatus(Employee employee, EmployeeStatus expected, EmployeeStatus next) {
+        if (employee.getStatus() == expected) {
             employee.setStatus(next);
             employeeRepository.save(employee);
         }
@@ -932,12 +1133,13 @@ public class EmployeeLifecycleWorkflowService {
         };
     }
 
-    private void processPendingRequests(Employee employee) {
-        // Cancel pending leave requests
+    /** Withdraws pending leave that would start after the last working day. */
+    private void processPendingRequests(Employee employee, LocalDate lastWorkingDate) {
         leaveRequestRepository
             .findByEmployeeId(employee.getId(), Pageable.unpaged())
             .stream()
             .filter(lr -> lr.getStatus() == LeaveStatus.PENDING)
+            .filter(lr -> lr.getStartDate() == null || lr.getStartDate().isAfter(lastWorkingDate))
             .forEach(lr -> {
                 lr.setStatus(LeaveStatus.CANCELED);
                 leaveRequestRepository.save(lr);
@@ -1081,6 +1283,13 @@ public class EmployeeLifecycleWorkflowService {
 
         OffboardingProcessResponse.FinalSettlementSummary settlement = calculateFinalSettlement(employee.getId());
 
+        Map<String, Object> context = workflow != null && workflow.getContext() != null ? workflow.getContext() : Map.of();
+        Object reason = context.get(CONTEXT_REASON);
+        Object reasonId = context.get(CONTEXT_TERMINATION_REASON_ID);
+        TerminationReason terminationReason = reasonId != null
+            ? terminationReasonRepository.findById(UUID.fromString(reasonId.toString())).orElse(null)
+            : null;
+
         return new OffboardingProcessResponse(
             process.getId(),
             workflow != null ? workflow.getId() : null,
@@ -1090,8 +1299,12 @@ public class EmployeeLifecycleWorkflowService {
             workflow != null ? workflow.getStatus() : fallbackWorkflowStatus(process),
             process.getStatus(),
             workflow != null ? workflow.getCurrentState() : STATE_EXIT_TASKS,
+            process.getStartDate(),
             process.getDueDate(),
-            process.getNotes(),
+            reason != null ? reason.toString() : null,
+            terminationReason != null ? terminationReason.getId() : null,
+            terminationReason != null ? terminationReason.getName() : null,
+            Boolean.TRUE.equals(context.get(CONTEXT_EXIT_INTERVIEW)),
             process.getCompletionPercentage(),
             taskResponses,
             progress,

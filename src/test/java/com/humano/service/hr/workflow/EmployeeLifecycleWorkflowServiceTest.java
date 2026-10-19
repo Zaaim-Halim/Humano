@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 import com.humano.domain.enumeration.hr.EmployeeProcessStatus;
 import com.humano.domain.enumeration.hr.EmployeeProcessType;
 import com.humano.domain.enumeration.hr.EmployeeStatus;
+import com.humano.domain.enumeration.hr.LeaveStatus;
 import com.humano.domain.enumeration.hr.OnboardingTaskLink;
 import com.humano.domain.enumeration.hr.OnboardingTaskOwner;
 import com.humano.domain.enumeration.hr.TrainingStatus;
@@ -23,14 +24,19 @@ import com.humano.domain.enumeration.hr.WorkflowType;
 import com.humano.domain.hr.EmployeeProcess;
 import com.humano.domain.hr.EmployeeProcessTask;
 import com.humano.domain.hr.EmployeeTraining;
+import com.humano.domain.hr.LeaveRequest;
 import com.humano.domain.hr.OnboardingSettings;
 import com.humano.domain.hr.OnboardingTaskTemplate;
+import com.humano.domain.hr.TerminationReason;
 import com.humano.domain.hr.Training;
 import com.humano.domain.hr.WorkflowInstance;
 import com.humano.domain.shared.Employee;
+import com.humano.domain.shared.PersistentToken;
 import com.humano.dto.hr.workflow.requests.CompleteTaskRequest;
+import com.humano.dto.hr.workflow.requests.InitiateOffboardingRequest;
 import com.humano.dto.hr.workflow.requests.InitiateOnboardingRequest;
 import com.humano.dto.hr.workflow.responses.EmployeeProcessSummary;
+import com.humano.dto.hr.workflow.responses.OffboardingProcessResponse;
 import com.humano.dto.hr.workflow.responses.OnboardingProcessResponse;
 import com.humano.repository.hr.EmployeeDocumentRepository;
 import com.humano.repository.hr.EmployeeProcessRepository;
@@ -40,11 +46,14 @@ import com.humano.repository.hr.ExpenseClaimRepository;
 import com.humano.repository.hr.LeaveRequestRepository;
 import com.humano.repository.hr.OnboardingSettingsRepository;
 import com.humano.repository.hr.OnboardingTaskTemplateRepository;
+import com.humano.repository.hr.TerminationReasonRepository;
 import com.humano.repository.hr.TrainingRepository;
 import com.humano.repository.payroll.EmployeeBenefitRepository;
 import com.humano.repository.shared.EmployeeRepository;
+import com.humano.repository.shared.PersistentTokenRepository;
 import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.billing.entitlement.FeatureCodes;
+import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.hr.workflow.infrastructure.DeadlineMonitorService;
 import com.humano.service.hr.workflow.infrastructure.NotificationOrchestrationService;
 import com.humano.service.hr.workflow.infrastructure.WorkflowStateManager;
@@ -78,6 +87,9 @@ class EmployeeLifecycleWorkflowServiceTest {
     private final OnboardingTaskTemplateRepository templates = mock(OnboardingTaskTemplateRepository.class);
     private final TrainingRepository trainingCatalog = mock(TrainingRepository.class);
     private final EntitlementService entitlements = mock(EntitlementService.class);
+    private final LeaveRequestRepository leave = mock(LeaveRequestRepository.class);
+    private final TerminationReasonRepository terminationReasons = mock(TerminationReasonRepository.class);
+    private final PersistentTokenRepository rememberedSignIns = mock(PersistentTokenRepository.class);
     private final EmployeeLifecycleWorkflowService service = new EmployeeLifecycleWorkflowService(
         workflows,
         mock(NotificationOrchestrationService.class),
@@ -88,11 +100,13 @@ class EmployeeLifecycleWorkflowServiceTest {
         trainings,
         benefits,
         documents,
-        mock(LeaveRequestRepository.class),
+        leave,
         expenses,
         new OnboardingChecklistService(settings, templates),
         trainingCatalog,
-        entitlements
+        entitlements,
+        terminationReasons,
+        rememberedSignIns
     );
 
     private static final LocalDate START = LocalDate.of(2026, 10, 1);
@@ -126,11 +140,12 @@ class EmployeeLifecycleWorkflowServiceTest {
         when(tasks.findById(any())).thenAnswer(inv ->
             saved.getTasks().stream().filter(t -> t.getId().equals(inv.getArgument(0))).findFirst()
         );
-        when(workflows.createWorkflow(eq(WorkflowType.ONBOARDING), eq(nadia.getId()), anyString(), any(), isNull())).thenAnswer(inv -> {
+        when(workflows.createWorkflow(any(), eq(nadia.getId()), anyString(), any(), isNull())).thenAnswer(inv -> {
             WorkflowInstance w = new WorkflowInstance();
             w.setId(UUID.randomUUID());
-            w.setWorkflowType(WorkflowType.ONBOARDING);
+            w.setWorkflowType(inv.getArgument(0));
             w.setStatus(WorkflowStatus.DRAFT);
+            w.setContext(new HashMap<>(inv.<Map<String, Object>>getArgument(3)));
             nadiasWorkflows.add(w);
             return w;
         });
@@ -145,6 +160,8 @@ class EmployeeLifecycleWorkflowServiceTest {
             return w;
         });
         when(workflows.findByEntityId(nadia.getId())).thenReturn(nadiasWorkflows);
+        when(leave.findByEmployeeId(eq(nadia.getId()), any())).thenReturn(Page.empty());
+        when(expenses.findByEmployeeId(eq(nadia.getId()), any())).thenReturn(Page.empty());
     }
 
     @Test
@@ -412,6 +429,163 @@ class EmployeeLifecycleWorkflowServiceTest {
         assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.TERMINATED);
     }
 
+    // ==================== Offboarding ====================
+
+    @Test
+    void startingOffboardingMarksTheEmployeeOffboarding() {
+        OffboardingProcessResponse response = service.initiateOffboarding(offboard(LocalDate.now().plusDays(20), null));
+
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.OFFBOARDING);
+        assertThat(response.startDate()).isEqualTo(LocalDate.now());
+        assertThat(response.offboardingReason()).isEqualTo("Moving abroad");
+        assertThat(nadiasWorkflows.get(0).getContext()).containsEntry(EmployeeLifecycleWorkflowService.CONTEXT_STATUS_BEFORE, "ACTIVE");
+    }
+
+    @Test
+    void aShortNoticeKeepsEveryTaskWithinTheNoticePeriod() {
+        LocalDate lastDay = LocalDate.now().plusDays(5);
+
+        OffboardingProcessResponse response = service.initiateOffboarding(offboard(lastDay, null));
+
+        assertThat(response.tasks()).isNotEmpty();
+        assertThat(response.tasks()).allSatisfy(t -> assertThat(t.dueDate()).isBetween(LocalDate.now(), lastDay));
+        assertThat(response.tasks()).anySatisfy(t -> assertThat(t.dueDate()).isEqualTo(lastDay));
+    }
+
+    @Test
+    void aLastDayInThePastTerminatesRightAway() {
+        TerminationReason resignation = new TerminationReason();
+        resignation.setId(UUID.randomUUID());
+        resignation.setName("Resignation");
+        when(terminationReasons.existsById(resignation.getId())).thenReturn(true);
+        when(terminationReasons.findById(resignation.getId())).thenReturn(Optional.of(resignation));
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+
+        OffboardingProcessResponse response = service.initiateOffboarding(offboard(yesterday, resignation.getId()));
+
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.TERMINATED);
+        assertThat(nadia.isActivated()).isFalse();
+        assertThat(nadia.getEndDate()).isEqualTo(yesterday);
+        assertThat(nadia.getTerminationReason()).isSameAs(resignation);
+        assertThat(nadia.getTerminationNotes()).isEqualTo("Moving abroad");
+        assertThat(response.terminationReasonName()).isEqualTo("Resignation");
+    }
+
+    @Test
+    void theDailyJobTerminatesOnlyAfterTheLastDayAndOnlyOnce() {
+        service.initiateOffboarding(offboard(LocalDate.now().plusDays(3), null));
+        when(processes.findByProcessTypeAndStatusInAndDueDateBeforeAndEmployeeStatus(any(), any(), any(), any())).thenAnswer(inv ->
+            List.of(saved)
+        );
+
+        assertThat(service.terminateDueOffboardings()).isZero(); // last day still ahead
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.OFFBOARDING);
+
+        saved.setDueDate(LocalDate.now().minusDays(2)); // a missed run: two days later
+        assertThat(service.terminateDueOffboardings()).isEqualTo(1);
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.TERMINATED);
+        assertThat(nadia.getEndDate()).isEqualTo(LocalDate.now().minusDays(2));
+
+        assertThat(service.terminateDueOffboardings()).isZero(); // idempotent
+    }
+
+    @Test
+    void terminationDeactivatesTheAccountAndForgetsRememberedSignIns() {
+        PersistentToken laptop = new PersistentToken();
+        laptop.setSeries("laptop");
+        when(rememberedSignIns.findByUser(nadia)).thenReturn(List.of(laptop));
+
+        service.initiateOffboarding(offboard(LocalDate.now().minusDays(1), null));
+
+        assertThat(nadia.isActivated()).isFalse();
+        verify(rememberedSignIns).deleteAll(List.of(laptop));
+    }
+
+    @Test
+    void anOffboardingThatIsCancelledBeforeTheLastDayKeepsTheAccountActive() {
+        OffboardingProcessResponse started = service.initiateOffboarding(offboard(LocalDate.now().plusDays(5), null));
+        service.cancelOffboarding(started.processId(), "Decided to stay");
+
+        assertThat(nadia.isActivated()).isTrue();
+        verify(rememberedSignIns, never()).deleteAll(any());
+    }
+
+    @Test
+    void theJobLeavesAStatusChangedByHandAlone() {
+        service.initiateOffboarding(offboard(LocalDate.now().plusDays(3), null));
+        nadia.setStatus(EmployeeStatus.INACTIVE);
+        saved.setDueDate(LocalDate.now().minusDays(1));
+        when(processes.findByProcessTypeAndStatusInAndDueDateBeforeAndEmployeeStatus(any(), any(), any(), any())).thenReturn(
+            List.of(saved)
+        );
+
+        assertThat(service.terminateDueOffboardings()).isZero();
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.INACTIVE);
+    }
+
+    @Test
+    void cancellingBeforeTheLastDayRestoresTheStatus() {
+        OffboardingProcessResponse started = service.initiateOffboarding(offboard(LocalDate.now().plusDays(10), null));
+
+        service.cancelOffboarding(started.processId(), "Decided to stay");
+
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.ACTIVE);
+        assertThat(saved.getStatus()).isEqualTo(EmployeeProcessStatus.CANCELLED);
+    }
+
+    @Test
+    void cancellingAfterTheyLeftKeepsThemTerminated() {
+        OffboardingProcessResponse started = service.initiateOffboarding(offboard(LocalDate.now().minusDays(1), null));
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.TERMINATED);
+
+        service.cancelOffboarding(started.processId(), "Checklist no longer needed");
+
+        assertThat(nadia.getStatus()).isEqualTo(EmployeeStatus.TERMINATED);
+    }
+
+    @Test
+    void offboardingIsRefusedForLeaversAndUnknownReferences() {
+        nadia.setStatus(EmployeeStatus.TERMINATED);
+        assertThatThrownBy(() -> service.initiateOffboarding(offboard(LocalDate.now().plusDays(5), null)))
+            .isInstanceOf(BusinessRuleViolationException.class)
+            .hasMessageContaining("already left");
+
+        nadia.setStatus(EmployeeStatus.ACTIVE);
+        UUID unknown = UUID.randomUUID();
+        assertThatThrownBy(() -> service.initiateOffboarding(offboard(LocalDate.now().plusDays(5), unknown)))
+            .isInstanceOf(BusinessRuleViolationException.class)
+            .hasMessageContaining("termination reason");
+
+        InitiateOffboardingRequest withInterviewer = new InitiateOffboardingRequest(
+            nadia.getId(),
+            LocalDate.now().plusDays(5),
+            "Moving abroad",
+            null,
+            null,
+            true,
+            UUID.randomUUID(),
+            null,
+            null
+        );
+        assertThatThrownBy(() -> service.initiateOffboarding(withInterviewer))
+            .isInstanceOf(BusinessRuleViolationException.class)
+            .hasMessageContaining("exit interviewer");
+        verify(processes, never()).save(any());
+    }
+
+    @Test
+    void onlyLeaveStartingAfterTheLastDayIsWithdrawn() {
+        LocalDate lastDay = LocalDate.now().plusDays(14);
+        LeaveRequest before = pendingLeave(lastDay.minusDays(3));
+        LeaveRequest after = pendingLeave(lastDay.plusDays(1));
+        when(leave.findByEmployeeId(eq(nadia.getId()), any())).thenReturn(new PageImpl<>(List.of(before, after)));
+
+        service.initiateOffboarding(offboard(lastDay, null));
+
+        assertThat(before.getStatus()).isEqualTo(LeaveStatus.PENDING);
+        assertThat(after.getStatus()).isEqualTo(LeaveStatus.CANCELED);
+    }
+
     @Test
     void aTargetBeforeTheStartIsRejected() {
         assertThatThrownBy(() -> service.initiateOnboarding(onboard(START, START.minusDays(1))))
@@ -441,6 +615,28 @@ class EmployeeLifecycleWorkflowServiceTest {
 
     private InitiateOnboardingRequest onboard(LocalDate startDate, LocalDate targetDate, List<UUID> trainingIds) {
         return new InitiateOnboardingRequest(nadia.getId(), startDate, targetDate, trainingIds, null, null);
+    }
+
+    private InitiateOffboardingRequest offboard(LocalDate lastDay, UUID terminationReasonId) {
+        return new InitiateOffboardingRequest(
+            nadia.getId(),
+            lastDay,
+            "Moving abroad",
+            "RESIGNATION",
+            terminationReasonId,
+            false,
+            null,
+            null,
+            null
+        );
+    }
+
+    private static LeaveRequest pendingLeave(LocalDate startDate) {
+        LeaveRequest request = new LeaveRequest();
+        request.setStartDate(startDate);
+        request.setEndDate(startDate.plusDays(2));
+        request.setStatus(LeaveStatus.PENDING);
+        return request;
     }
 
     private static Training training(String name) {

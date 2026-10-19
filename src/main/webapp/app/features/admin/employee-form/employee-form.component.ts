@@ -539,6 +539,15 @@ export default class EmployeeFormComponent implements OnInit {
     };
   }
 
+  /** Bringing a terminated employee back clears their leaving date; switching back restores it. */
+  private clearEndDateOnReinstate(leftOn: string): void {
+    this.form.controls.status.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(status => {
+      const endDate = this.form.controls.endDate;
+      if (status !== EmployeeStatus.TERMINATED && endDate.value === leftOn) endDate.setValue('');
+      else if (status === EmployeeStatus.TERMINATED && !endDate.value) endDate.setValue(leftOn);
+    });
+  }
+
   private loadProfile(id: string): void {
     this.loading.set(true);
     this.loadError.set(null);
@@ -575,6 +584,7 @@ export default class EmployeeFormComponent implements OnInit {
           // Position and department change through Change position (dated, kept in the history).
           this.form.controls.positionId.disable();
           this.form.controls.departmentId.disable();
+          if (p.status === EmployeeStatus.TERMINATED) this.clearEndDateOnReinstate(p.endDate?.slice(0, 10) ?? '');
           this.profile.set(p);
           this.refCurrent.set({
             employmentType: p.employmentType?.id ?? undefined,

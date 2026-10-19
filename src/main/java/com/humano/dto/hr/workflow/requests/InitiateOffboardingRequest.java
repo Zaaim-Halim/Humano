@@ -17,6 +17,9 @@ public record InitiateOffboardingRequest(
 
     String offboardingType, // RESIGNATION, TERMINATION, RETIREMENT, etc.
 
+    /** Termination reason from the company's list (Settings → Lists); recorded on the employee when they leave. */
+    UUID terminationReasonId,
+
     boolean conductExitInterview,
 
     UUID exitInterviewerId,

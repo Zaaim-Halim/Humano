@@ -237,6 +237,20 @@ const routes: Routes = [
         data: { permissions: [Permission.VIEW_ONBOARDING_PROGRESS, Permission.MANAGE_ONBOARDING] },
       },
       {
+        path: 'offboarding',
+        title: 'humano.nav.offboarding',
+        loadComponent: () => import('./features/admin/offboarding/offboarding.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.VIEW_OFFBOARDING, Permission.MANAGE_OFFBOARDING] },
+      },
+      {
+        path: 'offboarding/:id',
+        title: 'humano.nav.offboarding',
+        loadComponent: () => import('./features/admin/offboarding-detail/offboarding-detail.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.VIEW_OFFBOARDING, Permission.MANAGE_OFFBOARDING] },
+      },
+      {
         path: 'org',
         title: 'humano.nav.org',
         loadComponent: () => import('./features/admin/org-units/org-units.component'),

@@ -96,6 +96,14 @@ export const SHELL_NAV: ShellNavGroup[] = [
         permissions: [Permission.VIEW_ONBOARDING_PROGRESS, Permission.MANAGE_ONBOARDING],
       },
       {
+        id: 'offboarding',
+        labelKey: 'humano.nav.offboarding',
+        icon: 'user-minus',
+        link: '/offboarding',
+        keywords: 'leaver leaving exit resignation termination last day',
+        permissions: [Permission.VIEW_OFFBOARDING, Permission.MANAGE_OFFBOARDING],
+      },
+      {
         id: 'people-tree',
         labelKey: 'humano.nav.peopleTree',
         icon: 'git-fork',

@@ -129,6 +129,10 @@ public final class DefaultRolePermissions {
             AuthoritiesConstants.MANAGER
         );
 
+        // ---- Offboarding ----
+        grant(PermissionsConstants.MANAGE_OFFBOARDING, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.HR_SPECIALIST);
+        grant(PermissionsConstants.VIEW_OFFBOARDING, AuthoritiesConstants.HR_MANAGER, AuthoritiesConstants.HR_SPECIALIST);
+
         // ---- Employee self-service ----
         for (String selfServe : new String[] {
             PermissionsConstants.VIEW_OWN_PROFILE,
