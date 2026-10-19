@@ -82,7 +82,7 @@ public class PayrollInputService {
 
         PayrollInput input;
         if (existing.isPresent() && request.replaceExisting()) {
-            input = existing.get();
+            input = existing.orElseThrow();
             log.debug("Replacing existing input: {}", input.getId());
         } else if (existing.isPresent()) {
             throw new BusinessRuleViolationException(
@@ -142,7 +142,7 @@ public class PayrollInputService {
 
             PayrollInput input;
             if (existing.isPresent() && request.overwriteExisting()) {
-                input = existing.get();
+                input = existing.orElseThrow();
             } else if (existing.isPresent()) {
                 log.warn("Skipping duplicate input for employee {} component {}", employee.getId(), component.getCode());
                 continue;

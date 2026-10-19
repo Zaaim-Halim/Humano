@@ -22,6 +22,42 @@ spring:
   jackson:
     serialization:
       write-durations-as-timestamps: false
+  # In-memory H2 in MySQL mode for the master and the default (platform) tenant database.
+  # CASE_INSENSITIVE_IDENTIFIERS matches MySQL, where quoted reserved-word columns such as
+  # `read` (EmployeeNotification) resolve against the unquoted column Liquibase created.
+  datasource:
+    master:
+      url: jdbc:h2:mem:humano_master;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MYSQL;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+      username: sa
+      password:
+    default-tenant:
+      url: jdbc:h2:mem:humano_tenant_default;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MYSQL;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+      username: sa
+      password:
+  # Same JPA settings as src/main/resources/config/application.yml, which this file shadows on the
+  # test classpath. Without them tests ran with Hibernate defaults (e.g. date-times stored in the
+  # JVM's zone instead of UTC) unless the testdev/testprod profile happened to be active.
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate.jdbc.time_zone: UTC
+      hibernate.timezone.default_storage: NORMALIZE
+      hibernate.type.preferred_instant_jdbc_type: TIMESTAMP
+      hibernate.type.preferred_uuid_jdbc_type: BINARY
+      hibernate.id.new_generator_mappings: true
+      hibernate.cache.use_second_level_cache: false
+      hibernate.cache.use_query_cache: false
+      hibernate.generate_statistics: false
+      hibernate.jdbc.batch_size: 25
+      hibernate.order_inserts: true
+      hibernate.order_updates: true
+      hibernate.query.fail_on_pagination_over_collection_fetch: true
+      hibernate.query.in_clause_parameter_padding: true
+    hibernate:
+      ddl-auto: none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+        implicit-strategy: org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy
   mail:
     host: localhost
   main:

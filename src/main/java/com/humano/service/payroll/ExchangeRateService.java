@@ -73,7 +73,7 @@ public class ExchangeRateService {
             if (!request.replaceExisting()) {
                 throw new BusinessRuleViolationException("Exchange rate already exists for this currency pair on " + request.date());
             }
-            rate = existing.get();
+            rate = existing.orElseThrow();
             log.debug("Updating existing exchange rate: {}", rate.getId());
         } else {
             rate = new ExchangeRate();
@@ -158,19 +158,19 @@ public class ExchangeRateService {
         // Try exact match first
         Optional<ExchangeRate> exactRate = findExactRate(fromCurrencyId, toCurrencyId, effectiveDate);
         if (exactRate.isPresent()) {
-            return toResponse(exactRate.get());
+            return toResponse(exactRate.orElseThrow());
         }
 
         // Fall back to most recent rate before the date
         Optional<ExchangeRate> recentRate = findMostRecentRate(fromCurrencyId, toCurrencyId, effectiveDate);
         if (recentRate.isPresent()) {
-            return toResponse(recentRate.get());
+            return toResponse(recentRate.orElseThrow());
         }
 
         // Try reverse rate
         Optional<ExchangeRate> reverseRate = findMostRecentRate(toCurrencyId, fromCurrencyId, effectiveDate);
         if (reverseRate.isPresent()) {
-            ExchangeRate rate = reverseRate.get();
+            ExchangeRate rate = reverseRate.orElseThrow();
             // Return inverted rate
             return new ExchangeRateResponse(
                 rate.getId(),
@@ -459,11 +459,11 @@ public class ExchangeRateService {
         }
         Optional<ExchangeRate> exact = findExactRate(fromCurrencyId, toCurrencyId, effectiveDate);
         if (exact.isPresent()) {
-            return new ReportingRate(exact.get().getRate(), exact.get().getDate());
+            return new ReportingRate(exact.orElseThrow().getRate(), exact.orElseThrow().getDate());
         }
         Optional<ExchangeRate> fallback = findMostRecentRate(fromCurrencyId, toCurrencyId, effectiveDate);
         if (fallback.isPresent()) {
-            ExchangeRate r = fallback.get();
+            ExchangeRate r = fallback.orElseThrow();
             long staleDays = java.time.temporal.ChronoUnit.DAYS.between(r.getDate(), effectiveDate);
             if (staleDays > maxStalenessDays) {
                 throw new BusinessRuleViolationException(

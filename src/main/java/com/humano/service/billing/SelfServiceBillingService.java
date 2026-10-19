@@ -107,7 +107,7 @@ public class SelfServiceBillingService {
             lifecycleService.issueFirstInvoice(created.id());
             return subscriptionService.getSubscriptionById(created.id());
         }
-        Subscription sub = existing.get();
+        Subscription sub = existing.orElseThrow();
         boolean restarted = !RUNNING.contains(sub.getStatus());
         boolean sameTerms = sub.getSubscriptionPlan().getId().equals(plan.getId()) && sub.getBillingCycle() == request.billingCycle();
         // During a trial that is not set to continue, choosing even the trial's own plan means "keep it after the trial".

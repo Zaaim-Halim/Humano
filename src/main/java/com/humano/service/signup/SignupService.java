@@ -179,7 +179,7 @@ public class SignupService {
 
         Optional<Tenant> existing = masterTx.execute(tx -> ownWorkspace(email));
         if (existing != null && existing.isPresent()) {
-            Tenant t = existing.get();
+            Tenant t = existing.orElseThrow();
             log.info("Sign-up for an address that already has workspace '{}'; reminding it", t.getSubdomain());
             mailService.sendSignupExistingWorkspace(email, t.getName(), t.getSubdomain());
             return;
@@ -263,7 +263,7 @@ public class SignupService {
         } catch (DataIntegrityViolationException e) {
             Optional<Tenant> own = masterTx.execute(tx -> ownTenant(p));
             if (own != null && own.isPresent()) {
-                return own.get();
+                return own.orElseThrow();
             }
             throw new BadRequestAlertException("This workspace address was taken in the meantime", ENTITY_NAME, "subdomaintaken");
         }
@@ -384,7 +384,7 @@ public class SignupService {
         if (found.isEmpty()) {
             return found;
         }
-        Tenant t = found.get();
+        Tenant t = found.orElseThrow();
         if (t.isDemo() || GONE.contains(t.getStatus()) || !p.email().equalsIgnoreCase(t.getDemoContactEmail())) {
             throw new BadRequestAlertException("This workspace address was taken in the meantime", ENTITY_NAME, "subdomaintaken");
         }

@@ -174,7 +174,7 @@ public class PayrollRunResource {
             pd.setDetail("No payslip exists for run " + id + " and employee " + employeeId);
             return ResponseEntity.status(404).body(pd);
         }
-        PayslipService.PdfDownload download = payslipService.downloadPdf(slipOpt.get().id());
+        PayslipService.PdfDownload download = payslipService.downloadPdf(slipOpt.orElseThrow().id());
         return ResponseEntity.ok()
             .contentType(MediaType.APPLICATION_PDF)
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + download.filename() + "\"")

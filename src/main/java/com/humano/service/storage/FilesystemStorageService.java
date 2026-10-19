@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -99,7 +98,7 @@ public class FilesystemStorageService implements FileStorageService {
     /** Resolve {@code directory}+{@code filename} under {@link #rootLocation} with a traversal guard. */
     private Path resolveSafe(String directory, String filename) {
         Path base = (directory != null && !directory.isBlank()) ? this.rootLocation.resolve(directory) : this.rootLocation;
-        Path target = base.resolve(Paths.get(filename)).normalize().toAbsolutePath();
+        Path target = base.resolve(Path.of(filename)).normalize().toAbsolutePath();
         if (!target.startsWith(this.rootLocation)) {
             throw new StorageException("Cannot store file outside root location: " + filename);
         }
@@ -112,7 +111,7 @@ public class FilesystemStorageService implements FileStorageService {
      * persist relative keys.
      */
     private Path resolveKey(String key) {
-        Path p = Paths.get(key);
+        Path p = Path.of(key);
         Path resolved = (p.isAbsolute() ? p : this.rootLocation.resolve(p)).normalize();
         if (!resolved.startsWith(this.rootLocation)) {
             throw new StorageException("Resolved path escapes root location: " + key);

@@ -1045,7 +1045,7 @@ public class PerformanceReviewCycleService {
         for (UUID deptId : cycle.getDepartmentIds()) {
             Optional<Department> deptOpt = departmentRepository.findById(deptId);
             if (deptOpt.isPresent()) {
-                Department dept = deptOpt.get();
+                Department dept = deptOpt.orElseThrow();
 
                 Specification<Employee> spec = (root, query, cb) -> cb.equal(root.get("department").get("id"), deptId);
                 int totalInDept = (int) employeeRepository.count(spec);

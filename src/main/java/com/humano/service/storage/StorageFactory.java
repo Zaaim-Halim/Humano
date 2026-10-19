@@ -7,7 +7,6 @@ import com.humano.domain.tenant.storage.StorageConfigDetails;
 import com.humano.repository.storage.FileBlobRepository;
 import com.humano.repository.tenant.TenantStorageConfigRepository;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -76,7 +75,7 @@ public class StorageFactory {
             log.warn("No active storage configuration for tenant {}, defaulting to filesystem", tenantId);
             return defaultFilesystem(tenantId);
         }
-        TenantStorageConfig config = configOpt.get();
+        TenantStorageConfig config = configOpt.orElseThrow();
         FileStorageService service = createFor(config);
         log.info("Built {} storage backend for tenant {}", config.getBackend(), tenantId);
         return service;
@@ -100,10 +99,10 @@ public class StorageFactory {
         if (root == null || root.isBlank()) {
             root = defaultFilesystemRootLocation + "/" + config.getTenant().getId();
         }
-        return Paths.get(root);
+        return Path.of(root);
     }
 
     private FileStorageService defaultFilesystem(UUID tenantId) {
-        return new FilesystemStorageService(Paths.get(defaultFilesystemRootLocation, tenantId.toString()));
+        return new FilesystemStorageService(Path.of(defaultFilesystemRootLocation, tenantId.toString()));
     }
 }

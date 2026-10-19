@@ -263,7 +263,7 @@ public class CompensationService {
             log.info("No active compensation for employee {} on {}; skipping position sync", employeeId, effectiveDate);
             return Optional.empty();
         }
-        Compensation current = currentOpt.get();
+        Compensation current = currentOpt.orElseThrow();
         if (current.getPosition() != null && current.getPosition().getId().equals(newPositionId)) {
             return Optional.of(current);
         }

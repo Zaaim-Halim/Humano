@@ -311,7 +311,7 @@ public class EmployeeDocumentService {
     private static void applyFileMetadata(EmployeeDocument document, MultipartFile file) {
         String original = file.getOriginalFilename();
         document.setOriginalFileName(
-            original == null || original.isBlank() ? null : java.nio.file.Paths.get(original).getFileName().toString()
+            original == null || original.isBlank() ? null : java.nio.file.Path.of(original).getFileName().toString()
         );
         document.setContentType(file.getContentType());
         document.setSizeBytes(file.getSize());

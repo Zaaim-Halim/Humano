@@ -150,7 +150,7 @@ public class PayslipService {
             .findFirst();
 
         if (existing.isPresent()) {
-            return toResponse(existing.get());
+            return toResponse(existing.orElseThrow());
         }
 
         PayrollPeriod period = result.getPayrollPeriod();

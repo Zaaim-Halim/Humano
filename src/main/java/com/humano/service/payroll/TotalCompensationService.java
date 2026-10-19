@@ -252,7 +252,7 @@ public class TotalCompensationService {
             return BigDecimal.ZERO;
         }
 
-        Compensation comp = compensation.get();
+        Compensation comp = compensation.orElseThrow();
         return switch (comp.getBasis()) {
             case ANNUAL -> comp.getBaseAmount();
             case MONTHLY -> comp.getBaseAmount().multiply(BigDecimal.valueOf(12));

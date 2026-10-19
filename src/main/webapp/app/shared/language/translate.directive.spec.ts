@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import TranslateDirective from './translate.directive';
@@ -14,11 +14,12 @@ describe('TranslateDirective Tests', () => {
   let fixture: ComponentFixture<TestTranslateDirectiveComponent>;
   let translateService: TranslateService;
 
-  beforeEach(waitForAsync(() => {
+  beforeEach(() => {
+    // Synchronous: the app is zoneless, so zone-based helpers like waitForAsync aren't available.
     TestBed.configureTestingModule({
       imports: [TranslateModule.forRoot(), TestTranslateDirectiveComponent],
     });
-  }));
+  });
 
   beforeEach(() => {
     translateService = TestBed.inject(TranslateService);

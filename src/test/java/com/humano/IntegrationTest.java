@@ -3,6 +3,7 @@ package com.humano;
 import com.humano.config.AsyncSyncConfiguration;
 import com.humano.config.EmbeddedSQL;
 import com.humano.config.JacksonConfiguration;
+import com.humano.config.TenantRequestConfiguration;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -14,7 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@SpringBootTest(classes = { HumanoApp.class, JacksonConfiguration.class, AsyncSyncConfiguration.class })
+@SpringBootTest(classes = { HumanoApp.class, JacksonConfiguration.class, AsyncSyncConfiguration.class, TenantRequestConfiguration.class })
 @EmbeddedSQL
 public @interface IntegrationTest {
 }

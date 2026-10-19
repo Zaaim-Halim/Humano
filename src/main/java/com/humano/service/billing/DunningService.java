@@ -156,8 +156,8 @@ public class DunningService {
 
         // Find the invoice + payment to retry.
         Optional<Payment> lastFailedPayment = findLatestFailedPayment(sub);
-        if (lastFailedPayment.isPresent() && lookLikeProviderId(lastFailedPayment.get().getExternalPaymentId())) {
-            Payment toRetry = lastFailedPayment.get();
+        if (lastFailedPayment.isPresent() && lookLikeProviderId(lastFailedPayment.orElseThrow().getExternalPaymentId())) {
+            Payment toRetry = lastFailedPayment.orElseThrow();
             log.info("Dunning attempt {} for subscription {}: retrying payment {}", currentAttempt, sub.getId(), toRetry.getId());
             try {
                 // Re-using externalPaymentId as the next-token: Stripe's PaymentIntent

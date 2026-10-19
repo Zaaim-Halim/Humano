@@ -158,9 +158,9 @@ public class DevDataSeeder implements ApplicationRunner {
     private Tenant ensureDemoTenant() {
         try {
             Optional<Tenant> existing = tenantRepository.findBySubdomain(SUBDOMAIN);
-            if (existing.isPresent() && existing.get().getStatus() == TenantStatus.ACTIVE) {
+            if (existing.isPresent() && existing.orElseThrow().getStatus() == TenantStatus.ACTIVE) {
                 log.info("[dev-seed] demo tenant '{}' already ACTIVE; reusing it", SUBDOMAIN);
-                return existing.get();
+                return existing.orElseThrow();
             }
             // provisionTenant's own createTenantRecord does NOT set the @NotNull country / subscription
             // plan (real onboarding pre-creates that row), so seed a valid PENDING_SETUP row first and

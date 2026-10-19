@@ -73,7 +73,7 @@ public class BillingTaxResolver {
             );
             return TaxResult.zero();
         }
-        CountryTaxRate row = rateOpt.get();
+        CountryTaxRate row = rateOpt.orElseThrow();
         BigDecimal rate = row.getTaxRate();
         BigDecimal amount = subtotal.multiply(rate).setScale(MONEY_SCALE, RoundingMode.HALF_UP);
         return new TaxResult(rate, amount, row.getTaxName());

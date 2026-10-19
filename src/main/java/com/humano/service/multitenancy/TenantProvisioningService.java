@@ -106,7 +106,7 @@ public class TenantProvisioningService {
         UUID tenantId = masterTx.execute(tx -> {
             Optional<Tenant> existing = tenantRepository.findBySubdomain(subdomain);
             if (existing.isPresent()) {
-                Tenant t = existing.get();
+                Tenant t = existing.orElseThrow();
                 TenantStatus status = t.getStatus();
                 // Resume only from non-terminal in-progress states.
                 if (status == TenantStatus.ACTIVE || status == TenantStatus.SUSPENDED) {

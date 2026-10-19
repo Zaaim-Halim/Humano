@@ -286,7 +286,7 @@ public class PayrollProcessingService {
             .stream()
             .findFirst();
         if (existingByHash.isPresent()) {
-            PayrollRun existing = existingByHash.get();
+            PayrollRun existing = existingByHash.orElseThrow();
             log.info(
                 "Idempotent re-call: short-circuiting to existing run {} (status={}, hash={})",
                 existing.getId(),
@@ -643,12 +643,12 @@ public class PayrollProcessingService {
                     .findFirst();
                 if (
                     ruleOpt.isEmpty() ||
-                    ruleOpt.get().getDeductionPercentage() == null ||
-                    ruleOpt.get().getDeductionPercentage().signum() == 0
+                    ruleOpt.orElseThrow().getDeductionPercentage() == null ||
+                    ruleOpt.orElseThrow().getDeductionPercentage().signum() == 0
                 ) {
                     continue;
                 }
-                LeaveTypeRule rule = ruleOpt.get();
+                LeaveTypeRule rule = ruleOpt.orElseThrow();
                 BigDecimal pctAsRatio = rule.getDeductionPercentage().divide(BigDecimal.valueOf(100), RATE_SCALE, MONEY_ROUNDING);
                 BigDecimal deduction = dailyRate
                     .multiply(BigDecimal.valueOf(days))
@@ -965,7 +965,7 @@ public class PayrollProcessingService {
             .stream()
             .findFirst();
         if (existing.isPresent()) {
-            PayrollResult result = existing.get();
+            PayrollResult result = existing.orElseThrow();
             final UUID resultId = result.getId();
             List<PayrollLine> existingLines = payrollLineRepository.findAll(
                 (Specification<PayrollLine>) (root, query, cb) -> cb.equal(root.get("result").get("id"), resultId)
@@ -1177,7 +1177,7 @@ public class PayrollProcessingService {
             );
             return false;
         }
-        TaxWithholding w = row.get();
+        TaxWithholding w = row.orElseThrow();
         BigDecimal current = w.getYearToDateAmount() == null ? BigDecimal.ZERO : w.getYearToDateAmount();
         w.setYearToDateAmount(current.add(amount));
         taxWithholdingRepository.save(w);
@@ -1548,7 +1548,7 @@ public class PayrollProcessingService {
         Optional<PayrollInput> directInput = inputs.stream().filter(i -> i.getComponent().getId().equals(component.getId())).findFirst();
 
         if (directInput.isPresent()) {
-            PayrollInput input = directInput.get();
+            PayrollInput input = directInput.orElseThrow();
             if (input.getAmount() != null) {
                 return input.getAmount();
             }
