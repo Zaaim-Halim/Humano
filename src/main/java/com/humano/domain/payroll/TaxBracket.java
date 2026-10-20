@@ -1,5 +1,6 @@
 package com.humano.domain.payroll;
 
+import com.humano.domain.enumeration.payroll.TaxBracketBasis;
 import com.humano.domain.enumeration.payroll.TaxCode;
 import com.humano.domain.shared.AbstractAuditingEntity;
 import com.humano.domain.shared.Country;
@@ -17,20 +18,23 @@ import org.hibernate.annotations.UuidGenerator;
  * Represents a tax bracket for a specific tax code and country.
  * <p>
  * Tax brackets define the progressive taxation structure where different income ranges
- * are taxed at different rates. Each bracket specifies the income range it applies to,
- * the tax rate for that range, and the fixed amount from previous brackets.
+ * are taxed at different rates. Each bracket specifies the income range it applies to
+ * and the marginal rate for that range.
  * <p>
  * Tax brackets are used in payroll calculations to accurately compute income tax
  * withholdings based on employee earnings.
  * <ul>
  *   <li><b>lower</b>: Minimum income for this bracket.</li>
  *   <li><b>upper</b>: Maximum income for this bracket.</li>
- *   <li><b>rate</b>: Tax rate applied to the taxable amount above `lower`.</li>
- *   <li><b>fixedPart</b>: Fixed tax amount from previous brackets.</li>
+ *   <li><b>rate</b>: Marginal rate applied to the slice of income between `lower` and `upper`.</li>
+ *   <li><b>fixedPart</b>: Flat amount added once when income reaches this bracket (usually 0).</li>
+ *   <li><b>basis</b>: Whether the thresholds are annual or per pay period.</li>
  *   <li><b>taxCode</b>: Identifier for the tax type (e.g., PIT, VAT, Corporate Tax).</li>
  * </ul>
  * <p>
- * Each bracket is valid for a specific period and country.
+ * Each bracket is valid for a specific period and country. The brackets active for a
+ * (country, taxCode) on a date form one set, which must start at 0, be contiguous, and
+ * share a single basis — see {@code TaxCalculationService#validateBracketSet}.
  */
 @Entity
 @Table(name = "tax_bracket")
@@ -92,24 +96,36 @@ public class TaxBracket extends AbstractAuditingEntity<UUID> {
     /**
      * Tax rate applied to the taxable amount above the lower bound.
      * <p>
-     * The percentage rate applied to income in this bracket.
-     * Must be between 0% and 100%.
+     * The rate applied to income in this bracket, as a fraction (0.2 = 20%).
+     * Must be between 0% and 100%, with at most 6 decimals (e.g. 0.03078 for 3.078%).
      */
-    @Column(name = "rate", nullable = false, precision = 5, scale = 4)
+    @Column(name = "rate", nullable = false, precision = 7, scale = 6)
     @NotNull(message = "Rate is required")
     @DecimalMin(value = "0.0", inclusive = true, message = "Rate cannot be negative")
     @DecimalMax(value = "1.0", inclusive = true, message = "Rate cannot exceed 100%")
     private BigDecimal rate;
 
     /**
-     * Fixed tax amount from previous brackets.
+     * Flat amount added once when taxable income reaches this bracket.
      * <p>
-     * The accumulated tax amount from all lower brackets.
-     * Used for optimizing tax calculations.
+     * This is NOT the cumulative tax of the lower brackets: the calculation already sums
+     * every lower slice, so a table published as "tax = fixed amount + rate × (income − lower)"
+     * must be seeded with {@code fixedPart = 0} on every row. Leave it 0 unless the
+     * jurisdiction charges a genuine per-band flat amount.
      */
     @Column(name = "fixed_part", precision = 19, scale = 6)
     @DecimalMin(value = "0.0", inclusive = true, message = "Fixed part cannot be negative")
     private BigDecimal fixedPart = BigDecimal.ZERO;
+
+    /**
+     * Whether {@link #lower} / {@link #upper} are annual or per-pay-period amounts.
+     * <p>
+     * Existing rows default to {@link TaxBracketBasis#PER_PERIOD}, the original behaviour.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "basis", nullable = false, length = 20)
+    @NotNull(message = "Basis is required")
+    private TaxBracketBasis basis = TaxBracketBasis.PER_PERIOD;
 
     /**
      * Identifier for the tax type (e.g., PIT, VAT, Corporate Tax).
@@ -221,6 +237,19 @@ public class TaxBracket extends AbstractAuditingEntity<UUID> {
         this.fixedPart = fixedPart;
     }
 
+    public TaxBracketBasis getBasis() {
+        return basis;
+    }
+
+    public TaxBracket basis(TaxBracketBasis basis) {
+        this.basis = basis;
+        return this;
+    }
+
+    public void setBasis(TaxBracketBasis basis) {
+        this.basis = basis;
+    }
+
     public TaxCode getTaxCode() {
         return taxCode;
     }
@@ -263,6 +292,8 @@ public class TaxBracket extends AbstractAuditingEntity<UUID> {
             upper +
             ", rate=" +
             rate +
+            ", basis=" +
+            basis +
             ", validFrom=" +
             validFrom +
             ", validTo=" +

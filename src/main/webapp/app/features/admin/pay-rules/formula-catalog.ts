@@ -127,7 +127,7 @@ export const FUNCTION_DOCS: Record<string, FunctionDoc> = {
     params: ['value', 'bands'],
     returns: 'number',
     description: 'Progressive brackets. bands is a list of {low, high, rate}.',
-    example: '#band(#max(0, #grossSalary - 12570), {{0, 37700, 0.20}, {37700, 112430, 0.40}})',
+    example: '#band(#max(0, #grossSalary * 12 - 12570), {{0, 37700, 0.20}, {37700, 112430, 0.40}}) / 12',
   },
 
   // ----- Dates -----
@@ -269,8 +269,8 @@ export const RECIPES: Recipe[] = [
   },
   {
     title: 'UK PAYE (progressive bands)',
-    description: 'Banded income tax above the personal allowance.',
-    formula: '#band(#max(0, #grossSalary - 12570), {{0, 37700, 0.20}, {37700, 112430, 0.40}, {112430, 9999999, 0.45}})',
+    description: 'Banded income tax above the personal allowance. Annual bands, so monthly pay is annualised (× 12) and divided back.',
+    formula: '#band(#max(0, #grossSalary * 12 - 12570), {{0, 37700, 0.20}, {37700, 112430, 0.40}, {112430, 9999999, 0.45}}) / 12',
   },
   {
     title: 'Seniority bonus (5%/yr, cap 30%)',

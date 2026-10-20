@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Income period a bracket's thresholds are expressed in (ANNUAL or PER_PERIOD). Existing rows
+         default to PER_PERIOD, which is how payroll has always applied them, so their results don't change. -->
+    <changeSet id="tenant-tax-bracket-basis-001" author="halimzaaim">
+        <addColumn tableName="tax_bracket">
+            <column name="basis" type="VARCHAR(20)" defaultValue="PER_PERIOD">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <!-- DECIMAL(5,4) silently rounded statutory rates with five or six decimals as a fraction
+         (e.g. NYC's 3.078% = 0.03078 was stored as 0.0308). MySQL's MODIFY drops NOT NULL, so it is
+         re-applied in the same changeset. -->
+    <changeSet id="tenant-tax-bracket-rate-precision-001" author="halimzaaim">
+        <modifyDataType tableName="tax_bracket" columnName="rate" newDataType="DECIMAL(7,6)"/>
+        <addNotNullConstraint tableName="tax_bracket" columnName="rate" columnDataType="DECIMAL(7,6)"/>
+    </changeSet>
+
+</databaseChangeLog>

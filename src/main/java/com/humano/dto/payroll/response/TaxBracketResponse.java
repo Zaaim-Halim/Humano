@@ -1,5 +1,6 @@
 package com.humano.dto.payroll.response;
 
+import com.humano.domain.enumeration.payroll.TaxBracketBasis;
 import com.humano.domain.enumeration.payroll.TaxCode;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,6 +19,7 @@ public record TaxBracketResponse(
     BigDecimal rate,
     BigDecimal ratePercentage,
     BigDecimal fixedPart,
+    TaxBracketBasis basis,
     LocalDate validFrom,
     LocalDate validTo,
     boolean active

@@ -120,9 +120,10 @@ import org.springframework.stereotype.Service;
  * // US Social Security 6.2% on wages up to the 2025 cap of 176,100:
  *   #pct(#min(#grossSalary, 176100), 6.2)
  *
- * // UK PAYE banded 2025/26 (PA-adjusted):
- *   #band(#max(0, #grossSalary - 12570),
- *         {{0, 37700, 0.20}, {37700, 112430, 0.40}, {112430, 9999999, 0.45}})
+ * // UK PAYE banded 2025/26 (PA-adjusted). The bands are annual, so monthly pay is
+ * // annualised (× 12) and the annual tax divided back to the month:
+ *   #band(#max(0, #grossSalary * 12 - 12570),
+ *         {{0, 37700, 0.20}, {37700, 112430, 0.40}, {112430, 9999999, 0.45}}) / 12
  *
  * // Seniority bonus: 5% per year of service, capped at 30%:
  *   #pct(#baseSalary, #min(5 * #employeeYearsOfService, 30))

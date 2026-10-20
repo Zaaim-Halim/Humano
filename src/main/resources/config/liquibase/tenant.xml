@@ -93,6 +93,9 @@
     <include file="config/liquibase/changelog/tenant/20261018-onboarding-checklist-changelog.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/tenant/20261019-onboarding-task-links-changelog.xml" relativeToChangelogFile="false"/>
 
+    <!-- Tax brackets: ANNUAL / PER_PERIOD basis, and 6-decimal rate precision -->
+    <include file="config/liquibase/changelog/tenant/20261020-tax-bracket-basis-precision-changelog.xml" relativeToChangelogFile="false"/>
+
     <!--  will add tenant liquibase changelogs here -->
 
 </databaseChangeLog>

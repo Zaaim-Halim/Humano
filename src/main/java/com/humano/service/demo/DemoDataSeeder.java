@@ -18,6 +18,7 @@ import com.humano.domain.enumeration.payroll.Kind;
 import com.humano.domain.enumeration.payroll.Measurement;
 import com.humano.domain.enumeration.payroll.PayComponentCode;
 import com.humano.domain.enumeration.payroll.RunStatus;
+import com.humano.domain.enumeration.payroll.TaxBracketBasis;
 import com.humano.domain.enumeration.payroll.TaxCode;
 import com.humano.domain.hr.Attendance;
 import com.humano.domain.hr.AttendanceEvent;
@@ -2043,6 +2044,7 @@ public class DemoDataSeeder {
                     new BigDecimal((String) b[1]),
                     new BigDecimal((String) b[2]),
                     BigDecimal.ZERO,
+                    TaxBracketBasis.PER_PERIOD,
                     from,
                     null
                 )

@@ -1,15 +1,18 @@
 package com.humano.dto.payroll.request;
 
+import com.humano.domain.enumeration.payroll.TaxBracketBasis;
 import com.humano.domain.enumeration.payroll.TaxCode;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * Request DTO for creating a tax bracket.
+ * Request DTO for creating a tax bracket. {@code basis} defaults to {@link TaxBracketBasis#PER_PERIOD}
+ * when omitted.
  */
 public record CreateTaxBracketRequest(
     @NotNull(message = "Country ID is required") UUID countryId,
@@ -23,9 +26,12 @@ public record CreateTaxBracketRequest(
     @NotNull(message = "Rate is required")
     @DecimalMin(value = "0.0", message = "Rate cannot be negative")
     @DecimalMax(value = "1.0", message = "Rate cannot exceed 100%")
+    @Digits(integer = 1, fraction = 6, message = "Rate can have at most 6 decimals")
     BigDecimal rate,
 
     @DecimalMin(value = "0.0", message = "Fixed part cannot be negative") BigDecimal fixedPart,
+
+    TaxBracketBasis basis,
 
     @NotNull(message = "Valid from date is required") LocalDate validFrom,
 

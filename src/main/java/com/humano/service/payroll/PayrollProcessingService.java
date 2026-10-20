@@ -729,7 +729,8 @@ public class PayrollProcessingService {
         // ============================================================
         // Step 7 — Income tax (progressive, country-aware)
         //   Looks up the active TaxBracket rows for (employee.country, PIT, period.endDate)
-        //   and applies the spec'd progressive algorithm. The emitted line is tagged with
+        //   and applies the spec'd progressive algorithm, annualising via the calendar's
+        //   frequency when the set's basis is ANNUAL. The emitted line is tagged with
         //   lineCategory=INCOME_TAX and taxType=INCOME_TAX; those typed fields are the
         //   contract the post-time YTD reader (updateYearToDateOnPost) keys off.
         // ============================================================
@@ -744,10 +745,14 @@ public class PayrollProcessingService {
             // shape with data today — yields exactly the single PIT line as before. Each code's brackets
             // are applied to the same taxableIncome; per-code taxable-base adjustments (e.g. US state
             // income computed on a different base than federal) are a separate follow-up coupled to #5.
+            // ANNUAL bracket sets are annualised with the calendar's frequency; PER_PERIOD sets apply as-is.
+            // A malformed set (gap, overlap, no 0 start, mixed basis) throws and surfaces as a validation
+            // error for this employee rather than producing a mis-sliced tax.
+            int periodsPerYear = period.getCalendar().getFrequency().periodsPerYear();
             List<IncomeTaxComponent> incomeTaxes = computeIncomeTaxes(
                 taxableIncome,
                 code -> taxCalculationService.getActiveBracketsForCalculation(employee.getCountry().getId(), code, period.getEndDate()),
-                taxCalculationService::calculateProgressiveTax
+                (income, brackets) -> taxCalculationService.calculatePeriodTax(income, brackets, periodsPerYear)
             );
             if (incomeTaxes.isEmpty()) {
                 log.debug(

@@ -1,5 +1,6 @@
 package com.humano.service.payroll;
 
+import com.humano.domain.enumeration.payroll.TaxBracketBasis;
 import com.humano.domain.enumeration.payroll.TaxCode;
 import com.humano.domain.payroll.TaxBracket;
 import com.humano.domain.shared.Country;
@@ -49,7 +50,10 @@ public class TaxCalculationService {
             .findById(request.countryId())
             .orElseThrow(() -> new EntityNotFoundException("Country", request.countryId()));
 
-        validateTaxBracket(request);
+        validateBounds(request.lower(), request.upper(), request.rate());
+        if (request.validTo() != null && request.validTo().isBefore(request.validFrom())) {
+            throw new BusinessRuleViolationException("Valid-to date cannot be before valid-from date");
+        }
 
         TaxBracket bracket = new TaxBracket();
         bracket.setCountry(country);
@@ -58,8 +62,10 @@ public class TaxCalculationService {
         bracket.setUpper(request.upper());
         bracket.setRate(request.rate());
         bracket.setFixedPart(request.fixedPart() != null ? request.fixedPart() : BigDecimal.ZERO);
+        bracket.setBasis(request.basis() != null ? request.basis() : TaxBracketBasis.PER_PERIOD);
         bracket.setValidFrom(request.validFrom());
         bracket.setValidTo(request.validTo());
+        assertNoConflicts(bracket);
 
         bracket = taxBracketRepository.save(bracket);
         log.info("Created tax bracket {} for {} in {}", bracket.getId(), request.taxCode(), country.getName());
@@ -70,7 +76,9 @@ public class TaxCalculationService {
     /**
      * Calculates progressive tax for a given taxable income (REST-facing entry point).
      * Looks up the active brackets, delegates the math to {@link #calculateProgressiveTax},
-     * and assembles the per-bracket breakdown DTO.
+     * and assembles the per-bracket breakdown DTO. {@code taxableIncome} is read in the
+     * brackets' own {@link TaxBracketBasis} — an annual amount for ANNUAL brackets, a
+     * per-period amount for PER_PERIOD ones.
      */
     @Transactional(value = "tenantTransactionManager", readOnly = true)
     public TaxCalculationResponse calculateTax(
@@ -86,6 +94,7 @@ public class TaxCalculationService {
         if (brackets.isEmpty()) {
             throw new BusinessRuleViolationException("No active tax brackets found for " + taxCode + " in country " + countryId);
         }
+        validateBracketSet(brackets);
 
         BigDecimal totalTax = calculateProgressiveTax(taxableIncome, brackets);
 
@@ -146,16 +155,18 @@ public class TaxCalculationService {
      *   return tax
      * </pre>
      *
-     * <p><b>Assumption.</b> The bracket set is contiguous (each bracket's {@code lower}
-     * equals the previous bracket's {@code upper}) — the standard taxation convention.
-     * Tenants seeding non-contiguous brackets will see income that falls in a "gap"
-     * taxed as if it fell in the next bracket up.
+     * <p><b>Assumption.</b> The bracket set starts at 0 and is contiguous (each bracket's
+     * {@code lower} equals the previous bracket's {@code upper}). The slicing uses bracket
+     * widths, not positions, so a set that skips the 0% band, has a gap, or overlaps is
+     * mis-sliced — callers enforce the shape with {@link #validateBracketSet} first.
      *
-     * <p><b>fixedPart usage.</b> The spec's literal recipe adds {@code bracket.fixedPart}
-     * once per processed bracket, modelling a per-bracket flat fee. If your jurisdiction
-     * uses {@code fixedPart} as "precomputed cumulative tax of all lower brackets"
-     * (an optimisation for single-bracket lookup), seed all rows with
-     * {@code fixedPart = 0} to avoid double-counting.
+     * <p><b>fixedPart usage.</b> {@code bracket.fixedPart} is added once per processed
+     * bracket, modelling a per-bracket flat amount. It is NOT the cumulative tax of the lower
+     * brackets (the slices already sum those); tables published in that form must be seeded
+     * with {@code fixedPart = 0}.
+     *
+     * <p>Thresholds and income are in the same unit; annualisation for
+     * {@link TaxBracketBasis#ANNUAL} sets happens in {@link #calculatePeriodTax}.
      *
      * <p>Returns 0 for null or non-positive {@code taxableIncome}, and for an empty
      * bracket list. Result is scaled to 2 decimals (HALF_UP).
@@ -179,6 +190,70 @@ public class TaxCalculationService {
             remaining = remaining.subtract(slice);
         }
         return tax.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Tax for one pay period on {@code taxableIncome} (a per-period amount), honouring the set's
+     * {@link TaxBracketBasis}:
+     * <ul>
+     *   <li>PER_PERIOD — brackets are applied to the period income as-is.</li>
+     *   <li>ANNUAL — the income is annualised ({@code × periodsPerYear}), the brackets applied, and
+     *   the annual tax divided back by {@code periodsPerYear} (2 decimals, HALF_UP).</li>
+     * </ul>
+     * Validates the set's shape first, so a malformed set fails loudly instead of being mis-sliced.
+     *
+     * @throws BusinessRuleViolationException if the set fails {@link #validateBracketSet}
+     */
+    public BigDecimal calculatePeriodTax(BigDecimal taxableIncome, List<TaxBracket> brackets, int periodsPerYear) {
+        validateBracketSet(brackets);
+        if (brackets == null || brackets.isEmpty() || brackets.get(0).getBasis() != TaxBracketBasis.ANNUAL) {
+            return calculateProgressiveTax(taxableIncome, brackets);
+        }
+        if (taxableIncome == null || taxableIncome.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal periods = BigDecimal.valueOf(periodsPerYear);
+        BigDecimal annualTax = calculateProgressiveTax(taxableIncome.multiply(periods), brackets);
+        return annualTax.divide(periods, 2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Checks that a set of brackets active together (one country, tax code and date) can be sliced
+     * correctly: the lowest bracket starts at 0, each bracket starts where the previous one ends (no
+     * gaps, no overlaps — e.g. two years' rows left active together), and all share one basis.
+     * An empty or null set is valid (nothing to tax).
+     *
+     * @throws BusinessRuleViolationException describing the first problem found
+     */
+    public void validateBracketSet(List<TaxBracket> brackets) {
+        if (brackets == null || brackets.isEmpty()) {
+            return;
+        }
+        List<TaxBracket> sorted = new ArrayList<>(brackets);
+        sorted.sort(Comparator.comparing(TaxBracket::getLower));
+        TaxBracket first = sorted.get(0);
+        String scope = first.getTaxCode() + " brackets" + (first.getCountry() != null ? " for " + first.getCountry().getCode() : "");
+        if (first.getLower().signum() != 0) {
+            throw new BusinessRuleViolationException(
+                scope + " must start at 0 but the lowest starts at " + first.getLower() + "; add a 0% bracket for the tax-free band"
+            );
+        }
+        for (int i = 1; i < sorted.size(); i++) {
+            TaxBracket prev = sorted.get(i - 1);
+            TaxBracket cur = sorted.get(i);
+            int cmp = cur.getLower().compareTo(prev.getUpper());
+            if (cmp < 0) {
+                throw new BusinessRuleViolationException(
+                    scope + " overlap: " + range(prev) + " and " + range(cur) + " are active at the same time"
+                );
+            }
+            if (cmp > 0) {
+                throw new BusinessRuleViolationException(scope + " have a gap between " + prev.getUpper() + " and " + cur.getLower());
+            }
+            if (cur.getBasis() != first.getBasis()) {
+                throw new BusinessRuleViolationException(scope + " mix " + first.getBasis() + " and " + cur.getBasis() + " thresholds");
+            }
+        }
     }
 
     /**
@@ -231,6 +306,8 @@ public class TaxCalculationService {
         if (newUpper != null) bracket.setUpper(newUpper);
         if (newRate != null) bracket.setRate(newRate);
         if (newFixedPart != null) bracket.setFixedPart(newFixedPart);
+        validateBounds(bracket.getLower(), bracket.getUpper(), bracket.getRate());
+        assertNoConflicts(bracket);
 
         bracket = taxBracketRepository.save(bracket);
         log.info("Updated tax bracket {}", bracketId);
@@ -254,8 +331,10 @@ public class TaxCalculationService {
     }
 
     /**
-     * Copies tax brackets from one year to another for a country.
-     * Useful for annual tax table updates.
+     * Copies the bracket set in force at the end of {@code sourceYear} into a new set starting
+     * Jan 1 of {@code targetYear}, scaling thresholds by {@code adjustmentPercentage}. The source
+     * rows are closed the day before the new set starts, so the two sets are never active together.
+     * Refuses when the target year already has brackets of its own.
      */
     public List<TaxBracketResponse> copyBracketsToNewYear(
         UUID countryId,
@@ -264,19 +343,38 @@ public class TaxCalculationService {
         int targetYear,
         BigDecimal adjustmentPercentage
     ) {
-        LocalDate sourceStart = LocalDate.of(sourceYear, 1, 1);
+        if (targetYear <= sourceYear) {
+            throw new BusinessRuleViolationException("Target year must be after the source year");
+        }
         LocalDate sourceEnd = LocalDate.of(sourceYear, 12, 31);
         LocalDate targetStart = LocalDate.of(targetYear, 1, 1);
 
-        List<TaxBracket> sourceBrackets = taxBracketRepository.findAll(
-            (Specification<TaxBracket>) (root, query, cb) ->
-                cb.and(
-                    cb.equal(root.get("country").get("id"), countryId),
-                    cb.equal(root.get("taxCode"), taxCode),
-                    cb.lessThanOrEqualTo(root.get("validFrom"), sourceEnd),
-                    cb.or(cb.isNull(root.get("validTo")), cb.greaterThanOrEqualTo(root.get("validTo"), sourceStart))
-                )
-        );
+        // The set in force on Dec 31 — not every row that touched the source year, which would pull in
+        // brackets superseded mid-year and duplicate income ranges in the new set.
+        List<TaxBracket> sourceBrackets = getActiveBracketsForCalculation(countryId, taxCode, sourceEnd);
+        if (sourceBrackets.isEmpty()) {
+            log.info("No {} brackets in force on {} for country {}; nothing to copy", taxCode, sourceEnd, countryId);
+            return List.of();
+        }
+        validateBracketSet(sourceBrackets);
+
+        Set<UUID> sourceIds = sourceBrackets.stream().map(TaxBracket::getId).collect(Collectors.toSet());
+        boolean targetTaken = findWithOverlappingValidity(countryId, taxCode, targetStart, null)
+            .stream()
+            .anyMatch(b -> !sourceIds.contains(b.getId()));
+        if (targetTaken) {
+            throw new BusinessRuleViolationException(
+                taxCode + " brackets already exist from " + targetStart + "; expire them before copying " + sourceYear
+            );
+        }
+
+        LocalDate sourceClose = targetStart.minusDays(1);
+        for (TaxBracket source : sourceBrackets) {
+            if (source.getValidTo() == null || source.getValidTo().isAfter(sourceClose)) {
+                source.setValidTo(sourceClose);
+            }
+        }
+        taxBracketRepository.saveAll(sourceBrackets);
 
         BigDecimal multiplier = adjustmentPercentage != null
             ? BigDecimal.ONE.add(adjustmentPercentage.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP))
@@ -284,19 +382,28 @@ public class TaxCalculationService {
 
         List<TaxBracket> newBrackets = new ArrayList<>();
         for (TaxBracket source : sourceBrackets) {
+            BigDecimal fixedPart = source.getFixedPart() != null ? source.getFixedPart() : BigDecimal.ZERO;
             TaxBracket newBracket = new TaxBracket();
             newBracket.setCountry(source.getCountry());
             newBracket.setTaxCode(source.getTaxCode());
+            newBracket.setBasis(source.getBasis());
             newBracket.setLower(source.getLower().multiply(multiplier).setScale(2, RoundingMode.HALF_UP));
             newBracket.setUpper(source.getUpper().multiply(multiplier).setScale(2, RoundingMode.HALF_UP));
             newBracket.setRate(source.getRate()); // Rates typically stay the same
-            newBracket.setFixedPart(source.getFixedPart().multiply(multiplier).setScale(2, RoundingMode.HALF_UP));
+            newBracket.setFixedPart(fixedPart.multiply(multiplier).setScale(2, RoundingMode.HALF_UP));
             newBracket.setValidFrom(targetStart);
             newBrackets.add(newBracket);
         }
 
         List<TaxBracket> savedBrackets = taxBracketRepository.saveAll(newBrackets);
-        log.info("Copied {} tax brackets from {} to {} for country {}", savedBrackets.size(), sourceYear, targetYear, countryId);
+        log.info(
+            "Copied {} tax brackets from {} to {} for country {}; source rows closed on {}",
+            savedBrackets.size(),
+            sourceYear,
+            targetYear,
+            countryId,
+            sourceClose
+        );
 
         return savedBrackets.stream().map(this::toResponse).collect(Collectors.toList());
     }
@@ -334,18 +441,74 @@ public class TaxCalculationService {
         return summary;
     }
 
-    private void validateTaxBracket(CreateTaxBracketRequest request) {
-        if (request.lower().compareTo(request.upper()) >= 0) {
+    private void validateBounds(BigDecimal lower, BigDecimal upper, BigDecimal rate) {
+        if (lower.compareTo(upper) >= 0) {
             throw new BusinessRuleViolationException("Lower bound must be less than upper bound");
         }
 
-        if (request.rate().compareTo(BigDecimal.ZERO) < 0 || request.rate().compareTo(BigDecimal.ONE) > 0) {
+        if (rate.compareTo(BigDecimal.ZERO) < 0 || rate.compareTo(BigDecimal.ONE) > 0) {
             throw new BusinessRuleViolationException("Rate must be between 0 and 1 (0% to 100%)");
         }
 
-        if (request.validTo() != null && request.validTo().isBefore(request.validFrom())) {
-            throw new BusinessRuleViolationException("Valid-to date cannot be before valid-from date");
+        // The column holds 6 decimals; anything finer would be rounded silently by the database.
+        if (rate.stripTrailingZeros().scale() > 6) {
+            throw new BusinessRuleViolationException("Rate can have at most 6 decimals (e.g. 0.03078 for 3.078%)");
         }
+    }
+
+    /**
+     * Rejects {@code candidate} if, during any part of its validity window, another bracket for the same
+     * country and tax code covers an overlapping income range or uses a different basis. Gaps aren't
+     * checked here because sets are built one bracket at a time; {@link #validateBracketSet} catches
+     * them at calculation time.
+     */
+    private void assertNoConflicts(TaxBracket candidate) {
+        List<TaxBracket> concurrent = findWithOverlappingValidity(
+            candidate.getCountry().getId(),
+            candidate.getTaxCode(),
+            candidate.getValidFrom(),
+            candidate.getValidTo()
+        );
+        for (TaxBracket other : concurrent) {
+            if (other.getId() != null && other.getId().equals(candidate.getId())) {
+                continue;
+            }
+            if (other.getBasis() != candidate.getBasis()) {
+                throw new BusinessRuleViolationException(
+                    "A " +
+                    other.getBasis() +
+                    " " +
+                    candidate.getTaxCode() +
+                    " bracket set is already active in this period; " +
+                    "a set can't mix ANNUAL and PER_PERIOD thresholds"
+                );
+            }
+            if (candidate.getLower().compareTo(other.getUpper()) < 0 && other.getLower().compareTo(candidate.getUpper()) < 0) {
+                throw new BusinessRuleViolationException(
+                    "Bracket " + range(candidate) + " overlaps existing bracket " + range(other) + " valid from " + other.getValidFrom()
+                );
+            }
+        }
+    }
+
+    /** Brackets for (country, tax code) whose validity window overlaps [{@code from}, {@code to}]; a null {@code to} is open-ended. */
+    private List<TaxBracket> findWithOverlappingValidity(UUID countryId, TaxCode taxCode, LocalDate from, LocalDate to) {
+        return taxBracketRepository.findAll(
+            (Specification<TaxBracket>) (root, query, cb) -> {
+                List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+                predicates.add(cb.equal(root.get("country").get("id"), countryId));
+                predicates.add(cb.equal(root.get("taxCode"), taxCode));
+                predicates.add(cb.or(cb.isNull(root.get("validTo")), cb.greaterThanOrEqualTo(root.get("validTo"), from)));
+                if (to != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("validFrom"), to));
+                }
+                return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+            }
+        );
+    }
+
+    private static String range(TaxBracket bracket) {
+        return "[" + bracket.getLower() + ", " + bracket.getUpper() + ")";
     }
 
     private TaxBracketResponse toResponse(TaxBracket bracket) {
@@ -361,6 +524,7 @@ public class TaxCalculationService {
             bracket.getRate(),
             bracket.getRate().multiply(BigDecimal.valueOf(100)),
             bracket.getFixedPart(),
+            bracket.getBasis(),
             bracket.getValidFrom(),
             bracket.getValidTo(),
             isActive
