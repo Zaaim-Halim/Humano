@@ -57,6 +57,12 @@ public enum TaxType {
     PENSION_CONTRIBUTION,
 
     /**
+     * Work-accident and occupational-disease insurance, typically employer-paid at a rate set
+     * by the employer's economic activity (e.g. Bulgaria's TZPB fund).
+     */
+    WORK_INJURY,
+
+    /**
      * Tax on investment income, stock options, or capital assets.
      * May have different rates and rules than regular income tax.
      */
@@ -72,5 +78,5 @@ public enum TaxType {
      * Miscellaneous tax types not falling into other categories.
      * Used for unique or jurisdiction-specific tax requirements.
      */
-    OTHER
+    OTHER,
 }

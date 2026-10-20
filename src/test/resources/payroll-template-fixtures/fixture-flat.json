@@ -1,0 +1,350 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-flat",
+  "name": "Fixture — flat contributions with floor, cap and lookups",
+  "version": "1.0.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": { "country": "BG" },
+  "validity": { "from": "2030-01-01", "to": "2030-12-31" },
+  "currency": "EUR",
+  "payFrequencies": ["MONTHLY"],
+  "taxYearStart": "--01-01",
+  "rounding": { "scale": 2, "mode": "HALF_UP" },
+  "changelog": [{ "version": "1.0.0", "date": "2030-01-01", "summary": "Synthetic fixture with made-up numbers" }],
+  "sources": { "law": { "title": "Fixture law (made up)", "url": "https://example.org/law", "retrieved": "2030-01-01" } },
+  "inputs": {
+    "employer": [
+      { "key": "activity", "type": "STRING", "required": true, "pattern": "^\\d{2}(\\.\\d{1,2})?$", "description": "Activity code" }
+    ],
+    "employee": [
+      { "key": "group", "type": "INTEGER", "required": false, "min": 1, "max": 3, "description": "Group 1-3" },
+      { "key": "minimumOverride", "type": "DECIMAL", "required": false, "min": 0, "description": "Minimum replacing the lookup" },
+      { "key": "category", "type": "ENUM", "required": false, "values": ["A", "B"], "defaultValue": "A", "description": "Category" }
+    ]
+  },
+  "parameters": {
+    "cap": [
+      { "from": "2030-01-01", "to": "2030-06-30", "value": "2000.00", "source": "law" },
+      { "from": "2030-07-01", "to": "2030-12-31", "value": "2500.00", "source": "law" }
+    ],
+    "oldPension": [{ "from": "2030-01-01", "to": "2030-12-31", "value": "0.09", "source": "law" }],
+    "newPension": [{ "from": "2030-01-01", "to": "2030-12-31", "value": "0.06", "source": "law" }],
+    "employerPension": [{ "from": "2030-01-01", "to": "2030-12-31", "value": "0.08", "source": "law" }],
+    "health": [{ "from": "2030-01-01", "to": "2030-12-31", "value": "0.03", "source": "law" }],
+    "taxRate": [{ "from": "2030-01-01", "to": "2030-12-31", "value": "0.10", "source": "law" }]
+  },
+  "tables": {
+    "minimum": {
+      "kind": "HIERARCHICAL",
+      "description": "Minimum insurable income by activity and group",
+      "columns": ["1", "2", "3"],
+      "requireMostSpecific": true,
+      "ambiguityHint": "Set the employee's minimumOverride.",
+      "versions": [
+        {
+          "from": "2030-01-01",
+          "to": "2030-12-31",
+          "source": "law",
+          "rows": [
+            { "codes": { "include": ["10"], "exclude": ["10.5"] }, "label": "Food", "values": ["600", "700", "800"] },
+            { "codes": { "include": ["10.5"], "exclude": [] }, "label": "Dairy", "values": ["650", "750", "850"] },
+            { "codes": { "include": ["20"], "exclude": [] }, "label": "Chemicals A", "values": ["900", "900", "900"] },
+            { "codes": { "include": ["20"], "exclude": [] }, "label": "Chemicals B", "values": ["900", "900", "900"] },
+            { "codes": { "include": ["30"], "exclude": [] }, "label": "Vehicles", "values": ["500", "500", "500"] },
+            { "codes": { "include": ["30"], "exclude": [] }, "label": "Vehicles, drivers only", "values": [null, "550", null] }
+          ]
+        }
+      ]
+    },
+    "accident": {
+      "kind": "EXACT",
+      "description": "Employer accident rate by activity division",
+      "versions": [
+        {
+          "from": "2030-01-01",
+          "to": "2030-12-31",
+          "source": "law",
+          "rows": [
+            { "key": "10", "values": ["0.005"] },
+            { "key": "20", "values": ["0.011"] },
+            { "key": "30", "values": ["0.007"] }
+          ]
+        }
+      ]
+    }
+  },
+  "steps": [
+    { "id": "onlyCategoryA", "type": "REQUIRE", "condition": "#employee['category'] == 'A'", "message": "Category B is not supported" },
+    {
+      "id": "needsMinimum",
+      "type": "REQUIRE",
+      "condition": "#employee['minimumOverride'] != null or #employee['group'] != null",
+      "message": "Set the employee's group or minimumOverride"
+    },
+    { "id": "remuneration", "type": "VALUE", "expr": "#pos(#socialEarnings - #reductions)" },
+    {
+      "id": "minimum",
+      "type": "VALUE",
+      "expr": "#employee['minimumOverride'] != null ? #employee['minimumOverride'] : #table.lookup('minimum', #employer['activity'], #employee['group'])"
+    },
+    {
+      "id": "partialBelowMinimum",
+      "type": "REQUIRE",
+      "when": "#employee['minimumOverride'] == null",
+      "condition": "#fullPeriod or #remuneration >= #minimum",
+      "message": "Below the minimum in a partial month"
+    },
+    { "id": "insurable", "type": "VALUE", "expr": "#remuneration > 0 ? #clamp(#remuneration, #minimum, #p['cap']) : 0" },
+    {
+      "id": "pension",
+      "type": "CONTRIBUTION",
+      "label": "Pension",
+      "ledger": "PENSION_CONTRIBUTION",
+      "source": "law",
+      "base": "#insurable",
+      "employee": { "rate": "#birthYear < 1960 ? #p['oldPension'] : #p['newPension']" },
+      "employer": { "rate": "#p['employerPension']" }
+    },
+    {
+      "id": "health",
+      "type": "CONTRIBUTION",
+      "label": "Health",
+      "ledger": "MEDICARE",
+      "source": "law",
+      "base": "#insurable",
+      "employee": { "rate": "#p['health']" },
+      "employer": { "rate": "#p['health']" }
+    },
+    {
+      "id": "accident",
+      "type": "CONTRIBUTION",
+      "label": "Accident",
+      "ledger": "WORK_INJURY",
+      "source": "law",
+      "base": "#insurable",
+      "employer": { "rate": "#table.lookup('accident', #employer['activity'].substring(0, 2))" }
+    },
+    {
+      "id": "tax",
+      "type": "TAX",
+      "label": "Income tax",
+      "ledger": "INCOME_TAX",
+      "source": "law",
+      "base": "#pos(#taxableEarnings - #reductions - #employeeContributions)",
+      "rate": "#p['taxRate']"
+    }
+  ],
+  "limitations": ["Synthetic fixture"],
+  "testCases": [
+    {
+      "name": "ordinary month",
+      "evidence": "1500 within [700, 2000]: pension 6%/8%, health 3%/3%, accident 0.5%; tax 10% x (1500 - 135)",
+      "periodStart": "2030-03-01",
+      "periodEnd": "2030-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1500.00",
+      "birthDate": "1985-05-10",
+      "employer": { "activity": "10.1" },
+      "employee": { "group": "2" },
+      "expectLines": [
+        { "step": "pension", "side": "EMPLOYEE", "amount": "90.00" },
+        { "step": "pension", "side": "EMPLOYER", "amount": "120.00" },
+        { "step": "health", "side": "EMPLOYEE", "amount": "45.00" },
+        { "step": "health", "side": "EMPLOYER", "amount": "45.00" },
+        { "step": "accident", "side": "EMPLOYER", "amount": "7.50" },
+        { "step": "tax", "side": "TAX", "amount": "136.50" }
+      ]
+    },
+    {
+      "name": "second-half cap, older cohort, agreeing duplicate rows",
+      "evidence": "3000 capped at 2500 (from 2030-07-01); born 1955 so 9%; rows Chemicals A/B both 900; tax 10% x (3000 - 300)",
+      "periodStart": "2030-08-01",
+      "periodEnd": "2030-08-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1955-02-01",
+      "employer": { "activity": "20" },
+      "employee": { "group": "1" },
+      "expectLines": [
+        { "step": "pension", "side": "EMPLOYEE", "amount": "225.00" },
+        { "step": "pension", "side": "EMPLOYER", "amount": "200.00" },
+        { "step": "health", "side": "EMPLOYEE", "amount": "75.00" },
+        { "step": "health", "side": "EMPLOYER", "amount": "75.00" },
+        { "step": "accident", "side": "EMPLOYER", "amount": "27.50" },
+        { "step": "tax", "side": "TAX", "amount": "270.00" }
+      ]
+    },
+    {
+      "name": "floor raises the base; excluded class uses its own row",
+      "evidence": "10.5 is excluded from Food and has Dairy group 3 = 850; 400 raised to 850; tax 10% x (400 - 76.50)",
+      "periodStart": "2030-01-01",
+      "periodEnd": "2030-01-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "400.00",
+      "birthDate": "1990-01-01",
+      "employer": { "activity": "10.5" },
+      "employee": { "group": "3" },
+      "expectLines": [
+        { "step": "pension", "side": "EMPLOYEE", "amount": "51.00" },
+        { "step": "pension", "side": "EMPLOYER", "amount": "68.00" },
+        { "step": "health", "side": "EMPLOYEE", "amount": "25.50" },
+        { "step": "health", "side": "EMPLOYER", "amount": "25.50" },
+        { "step": "accident", "side": "EMPLOYER", "amount": "4.25" },
+        { "step": "tax", "side": "TAX", "amount": "32.35" }
+      ]
+    },
+    {
+      "name": "half-up rounding per line",
+      "evidence": "1234.56: 74.0736->74.07, 98.7648->98.76, 37.0368->37.04, 6.1728->6.17; tax 10% x 1123.45 = 112.345 -> 112.35",
+      "periodStart": "2030-05-01",
+      "periodEnd": "2030-05-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1234.56",
+      "birthDate": "1985-05-10",
+      "employer": { "activity": "10.1" },
+      "employee": { "group": "1" },
+      "expectLines": [
+        { "step": "pension", "side": "EMPLOYEE", "amount": "74.07" },
+        { "step": "pension", "side": "EMPLOYER", "amount": "98.76" },
+        { "step": "health", "side": "EMPLOYEE", "amount": "37.04" },
+        { "step": "health", "side": "EMPLOYER", "amount": "37.04" },
+        { "step": "accident", "side": "EMPLOYER", "amount": "6.17" },
+        { "step": "tax", "side": "TAX", "amount": "112.35" }
+      ]
+    },
+    {
+      "name": "no earnings, no lines",
+      "evidence": "zero remuneration: no contributions and no tax",
+      "periodStart": "2030-02-01",
+      "periodEnd": "2030-02-28",
+      "frequency": "MONTHLY",
+      "grossEarnings": "0",
+      "birthDate": "1985-05-10",
+      "employer": { "activity": "10.1" },
+      "employee": { "group": "1" },
+      "expectLines": []
+    },
+    {
+      "name": "override replaces the lookup",
+      "evidence": "minimumOverride 1000 > 800 earned; no lookup, so activity 30's ambiguity doesn't matter",
+      "periodStart": "2030-02-01",
+      "periodEnd": "2030-02-28",
+      "frequency": "MONTHLY",
+      "grossEarnings": "800.00",
+      "birthDate": "1985-05-10",
+      "employer": { "activity": "30" },
+      "employee": { "minimumOverride": "1000" },
+      "expectLines": [
+        { "step": "pension", "side": "EMPLOYEE", "amount": "60.00" },
+        { "step": "pension", "side": "EMPLOYER", "amount": "80.00" },
+        { "step": "health", "side": "EMPLOYEE", "amount": "30.00" },
+        { "step": "health", "side": "EMPLOYER", "amount": "30.00" },
+        { "step": "accident", "side": "EMPLOYER", "amount": "7.00" },
+        { "step": "tax", "side": "TAX", "amount": "71.00" }
+      ]
+    },
+    {
+      "name": "conflicting rows refuse",
+      "evidence": "activity 30, group 2: Vehicles says 500, the drivers-only row says 550",
+      "periodStart": "2030-02-01",
+      "periodEnd": "2030-02-28",
+      "frequency": "MONTHLY",
+      "grossEarnings": "800.00",
+      "birthDate": "1985-05-10",
+      "employer": { "activity": "30" },
+      "employee": { "group": "2" },
+      "expectError": "has more than one value for 30 / 2"
+    },
+    {
+      "name": "a row that leaves the group empty doesn't apply to it",
+      "evidence": "activity 30, group 1: only Vehicles (500) has a value; 800 is above it, so contributions on 800",
+      "periodStart": "2030-02-01",
+      "periodEnd": "2030-02-28",
+      "frequency": "MONTHLY",
+      "grossEarnings": "800.00",
+      "birthDate": "1985-05-10",
+      "employer": { "activity": "30" },
+      "employee": { "group": "1" },
+      "expectLines": [
+        { "step": "pension", "side": "EMPLOYEE", "amount": "48.00" },
+        { "step": "pension", "side": "EMPLOYER", "amount": "64.00" },
+        { "step": "health", "side": "EMPLOYEE", "amount": "24.00" },
+        { "step": "health", "side": "EMPLOYER", "amount": "24.00" },
+        { "step": "accident", "side": "EMPLOYER", "amount": "5.60" },
+        { "step": "tax", "side": "TAX", "amount": "72.80" }
+      ]
+    },
+    {
+      "name": "too-general code refuses",
+      "evidence": "the table distinguishes 10.5 within 10",
+      "periodStart": "2030-02-01",
+      "periodEnd": "2030-02-28",
+      "frequency": "MONTHLY",
+      "grossEarnings": "800.00",
+      "birthDate": "1985-05-10",
+      "employer": { "activity": "10" },
+      "employee": { "group": "1" },
+      "expectError": "distinguishes codes below 10"
+    },
+    {
+      "name": "partial month below the minimum refuses",
+      "evidence": "300 < 600 with fullPeriod=false",
+      "periodStart": "2030-02-01",
+      "periodEnd": "2030-02-28",
+      "frequency": "MONTHLY",
+      "grossEarnings": "300.00",
+      "fullPeriod": false,
+      "birthDate": "1985-05-10",
+      "employer": { "activity": "10.1" },
+      "employee": { "group": "1" },
+      "expectError": "Below the minimum in a partial month"
+    },
+    {
+      "name": "missing birth date refuses",
+      "evidence": "the pension rate depends on the birth year",
+      "periodStart": "2030-02-01",
+      "periodEnd": "2030-02-28",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "employer": { "activity": "10.1" },
+      "employee": { "group": "1" },
+      "expectError": "no birth date"
+    },
+    {
+      "name": "unsupported category refuses",
+      "evidence": "REQUIRE step",
+      "periodStart": "2030-02-01",
+      "periodEnd": "2030-02-28",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "birthDate": "1985-05-10",
+      "employer": { "activity": "10.1" },
+      "employee": { "group": "1", "category": "B" },
+      "expectError": "Category B is not supported"
+    },
+    {
+      "name": "missing employer setting refuses",
+      "evidence": "activity is required",
+      "periodStart": "2030-02-01",
+      "periodEnd": "2030-02-28",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "birthDate": "1985-05-10",
+      "employer": {},
+      "employee": { "group": "1" },
+      "expectError": "Missing required employer setting [activity]"
+    },
+    {
+      "name": "invalid attribute refuses",
+      "evidence": "group must be 1-3",
+      "periodStart": "2030-02-01",
+      "periodEnd": "2030-02-28",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "birthDate": "1985-05-10",
+      "employer": { "activity": "10.1" },
+      "employee": { "group": "4" },
+      "expectError": "must be at most 3"
+    }
+  ]
+}

@@ -414,7 +414,7 @@ public class PayslipService {
         for (PayrollLine line : lines) {
             PayslipPdfGenerator.PayslipPdfModel.LineItem item = new PayslipPdfGenerator.PayslipPdfModel.LineItem(
                 line.getComponent().getCode().name(),
-                line.getComponent().getName(),
+                line.displayName(),
                 line.getQuantity(),
                 line.getRate(),
                 line.getAmount(),
@@ -785,7 +785,7 @@ public class PayslipService {
             PayrollResultResponse.PayrollLineItem item = new PayrollResultResponse.PayrollLineItem(
                 line.getId(),
                 line.getComponent().getCode().name(),
-                line.getComponent().getName(),
+                line.displayName(),
                 line.getQuantity(),
                 line.getRate(),
                 line.getAmount(),

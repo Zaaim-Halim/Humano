@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "wrong-expectation",
+  "name": "Valid structure, wrong worked example",
+  "version": "1.0.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": { "country": "BG" },
+  "validity": { "from": "2030-01-01", "to": "2030-12-31" },
+  "currency": "EUR",
+  "payFrequencies": ["MONTHLY"],
+  "taxYearStart": "--01-01",
+  "changelog": [{ "version": "1.0.0", "date": "2030-01-01", "summary": "fixture" }],
+  "sources": { "law": { "title": "Law", "url": "https://example.org/law", "retrieved": "2030-01-01" } },
+  "inputs": { "employer": [], "employee": [] },
+  "parameters": { "rate": [{ "from": "2030-01-01", "to": "2030-12-31", "value": "0.10", "source": "law" }] },
+  "tables": {},
+  "steps": [
+    {
+      "id": "tax",
+      "type": "TAX",
+      "label": "Tax",
+      "ledger": "INCOME_TAX",
+      "source": "law",
+      "base": "#taxableEarnings",
+      "rate": "#p['rate']"
+    }
+  ],
+  "limitations": [],
+  "testCases": [
+    {
+      "name": "off by one cent",
+      "evidence": "deliberately wrong: 10% of 1000 is 100.00",
+      "periodStart": "2030-03-01",
+      "periodEnd": "2030-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "expectLines": [{ "step": "tax", "side": "TAX", "amount": "100.01" }]
+    }
+  ]
+}

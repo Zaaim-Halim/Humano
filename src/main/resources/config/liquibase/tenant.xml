@@ -96,6 +96,9 @@
     <!-- Tax brackets: ANNUAL / PER_PERIOD basis, and 6-decimal rate precision -->
     <include file="config/liquibase/changelog/tenant/20261020-tax-bracket-basis-precision-changelog.xml" relativeToChangelogFile="false"/>
 
+    <!-- Statutory payroll templates: tenant adoption, employee profiles, template tags on payroll lines -->
+    <include file="config/liquibase/changelog/tenant/20261020-payroll-templates-changelog.xml" relativeToChangelogFile="false"/>
+
     <!--  will add tenant liquibase changelogs here -->
 
 </databaseChangeLog>

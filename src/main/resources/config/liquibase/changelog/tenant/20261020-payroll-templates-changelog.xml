@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Statutory payroll templates ship with the application (classpath payroll-templates/). A tenant
+         adopts one by id and stores only its own employer settings, so every shipped update reaches
+         it. country_code / subdivision record the template's jurisdiction at adoption, so payroll can
+         refuse (rather than silently fall back) if a later build no longer ships the template.
+         acknowledged_version is the template version an admin last reviewed, to flag new ones. -->
+    <changeSet id="20261020-payroll-template-adoption" author="halimzaaim">
+        <createTable tableName="payroll_template_adoption">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_template_adoption"/>
+            </column>
+            <column name="template_id" type="VARCHAR(80)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="ux_payroll_template_adoption_template"/>
+            </column>
+            <column name="country_code" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="subdivision" type="VARCHAR(10)"/>
+            <column name="enabled" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="settings" type="${jsonType}"/>
+            <column name="acknowledged_version" type="VARCHAR(40)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Per-employee inputs a template reads (e.g. Bulgaria's NKPD qualification group).
+         One row per (employee, template). -->
+    <changeSet id="20261020-employee-template-profile" author="halimzaaim">
+        <createTable tableName="employee_template_profile">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_employee_template_profile"/>
+            </column>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="template_id" type="VARCHAR(80)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attributes" type="${jsonType}"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addUniqueConstraint
+            tableName="employee_template_profile"
+            columnNames="employee_id, template_id"
+            constraintName="ux_employee_template_profile_employee_template"/>
+        <addForeignKeyConstraint
+            baseTableName="employee_template_profile"
+            baseColumnNames="employee_id"
+            constraintName="fk_employee_template_profile_employee"
+            referencedTableName="employee"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <!-- Template lines post against generic components (TAX_PIT / EMPLOYER_CHARGE), so each carries its
+         own payslip label, plus the template id@version and step that produced it: the audit trail per
+         payslip, and the key year-to-date sums are read by. -->
+    <changeSet id="20261020-payroll-line-template-columns" author="halimzaaim">
+        <addColumn tableName="payroll_line">
+            <column name="label" type="VARCHAR(120)"/>
+            <column name="template_ref" type="VARCHAR(130)"/>
+            <column name="template_step" type="VARCHAR(60)"/>
+        </addColumn>
+        <createIndex tableName="payroll_line" indexName="ix_payroll_line_template_step">
+            <column name="template_step"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- payroll_line.rate holds a percentage and quantity a base or count. Two decimals silently rounded
+         statutory rates such as 3.078 % and template bases that year-to-date caps are summed from. Both
+         are nullable, so MySQL's MODIFY loses no constraint; existing values are preserved. -->
+    <changeSet id="20261020-payroll-line-rate-quantity-precision" author="halimzaaim">
+        <modifyDataType tableName="payroll_line" columnName="rate" newDataType="DECIMAL(38,6)"/>
+        <modifyDataType tableName="payroll_line" columnName="quantity" newDataType="DECIMAL(38,6)"/>
+    </changeSet>
+
+</databaseChangeLog>

@@ -41,19 +41,21 @@ public class PayrollLine extends AbstractAuditingEntity<UUID> {
     /**
      * The number of units/hours for this component (if applicable).
      * <p>
-     * Used for quantity-based components like hours worked or units produced.
+     * Used for quantity-based components like hours worked or units produced. For payroll-template
+     * lines it holds the base the rate was applied to (year-to-date caps are summed from it).
      * Can be null for fixed components that don't depend on quantity.
      */
-    @Column(name = "quantity")
+    @Column(name = "quantity", precision = 38, scale = 6)
     private BigDecimal quantity;
 
     /**
      * The rate applied for this component (if applicable).
      * <p>
-     * Used with the quantity to calculate the amount for rate-based components.
+     * Used with the quantity to calculate the amount for rate-based components. Withholding and
+     * payroll-template lines store it as a percentage (6.58 = 6.58 %).
      * Can be null for fixed components that don't depend on a rate.
      */
-    @Column(name = "rate")
+    @Column(name = "rate", precision = 38, scale = 6)
     private BigDecimal rate;
 
     /**
@@ -102,6 +104,21 @@ public class PayrollLine extends AbstractAuditingEntity<UUID> {
     @Enumerated(EnumType.STRING)
     @Column(name = "tax_type")
     private TaxType taxType;
+
+    /**
+     * Payslip label overriding the component name, for lines posted against a generic component
+     * (e.g. each statutory contribution a payroll template emits against TAX_PIT). Null otherwise.
+     */
+    @Column(name = "label", length = 120)
+    private String label;
+
+    /** {@code templateId@version} of the payroll template that produced this line; null for non-template lines. */
+    @Column(name = "template_ref", length = 130)
+    private String templateRef;
+
+    /** Id of the template step that produced this line; year-to-date sums are keyed by it. */
+    @Column(name = "template_step", length = 60)
+    private String templateStep;
 
     /**
      * The PayrollResult (payslip) this line is part of.
@@ -217,6 +234,40 @@ public class PayrollLine extends AbstractAuditingEntity<UUID> {
     public PayrollLine taxType(TaxType taxType) {
         this.taxType = taxType;
         return this;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
+    }
+
+    public PayrollLine label(String label) {
+        this.label = label;
+        return this;
+    }
+
+    public String getTemplateRef() {
+        return templateRef;
+    }
+
+    public void setTemplateRef(String templateRef) {
+        this.templateRef = templateRef;
+    }
+
+    public String getTemplateStep() {
+        return templateStep;
+    }
+
+    public void setTemplateStep(String templateStep) {
+        this.templateStep = templateStep;
+    }
+
+    /** The payslip label: {@link #label} when set, otherwise the component's name. */
+    public String displayName() {
+        return label != null ? label : component != null ? component.getName() : null;
     }
 
     public void setTaxType(TaxType taxType) {

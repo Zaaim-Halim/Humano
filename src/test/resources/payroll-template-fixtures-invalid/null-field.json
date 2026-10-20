@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "null-field",
+  "name": "Changelog entry without a version",
+  "version": "1.0.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": { "country": "BG" },
+  "validity": { "from": "2030-01-01", "to": "2030-12-31" },
+  "currency": "EUR",
+  "payFrequencies": ["MONTHLY"],
+  "taxYearStart": "--01-01",
+  "changelog": [{ "date": "2030-01-01", "summary": "no version" }],
+  "sources": { "law": { "title": "Law", "url": "https://example.org/law", "retrieved": "2030-01-01" } },
+  "inputs": { "employer": [], "employee": [] },
+  "parameters": {},
+  "tables": {},
+  "steps": [{ "id": "tax", "type": "TAX", "label": "Tax", "ledger": "INCOME_TAX", "amount": "#taxableEarnings" }],
+  "limitations": [],
+  "testCases": []
+}

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "broken-structure",
+  "name": "Broken on purpose",
+  "version": "1.0.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": { "country": "BG" },
+  "validity": { "from": "2030-01-01", "to": "2030-12-31" },
+  "currency": "EUR",
+  "payFrequencies": ["MONTHLY"],
+  "taxYearStart": "--01-01",
+  "changelog": [{ "version": "0.9.0", "date": "2030-01-01", "summary": "stale changelog" }],
+  "sources": { "law": { "title": "Law", "url": "https://example.org/law", "retrieved": "2030-01-01" } },
+  "inputs": { "employer": [], "employee": [{ "key": "group", "type": "INTEGER", "required": false, "description": "Group" }] },
+  "parameters": {
+    "rate": [
+      { "from": "2030-01-01", "to": "2030-05-31", "value": "0.10", "source": "law" },
+      { "from": "2030-07-01", "to": "2030-12-31", "value": "0.12", "source": "nowhere" }
+    ]
+  },
+  "tables": {
+    "pit": {
+      "kind": "BRACKETS",
+      "description": "Brackets with a gap",
+      "versions": [
+        {
+          "from": "2030-01-01",
+          "to": "2030-12-31",
+          "source": "law",
+          "rows": [
+            { "lower": "100", "upper": "1000", "rate": "0.1" },
+            { "lower": "2000", "upper": "999999", "rate": "0.2" }
+          ]
+        }
+      ]
+    }
+  },
+  "steps": [
+    { "id": "literal", "type": "VALUE", "expr": "#grossEarnings * 0.5" },
+    { "id": "divides", "type": "VALUE", "expr": "#grossEarnings / 2" },
+    { "id": "typo", "type": "VALUE", "expr": "#grosEarnings" },
+    { "id": "undeclared", "type": "VALUE", "expr": "#employee['qualification']" },
+    { "id": "noParam", "type": "VALUE", "expr": "#p['missing']" },
+    { "id": "wrongTable", "type": "VALUE", "expr": "#table.lookup('pit', 1)" },
+    { "id": "literal", "type": "VALUE", "expr": "#grossEarnings" },
+    { "id": "taxes", "type": "VALUE", "expr": "#grossEarnings" },
+    {
+      "id": "contrib",
+      "type": "CONTRIBUTION",
+      "label": "C",
+      "ledger": "SOCIAL_SECURITY",
+      "base": "#grossEarnings",
+      "employee": { "rate": "#p['rate']", "amount": "#grossEarnings" }
+    }
+  ],
+  "limitations": [],
+  "testCases": []
+}

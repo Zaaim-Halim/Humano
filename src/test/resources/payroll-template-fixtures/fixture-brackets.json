@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-brackets",
+  "name": "Fixture — annual brackets, bands and a year-to-date cap",
+  "version": "1.0.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": { "country": "GB" },
+  "validity": { "from": "2030-04-06", "to": "2031-04-05" },
+  "currency": "GBP",
+  "payFrequencies": ["WEEKLY", "MONTHLY"],
+  "taxYearStart": "--04-06",
+  "rounding": { "scale": 2, "mode": "HALF_UP" },
+  "changelog": [{ "version": "1.0.0", "date": "2030-04-06", "summary": "Synthetic fixture with made-up numbers" }],
+  "sources": { "law": { "title": "Fixture law (made up)", "url": "https://example.org/law", "retrieved": "2030-04-06" } },
+  "inputs": { "employer": [], "employee": [] },
+  "parameters": {
+    "wageBase": [{ "from": "2030-04-06", "to": "2031-04-05", "value": "10000", "source": "law" }],
+    "ssRate": [{ "from": "2030-04-06", "to": "2031-04-05", "value": "0.05", "source": "law" }]
+  },
+  "tables": {
+    "pit": {
+      "kind": "BRACKETS",
+      "description": "Annual income tax brackets",
+      "versions": [
+        {
+          "from": "2030-04-06",
+          "to": "2031-04-05",
+          "source": "law",
+          "rows": [
+            { "lower": "0", "upper": "10000", "rate": "0" },
+            { "lower": "10000", "upper": "40000", "rate": "0.20" },
+            { "lower": "40000", "upper": "999999999", "rate": "0.40" }
+          ]
+        }
+      ]
+    },
+    "bands": {
+      "kind": "BRACKETS",
+      "description": "Annual contribution bands",
+      "versions": [
+        {
+          "from": "2030-04-06",
+          "to": "2031-04-05",
+          "source": "law",
+          "rows": [
+            { "lower": "0", "upper": "12000", "rate": "0" },
+            { "lower": "12000", "upper": "50000", "rate": "0.08" },
+            { "lower": "50000", "upper": "999999999", "rate": "0.02" }
+          ]
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "id": "ss",
+      "type": "CONTRIBUTION",
+      "label": "Social security",
+      "ledger": "SOCIAL_SECURITY",
+      "source": "law",
+      "base": "#min(#socialEarnings, #pos(#p['wageBase'] - #ytd.base('ss', 'EMPLOYEE')))",
+      "employee": { "rate": "#p['ssRate']" },
+      "employer": { "rate": "#p['ssRate']" }
+    },
+    {
+      "id": "band",
+      "type": "CONTRIBUTION",
+      "label": "Banded contribution",
+      "ledger": "SOCIAL_SECURITY",
+      "source": "law",
+      "base": "#socialEarnings",
+      "employee": { "amount": "#divide(#table.bracketTax('bands', #band_base * #periodsPerYear), #periodsPerYear, 6, 'HALF_UP')" }
+    },
+    {
+      "id": "pit",
+      "type": "TAX",
+      "label": "Income tax",
+      "ledger": "INCOME_TAX",
+      "source": "law",
+      "base": "#pos(#taxableEarnings - #reductions)",
+      "amount": "#divide(#table.bracketTax('pit', #pit_base * #periodsPerYear), #periodsPerYear, 6, 'HALF_UP')"
+    }
+  ],
+  "limitations": ["Synthetic fixture"],
+  "testCases": [
+    {
+      "name": "monthly, below the cap",
+      "evidence": "ss 5% x 3000; bands (36000-12000) x 8% / 12 = 160; pit (36000-10000) x 20% / 12 = 433.333333",
+      "periodStart": "2030-05-01",
+      "periodEnd": "2030-05-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "expectLines": [
+        { "step": "ss", "side": "EMPLOYEE", "amount": "150.00" },
+        { "step": "ss", "side": "EMPLOYER", "amount": "150.00" },
+        { "step": "band", "side": "EMPLOYEE", "amount": "160.00" },
+        { "step": "pit", "side": "TAX", "amount": "433.33" }
+      ]
+    },
+    {
+      "name": "year-to-date cap partly used",
+      "evidence": "9000 of the 10000 wage base used earlier in the tax year, so ss applies to 1000",
+      "periodStart": "2030-05-01",
+      "periodEnd": "2030-05-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "ytd": { "ss.EMPLOYEE.base": "9000" },
+      "expectLines": [
+        { "step": "ss", "side": "EMPLOYEE", "amount": "50.00" },
+        { "step": "ss", "side": "EMPLOYER", "amount": "50.00" },
+        { "step": "band", "side": "EMPLOYEE", "amount": "160.00" },
+        { "step": "pit", "side": "TAX", "amount": "433.33" }
+      ]
+    },
+    {
+      "name": "year-to-date cap exhausted",
+      "evidence": "the whole wage base used: no ss lines",
+      "periodStart": "2030-05-01",
+      "periodEnd": "2030-05-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "ytd": { "ss.EMPLOYEE.base": "10000" },
+      "expectLines": [
+        { "step": "band", "side": "EMPLOYEE", "amount": "160.00" },
+        { "step": "pit", "side": "TAX", "amount": "433.33" }
+      ]
+    },
+    {
+      "name": "weekly annualisation",
+      "evidence": "700 x 52 = 36400: bands 24400 x 8% / 52 = 37.538462; pit 26400 x 20% / 52 = 101.538462",
+      "periodStart": "2030-05-04",
+      "periodEnd": "2030-05-10",
+      "frequency": "WEEKLY",
+      "grossEarnings": "700.00",
+      "expectLines": [
+        { "step": "ss", "side": "EMPLOYEE", "amount": "35.00" },
+        { "step": "ss", "side": "EMPLOYER", "amount": "35.00" },
+        { "step": "band", "side": "EMPLOYEE", "amount": "37.54" },
+        { "step": "pit", "side": "TAX", "amount": "101.54" }
+      ]
+    },
+    {
+      "name": "top bands",
+      "evidence": "60000 a year: bands 38000 x 8% + 10000 x 2% = 3240 / 12; pit 30000 x 20% + 20000 x 40% = 14000 / 12 = 1166.666667",
+      "periodStart": "2030-05-01",
+      "periodEnd": "2030-05-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "expectLines": [
+        { "step": "ss", "side": "EMPLOYEE", "amount": "250.00" },
+        { "step": "ss", "side": "EMPLOYER", "amount": "250.00" },
+        { "step": "band", "side": "EMPLOYEE", "amount": "270.00" },
+        { "step": "pit", "side": "TAX", "amount": "1166.67" }
+      ]
+    },
+    {
+      "name": "period outside the template's data",
+      "evidence": "validity ends 2031-04-05",
+      "periodStart": "2031-05-01",
+      "periodEnd": "2031-05-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "expectError": "a newer template version is needed"
+    },
+    {
+      "name": "unsupported frequency",
+      "evidence": "only weekly and monthly",
+      "periodStart": "2030-05-01",
+      "periodEnd": "2030-05-14",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "1500.00",
+      "expectError": "supports [WEEKLY, MONTHLY] pay, not BIWEEKLY"
+    }
+  ]
+}

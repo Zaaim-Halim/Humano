@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-extension",
+  "name": "Fixture — tax computed by a code extension",
+  "version": "1.0.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": { "country": "DE" },
+  "validity": { "from": "2030-01-01", "to": "2030-12-31" },
+  "currency": "EUR",
+  "payFrequencies": ["MONTHLY"],
+  "taxYearStart": "--01-01",
+  "changelog": [{ "version": "1.0.0", "date": "2030-01-01", "summary": "Synthetic fixture with made-up numbers" }],
+  "sources": { "law": { "title": "Fixture law (made up)", "url": "https://example.org/law", "retrieved": "2030-01-01" } },
+  "inputs": {
+    "employer": [],
+    "employee": [
+      { "key": "exempt", "type": "BOOLEAN", "required": false, "defaultValue": "false", "description": "Exempt from the surcharge" }
+    ]
+  },
+  "parameters": { "factor": [{ "from": "2030-01-01", "to": "2030-12-31", "value": "0.25", "source": "law" }] },
+  "tables": {},
+  "steps": [
+    {
+      "id": "algorithm",
+      "type": "EXTENSION",
+      "extension": "test.scaled-tax-2030",
+      "inputs": { "amount": "#taxableEarnings", "factor": "#p['factor']" }
+    },
+    { "id": "wageTax", "type": "TAX", "label": "Wage tax", "ledger": "INCOME_TAX", "source": "law", "amount": "#algorithm['tax']" },
+    {
+      "id": "surcharge",
+      "type": "TAX",
+      "label": "Surcharge",
+      "ledger": "LOCAL_INCOME_TAX",
+      "source": "law",
+      "when": "!#employee['exempt']",
+      "base": "#wageTax",
+      "rate": "#p['factor']"
+    }
+  ],
+  "limitations": ["Synthetic fixture"],
+  "testCases": [
+    {
+      "name": "extension output feeds later steps",
+      "evidence": "extension: 1000 x 0.25 = 250; surcharge 25% x 250 = 62.50",
+      "periodStart": "2030-03-01",
+      "periodEnd": "2030-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "expectLines": [
+        { "step": "wageTax", "side": "TAX", "amount": "250.00" },
+        { "step": "surcharge", "side": "TAX", "amount": "62.50" }
+      ]
+    },
+    {
+      "name": "a false 'when' skips the step",
+      "evidence": "exempt employee: no surcharge",
+      "periodStart": "2030-03-01",
+      "periodEnd": "2030-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "employee": { "exempt": "true" },
+      "expectLines": [{ "step": "wageTax", "side": "TAX", "amount": "250.00" }]
+    }
+  ]
+}

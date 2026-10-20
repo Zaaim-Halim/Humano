@@ -23,6 +23,13 @@ import com.humano.security.PermissionsConstants;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.EmployeeRoleHistory;
+import com.humano.service.payroll.template.PayrollTemplateService;
+import com.humano.service.payroll.template.engine.PayrollTemplateEngine;
+import com.humano.service.payroll.template.engine.TemplateCalculationException;
+import com.humano.service.payroll.template.engine.TemplateInput;
+import com.humano.service.payroll.template.engine.TemplateLine;
+import com.humano.service.payroll.template.model.LineSide;
+import com.humano.service.payroll.template.model.PayrollTemplate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -155,6 +162,8 @@ public class PayrollProcessingService {
     private final TaxCalculationService taxCalculationService;
     private final ExchangeRateService exchangeRateService;
     private final AuthorityPermissionService authorityPermissionService;
+    private final PayrollTemplateService payrollTemplateService;
+    private final PayrollTemplateEngine payrollTemplateEngine;
 
     /** Runs each employee's calculation in its own tenant {@code REQUIRES_NEW} transaction. */
     private final PayrollEmployeeTransactionExecutor employeeTransactionExecutor;
@@ -190,9 +199,13 @@ public class PayrollProcessingService {
         ExchangeRateService exchangeRateService,
         AuthorityPermissionService authorityPermissionService,
         PayrollEmployeeTransactionExecutor employeeTransactionExecutor,
-        EmployeeRoleHistory roleHistory
+        EmployeeRoleHistory roleHistory,
+        PayrollTemplateService payrollTemplateService,
+        PayrollTemplateEngine payrollTemplateEngine
     ) {
         this.roleHistory = roleHistory;
+        this.payrollTemplateService = payrollTemplateService;
+        this.payrollTemplateEngine = payrollTemplateEngine;
         this.payrollRunRepository = payrollRunRepository;
         this.payrollPeriodRepository = payrollPeriodRepository;
         this.payrollResultRepository = payrollResultRepository;
@@ -269,12 +282,15 @@ public class PayrollProcessingService {
             .toList();
         Instant payRuleVersion = payRuleRepository.findMaxLastModifiedDate().orElse(null);
         Instant taxBracketVersion = taxBracketRepository.findMaxLastModifiedDate().orElse(null);
+        // Template versions, adoption settings and employee template profiles change the calculation too.
+        String templateFingerprint = payrollTemplateService.fingerprint();
         String hash = generateIdempotencyHash(
             period.getId(),
             scope,
             sortedEmployeeIds,
             payRuleVersion,
             taxBracketVersion,
+            templateFingerprint,
             request.reportingCurrencyId()
         );
 
@@ -500,6 +516,9 @@ public class PayrollProcessingService {
 
         BigDecimal gross = BigDecimal.ZERO;
         BigDecimal nonTaxableEarnings = BigDecimal.ZERO;
+        // Earnings whose component is not subject to social contributions; payroll templates use
+        // gross minus these as their contribution base.
+        BigDecimal nonSocialEarnings = BigDecimal.ZERO;
         BigDecimal preTaxDeductions = BigDecimal.ZERO;
         BigDecimal postTaxDeductions = BigDecimal.ZERO;
         BigDecimal taxWithheld = BigDecimal.ZERO;
@@ -529,6 +548,9 @@ public class PayrollProcessingService {
             if (!Boolean.TRUE.equals(basicComponent.getTaxable())) {
                 nonTaxableEarnings = nonTaxableEarnings.add(baseSalary);
             }
+            if (!Boolean.TRUE.equals(basicComponent.getContributesToSocial())) {
+                nonSocialEarnings = nonSocialEarnings.add(baseSalary);
+            }
             context.put(basicComponent.getCode().name(), baseSalary);
         } else {
             log.warn("Step 1 — no BASIC PayComponent seeded; base salary {} counted in gross without a line", fmt(baseSalary));
@@ -557,6 +579,9 @@ public class PayrollProcessingService {
             gross = gross.add(amt);
             if (!Boolean.TRUE.equals(input.getComponent().getTaxable())) {
                 nonTaxableEarnings = nonTaxableEarnings.add(amt);
+            }
+            if (!Boolean.TRUE.equals(input.getComponent().getContributesToSocial())) {
+                nonSocialEarnings = nonSocialEarnings.add(amt);
             }
             context.put(input.getComponent().getCode().name(), amt);
             handledComponentIds.add(input.getComponent().getId());
@@ -590,6 +615,9 @@ public class PayrollProcessingService {
                 if (!Boolean.TRUE.equals(bonusComponent.getTaxable())) {
                     nonTaxableEarnings = nonTaxableEarnings.add(amt);
                 }
+                if (!Boolean.TRUE.equals(bonusComponent.getContributesToSocial())) {
+                    nonSocialEarnings = nonSocialEarnings.add(amt);
+                }
             }
         }
 
@@ -606,6 +634,9 @@ public class PayrollProcessingService {
             if (!Boolean.TRUE.equals(component.getTaxable())) {
                 nonTaxableEarnings = nonTaxableEarnings.add(amt);
             }
+            if (!Boolean.TRUE.equals(component.getContributesToSocial())) {
+                nonSocialEarnings = nonSocialEarnings.add(amt);
+            }
             context.put(component.getCode().name(), amt);
         }
 
@@ -618,6 +649,9 @@ public class PayrollProcessingService {
         //   a silent earnings reduction. Reviewers should know this is deliberate.
         // ============================================================
         PayComponent leaveDeductionComponent = componentsByCode.get(PayComponentCode.DEDUCTION);
+        boolean hadLeaveDeduction = false;
+        // Pre-tax leave deductions: remuneration not earned, which payroll templates take off their bases.
+        BigDecimal leaveReductions = BigDecimal.ZERO;
         if (employee.getCountry() == null) {
             log.debug("Step 3 — leave deductions skipped: employee {} has no country", employee.getId());
         } else if (leaveDeductionComponent == null) {
@@ -683,9 +717,11 @@ public class PayrollProcessingService {
                 );
                 if (affectsTaxable) {
                     preTaxDeductions = preTaxDeductions.add(deduction);
+                    leaveReductions = leaveReductions.add(deduction);
                 } else {
                     postTaxDeductions = postTaxDeductions.add(deduction);
                 }
+                hadLeaveDeduction = true;
             }
         }
 
@@ -727,6 +763,85 @@ public class PayrollProcessingService {
         context.put("taxableIncome", taxableIncome);
 
         // ============================================================
+        // Step 6b — Statutory payroll templates
+        //   Enabled templates covering the employee's country compute income tax and social
+        //   contributions from shipped, cited template data. The tax types they produce are then
+        //   theirs: step 7 skips bracket codes and step 8 skips withholding rows of those types, and
+        //   formula rules on TAX_PIT / EMPLOYER_CHARGE don't run for this employee. Lines are tagged
+        //   with the template id@version and step (audit trail; year-to-date sums read them back).
+        // ============================================================
+        Set<TaxType> templateLedgers = EnumSet.noneOf(TaxType.class);
+        List<PayrollTemplateService.AppliedTemplate> templates = payrollTemplateService.applicableTo(employee);
+        if (!templates.isEmpty()) {
+            PayComponent templateTaxComponent = componentsByCode.get(PayComponentCode.TAX_PIT);
+            PayComponent templateEmployerComponent = componentsByCode.get(PayComponentCode.EMPLOYER_CHARGE);
+            if (templateTaxComponent == null || templateEmployerComponent == null) {
+                throw new TemplateCalculationException(
+                    "Payroll templates need the TAX_PIT and EMPLOYER_CHARGE pay components; save the template adoption again to create them"
+                );
+            }
+            handledComponentIds.add(templateTaxComponent.getId());
+            handledComponentIds.add(templateEmployerComponent.getId());
+            boolean fullPeriod =
+                employedThroughout(employee, period) &&
+                !hadLeaveDeduction &&
+                (employee.getFte() == null || employee.getFte().compareTo(BigDecimal.ONE) >= 0);
+            BigDecimal otherPreTaxDeductions = preTaxDeductions.subtract(leaveReductions);
+            for (PayrollTemplateService.AppliedTemplate applied : templates) {
+                PayrollTemplate template = applied.template();
+                TemplateInput input = new TemplateInput(
+                    period.getStartDate(),
+                    period.getEndDate(),
+                    period.getCalendar().getFrequency(),
+                    compensation.getCurrency().getCode().getCode(),
+                    grossPay,
+                    grossPay.subtract(nonSocialEarnings),
+                    grossPay.subtract(nonTaxableEarnings),
+                    leaveReductions,
+                    otherPreTaxDeductions,
+                    fullPeriod,
+                    employee.getFte(),
+                    employee.getBirthDate(),
+                    applied.settings(),
+                    applied.attributes(),
+                    payrollTemplateService.yearToDate(employee.getId(), template, period.getStartDate())
+                );
+                for (TemplateLine templateLine : payrollTemplateEngine.calculate(template, input)) {
+                    boolean employerSide = templateLine.side() == LineSide.EMPLOYER;
+                    PayrollLineCategory category =
+                        switch (templateLine.side()) {
+                            case EMPLOYEE -> PayrollLineCategory.WITHHOLDING;
+                            case EMPLOYER -> PayrollLineCategory.EMPLOYER_CHARGE;
+                            case TAX -> PayrollLineCategory.INCOME_TAX;
+                        };
+                    // Line rates are stored as percentages, like withholding lines.
+                    BigDecimal ratePercent = templateLine.rate() == null ? null : templateLine.rate().movePointRight(2);
+                    PayrollLine line = emitLine(
+                        result,
+                        employerSide ? templateEmployerComponent : templateTaxComponent,
+                        templateLine.base(),
+                        ratePercent,
+                        templateLine.amount(),
+                        seq.next(),
+                        "Step 6b — " + templateLine.explain()
+                    )
+                        .lineCategory(category)
+                        .taxType(templateLine.ledger())
+                        .label(templateLine.label());
+                    line.setTemplateRef(templateLine.templateRef());
+                    line.setTemplateStep(templateLine.step());
+                    lines.add(line);
+                    if (employerSide) {
+                        employerCharges = employerCharges.add(templateLine.amount());
+                    } else {
+                        taxWithheld = taxWithheld.add(templateLine.amount());
+                    }
+                }
+                templateLedgers.addAll(applied.ledgers());
+            }
+        }
+
+        // ============================================================
         // Step 7 — Income tax (progressive, country-aware)
         //   Looks up the active TaxBracket rows for (employee.country, PIT, period.endDate)
         //   and applies the spec'd progressive algorithm, annualising via the calendar's
@@ -751,7 +866,10 @@ public class PayrollProcessingService {
             int periodsPerYear = period.getCalendar().getFrequency().periodsPerYear();
             List<IncomeTaxComponent> incomeTaxes = computeIncomeTaxes(
                 taxableIncome,
-                code -> taxCalculationService.getActiveBracketsForCalculation(employee.getCountry().getId(), code, period.getEndDate()),
+                code ->
+                    templateLedgers.contains(INCOME_TAX_LEDGER_TYPE.get(code))
+                        ? List.of()
+                        : taxCalculationService.getActiveBracketsForCalculation(employee.getCountry().getId(), code, period.getEndDate()),
                 (income, brackets) -> taxCalculationService.calculatePeriodTax(income, brackets, periodsPerYear)
             );
             if (incomeTaxes.isEmpty()) {
@@ -799,6 +917,7 @@ public class PayrollProcessingService {
         // activeWithholdings loaded once near the top of this method (shared with the formula context).
         for (TaxWithholding w : activeWithholdings) {
             if (w.getType() == TaxType.INCOME_TAX) continue;
+            if (templateLedgers.contains(w.getType())) continue; // computed by a payroll template (step 6b)
             BigDecimal amt = computeWithholdingAmount(w, grossPay);
             if (amt.signum() == 0) continue;
             if (taxPitComponent == null) {
@@ -1125,6 +1244,9 @@ public class PayrollProcessingService {
             BigDecimal incomeTaxAmount = BigDecimal.ZERO;
             Map<TaxType, BigDecimal> withholdingByType = new EnumMap<>(TaxType.class);
             for (PayrollLine line : lines) {
+                if (line.getTemplateRef() != null) {
+                    continue; // template year-to-date is read from the lines themselves
+                }
                 BigDecimal amt = nz(line.getAmount());
                 PayrollLineCategory category = line.getLineCategory();
                 if (category == PayrollLineCategory.INCOME_TAX) {
@@ -1230,7 +1352,7 @@ public class PayrollProcessingService {
             (Specification<PayrollLine>) (root, query, cb) -> cb.equal(root.get("result").get("run").get("id"), runId)
         );
         for (PayrollLine line : allLines) {
-            String componentName = line.getComponent().getName();
+            String componentName = line.displayName();
             if (line.getComponent().getKind() == Kind.EARNING) {
                 earningsByComponent.merge(componentName, line.getAmount(), BigDecimal::add);
             } else if (line.getComponent().getKind() == Kind.DEDUCTION) {
@@ -1663,7 +1785,7 @@ public class PayrollProcessingService {
 
     /** Bumped whenever the hash *format* changes so old runs don't collide with new ones.
      *  v2 (P3.4): added {@code reportingCurrencyId} as the final pipe-delimited field. */
-    private static final int HASH_VERSION = 2;
+    private static final int HASH_VERSION = 3;
 
     private static final String HASH_DELIM = "|";
 
@@ -1679,6 +1801,7 @@ public class PayrollProcessingService {
         List<UUID> sortedEmployeeIds,
         Instant payRuleVersion,
         Instant taxBracketVersion,
+        String templateFingerprint,
         UUID reportingCurrencyId
     ) {
         StringBuilder payload = new StringBuilder();
@@ -1690,6 +1813,8 @@ public class PayrollProcessingService {
         payload.append(payRuleVersion == null ? "0" : payRuleVersion.toString());
         payload.append(HASH_DELIM);
         payload.append(taxBracketVersion == null ? "0" : taxBracketVersion.toString());
+        payload.append(HASH_DELIM);
+        payload.append(templateFingerprint == null ? "" : templateFingerprint);
         payload.append(HASH_DELIM);
         payload.append(reportingCurrencyId == null ? "0" : reportingCurrencyId.toString());
         try {
@@ -1742,6 +1867,13 @@ public class PayrollProcessingService {
         line.setSequence(sequence);
         line.setExplain(explain);
         return line;
+    }
+
+    /** Whether the employee was employed from the period's first day through its last. */
+    private static boolean employedThroughout(Employee employee, PayrollPeriod period) {
+        boolean startedBefore = employee.getStartDate() == null || !employee.getStartDate().isAfter(period.getStartDate());
+        boolean endedAfter = employee.getEndDate() == null || !employee.getEndDate().isBefore(period.getEndDate());
+        return startedBefore && endedAfter;
     }
 
     /** Human-readable money formatter used inside {@code explain} text. */
