@@ -1,7 +1,5 @@
 package com.humano.service.billing.entitlement;
 
-import com.humano.config.multitenancy.MultiTenantProperties;
-import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.billing.Feature;
 import com.humano.domain.billing.PlanFeature;
 import com.humano.domain.billing.Subscription;
@@ -12,7 +10,9 @@ import com.humano.repository.billing.FeatureRepository;
 import com.humano.repository.billing.SubscriptionAddonRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
-import com.humano.web.rest.errors.PlanLimitException;
+import com.humano.service.errors.PlanLimitException;
+import com.humano.tenancy.MultiTenantProperties;
+import com.humano.tenancy.TenantContext;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;

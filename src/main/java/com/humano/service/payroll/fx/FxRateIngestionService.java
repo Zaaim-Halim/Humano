@@ -1,6 +1,5 @@
 package com.humano.service.payroll.fx;
 
-import com.humano.config.multitenancy.TenantIteration;
 import com.humano.domain.enumeration.CurrencyCode;
 import com.humano.domain.payroll.Currency;
 import com.humano.domain.payroll.OrganizationSettings;
@@ -9,6 +8,7 @@ import com.humano.repository.payroll.CurrencyRepository;
 import com.humano.repository.payroll.OrganizationSettingsRepository;
 import com.humano.repository.payroll.PayrollRunRepository;
 import com.humano.service.payroll.ExchangeRateService;
+import com.humano.tenancy.TenantIteration;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -192,11 +192,7 @@ public class FxRateIngestionService {
             written++;
         }
         if (written > 0) {
-            log.debug(
-                "FX ingestion wrote {} rate(s) for tenant {}",
-                written,
-                com.humano.config.multitenancy.TenantContext.getCurrentTenant()
-            );
+            log.debug("FX ingestion wrote {} rate(s) for tenant {}", written, com.humano.tenancy.TenantContext.getCurrentTenant());
         }
     }
 }

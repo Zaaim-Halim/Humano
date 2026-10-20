@@ -1,7 +1,5 @@
 package com.humano.web.rest.tenant;
 
-import com.humano.config.multitenancy.TenantDataSourceProvider;
-import com.humano.config.multitenancy.TenantDataSourceProvider.ConnectionPoolStats;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.dto.tenant.TenantRegistrationDTO;
@@ -10,6 +8,8 @@ import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequirePermission;
 import com.humano.service.multitenancy.TenantProvisioningService;
 import com.humano.service.tenant.TenantService;
+import com.humano.tenancy.TenantDataSourceProvider;
+import com.humano.tenancy.TenantDataSourceProvider.ConnectionPoolStats;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;

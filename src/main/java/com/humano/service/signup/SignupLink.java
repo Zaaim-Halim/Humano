@@ -3,7 +3,7 @@ package com.humano.service.signup;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.humano.domain.enumeration.CountryCode;
-import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.service.errors.BadRequestAlertException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;

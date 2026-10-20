@@ -1,7 +1,5 @@
 package com.humano.web.rest.tenant;
 
-import com.humano.config.multitenancy.TenantContext;
-import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.dto.tenant.requests.CreateOrganizationRequest;
 import com.humano.dto.tenant.requests.CreateTenantStorageConfigRequest;
 import com.humano.dto.tenant.requests.UpdateOrganizationRequest;
@@ -14,6 +12,8 @@ import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.service.tenant.OrganizationService;
 import com.humano.service.tenant.TenantService;
 import com.humano.service.tenant.TenantStorageConfigService;
+import com.humano.tenancy.TenantContext;
+import com.humano.tenancy.TenantIdResolver;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;

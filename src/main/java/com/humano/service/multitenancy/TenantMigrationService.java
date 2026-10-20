@@ -1,8 +1,8 @@
 package com.humano.service.multitenancy;
 
-import com.humano.config.multitenancy.TenantDataSourceProvider;
 import com.humano.domain.tenant.Tenant;
 import com.humano.domain.tenant.TenantDatabaseConfig;
+import com.humano.tenancy.TenantDataSourceProvider;
 import javax.sql.DataSource;
 import liquibase.integration.spring.SpringLiquibase;
 import org.slf4j.Logger;

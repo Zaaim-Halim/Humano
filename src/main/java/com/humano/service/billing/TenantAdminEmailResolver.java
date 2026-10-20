@@ -1,9 +1,9 @@
 package com.humano.service.billing;
 
-import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.shared.User;
 import com.humano.repository.shared.UserRepository;
 import com.humano.security.AuthoritiesConstants;
+import com.humano.tenancy.TenantContext;
 import java.util.Comparator;
 import java.util.Optional;
 import org.slf4j.Logger;

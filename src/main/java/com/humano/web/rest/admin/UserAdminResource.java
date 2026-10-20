@@ -9,7 +9,7 @@ import com.humano.repository.shared.UserRepository;
 import com.humano.security.annotation.RequireAdmin;
 import com.humano.service.MailService;
 import com.humano.service.admin.UserAccountService;
-import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.service.errors.BadRequestAlertException;
 import com.humano.web.rest.errors.EmailAlreadyUsedException;
 import com.humano.web.rest.errors.LoginAlreadyUsedException;
 import jakarta.validation.Valid;

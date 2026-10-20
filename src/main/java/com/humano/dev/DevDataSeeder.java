@@ -1,7 +1,5 @@
 package com.humano.dev;
 
-import com.humano.config.multitenancy.MultiTenantProperties;
-import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.CountryCode;
 import com.humano.domain.enumeration.billing.SubscriptionType;
@@ -19,6 +17,8 @@ import com.humano.service.demo.DemoDataSeeder;
 import com.humano.service.demo.DemoPersonaService;
 import com.humano.service.multitenancy.TenantInitializationService;
 import com.humano.service.multitenancy.TenantProvisioningService;
+import com.humano.tenancy.MultiTenantProperties;
+import com.humano.tenancy.TenantContext;
 import java.math.BigDecimal;
 import java.util.LinkedHashSet;
 import java.util.List;

@@ -1,6 +1,5 @@
 package com.humano.service.billing;
 
-import com.humano.config.multitenancy.TenantAccessGuard;
 import com.humano.domain.billing.Invoice;
 import com.humano.domain.billing.InvoiceLine;
 import com.humano.domain.billing.Subscription;
@@ -16,6 +15,7 @@ import com.humano.repository.billing.SubscriptionAddonRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.billing.entitlement.FeatureCodes;
+import com.humano.tenancy.TenantAccessGuard;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.math.BigDecimal;
@@ -484,7 +484,7 @@ public class BillingLifecycleService {
 
     /**
      * The trial ended without a plan. The workspace is not suspended yet: while the subscription is
-     * {@code EXPIRED} it is read-only ({@link com.humano.config.multitenancy.TenantAccessGuard}), so
+     * {@code EXPIRED} it is read-only ({@link com.humano.tenancy.TenantAccessGuard}), so
      * people can still sign in and an admin can pick a plan; {@link #suspendLapsedTrials()} pauses
      * it {@link #READ_ONLY_DAYS} days later.
      */

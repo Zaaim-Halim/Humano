@@ -1,6 +1,5 @@
 package com.humano.service.billing.entitlement;
 
-import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.billing.Subscription;
 import com.humano.domain.billing.SubscriptionAddon;
 import com.humano.domain.billing.SubscriptionPlan;
@@ -11,8 +10,9 @@ import com.humano.dto.billing.responses.StorageAddonResponse;
 import com.humano.repository.billing.SubscriptionAddonRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
+import com.humano.service.errors.BadRequestAlertException;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.tenancy.TenantContext;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;

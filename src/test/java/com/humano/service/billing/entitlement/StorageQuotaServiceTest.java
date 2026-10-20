@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.humano.repository.hr.EmployeeDocumentRepository;
 import com.humano.repository.storage.StoredFileRepository;
-import com.humano.web.rest.errors.PlanLimitException;
+import com.humano.service.errors.PlanLimitException;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,7 +33,7 @@ class StorageQuotaServiceTest {
         null,
         null,
         null,
-        new com.humano.config.multitenancy.MultiTenantProperties(),
+        new com.humano.tenancy.MultiTenantProperties(),
         mock(org.springframework.transaction.PlatformTransactionManager.class)
     ) {
         @Override

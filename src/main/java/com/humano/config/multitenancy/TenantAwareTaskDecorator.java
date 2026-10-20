@@ -1,5 +1,6 @@
 package com.humano.config.multitenancy;
 
+import com.humano.tenancy.TenantContext;
 import java.util.Map;
 import org.slf4j.MDC;
 import org.springframework.core.task.TaskDecorator;

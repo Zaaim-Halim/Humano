@@ -1,5 +1,8 @@
 package com.humano.web.rest.errors;
 
+import com.humano.service.errors.BadRequestAlertException;
+import com.humano.service.errors.ErrorConstants;
+
 @SuppressWarnings("java:S110") // Inheritance tree of classes should not be too deep
 public class LoginAlreadyUsedException extends BadRequestAlertException {
 

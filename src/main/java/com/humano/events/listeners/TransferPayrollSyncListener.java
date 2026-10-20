@@ -1,8 +1,8 @@
 package com.humano.events.listeners;
 
-import com.humano.config.multitenancy.TenantContext;
 import com.humano.events.TransferExecutedEvent;
 import com.humano.service.payroll.CompensationService;
+import com.humano.tenancy.TenantContext;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

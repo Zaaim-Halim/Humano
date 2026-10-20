@@ -2,8 +2,6 @@ package com.humano.service.admin;
 
 import com.humano.aop.audit.Auditable;
 import com.humano.config.Constants;
-import com.humano.config.multitenancy.TenantContext;
-import com.humano.config.multitenancy.TenantIteration;
 import com.humano.domain.shared.Authority;
 import com.humano.domain.shared.User;
 import com.humano.dto.admin.requests.CreateUserRequest;
@@ -14,6 +12,8 @@ import com.humano.repository.shared.PersistentTokenRepository;
 import com.humano.repository.shared.UserRepository;
 import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.billing.entitlement.FeatureCodes;
+import com.humano.tenancy.TenantContext;
+import com.humano.tenancy.TenantIteration;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Instant;

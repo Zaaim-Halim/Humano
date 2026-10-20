@@ -26,7 +26,7 @@ import com.humano.repository.payroll.CompensationRepository;
 import com.humano.repository.payroll.PayrollRunRepository;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.audit.AuditEventService;
-import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.service.errors.BadRequestAlertException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;

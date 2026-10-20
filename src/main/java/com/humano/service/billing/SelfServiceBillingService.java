@@ -1,6 +1,5 @@
 package com.humano.service.billing;
 
-import com.humano.config.multitenancy.TenantAccessGuard;
 import com.humano.domain.billing.Subscription;
 import com.humano.domain.billing.SubscriptionAddon;
 import com.humano.domain.billing.SubscriptionPlan;
@@ -17,8 +16,9 @@ import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.billing.entitlement.StorageAddonOffer;
+import com.humano.service.errors.BadRequestAlertException;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.tenancy.TenantAccessGuard;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;

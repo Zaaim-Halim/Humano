@@ -1,8 +1,5 @@
 package com.humano.service.multitenancy;
 
-import com.humano.config.multitenancy.MultiTenantProperties;
-import com.humano.config.multitenancy.TenantAccessGuard;
-import com.humano.config.multitenancy.TenantPasswordCipher;
 import com.humano.domain.enumeration.tenant.ProvisioningStep;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
@@ -10,6 +7,9 @@ import com.humano.domain.tenant.TenantDatabaseConfig;
 import com.humano.dto.tenant.TenantRegistrationDTO;
 import com.humano.repository.tenant.TenantDatabaseConfigRepository;
 import com.humano.repository.tenant.TenantRepository;
+import com.humano.tenancy.MultiTenantProperties;
+import com.humano.tenancy.TenantAccessGuard;
+import com.humano.tenancy.TenantPasswordCipher;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;

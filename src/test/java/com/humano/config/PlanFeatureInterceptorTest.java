@@ -9,7 +9,7 @@ import com.humano.security.annotation.RequireFeature;
 import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.billing.entitlement.Entitlements;
 import com.humano.service.billing.entitlement.FeatureCodes;
-import com.humano.web.rest.errors.PlanLimitException;
+import com.humano.service.errors.PlanLimitException;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;

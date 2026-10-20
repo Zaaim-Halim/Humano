@@ -1,4 +1,4 @@
-package com.humano.config.multitenancy;
+package com.humano.tenancy;
 
 import com.humano.domain.tenant.Tenant;
 import com.humano.repository.tenant.TenantRepository;

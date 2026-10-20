@@ -1,7 +1,5 @@
 package com.humano.service.signup;
 
-import com.humano.config.multitenancy.MultiTenantProperties;
-import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.tenant.TenantStatus;
@@ -19,8 +17,10 @@ import com.humano.repository.payroll.OrganizationSettingsRepository;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.billing.BillingMailService;
 import com.humano.service.billing.SubscriptionService;
+import com.humano.service.errors.BadRequestAlertException;
 import com.humano.service.multitenancy.TenantProvisioningService;
-import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.tenancy.MultiTenantProperties;
+import com.humano.tenancy.TenantContext;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;

@@ -1,8 +1,8 @@
 package com.humano.service.multitenancy;
 
-import com.humano.config.multitenancy.MultiTenantProperties;
-import com.humano.config.multitenancy.TenantPasswordCipher;
 import com.humano.domain.tenant.TenantDatabaseConfig;
+import com.humano.tenancy.MultiTenantProperties;
+import com.humano.tenancy.TenantPasswordCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;

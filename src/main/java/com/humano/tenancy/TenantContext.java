@@ -1,4 +1,4 @@
-package com.humano.config.multitenancy;
+package com.humano.tenancy;
 
 /**
  * Thread-local storage for current tenant context.

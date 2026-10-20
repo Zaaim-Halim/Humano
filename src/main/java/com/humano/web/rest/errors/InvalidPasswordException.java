@@ -1,5 +1,6 @@
 package com.humano.web.rest.errors;
 
+import com.humano.service.errors.ErrorConstants;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.ErrorResponseException;
 import tech.jhipster.web.rest.errors.ProblemDetailWithCause.ProblemDetailWithCauseBuilder;

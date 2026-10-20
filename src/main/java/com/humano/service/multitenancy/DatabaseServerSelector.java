@@ -1,7 +1,7 @@
 package com.humano.service.multitenancy;
 
-import com.humano.config.multitenancy.MultiTenantProperties;
 import com.humano.dto.tenant.TenantRegistrationDTO;
+import com.humano.tenancy.MultiTenantProperties;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

@@ -3,7 +3,7 @@ package com.humano.config;
 import com.humano.security.annotation.RequireFeature;
 import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.billing.entitlement.Entitlements;
-import com.humano.web.rest.errors.PlanLimitException;
+import com.humano.service.errors.PlanLimitException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Set;

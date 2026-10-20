@@ -1,12 +1,12 @@
 package com.humano.web.rest.billing;
 
-import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.dto.billing.requests.CreateSubscriptionRequest;
 import com.humano.dto.billing.requests.UpdateSubscriptionRequest;
 import com.humano.dto.billing.responses.SubscriptionResponse;
 import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.SubscriptionService;
+import com.humano.tenancy.TenantIdResolver;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;

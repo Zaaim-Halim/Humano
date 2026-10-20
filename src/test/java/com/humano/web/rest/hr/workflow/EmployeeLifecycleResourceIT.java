@@ -11,8 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.humano.IntegrationTest;
-import com.humano.config.multitenancy.MultiTenantProperties;
-import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.enumeration.hr.EmployeeStatus;
 import com.humano.domain.enumeration.hr.OrganizationalUnitType;
 import com.humano.domain.hr.OrganizationalUnit;
@@ -28,6 +26,8 @@ import com.humano.repository.shared.PermissionRepository;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.security.AuthorityPermissionService;
 import com.humano.security.DefaultRolePermissions;
+import com.humano.tenancy.MultiTenantProperties;
+import com.humano.tenancy.TenantContext;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;

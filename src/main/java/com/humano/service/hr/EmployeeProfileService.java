@@ -38,10 +38,9 @@ import com.humano.service.MailService;
 import com.humano.service.admin.UserAccountService;
 import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.billing.entitlement.FeatureCodes;
+import com.humano.service.errors.BadRequestAlertException;
 import com.humano.service.errors.EntityNotFoundException;
-import com.humano.web.rest.errors.BadRequestAlertException;
-import com.humano.web.rest.errors.EmailAlreadyUsedException;
-import com.humano.web.rest.errors.LoginAlreadyUsedException;
+import com.humano.service.errors.ErrorConstants;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -144,12 +143,23 @@ public class EmployeeProfileService {
     public EmployeeProfileResponse provisionEmployee(CreateEmployeeRequest request) {
         log.debug("Request to provision Employee with login: {}", request.login());
 
-        // Reject collisions up-front (mirrors UserAdminResource.createUser).
+        // Reject collisions up-front (mirrors UserAdminResource.createUser, with the same responses
+        // as its LoginAlreadyUsedException / EmailAlreadyUsedException).
         if (userRepository.findOneByLogin(request.login().toLowerCase()).isPresent()) {
-            throw new LoginAlreadyUsedException();
+            throw new BadRequestAlertException(
+                ErrorConstants.LOGIN_ALREADY_USED_TYPE,
+                "Login name already used!",
+                "userManagement",
+                "userexists"
+            );
         }
         if (request.email() != null && userRepository.findOneByEmailIgnoreCase(request.email()).isPresent()) {
-            throw new EmailAlreadyUsedException();
+            throw new BadRequestAlertException(
+                ErrorConstants.EMAIL_ALREADY_USED_TYPE,
+                "Email is already in use!",
+                "userManagement",
+                "emailexists"
+            );
         }
 
         // Build the Employee itself — account fields and HR profile together — so the

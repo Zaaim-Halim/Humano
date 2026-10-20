@@ -1,4 +1,4 @@
-package com.humano.config.multitenancy;
+package com.humano.tenancy;
 
 import java.security.SecureRandom;
 import org.jasypt.encryption.StringEncryptor;

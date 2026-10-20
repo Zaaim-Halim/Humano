@@ -11,14 +11,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.humano.config.multitenancy.TenantIteration;
 import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.PersistentTokenRepository;
 import com.humano.repository.shared.UserRepository;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.billing.entitlement.FeatureCodes;
-import com.humano.web.rest.errors.PlanLimitException;
+import com.humano.service.errors.PlanLimitException;
+import com.humano.tenancy.TenantIteration;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Set;
 import java.util.UUID;

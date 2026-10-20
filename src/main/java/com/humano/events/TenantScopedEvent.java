@@ -18,7 +18,7 @@ package com.humano.events;
  * field, but every event still carries it so a future listener that needs
  * tenant routing can be added without changing the event contract.
  *
- * @see com.humano.config.multitenancy.TenantContext
+ * @see com.humano.tenancy.TenantContext
  */
 public interface TenantScopedEvent {
     /**

@@ -4,7 +4,6 @@ import com.humano.dto.hr.workflow.requests.ApprovalDecisionRequest;
 import com.humano.dto.hr.workflow.requests.SubmitApprovalRequest;
 import com.humano.dto.hr.workflow.responses.ApprovalWorkflowResponse;
 import com.humano.dto.hr.workflow.responses.PendingApprovalSummary;
-import com.humano.security.ApprovalAccess;
 import com.humano.security.annotation.RequireHrManager;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
 import com.humano.service.hr.workflow.ApprovalWorkflowOrchestratorService;

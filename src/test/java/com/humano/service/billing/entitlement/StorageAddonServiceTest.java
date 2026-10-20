@@ -15,7 +15,7 @@ import com.humano.domain.tenant.Tenant;
 import com.humano.repository.billing.SubscriptionAddonRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
-import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.service.errors.BadRequestAlertException;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;

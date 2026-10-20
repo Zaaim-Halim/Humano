@@ -1,7 +1,5 @@
 package com.humano.service.demo;
 
-import com.humano.config.multitenancy.MultiTenantProperties;
-import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.tenant.DemoSetupStatus;
 import com.humano.domain.enumeration.tenant.TenantStatus;
@@ -20,9 +18,11 @@ import com.humano.repository.shared.UserRepository;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.service.billing.SubscriptionService;
+import com.humano.service.errors.BadRequestAlertException;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.multitenancy.TenantProvisioningService;
-import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.tenancy.MultiTenantProperties;
+import com.humano.tenancy.TenantContext;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

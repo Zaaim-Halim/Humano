@@ -3,9 +3,9 @@ package com.humano.config;
 import static org.springframework.security.config.Customizer.withDefaults;
 import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
 
-import com.humano.config.multitenancy.TenantContext;
 import com.humano.config.multitenancy.TenantResolutionFilter;
 import com.humano.security.AuthoritiesConstants;
+import com.humano.tenancy.TenantContext;
 import com.humano.web.filter.SpaWebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

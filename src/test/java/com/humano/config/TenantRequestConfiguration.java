@@ -1,6 +1,6 @@
 package com.humano.config;
 
-import com.humano.config.multitenancy.MultiTenantProperties;
+import com.humano.tenancy.MultiTenantProperties;
 import org.springframework.boot.test.autoconfigure.web.servlet.MockMvcBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

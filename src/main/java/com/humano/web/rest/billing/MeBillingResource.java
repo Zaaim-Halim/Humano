@@ -1,6 +1,5 @@
 package com.humano.web.rest.billing;
 
-import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.dto.billing.requests.ChangeMyPlanRequest;
 import com.humano.dto.billing.requests.SetStorageAddonRequest;
 import com.humano.dto.billing.responses.EntitlementsResponse;
@@ -13,6 +12,7 @@ import com.humano.service.billing.SelfServiceBillingService;
 import com.humano.service.billing.SubscriptionService;
 import com.humano.service.billing.entitlement.PlanUsageService;
 import com.humano.service.billing.entitlement.StorageAddonService;
+import com.humano.tenancy.TenantIdResolver;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -5,7 +5,7 @@ import com.humano.repository.shared.AuthorityRepository;
 import com.humano.security.AuthorityPermissionService;
 import com.humano.security.annotation.RequireAdmin;
 import com.humano.service.admin.UserAccountService;
-import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.service.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.net.URISyntaxException;

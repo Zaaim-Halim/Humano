@@ -1,5 +1,8 @@
 package com.humano.config.multitenancy;
 
+import com.humano.tenancy.MultiTenantProperties;
+import com.humano.tenancy.TenantAccessGuard;
+import com.humano.tenancy.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

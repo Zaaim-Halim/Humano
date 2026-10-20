@@ -1,9 +1,9 @@
 package com.humano.security;
 
-import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.shared.Authority;
 import com.humano.domain.shared.Permission;
 import com.humano.repository.shared.AuthorityRepository;
+import com.humano.tenancy.TenantContext;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;

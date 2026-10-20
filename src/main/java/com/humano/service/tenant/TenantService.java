@@ -1,6 +1,5 @@
 package com.humano.service.tenant;
 
-import com.humano.config.multitenancy.MultiTenantProperties;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
@@ -10,6 +9,7 @@ import com.humano.dto.tenant.responses.TenantResponse;
 import com.humano.repository.billing.SubscriptionPlanRepository;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.errors.EntityNotFoundException;
+import com.humano.tenancy.MultiTenantProperties;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;

@@ -10,7 +10,7 @@ import com.humano.security.AuthoritiesConstants;
 import com.humano.security.SecurityUtils;
 import com.humano.service.MailService;
 import com.humano.service.admin.UserAccountService;
-import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.service.errors.BadRequestAlertException;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;

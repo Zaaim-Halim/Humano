@@ -1,6 +1,8 @@
-package com.humano.security;
+package com.humano.web.rest.hr.workflow;
 
 import com.humano.dto.hr.workflow.responses.ApprovalWorkflowResponse;
+import com.humano.security.AuthoritiesConstants;
+import com.humano.security.SecurityUtils;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.security.access.AccessDeniedException;

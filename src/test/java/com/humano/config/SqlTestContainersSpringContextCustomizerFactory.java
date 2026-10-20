@@ -12,6 +12,7 @@ import org.springframework.test.context.ContextConfigurationAttributes;
 import org.springframework.test.context.ContextCustomizer;
 import org.springframework.test.context.ContextCustomizerFactory;
 import org.springframework.test.context.MergedContextConfiguration;
+import org.testcontainers.containers.JdbcDatabaseContainer;
 import tech.jhipster.config.JHipsterConstants;
 
 public class SqlTestContainersSpringContextCustomizerFactory implements ContextCustomizerFactory {
@@ -48,15 +49,34 @@ public class SqlTestContainersSpringContextCustomizerFactory implements ContextC
                             throw new RuntimeException(e);
                         }
                     }
-                    testValues = testValues.and(
-                        "spring.datasource.url=" +
-                        prodTestContainer.getTestContainer().getJdbcUrl() +
-                        "?useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&createDatabaseIfNotExist=true"
-                    );
-                    testValues = testValues.and("spring.datasource.username=" + prodTestContainer.getTestContainer().getUsername());
-                    testValues = testValues.and("spring.datasource.password=" + prodTestContainer.getTestContainer().getPassword());
+                    // The application builds its own pools for the master and the default tenant
+                    // database (MultiTenantDataSourceConfig); plain spring.datasource.* is never read.
+                    for (String pool : List.of("master", "default-tenant")) {
+                        testValues = testValues.and(datasourceProperties(pool, prodTestContainer.getTestContainer()));
+                    }
                 }
                 testValues.applyTo(context);
+            }
+
+            /** Pool settings as in application-prod.yml, against a database of the container's server. */
+            private List<String> datasourceProperties(String pool, JdbcDatabaseContainer<?> container) {
+                String database = "master".equals(pool) ? "humano_master" : "humano_tenant_default";
+                String prefix = "spring.datasource." + pool + ".";
+                return List.of(
+                    prefix +
+                    "url=jdbc:mysql://" +
+                    container.getHost() +
+                    ":" +
+                    container.getFirstMappedPort() +
+                    "/" +
+                    database +
+                    "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8&createDatabaseIfNotExist=true",
+                    // Root, so the driver can create both databases.
+                    prefix + "username=root",
+                    prefix + "password=" + container.getPassword(),
+                    prefix + "driver-class-name=com.mysql.cj.jdbc.Driver",
+                    prefix + "hikari.auto-commit=false"
+                );
             }
 
             @Override

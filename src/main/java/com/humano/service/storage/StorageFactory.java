@@ -1,11 +1,11 @@
 package com.humano.service.storage;
 
-import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.domain.tenant.TenantStorageConfig;
 import com.humano.domain.tenant.storage.FilesystemStorageDetails;
 import com.humano.domain.tenant.storage.StorageConfigDetails;
 import com.humano.repository.storage.FileBlobRepository;
 import com.humano.repository.tenant.TenantStorageConfigRepository;
+import com.humano.tenancy.TenantIdResolver;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;

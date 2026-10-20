@@ -8,7 +8,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.humano.config.multitenancy.TenantAccessGuard;
 import com.humano.domain.billing.Coupon;
 import com.humano.domain.billing.Invoice;
 import com.humano.domain.billing.Subscription;
@@ -21,6 +20,7 @@ import com.humano.repository.billing.InvoiceRepository;
 import com.humano.repository.billing.SubscriptionAddonRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
+import com.humano.tenancy.TenantAccessGuard;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.math.BigDecimal;
 import java.time.Instant;

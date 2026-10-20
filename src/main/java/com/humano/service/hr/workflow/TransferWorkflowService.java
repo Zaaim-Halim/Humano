@@ -1,6 +1,5 @@
 package com.humano.service.hr.workflow;
 
-import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.enumeration.hr.PositionChangeStatus;
 import com.humano.domain.enumeration.hr.PositionChangeType;
 import com.humano.domain.enumeration.hr.WorkflowStatus;
@@ -13,11 +12,12 @@ import com.humano.dto.hr.workflow.responses.TransferWorkflowResponse;
 import com.humano.events.TransferExecutedEvent;
 import com.humano.repository.hr.*;
 import com.humano.repository.shared.EmployeeRepository;
+import com.humano.service.errors.BadRequestAlertException;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.workflow.infrastructure.DeadlineMonitorService;
 import com.humano.service.hr.workflow.infrastructure.NotificationOrchestrationService;
 import com.humano.service.hr.workflow.infrastructure.WorkflowStateManager;
-import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.tenancy.TenantContext;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;

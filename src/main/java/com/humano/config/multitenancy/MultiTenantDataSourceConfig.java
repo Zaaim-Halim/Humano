@@ -1,5 +1,6 @@
 package com.humano.config.multitenancy;
 
+import com.humano.tenancy.TenantDataSourceProvider;
 import com.zaxxer.hikari.HikariDataSource;
 import java.util.HashMap;
 import java.util.Map;

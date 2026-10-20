@@ -1,7 +1,5 @@
 package com.humano.service.multitenancy;
 
-import com.humano.config.multitenancy.MultiTenantProperties;
-import com.humano.config.multitenancy.TenantContext;
 import com.humano.domain.enumeration.hr.ApprovalType;
 import com.humano.domain.enumeration.hr.ApproverType;
 import com.humano.domain.enumeration.payroll.Frequency;
@@ -27,6 +25,8 @@ import com.humano.security.AuthorityPermissionService;
 import com.humano.security.DefaultRolePermissions;
 import com.humano.security.PlatformRolePermissions;
 import com.humano.service.hr.workflow.ApprovalChainValidator;
+import com.humano.tenancy.MultiTenantProperties;
+import com.humano.tenancy.TenantContext;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;

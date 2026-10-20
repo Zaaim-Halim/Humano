@@ -1,4 +1,4 @@
-package com.humano.config.multitenancy;
+package com.humano.tenancy;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;

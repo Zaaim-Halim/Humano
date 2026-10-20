@@ -1,4 +1,4 @@
-package com.humano.config.multitenancy;
+package com.humano.tenancy;
 
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.repository.tenant.TenantRepository;
@@ -36,7 +36,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  *       cheap-per-tenant ticks.</li>
  *   <li><b>{@link #forEachActiveTenantParallel}</b> — fans out to the
  *       {@code taskExecutor} pool (already decorated with
- *       {@link TenantAwareTaskDecorator}). Bounded by the pool's core/max size,
+ *       {@link com.humano.config.multitenancy.TenantAwareTaskDecorator}). Bounded by the pool's core/max size,
  *       not by tenant count. Good for thousands of tenants.</li>
  * </ul>
  *
@@ -123,7 +123,7 @@ public class TenantIteration {
      * pool. Bounded by the pool's max size — at no point will more than
      * {@code pool.maxSize} tenants run concurrently, regardless of fleet size.
      *
-     * <p>Per-task tenant context is set both by {@link TenantAwareTaskDecorator}
+     * <p>Per-task tenant context is set both by {@link com.humano.config.multitenancy.TenantAwareTaskDecorator}
      * (carrying the submitter's tenant — usually {@code null} here since this
      * is called from a scheduler thread) AND defensively inside the task, so
      * the right tenant is always present when the work runs.

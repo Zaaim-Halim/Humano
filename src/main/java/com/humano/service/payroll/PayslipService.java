@@ -52,7 +52,7 @@ public class PayslipService {
     private final StorageFactory storageFactory;
 
     private final com.humano.service.tenant.TenantService tenantService;
-    private final com.humano.config.multitenancy.TenantIdResolver tenantIdResolver;
+    private final com.humano.tenancy.TenantIdResolver tenantIdResolver;
     private final EmployeeRoleHistory roleHistory;
 
     public PayslipService(
@@ -64,7 +64,7 @@ public class PayslipService {
         PayslipPdfGenerator pdfGenerator,
         StorageFactory storageFactory,
         com.humano.service.tenant.TenantService tenantService,
-        com.humano.config.multitenancy.TenantIdResolver tenantIdResolver,
+        com.humano.tenancy.TenantIdResolver tenantIdResolver,
         EmployeeRoleHistory roleHistory
     ) {
         this.roleHistory = roleHistory;

@@ -1,4 +1,4 @@
-package com.humano.config.multitenancy;
+package com.humano.tenancy;
 
 /**
  * Exception thrown when a tenant is not found or cannot be resolved.

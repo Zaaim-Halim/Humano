@@ -1,7 +1,5 @@
 package com.humano.service.hr.workflow.infrastructure;
 
-import com.humano.config.multitenancy.TenantContext;
-import com.humano.config.multitenancy.TenantIteration;
 import com.humano.domain.hr.WorkflowDeadline;
 import com.humano.domain.hr.WorkflowInstance;
 import com.humano.domain.shared.Employee;
@@ -10,6 +8,8 @@ import com.humano.repository.hr.workflow.WorkflowDeadlineRepository;
 import com.humano.repository.hr.workflow.WorkflowInstanceRepository;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.EntityNotFoundException;
+import com.humano.tenancy.TenantContext;
+import com.humano.tenancy.TenantIteration;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Instant;

@@ -1,6 +1,5 @@
 package com.humano.web.rest.me;
 
-import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.domain.shared.User;
 import com.humano.dto.hr.requests.EmployeeTrainingSearchRequest;
 import com.humano.dto.hr.requests.PerformanceReviewSearchRequest;
@@ -22,6 +21,7 @@ import com.humano.service.payroll.CompensationService;
 import com.humano.service.payroll.OrganizationSettingsService;
 import com.humano.service.payroll.PayslipService;
 import com.humano.service.tenant.TenantService;
+import com.humano.tenancy.TenantIdResolver;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;

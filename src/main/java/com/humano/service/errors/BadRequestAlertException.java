@@ -1,4 +1,4 @@
-package com.humano.web.rest.errors;
+package com.humano.service.errors;
 
 import java.net.URI;
 import org.springframework.http.HttpStatus;

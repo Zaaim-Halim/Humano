@@ -1,6 +1,5 @@
 package com.humano.service.storage;
 
-import com.humano.config.multitenancy.TenantIdResolver;
 import com.humano.domain.enumeration.storage.FileContext;
 import com.humano.domain.enumeration.storage.FileVisibility;
 import com.humano.domain.enumeration.storage.StorageBackendType;
@@ -11,6 +10,7 @@ import com.humano.repository.storage.StoredFileRepository;
 import com.humano.repository.tenant.TenantStorageConfigRepository;
 import com.humano.service.billing.entitlement.StorageQuotaService;
 import com.humano.service.errors.EntityNotFoundException;
+import com.humano.tenancy.TenantIdResolver;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;

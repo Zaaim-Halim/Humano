@@ -16,7 +16,7 @@ import com.humano.dto.hr.workflow.requests.UpdateOnboardingChecklistRequest;
 import com.humano.dto.hr.workflow.responses.OnboardingChecklistResponse;
 import com.humano.repository.hr.OnboardingSettingsRepository;
 import com.humano.repository.hr.OnboardingTaskTemplateRepository;
-import com.humano.web.rest.errors.BadRequestAlertException;
+import com.humano.service.errors.BadRequestAlertException;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

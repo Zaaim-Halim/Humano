@@ -1,5 +1,7 @@
 package com.humano.config.multitenancy;
 
+import com.humano.tenancy.TenantContext;
+import com.humano.tenancy.TenantDataSourceProvider;
 import javax.sql.DataSource;
 import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
 
