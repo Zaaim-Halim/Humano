@@ -190,6 +190,27 @@ public class UserAccountService {
             });
     }
 
+    /**
+     * Switch off sign-in for someone who no longer works here: the account is deactivated (sign-in
+     * and "remember me" are refused) and their remembered sign-ins are removed.
+     */
+    public void switchOffSignIn(User user) {
+        user.setActivated(false);
+        persistentTokenRepository.deleteAll(persistentTokenRepository.findByUser(user));
+    }
+
+    /**
+     * Switch sign-in back on for someone who works here again. They take an admin seat again when
+     * their roles need one, so the plan's seat limit applies.
+     */
+    public void restoreSignIn(User user) {
+        Set<String> roles = user.getAuthorities() == null
+            ? Set.of()
+            : user.getAuthorities().stream().map(Authority::getName).collect(Collectors.toSet());
+        checkAdminSeat(user.getId(), roles, true);
+        user.setActivated(true);
+    }
+
     public void deleteUser(String login) {
         userRepository
             .findOneByLogin(login)

@@ -13,7 +13,7 @@ import com.humano.dto.hr.workflow.responses.OnboardingProcessResponse;
 import com.humano.repository.hr.*;
 import com.humano.repository.payroll.EmployeeBenefitRepository;
 import com.humano.repository.shared.EmployeeRepository;
-import com.humano.repository.shared.PersistentTokenRepository;
+import com.humano.service.admin.UserAccountService;
 import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.errors.BadRequestAlertException;
@@ -125,7 +125,7 @@ public class EmployeeLifecycleWorkflowService {
     private final TrainingRepository trainingRepository;
     private final EntitlementService entitlementService;
     private final TerminationReasonRepository terminationReasonRepository;
-    private final PersistentTokenRepository persistentTokenRepository;
+    private final UserAccountService userAccountService;
 
     public EmployeeLifecycleWorkflowService(
         WorkflowStateManager workflowStateManager,
@@ -143,7 +143,7 @@ public class EmployeeLifecycleWorkflowService {
         TrainingRepository trainingRepository,
         EntitlementService entitlementService,
         TerminationReasonRepository terminationReasonRepository,
-        PersistentTokenRepository persistentTokenRepository
+        UserAccountService userAccountService
     ) {
         this.workflowStateManager = workflowStateManager;
         this.notificationService = notificationService;
@@ -160,7 +160,7 @@ public class EmployeeLifecycleWorkflowService {
         this.trainingRepository = trainingRepository;
         this.entitlementService = entitlementService;
         this.terminationReasonRepository = terminationReasonRepository;
-        this.persistentTokenRepository = persistentTokenRepository;
+        this.userAccountService = userAccountService;
     }
 
     // ==================== ONBOARDING ====================
@@ -965,8 +965,7 @@ public class EmployeeLifecycleWorkflowService {
         Map<String, Object> context = workflow != null && workflow.getContext() != null ? workflow.getContext() : Map.of();
 
         employee.setStatus(EmployeeStatus.TERMINATED);
-        employee.setActivated(false);
-        persistentTokenRepository.deleteAll(persistentTokenRepository.findByUser(employee));
+        userAccountService.switchOffSignIn(employee);
         if (employee.getEndDate() == null) {
             employee.setEndDate(lastDay);
         }

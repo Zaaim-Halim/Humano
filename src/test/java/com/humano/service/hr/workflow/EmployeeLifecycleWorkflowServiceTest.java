@@ -49,8 +49,11 @@ import com.humano.repository.hr.OnboardingTaskTemplateRepository;
 import com.humano.repository.hr.TerminationReasonRepository;
 import com.humano.repository.hr.TrainingRepository;
 import com.humano.repository.payroll.EmployeeBenefitRepository;
+import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.repository.shared.PersistentTokenRepository;
+import com.humano.repository.shared.UserRepository;
+import com.humano.service.admin.UserAccountService;
 import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.errors.BadRequestAlertException;
@@ -58,6 +61,8 @@ import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.hr.workflow.infrastructure.DeadlineMonitorService;
 import com.humano.service.hr.workflow.infrastructure.NotificationOrchestrationService;
 import com.humano.service.hr.workflow.infrastructure.WorkflowStateManager;
+import com.humano.tenancy.TenantIteration;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -71,6 +76,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 /** Onboarding creates a tracked checklist whose process and workflow stay in step. */
 class EmployeeLifecycleWorkflowServiceTest {
@@ -106,7 +112,15 @@ class EmployeeLifecycleWorkflowServiceTest {
         trainingCatalog,
         entitlements,
         terminationReasons,
-        rememberedSignIns
+        new UserAccountService(
+            mock(UserRepository.class),
+            mock(AuthorityRepository.class),
+            rememberedSignIns,
+            mock(PasswordEncoder.class),
+            mock(TenantIteration.class),
+            new SimpleMeterRegistry(),
+            entitlements
+        )
     );
 
     private static final LocalDate START = LocalDate.of(2026, 10, 1);

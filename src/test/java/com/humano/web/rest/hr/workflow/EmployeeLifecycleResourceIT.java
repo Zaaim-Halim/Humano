@@ -18,11 +18,13 @@ import com.humano.domain.hr.Position;
 import com.humano.domain.shared.Authority;
 import com.humano.domain.shared.Employee;
 import com.humano.domain.shared.Permission;
+import com.humano.domain.shared.PersistentToken;
 import com.humano.repository.hr.OrganizationalUnitRepository;
 import com.humano.repository.hr.PositionRepository;
 import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.repository.shared.PermissionRepository;
+import com.humano.repository.shared.PersistentTokenRepository;
 import com.humano.security.AuthoritiesConstants;
 import com.humano.security.AuthorityPermissionService;
 import com.humano.security.DefaultRolePermissions;
@@ -41,6 +43,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -70,6 +73,9 @@ class EmployeeLifecycleResourceIT {
 
     @Autowired
     private EmployeeRepository employees;
+
+    @Autowired
+    private PersistentTokenRepository rememberedSignIns;
 
     @Autowired
     private PositionRepository positions;
@@ -316,6 +322,50 @@ class EmployeeLifecycleResourceIT {
         Employee back = employees.findById(hire.getId()).orElseThrow();
         assertThat(back.getStatus()).isEqualTo(EmployeeStatus.ACTIVE);
         assertThat(back.getEndDate()).isNull();
+        assertThat(back.isActivated()).isTrue();
+    }
+
+    @Test
+    void terminatingSomeoneOnTheirProfileSwitchesOffTheirSignInUntilTheyComeBack() throws Exception {
+        PersistentToken laptop = new PersistentToken();
+        laptop.setSeries("laptop-" + UUID.randomUUID().toString().substring(0, 8));
+        laptop.setTokenValue("value");
+        laptop.setTokenDate(LocalDate.now());
+        laptop.setUser(hire);
+        rememberedSignIns.saveAndFlush(laptop);
+
+        setStatus(EmployeeStatus.TERMINATED).andExpect(status().isOk());
+        Employee gone = employees.findById(hire.getId()).orElseThrow();
+        assertThat(gone.isActivated()).isFalse();
+        assertThat(rememberedSignIns.findByUser(gone)).isEmpty();
+
+        // Saving their profile again while they're terminated leaves the account alone.
+        setStatus(EmployeeStatus.TERMINATED).andExpect(status().isOk());
+        assertThat(employees.findById(hire.getId()).orElseThrow().isActivated()).isFalse();
+
+        setStatus(EmployeeStatus.ACTIVE).andExpect(status().isOk());
+        assertThat(employees.findById(hire.getId()).orElseThrow().isActivated()).isTrue();
+    }
+
+    @Test
+    @WithMockUser(username = "self-terminator", authorities = { "ROLE_ADMIN" })
+    void nobodyCanTerminateThemselves() throws Exception {
+        hire.setLogin("self-terminator");
+        hire = employees.saveAndFlush(hire);
+
+        setStatus(EmployeeStatus.TERMINATED).andExpect(status().isBadRequest());
+        Employee still = employees.findById(hire.getId()).orElseThrow();
+        assertThat(still.getStatus()).isEqualTo(EmployeeStatus.ACTIVE);
+        assertThat(still.isActivated()).isTrue();
+    }
+
+    private ResultActions setStatus(EmployeeStatus status) throws Exception {
+        return mvc.perform(
+            put("/api/hr/employees/" + hire.getId())
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"" + status + "\"}")
+        );
     }
 
     @Test

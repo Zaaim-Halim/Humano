@@ -34,6 +34,7 @@ import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.repository.shared.UserRepository;
 import com.humano.security.AuthoritiesConstants;
+import com.humano.security.SecurityUtils;
 import com.humano.service.MailService;
 import com.humano.service.admin.UserAccountService;
 import com.humano.service.billing.entitlement.EntitlementService;
@@ -174,12 +175,19 @@ public class EmployeeProfileService {
         }
         setEmployeeRelationships(employee, profile);
         addEmployeeAuthority(employee);
+        // Someone recorded as already gone (a past employee) gets no working sign-in.
+        boolean terminated = employee.getStatus() == EmployeeStatus.TERMINATED;
+        if (terminated) {
+            employee.setActivated(false);
+        }
 
         Employee savedEmployee = employeeRepository.save(employee);
         log.debug("Created employee profile with ID: {}", savedEmployee.getId());
 
         // Sent after the insert so the reset link can never point at a row that was rolled back.
-        mailService.sendCreationEmail(savedEmployee);
+        if (!terminated) {
+            mailService.sendCreationEmail(savedEmployee);
+        }
 
         return mapToEmployeeProfileResponse(savedEmployee);
     }
@@ -199,10 +207,13 @@ public class EmployeeProfileService {
             .findById(id)
             .map(existingEmployee -> {
                 String oldPath = existingEmployee.getPath();
+                EmployeeStatus statusBefore = existingEmployee.getStatus();
+                refuseSelfTermination(existingEmployee, request.status());
 
                 updateEmployeeFromRequest(existingEmployee, request);
                 updateEmployeeRelationships(existingEmployee, request);
                 updateEmployeeAuthorities(existingEmployee, request.authorities());
+                updateSignIn(existingEmployee, statusBefore);
 
                 // saveAndFlush so the cursor row's recomputed path is in the DB before we
                 // bulk-rewrite the descendants. The @PreUpdate hook on Employee recomputes
@@ -321,6 +332,31 @@ public class EmployeeProfileService {
     }
 
     /** Refuses (403, plan limit) when the plan's employee limit is reached. Terminated people do not count. */
+    /**
+     * Sign-in follows termination, as it does at the end of an offboarding: terminating someone by
+     * hand switches it off, and bringing them back switches it on again (taking an admin seat if
+     * their roles need one).
+     */
+    private void updateSignIn(Employee employee, EmployeeStatus statusBefore) {
+        boolean terminated = employee.getStatus() == EmployeeStatus.TERMINATED;
+        if (terminated == (statusBefore == EmployeeStatus.TERMINATED)) {
+            return;
+        }
+        if (terminated) {
+            userAccountService.switchOffSignIn(employee);
+        } else {
+            userAccountService.restoreSignIn(employee);
+        }
+    }
+
+    /** Nobody can terminate themselves: it would switch off their own sign-in. */
+    private void refuseSelfTermination(Employee employee, EmployeeStatus requested) {
+        boolean terminating = requested == EmployeeStatus.TERMINATED && employee.getStatus() != EmployeeStatus.TERMINATED;
+        if (terminating && SecurityUtils.getCurrentUserLogin().filter(employee.getLogin()::equalsIgnoreCase).isPresent()) {
+            throw new BadRequestAlertException("You can't terminate yourself; another admin has to do it.", ENTITY_NAME, "selftermination");
+        }
+    }
+
     private void checkEmployeeLimit() {
         entitlementService.checkOneMore(FeatureCodes.EMPLOYEES, employeeRepository.countByStatusNot(EmployeeStatus.TERMINATED));
     }
