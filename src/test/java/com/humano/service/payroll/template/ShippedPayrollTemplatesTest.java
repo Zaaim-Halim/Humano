@@ -142,6 +142,49 @@ class ShippedPayrollTemplatesTest {
         assertThat(rates(uk.tables().get("niEmployeeRates"), LocalDate.of(2026, 6, 1))).containsEntry("C", new BigDecimal("0"));
     }
 
+    @Test
+    void usFiguresMatchIrsPublications() {
+        PayrollTemplate us = catalog.find("us-federal-employment").orElseThrow();
+        Map<String, String> values = us
+            .parameters()
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get(0).value().toPlainString()));
+        // Pub 15 (2026): 6.2% to $184,500; 1.45%; 0.9% over $200,000; FUTA 6.0% less 5.4% on $7,000.
+        assertThat(values)
+            .containsEntry("socialSecurityRate", "0.062")
+            .containsEntry("socialSecurityWageBase", "184500")
+            .containsEntry("medicareRate", "0.0145")
+            .containsEntry("additionalMedicareRate", "0.009")
+            .containsEntry("additionalMedicareThreshold", "200000")
+            .containsEntry("futaRate", "0.060")
+            .containsEntry("futaMaximumCredit", "0.054")
+            .containsEntry("futaWageBase", "7000");
+        // Pub 15-T (2026) Worksheet 1A lines 1g and 1k.
+        assertThat(values)
+            .containsEntry("standardAdjustmentMarried", "12900")
+            .containsEntry("standardAdjustmentOther", "8600")
+            .containsEntry("allowanceAmount", "4300");
+        // Annual Percentage Method table, STANDARD Single: $0 / $7,500 10% / $19,900 $1,240 12% ... $648,100 $192,979.25 37%.
+        assertThat(us.tables().get("annualWithholding").versions().get(0).rows())
+            .filteredOn(r -> r.key().equals("STANDARD_SINGLE"))
+            .extracting(r -> plain(r.lower()) + "@" + plain(r.rate()) + "+" + plain(r.base()))
+            .containsExactly(
+                "0@0+0",
+                "7500@0.1+0",
+                "19900@0.12+1240",
+                "57900@0.22+5800",
+                "113200@0.24+17966",
+                "209275@0.32+41024",
+                "263725@0.35+58448",
+                "648100@0.37+192979.25"
+            );
+    }
+
+    private static String plain(BigDecimal value) {
+        return value.stripTrailingZeros().toPlainString();
+    }
+
     private static Map<String, BigDecimal> rates(Table table, LocalDate date) {
         return table
             .versions()

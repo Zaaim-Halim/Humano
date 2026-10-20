@@ -20,9 +20,11 @@ import java.util.Map;
  * @param socialEarnings  earnings subject to social contributions (defaults to gross)
  * @param taxableEarnings taxable earnings (defaults to gross)
  * @param reductions      unpaid-leave reductions (defaults to 0)
- * @param preTaxDeductions tenant pre-tax deductions (defaults to 0)
+ * @param preTaxDeductions tenant pre-tax deductions (defaults to the sum by type, else 0)
+ * @param preTaxDeductionsByType the same by deduction type (defaults to none)
  * @param fullPeriod      employed full-time for the whole period (defaults to true)
  * @param birthDate       employee's birth date
+ * @param employmentStartDate first day of employment (defaults to the period start)
  * @param employer        employer settings
  * @param employee        employee attributes
  * @param ytd             year-to-date sums before this period, keyed {@code step.SIDE.base|amount}
@@ -41,8 +43,10 @@ public record TestCase(
     BigDecimal taxableEarnings,
     BigDecimal reductions,
     BigDecimal preTaxDeductions,
+    Map<String, BigDecimal> preTaxDeductionsByType,
     Boolean fullPeriod,
     LocalDate birthDate,
+    LocalDate employmentStartDate,
     Map<String, String> employer,
     Map<String, String> employee,
     Map<String, BigDecimal> ytd,

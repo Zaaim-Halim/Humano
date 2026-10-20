@@ -1,0 +1,3023 @@
+{
+  "schemaVersion": 1,
+  "id": "us-federal-employment",
+  "name": "United States — federal income tax withholding, FICA and FUTA",
+  "version": "2026.1.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": {
+    "country": "US"
+  },
+  "validity": {
+    "from": "2026-01-01",
+    "to": "2026-12-31"
+  },
+  "currency": "USD",
+  "payFrequencies": ["WEEKLY", "BIWEEKLY", "SEMIMONTHLY", "MONTHLY"],
+  "taxYearStart": "--01-01",
+  "dateBasis": "PAYMENT_DATE",
+  "rounding": {
+    "scale": 2,
+    "mode": "HALF_UP"
+  },
+  "changelog": [
+    {
+      "version": "2026.1.0",
+      "date": "2026-10-20",
+      "summary": "Wages paid in 2026: Pub 15-T percentage method for automated payroll systems (2020 or later and 2019 or earlier Forms W-4, nonresident alien adjustment); social security, Medicare, Additional Medicare and FUTA per Pub 15."
+    }
+  ],
+  "sources": {
+    "irs-pub15t-2026": {
+      "title": "IRS Publication 15-T (2026), Federal Income Tax Withholding Methods — Worksheet 1A, 2026 Annual Percentage Method tables, Withholding Adjustment for Nonresident Alien Employees (Tables 1 and 2), Rounding",
+      "url": "https://www.irs.gov/pub/irs-pdf/p15t.pdf",
+      "retrieved": "2026-10-20"
+    },
+    "irs-pub15-2026": {
+      "title": "IRS Publication 15 (2026), (Circular E) Employer's Tax Guide — section 9 (social security and Medicare: 6.2% to $184,500, 1.45%, Additional Medicare 0.9% over $200,000) and section 14 (FUTA 6.0% on $7,000, credit up to 5.4%)",
+      "url": "https://www.irs.gov/pub/irs-pdf/p15.pdf",
+      "retrieved": "2026-10-20"
+    },
+    "irs-fw4-2026": {
+      "title": "IRS Form W-4 (2026), Employee's Withholding Certificate — steps 1(c), 2(c), 3, 4(a)-(c) and exemption from withholding",
+      "url": "https://www.irs.gov/pub/irs-pdf/fw4.pdf",
+      "retrieved": "2026-10-20"
+    }
+  },
+  "inputs": {
+    "employer": [
+      {
+        "key": "roundToWholeDollars",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Round federal income tax withholding to the nearest dollar (Pub 15-T allows it if used consistently)"
+      },
+      {
+        "key": "futaExempt",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The employer is exempt from FUTA (e.g. a 501(c)(3) organization or a government employer)"
+      }
+    ],
+    "employee": [
+      {
+        "key": "w4Version",
+        "type": "ENUM",
+        "required": false,
+        "values": ["FORM_2020_OR_LATER", "FORM_2019_OR_EARLIER"],
+        "defaultValue": "FORM_2020_OR_LATER",
+        "description": "Which Form W-4 the employee's withholding is based on"
+      },
+      {
+        "key": "filingStatus",
+        "type": "ENUM",
+        "required": true,
+        "values": ["SINGLE", "MARRIED_FILING_JOINTLY", "HEAD_OF_HOUSEHOLD"],
+        "description": "Form W-4 Step 1(c) (2019 or earlier forms: Married = MARRIED_FILING_JOINTLY; Single or Married but withhold at the higher single rate = SINGLE)"
+      },
+      {
+        "key": "multipleJobs",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Form W-4 Step 2(c) box checked (two jobs / spouse works)"
+      },
+      {
+        "key": "dependentsAmount",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "defaultValue": "0",
+        "description": "Form W-4 Step 3 total (claim dependent and other credits), annual"
+      },
+      {
+        "key": "otherIncome",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "defaultValue": "0",
+        "description": "Form W-4 Step 4(a) other income, annual"
+      },
+      {
+        "key": "deductions",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "defaultValue": "0",
+        "description": "Form W-4 Step 4(b) deductions, annual"
+      },
+      {
+        "key": "extraWithholding",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "defaultValue": "0",
+        "description": "Form W-4 Step 4(c) (2019 or earlier forms: line 6) extra withholding per pay period"
+      },
+      {
+        "key": "allowances",
+        "type": "INTEGER",
+        "required": false,
+        "min": 0,
+        "max": 99,
+        "defaultValue": "0",
+        "description": "Withholding allowances on a 2019 or earlier Form W-4 (line 5)"
+      },
+      {
+        "key": "exemptFromWithholding",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The employee claimed exemption from withholding on a Form W-4 valid for 2026"
+      },
+      {
+        "key": "nonresidentAlien",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Nonresident alien employee (Pub 15-T Tables 1 and 2 are added to wages for income tax withholding only)"
+      },
+      {
+        "key": "broughtForwardYear",
+        "type": "INTEGER",
+        "required": false,
+        "min": 2000,
+        "max": 2100,
+        "description": "Calendar year the brought-forward wages belong to; other years' figures are ignored"
+      },
+      {
+        "key": "broughtForwardSocialSecurityWages",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "description": "Social security wages this employer (or a predecessor) already paid this year outside Humano"
+      },
+      {
+        "key": "broughtForwardMedicareWages",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "description": "Medicare wages this employer (or a predecessor) already paid this year outside Humano"
+      },
+      {
+        "key": "broughtForwardFutaWages",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "description": "FUTA wages this employer (or a predecessor) already paid this year outside Humano"
+      }
+    ]
+  },
+  "parameters": {
+    "standardAdjustmentMarried": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "12900",
+        "source": "irs-pub15t-2026"
+      }
+    ],
+    "standardAdjustmentOther": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "8600",
+        "source": "irs-pub15t-2026"
+      }
+    ],
+    "allowanceAmount": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "4300",
+        "source": "irs-pub15t-2026"
+      }
+    ],
+    "socialSecurityRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.062",
+        "source": "irs-pub15-2026"
+      }
+    ],
+    "socialSecurityWageBase": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "184500",
+        "source": "irs-pub15-2026"
+      }
+    ],
+    "medicareRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0145",
+        "source": "irs-pub15-2026"
+      }
+    ],
+    "additionalMedicareRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.009",
+        "source": "irs-pub15-2026"
+      }
+    ],
+    "additionalMedicareThreshold": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "200000",
+        "source": "irs-pub15-2026"
+      }
+    ],
+    "futaRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.060",
+        "source": "irs-pub15-2026"
+      }
+    ],
+    "futaMaximumCredit": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.054",
+        "source": "irs-pub15-2026"
+      }
+    ],
+    "futaWageBase": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "7000",
+        "source": "irs-pub15-2026"
+      }
+    ]
+  },
+  "tables": {
+    "annualWithholding": {
+      "kind": "BRACKETS",
+      "description": "2026 Annual Percentage Method tables (Pub 15-T section 1): column A as lower, B as upper, C as base, D as rate; one schedule per Step 2 checkbox and filing status",
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "irs-pub15t-2026",
+          "rows": [
+            {
+              "key": "STANDARD_SINGLE",
+              "lower": "0",
+              "upper": "7500",
+              "rate": "0",
+              "base": "0.00"
+            },
+            {
+              "key": "STANDARD_SINGLE",
+              "lower": "7500",
+              "upper": "19900",
+              "rate": "0.1",
+              "base": "0.00"
+            },
+            {
+              "key": "STANDARD_SINGLE",
+              "lower": "19900",
+              "upper": "57900",
+              "rate": "0.12",
+              "base": "1240.00"
+            },
+            {
+              "key": "STANDARD_SINGLE",
+              "lower": "57900",
+              "upper": "113200",
+              "rate": "0.22",
+              "base": "5800.00"
+            },
+            {
+              "key": "STANDARD_SINGLE",
+              "lower": "113200",
+              "upper": "209275",
+              "rate": "0.24",
+              "base": "17966.00"
+            },
+            {
+              "key": "STANDARD_SINGLE",
+              "lower": "209275",
+              "upper": "263725",
+              "rate": "0.32",
+              "base": "41024.00"
+            },
+            {
+              "key": "STANDARD_SINGLE",
+              "lower": "263725",
+              "upper": "648100",
+              "rate": "0.35",
+              "base": "58448.00"
+            },
+            {
+              "key": "STANDARD_SINGLE",
+              "lower": "648100",
+              "upper": "999999999999",
+              "rate": "0.37",
+              "base": "192979.25"
+            },
+            {
+              "key": "STANDARD_MARRIED_FILING_JOINTLY",
+              "lower": "0",
+              "upper": "19300",
+              "rate": "0",
+              "base": "0.00"
+            },
+            {
+              "key": "STANDARD_MARRIED_FILING_JOINTLY",
+              "lower": "19300",
+              "upper": "44100",
+              "rate": "0.1",
+              "base": "0.00"
+            },
+            {
+              "key": "STANDARD_MARRIED_FILING_JOINTLY",
+              "lower": "44100",
+              "upper": "120100",
+              "rate": "0.12",
+              "base": "2480.00"
+            },
+            {
+              "key": "STANDARD_MARRIED_FILING_JOINTLY",
+              "lower": "120100",
+              "upper": "230700",
+              "rate": "0.22",
+              "base": "11600.00"
+            },
+            {
+              "key": "STANDARD_MARRIED_FILING_JOINTLY",
+              "lower": "230700",
+              "upper": "422850",
+              "rate": "0.24",
+              "base": "35932.00"
+            },
+            {
+              "key": "STANDARD_MARRIED_FILING_JOINTLY",
+              "lower": "422850",
+              "upper": "531750",
+              "rate": "0.32",
+              "base": "82048.00"
+            },
+            {
+              "key": "STANDARD_MARRIED_FILING_JOINTLY",
+              "lower": "531750",
+              "upper": "788000",
+              "rate": "0.35",
+              "base": "116896.00"
+            },
+            {
+              "key": "STANDARD_MARRIED_FILING_JOINTLY",
+              "lower": "788000",
+              "upper": "999999999999",
+              "rate": "0.37",
+              "base": "206583.50"
+            },
+            {
+              "key": "STANDARD_HEAD_OF_HOUSEHOLD",
+              "lower": "0",
+              "upper": "15550",
+              "rate": "0",
+              "base": "0.00"
+            },
+            {
+              "key": "STANDARD_HEAD_OF_HOUSEHOLD",
+              "lower": "15550",
+              "upper": "33250",
+              "rate": "0.1",
+              "base": "0.00"
+            },
+            {
+              "key": "STANDARD_HEAD_OF_HOUSEHOLD",
+              "lower": "33250",
+              "upper": "83000",
+              "rate": "0.12",
+              "base": "1770.00"
+            },
+            {
+              "key": "STANDARD_HEAD_OF_HOUSEHOLD",
+              "lower": "83000",
+              "upper": "121250",
+              "rate": "0.22",
+              "base": "7740.00"
+            },
+            {
+              "key": "STANDARD_HEAD_OF_HOUSEHOLD",
+              "lower": "121250",
+              "upper": "217300",
+              "rate": "0.24",
+              "base": "16155.00"
+            },
+            {
+              "key": "STANDARD_HEAD_OF_HOUSEHOLD",
+              "lower": "217300",
+              "upper": "271750",
+              "rate": "0.32",
+              "base": "39207.00"
+            },
+            {
+              "key": "STANDARD_HEAD_OF_HOUSEHOLD",
+              "lower": "271750",
+              "upper": "656150",
+              "rate": "0.35",
+              "base": "56631.00"
+            },
+            {
+              "key": "STANDARD_HEAD_OF_HOUSEHOLD",
+              "lower": "656150",
+              "upper": "999999999999",
+              "rate": "0.37",
+              "base": "191171.00"
+            },
+            {
+              "key": "CHECKBOX_SINGLE",
+              "lower": "0",
+              "upper": "8050",
+              "rate": "0",
+              "base": "0.00"
+            },
+            {
+              "key": "CHECKBOX_SINGLE",
+              "lower": "8050",
+              "upper": "14250",
+              "rate": "0.1",
+              "base": "0.00"
+            },
+            {
+              "key": "CHECKBOX_SINGLE",
+              "lower": "14250",
+              "upper": "33250",
+              "rate": "0.12",
+              "base": "620.00"
+            },
+            {
+              "key": "CHECKBOX_SINGLE",
+              "lower": "33250",
+              "upper": "60900",
+              "rate": "0.22",
+              "base": "2900.00"
+            },
+            {
+              "key": "CHECKBOX_SINGLE",
+              "lower": "60900",
+              "upper": "108938",
+              "rate": "0.24",
+              "base": "8983.00"
+            },
+            {
+              "key": "CHECKBOX_SINGLE",
+              "lower": "108938",
+              "upper": "136163",
+              "rate": "0.32",
+              "base": "20512.00"
+            },
+            {
+              "key": "CHECKBOX_SINGLE",
+              "lower": "136163",
+              "upper": "328350",
+              "rate": "0.35",
+              "base": "29224.00"
+            },
+            {
+              "key": "CHECKBOX_SINGLE",
+              "lower": "328350",
+              "upper": "999999999999",
+              "rate": "0.37",
+              "base": "96489.63"
+            },
+            {
+              "key": "CHECKBOX_MARRIED_FILING_JOINTLY",
+              "lower": "0",
+              "upper": "16100",
+              "rate": "0",
+              "base": "0.00"
+            },
+            {
+              "key": "CHECKBOX_MARRIED_FILING_JOINTLY",
+              "lower": "16100",
+              "upper": "28500",
+              "rate": "0.1",
+              "base": "0.00"
+            },
+            {
+              "key": "CHECKBOX_MARRIED_FILING_JOINTLY",
+              "lower": "28500",
+              "upper": "66500",
+              "rate": "0.12",
+              "base": "1240.00"
+            },
+            {
+              "key": "CHECKBOX_MARRIED_FILING_JOINTLY",
+              "lower": "66500",
+              "upper": "121800",
+              "rate": "0.22",
+              "base": "5800.00"
+            },
+            {
+              "key": "CHECKBOX_MARRIED_FILING_JOINTLY",
+              "lower": "121800",
+              "upper": "217875",
+              "rate": "0.24",
+              "base": "17966.00"
+            },
+            {
+              "key": "CHECKBOX_MARRIED_FILING_JOINTLY",
+              "lower": "217875",
+              "upper": "272325",
+              "rate": "0.32",
+              "base": "41024.00"
+            },
+            {
+              "key": "CHECKBOX_MARRIED_FILING_JOINTLY",
+              "lower": "272325",
+              "upper": "400450",
+              "rate": "0.35",
+              "base": "58448.00"
+            },
+            {
+              "key": "CHECKBOX_MARRIED_FILING_JOINTLY",
+              "lower": "400450",
+              "upper": "999999999999",
+              "rate": "0.37",
+              "base": "103291.75"
+            },
+            {
+              "key": "CHECKBOX_HEAD_OF_HOUSEHOLD",
+              "lower": "0",
+              "upper": "12075",
+              "rate": "0",
+              "base": "0.00"
+            },
+            {
+              "key": "CHECKBOX_HEAD_OF_HOUSEHOLD",
+              "lower": "12075",
+              "upper": "20925",
+              "rate": "0.1",
+              "base": "0.00"
+            },
+            {
+              "key": "CHECKBOX_HEAD_OF_HOUSEHOLD",
+              "lower": "20925",
+              "upper": "45800",
+              "rate": "0.12",
+              "base": "885.00"
+            },
+            {
+              "key": "CHECKBOX_HEAD_OF_HOUSEHOLD",
+              "lower": "45800",
+              "upper": "64925",
+              "rate": "0.22",
+              "base": "3870.00"
+            },
+            {
+              "key": "CHECKBOX_HEAD_OF_HOUSEHOLD",
+              "lower": "64925",
+              "upper": "112950",
+              "rate": "0.24",
+              "base": "8077.50"
+            },
+            {
+              "key": "CHECKBOX_HEAD_OF_HOUSEHOLD",
+              "lower": "112950",
+              "upper": "140175",
+              "rate": "0.32",
+              "base": "19603.50"
+            },
+            {
+              "key": "CHECKBOX_HEAD_OF_HOUSEHOLD",
+              "lower": "140175",
+              "upper": "332375",
+              "rate": "0.35",
+              "base": "28315.50"
+            },
+            {
+              "key": "CHECKBOX_HEAD_OF_HOUSEHOLD",
+              "lower": "332375",
+              "upper": "999999999999",
+              "rate": "0.37",
+              "base": "95585.50"
+            }
+          ]
+        }
+      ]
+    },
+    "nonresidentAlienAddition": {
+      "kind": "EXACT",
+      "description": "Amount added to a nonresident alien's wages per payroll period: Table 2 (Form W-4 2020 or later, or first paid in 2020 or later), Table 1 (otherwise)",
+      "columns": ["FORM_2020_OR_LATER", "FORM_2019_OR_EARLIER"],
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "irs-pub15t-2026",
+          "rows": [
+            {
+              "key": "WEEKLY",
+              "values": ["309.60", "226.90"]
+            },
+            {
+              "key": "BIWEEKLY",
+              "values": ["619.20", "453.80"]
+            },
+            {
+              "key": "SEMIMONTHLY",
+              "values": ["670.80", "491.70"]
+            },
+            {
+              "key": "MONTHLY",
+              "values": ["1341.70", "983.30"]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "id": "supportedPreTaxDeductions",
+      "type": "REQUIRE",
+      "condition": "#preTaxDeductions == #preTaxDeductionsByType['RETIREMENT'] + #preTaxDeductionsByType['INSURANCE']",
+      "message": "Only pre-tax deductions of type RETIREMENT (401(k), 403(b), governmental 457(b) elective deferrals) and INSURANCE (section 125 cafeteria plan) are supported"
+    },
+    {
+      "id": "noHeadOfHouseholdOnOldForm",
+      "type": "REQUIRE",
+      "when": "!(#employee['w4Version'] == 'FORM_2020_OR_LATER')",
+      "condition": "#employee['filingStatus'] != 'HEAD_OF_HOUSEHOLD'",
+      "message": "Head of household can't be used with a 2019 or earlier Form W-4 (Pub 15-T)"
+    },
+    {
+      "id": "noStepsOnOldForm",
+      "type": "REQUIRE",
+      "when": "!(#employee['w4Version'] == 'FORM_2020_OR_LATER')",
+      "condition": "!#employee['multipleJobs'] and #employee['dependentsAmount'] == 0 and #employee['otherIncome'] == 0 and #employee['deductions'] == 0",
+      "message": "Form W-4 steps 2-4(b) only exist on 2020 or later forms; a 2019 or earlier form uses allowances"
+    },
+    {
+      "id": "noAllowancesOnNewForm",
+      "type": "REQUIRE",
+      "when": "#employee['w4Version'] == 'FORM_2020_OR_LATER'",
+      "condition": "#employee['allowances'] == 0",
+      "message": "Withholding allowances only exist on 2019 or earlier Forms W-4"
+    },
+    {
+      "id": "broughtForward",
+      "type": "VALUE",
+      "expr": "#employee['broughtForwardYear'] != null and #employee['broughtForwardYear'] == #taxYear"
+    },
+    {
+      "id": "earlierPayThisYear",
+      "type": "REQUIRE",
+      "when": "#ytd.periods('medicare', 'EMPLOYEE') == 0 and #employmentStartDate < #periodStart and #periodStart > #taxYearStartDate",
+      "condition": "#broughtForward",
+      "message": "No earlier payroll this year is recorded for this employee, who was employed before this period: set broughtForwardYear and the social security, Medicare and FUTA wages already paid this year (0 if none) so the wage bases and the Additional Medicare threshold apply correctly"
+    },
+    {
+      "id": "incomeTaxWages",
+      "type": "VALUE",
+      "expr": "#pos(#taxableEarnings - #reductions - #preTaxDeductions)"
+    },
+    {
+      "id": "nonresidentAddition",
+      "type": "VALUE",
+      "when": "#employee['nonresidentAlien']",
+      "expr": "#table.lookup('nonresidentAlienAddition', #frequency, #employee['w4Version'])"
+    },
+    {
+      "id": "annualWages",
+      "type": "VALUE",
+      "expr": "(#incomeTaxWages + #nonresidentAddition) * #periodsPerYear"
+    },
+    {
+      "id": "adjustedAnnualWages",
+      "type": "VALUE",
+      "expr": "#employee['w4Version'] == 'FORM_2020_OR_LATER' ? #pos(#annualWages + #employee['otherIncome'] - #employee['deductions'] - (#employee['multipleJobs'] ? 0 : (#employee['filingStatus'] == 'MARRIED_FILING_JOINTLY' ? #p['standardAdjustmentMarried'] : #p['standardAdjustmentOther']))) : #pos(#annualWages - #employee['allowances'] * #p['allowanceAmount'])"
+    },
+    {
+      "id": "tentativeWithholding",
+      "type": "VALUE",
+      "expr": "#divide(#table.bracketTax('annualWithholding', (#employee['w4Version'] == 'FORM_2020_OR_LATER' and #employee['multipleJobs'] ? 'CHECKBOX_' : 'STANDARD_') + #employee['filingStatus'], #adjustedAnnualWages), #periodsPerYear, 10, 'HALF_UP')"
+    },
+    {
+      "id": "creditsPerPeriod",
+      "type": "VALUE",
+      "when": "#employee['w4Version'] == 'FORM_2020_OR_LATER'",
+      "expr": "#divide(#employee['dependentsAmount'], #periodsPerYear, 10, 'HALF_UP')"
+    },
+    {
+      "id": "withholding",
+      "type": "VALUE",
+      "expr": "#pos(#tentativeWithholding - #creditsPerPeriod) + #employee['extraWithholding']"
+    },
+    {
+      "id": "federalIncomeTax",
+      "type": "TAX",
+      "label": "Federal income tax",
+      "ledger": "INCOME_TAX",
+      "source": "irs-pub15t-2026",
+      "when": "!#employee['exemptFromWithholding']",
+      "base": "#incomeTaxWages",
+      "amount": "#employer['roundToWholeDollars'] ? #round(#withholding, 0, 'HALF_UP') : #withholding"
+    },
+    {
+      "id": "ficaWages",
+      "type": "VALUE",
+      "expr": "#pos(#socialEarnings - #reductions - #preTaxDeductionsByType['INSURANCE'])"
+    },
+    {
+      "id": "socialSecurityWagesToDate",
+      "type": "VALUE",
+      "expr": "#ytd.base('socialSecurity', 'EMPLOYEE') + (#broughtForward ? #coalesce(#employee['broughtForwardSocialSecurityWages'], 0) : 0)"
+    },
+    {
+      "id": "socialSecurity",
+      "type": "CONTRIBUTION",
+      "label": "Social security",
+      "ledger": "SOCIAL_SECURITY",
+      "source": "irs-pub15-2026",
+      "base": "#min(#ficaWages, #pos(#p['socialSecurityWageBase'] - #socialSecurityWagesToDate))",
+      "employee": {
+        "rate": "#p['socialSecurityRate']"
+      },
+      "employer": {
+        "rate": "#p['socialSecurityRate']"
+      }
+    },
+    {
+      "id": "medicareWagesToDate",
+      "type": "VALUE",
+      "expr": "#ytd.base('medicare', 'EMPLOYEE') + (#broughtForward ? #coalesce(#employee['broughtForwardMedicareWages'], 0) : 0)"
+    },
+    {
+      "id": "medicare",
+      "type": "CONTRIBUTION",
+      "label": "Medicare",
+      "ledger": "MEDICARE",
+      "source": "irs-pub15-2026",
+      "base": "#ficaWages",
+      "employee": {
+        "rate": "#p['medicareRate']"
+      },
+      "employer": {
+        "rate": "#p['medicareRate']"
+      }
+    },
+    {
+      "id": "additionalMedicare",
+      "type": "CONTRIBUTION",
+      "label": "Additional Medicare",
+      "ledger": "MEDICARE",
+      "source": "irs-pub15-2026",
+      "base": "#pos(#medicareWagesToDate + #ficaWages - #p['additionalMedicareThreshold']) - #pos(#medicareWagesToDate - #p['additionalMedicareThreshold'])",
+      "employee": {
+        "rate": "#p['additionalMedicareRate']"
+      }
+    },
+    {
+      "id": "futaWagesToDate",
+      "type": "VALUE",
+      "expr": "#ytd.base('futa', 'EMPLOYER') + (#broughtForward ? #coalesce(#employee['broughtForwardFutaWages'], 0) : 0)"
+    },
+    {
+      "id": "futa",
+      "type": "CONTRIBUTION",
+      "label": "FUTA",
+      "ledger": "UNEMPLOYMENT",
+      "source": "irs-pub15-2026",
+      "when": "!#employer['futaExempt']",
+      "base": "#min(#ficaWages, #pos(#p['futaWageBase'] - #futaWagesToDate))",
+      "employer": {
+        "rate": "#p['futaRate'] - #p['futaMaximumCredit']"
+      }
+    }
+  ],
+  "limitations": [
+    "Federal only: state and local income taxes, state unemployment (SUTA) and state disability insurance are separate templates.",
+    "Weekly, biweekly, semimonthly and monthly pay; supplemental wages are withheld as regular wages (aggregate), so the optional 22% flat rate and the mandatory 37% rate on supplemental wages over $1,000,000 are not applied.",
+    "Pre-tax deductions: RETIREMENT is treated as 401(k)/403(b)/457(b) elective deferrals (reduce income tax wages only) and INSURANCE as section 125 cafeteria plan deductions (reduce income tax, FICA and FUTA wages); other pre-tax types are refused.",
+    "FICA- or FUTA-exempt employment (e.g. F-1/J-1 students, family employees, some religious and government employment) is not modelled.",
+    "FUTA is accrued at 0.6% (6.0% less the maximum 5.4% credit); credit reductions for a state (announced in November) and late state payments are reconciled on Form 940.",
+    "Tips, fringe benefits, group-term life insurance over $50,000 and third-party sick pay are not included.",
+    "Wage bases count wages paid by this employer through Humano plus brought-forward wages; mid-year adoptions must enter the year's earlier wages.",
+    "Status LAW_DERIVED: income tax reproduces all 15,845 weekly-to-monthly amounts of the Pub 15-T Wage Bracket Method tables (checked by build_template.py; 28 of them plus the Pub 15-T nonresident alien example are test cases); other amounts are derived from the publications."
+  ],
+  "testCases": [
+    {
+      "name": "Pub 15-T wage bracket: weekly $585-$595, married filing jointly, standard",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2020 or later (section 2), page 14: $0 tentative withholding for wages of at least $585 but less than $595 (computed at the $590 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "590",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "multipleJobs": "false"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "36.58"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "36.58"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "8.56"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "8.56"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "3.54"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: weekly $1,205-$1,215, head of household, Step 2 checkbox",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2020 or later (section 2), page 15: $147 tentative withholding for wages of at least $1,205 but less than $1,215 (computed at the $1210 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "1210",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "filingStatus": "HEAD_OF_HOUSEHOLD",
+        "multipleJobs": "true"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "147"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "75.02"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "75.02"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "17.55"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "17.55"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "7.26"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: weekly $1,915-$1,925, single, Step 2 checkbox",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2020 or later (section 2), page 16: $352 tentative withholding for wages of at least $1,915 but less than $1,925 (computed at the $1920 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "1920",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "filingStatus": "SINGLE",
+        "multipleJobs": "true"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "352"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "119.04"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "119.04"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "27.84"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "27.84"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "11.52"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: biweekly $835-$850, married filing jointly, standard",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2020 or later (section 2), page 17: $0 tentative withholding for wages of at least $835 but less than $850 (computed at the $842.5 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "842.5",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "multipleJobs": "false"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "52.24"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "52.24"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "12.22"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "12.22"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "5.06"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: biweekly $1,925-$1,945, head of household, Step 2 checkbox",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2020 or later (section 2), page 18: $187 tentative withholding for wages of at least $1,925 but less than $1,945 (computed at the $1935 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "1935",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "filingStatus": "HEAD_OF_HOUSEHOLD",
+        "multipleJobs": "true"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "187"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "119.97"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "119.97"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "28.06"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "28.06"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "11.61"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: biweekly $3,845-$3,875, single, Step 2 checkbox",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2020 or later (section 2), page 19: $710 tentative withholding for wages of at least $3,845 but less than $3,875 (computed at the $3860 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "3860",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "filingStatus": "SINGLE",
+        "multipleJobs": "true"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "710"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "239.32"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "239.32"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "55.97"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "55.97"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "23.16"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: semimonthly $890-$905, married filing jointly, standard",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2020 or later (section 2), page 20: $0 tentative withholding for wages of at least $890 but less than $905 (computed at the $897.5 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-15",
+      "paymentDate": "2026-06-15",
+      "frequency": "SEMIMONTHLY",
+      "grossEarnings": "897.5",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "multipleJobs": "false"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "55.65"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "55.65"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "13.01"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "13.01"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "5.39"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: semimonthly $2,000-$2,020, head of household, Step 2 checkbox",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2020 or later (section 2), page 21: $184 tentative withholding for wages of at least $2,000 but less than $2,020 (computed at the $2010 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-15",
+      "paymentDate": "2026-06-15",
+      "frequency": "SEMIMONTHLY",
+      "grossEarnings": "2010",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "filingStatus": "HEAD_OF_HOUSEHOLD",
+        "multipleJobs": "true"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "184"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "124.62"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "124.62"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "29.15"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "29.15"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "12.06"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: semimonthly $4,150-$4,185, single, Step 2 checkbox",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2020 or later (section 2), page 22: $765 tentative withholding for wages of at least $4,150 but less than $4,185 (computed at the $4167.5 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-15",
+      "paymentDate": "2026-06-15",
+      "frequency": "SEMIMONTHLY",
+      "grossEarnings": "4167.5",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "filingStatus": "SINGLE",
+        "multipleJobs": "true"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "765"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "258.39"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "258.39"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "60.43"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "60.43"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "25.01"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: monthly $1,765-$1,795, married filing jointly, standard",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2020 or later (section 2), page 23: $0 tentative withholding for wages of at least $1,765 but less than $1,795 (computed at the $1780 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1780",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "multipleJobs": "false"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "110.36"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "110.36"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "25.81"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "25.81"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "10.68"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: monthly $4,025-$4,065, head of household, Step 2 checkbox",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2020 or later (section 2), page 24: $373 tentative withholding for wages of at least $4,025 but less than $4,065 (computed at the $4045 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4045",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "filingStatus": "HEAD_OF_HOUSEHOLD",
+        "multipleJobs": "true"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "373"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "250.79"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "250.79"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "58.65"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "58.65"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "24.27"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: monthly $8,325-$8,395, single, Step 2 checkbox",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2020 or later (section 2), page 25: $1537 tentative withholding for wages of at least $8,325 but less than $8,395 (computed at the $8360 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "8360",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "filingStatus": "SINGLE",
+        "multipleJobs": "true"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "1537"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "518.32"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "518.32"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "121.22"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "121.22"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "42.00"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: weekly $725-$735, married, 1 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 29: $28 tentative withholding for wages of at least $725 but less than $735 (computed at the $730 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "730",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "allowances": "1"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "28"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "45.26"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "45.26"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "10.59"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "10.59"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "4.38"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: weekly $1,345-$1,360, single, 4 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 33: $101 tentative withholding for wages of at least $1,345 but less than $1,360 (computed at the $1352.5 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "1352.5",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "SINGLE",
+        "allowances": "4"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "101"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "83.86"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "83.86"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "19.61"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "19.61"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "8.12"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: weekly $1,020-$1,035, married, 7 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 30: $8 tentative withholding for wages of at least $1,020 but less than $1,035 (computed at the $1027.5 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "1027.5",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "allowances": "7"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "8"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "63.71"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "63.71"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "14.90"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "14.90"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "6.17"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: weekly $1,825-$1,840, single, 10 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 34: $99 tentative withholding for wages of at least $1,825 but less than $1,840 (computed at the $1832.5 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "1832.5",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "SINGLE",
+        "allowances": "10"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "99"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "113.62"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "113.62"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "26.57"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "26.57"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "11.00"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: biweekly $1,135-$1,145, married, 1 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 35: $23 tentative withholding for wages of at least $1,135 but less than $1,145 (computed at the $1140 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "1140",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "allowances": "1"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "23"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "70.68"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "70.68"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "16.53"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "16.53"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "6.84"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: biweekly $1,940-$1,970, single, 4 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 39: $111 tentative withholding for wages of at least $1,940 but less than $1,970 (computed at the $1955 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "1955",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "SINGLE",
+        "allowances": "4"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "111"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "121.21"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "121.21"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "28.35"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "28.35"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "11.73"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: biweekly $1,405-$1,415, married, 7 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 36: $0 tentative withholding for wages of at least $1,405 but less than $1,415 (computed at the $1410 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "1410",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "allowances": "7"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "87.42"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "87.42"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "20.45"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "20.45"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "8.46"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: biweekly $3,290-$3,340, single, 10 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 40: $155 tentative withholding for wages of at least $3,290 but less than $3,340 (computed at the $3315 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "3315",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "SINGLE",
+        "allowances": "10"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "155"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "205.53"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "205.53"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "48.07"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "48.07"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "19.89"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: semimonthly $1,225-$1,235, married, 1 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 41: $25 tentative withholding for wages of at least $1,225 but less than $1,235 (computed at the $1230 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-15",
+      "paymentDate": "2026-06-15",
+      "frequency": "SEMIMONTHLY",
+      "grossEarnings": "1230",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "allowances": "1"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "25"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "76.26"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "76.26"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "17.84"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "17.84"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "7.38"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: semimonthly $2,595-$2,635, single, 4 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 45: $180 tentative withholding for wages of at least $2,595 but less than $2,635 (computed at the $2615 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-15",
+      "paymentDate": "2026-06-15",
+      "frequency": "SEMIMONTHLY",
+      "grossEarnings": "2615",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "SINGLE",
+        "allowances": "4"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "180"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "162.13"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "162.13"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "37.92"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "37.92"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "15.69"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: semimonthly $1,515-$1,525, married, 7 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 42: $0 tentative withholding for wages of at least $1,515 but less than $1,525 (computed at the $1520 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-15",
+      "paymentDate": "2026-06-15",
+      "frequency": "SEMIMONTHLY",
+      "grossEarnings": "1520",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "allowances": "7"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "94.24"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "94.24"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "22.04"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "22.04"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "9.12"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: semimonthly $3,875-$3,915, single, 10 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 46: $205 tentative withholding for wages of at least $3,875 but less than $3,915 (computed at the $3895 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-15",
+      "paymentDate": "2026-06-15",
+      "frequency": "SEMIMONTHLY",
+      "grossEarnings": "3895",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "SINGLE",
+        "allowances": "10"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "205"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "241.49"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "241.49"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "56.48"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "56.48"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "23.37"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: monthly $3,130-$3,170, married, 1 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 47: $118 tentative withholding for wages of at least $3,130 but less than $3,170 (computed at the $3150 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3150",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "allowances": "1"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "118"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "195.30"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "195.30"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "45.68"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "45.68"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "18.90"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: monthly $5,020-$5,100, single, 4 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 51: $340 tentative withholding for wages of at least $5,020 but less than $5,100 (computed at the $5060 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5060",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "SINGLE",
+        "allowances": "4"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "340"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "313.72"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "313.72"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "73.37"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "73.37"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "30.36"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: monthly $4,410-$4,470, married, 7 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 48: $32 tentative withholding for wages of at least $4,410 but less than $4,470 (computed at the $4440 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4440",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "allowances": "7"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "32"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "275.28"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "275.28"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "64.38"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "64.38"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "26.64"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T wage bracket: monthly $7,660-$7,740, single, 10 allowances",
+      "evidence": "IRS Pub 15-T (2026) Wage Bracket Method table, Form W-4 2019 or earlier (section 3), page 52: $398 tentative withholding for wages of at least $7,660 but less than $7,740 (computed at the $7700 midpoint, rounded to the dollar); FICA and FUTA lines by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "7700",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "SINGLE",
+        "allowances": "10"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "398"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "477.40"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "477.40"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "111.65"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "111.65"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "42.00"
+        }
+      ]
+    },
+    {
+      "name": "Pub 15-T nonresident alien example",
+      "evidence": "IRS Pub 15-T (2026) Withholding Adjustment for Nonresident Alien Employees, example: $300 weekly, 2019 Form W-4 single with one allowance, $226.90 added (Table 1), $31 withheld",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "300.00",
+      "employer": {
+        "roundToWholeDollars": "true"
+      },
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "SINGLE",
+        "allowances": "1",
+        "nonresidentAlien": "true"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "31"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "18.60"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "18.60"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "4.35"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "4.35"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "1.80"
+        }
+      ]
+    },
+    {
+      "name": "single, monthly, to the cent",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "6250.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "639.17"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "387.50"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "387.50"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "90.63"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "90.63"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "37.50"
+        }
+      ]
+    },
+    {
+      "name": "401(k) reduces income tax wages only; section 125 reduces both",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE"
+      },
+      "preTaxDeductionsByType": {
+        "RETIREMENT": "500.00",
+        "INSURANCE": "200.00"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "334.33"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "297.60"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "297.60"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "69.60"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "69.60"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "28.80"
+        }
+      ]
+    },
+    {
+      "name": "married filing jointly, Step 2 checkbox, dependents and extra withholding",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "3846.15",
+      "employer": {},
+      "employee": {
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "multipleJobs": "true",
+        "dependentsAmount": "4400",
+        "extraWithholding": "25.00"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "362.31"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "238.46"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "238.46"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "55.77"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "55.77"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "23.08"
+        }
+      ]
+    },
+    {
+      "name": "head of household with other income and deductions",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-15",
+      "paymentDate": "2026-06-15",
+      "frequency": "SEMIMONTHLY",
+      "grossEarnings": "2900.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "HEAD_OF_HOUSEHOLD",
+        "otherIncome": "6000",
+        "deductions": "3500"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "225.00"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "179.80"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "179.80"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "42.05"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "42.05"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "17.40"
+        }
+      ]
+    },
+    {
+      "name": "credits larger than the tentative amount",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "700.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "dependentsAmount": "6600",
+        "extraWithholding": "10.00"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "10.00"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "43.40"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "43.40"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "10.15"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "10.15"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "4.20"
+        }
+      ]
+    },
+    {
+      "name": "2019 Form W-4, married, 3 allowances, to the cent",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "7425.50",
+      "employer": {},
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "allowances": "3"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "527.73"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "460.38"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "460.38"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "107.67"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "107.67"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "42.00"
+        }
+      ]
+    },
+    {
+      "name": "nonresident alien on a 2020 or later Form W-4",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines() (Table 2 adds $619.20 biweekly to income tax wages only)",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "2400.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE",
+        "nonresidentAlien": "true"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "324.61"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "148.80"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "148.80"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "34.80"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "34.80"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "14.40"
+        }
+      ]
+    },
+    {
+      "name": "top bracket, single, monthly",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "70000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "21733.35"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "4340.00"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "4340.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "1015.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "1015.00"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "42.00"
+        }
+      ]
+    },
+    {
+      "name": "exempt from withholding: FICA and FUTA still due",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-19",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "1500.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE",
+        "exemptFromWithholding": "true"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "93.00"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "93.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "21.75"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "21.75"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "9.00"
+        }
+      ]
+    },
+    {
+      "name": "social security wage base reached this period",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines(); Pub 15: wages above $184,500 owe no social security tax",
+      "periodStart": "2026-11-01",
+      "periodEnd": "2026-11-30",
+      "paymentDate": "2026-11-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "20000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE"
+      },
+      "ytd": {
+        "socialSecurity.EMPLOYEE.base": "170000.00",
+        "medicare.EMPLOYEE.base": "190000.00",
+        "futa.EMPLOYER.base": "7000.00",
+        "medicare.EMPLOYEE.periods": "10"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "4008.67"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "899.00"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "899.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "290.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "290.00"
+        },
+        {
+          "step": "additionalMedicare",
+          "side": "EMPLOYEE",
+          "amount": "90.00"
+        }
+      ]
+    },
+    {
+      "name": "past the wage base and the Additional Medicare threshold",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2026-12-01",
+      "periodEnd": "2026-12-31",
+      "paymentDate": "2026-12-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "20000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE"
+      },
+      "ytd": {
+        "socialSecurity.EMPLOYEE.base": "184500.00",
+        "medicare.EMPLOYEE.base": "210000.00",
+        "futa.EMPLOYER.base": "7000.00",
+        "medicare.EMPLOYEE.periods": "11"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "4008.67"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "290.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "290.00"
+        },
+        {
+          "step": "additionalMedicare",
+          "side": "EMPLOYEE",
+          "amount": "180.00"
+        }
+      ]
+    },
+    {
+      "name": "FUTA wage base reached this period",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2026-02-01",
+      "periodEnd": "2026-02-28",
+      "paymentDate": "2026-02-27",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE"
+      },
+      "ytd": {
+        "socialSecurity.EMPLOYEE.base": "4000.00",
+        "medicare.EMPLOYEE.base": "4000.00",
+        "futa.EMPLOYER.base": "4000.00",
+        "medicare.EMPLOYEE.periods": "1"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "298.33"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "248.00"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "248.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "58.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "58.00"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "18.00"
+        }
+      ]
+    },
+    {
+      "name": "FUTA-exempt employer",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "employer": {
+        "futaExempt": "true"
+      },
+      "employee": {
+        "filingStatus": "SINGLE"
+      },
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "298.33"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "248.00"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "248.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "58.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "58.00"
+        }
+      ]
+    },
+    {
+      "name": "mid-year adoption with wages brought forward",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines(); Pub 15 successor employer: earlier wages count toward the bases",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "18000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE",
+        "broughtForwardYear": "2026",
+        "broughtForwardSocialSecurityWages": "180000.00",
+        "broughtForwardMedicareWages": "180000.00",
+        "broughtForwardFutaWages": "7000.00"
+      },
+      "employmentStartDate": "2019-03-01",
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "3381.17"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "279.00"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "279.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "261.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "261.00"
+        }
+      ]
+    },
+    {
+      "name": "new hire in October needs nothing brought forward",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE"
+      },
+      "employmentStartDate": "2026-10-05",
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "418.33"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "310.00"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "310.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "72.50"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "72.50"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "30.00"
+        }
+      ]
+    },
+    {
+      "name": "first payroll of the year",
+      "evidence": "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()",
+      "periodStart": "2025-12-22",
+      "periodEnd": "2026-01-04",
+      "paymentDate": "2026-01-09",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "3000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE"
+      },
+      "employmentStartDate": "2018-01-01",
+      "expectLines": [
+        {
+          "step": "federalIncomeTax",
+          "side": "TAX",
+          "amount": "320.38"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "186.00"
+        },
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYER",
+          "amount": "186.00"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYEE",
+          "amount": "43.50"
+        },
+        {
+          "step": "medicare",
+          "side": "EMPLOYER",
+          "amount": "43.50"
+        },
+        {
+          "step": "futa",
+          "side": "EMPLOYER",
+          "amount": "18.00"
+        }
+      ]
+    },
+    {
+      "name": "employee paid earlier this year without brought-forward wages",
+      "evidence": "wage bases need this year's earlier wages",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE"
+      },
+      "employmentStartDate": "2019-03-01",
+      "expectError": "No earlier payroll this year"
+    },
+    {
+      "name": "other pre-tax deduction types are refused",
+      "evidence": "only 401(k)-type and section 125 deductions are modelled",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE"
+      },
+      "preTaxDeductionsByType": {
+        "OTHER": "100.00"
+      },
+      "expectError": "pre-tax"
+    },
+    {
+      "name": "head of household on a 2019 Form W-4 is refused",
+      "evidence": "Pub 15-T: don't use the Head of Household table for 2019 or earlier forms",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "employer": {},
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "HEAD_OF_HOUSEHOLD"
+      },
+      "expectError": "Head of household"
+    },
+    {
+      "name": "allowances on a 2020 or later Form W-4 are refused",
+      "evidence": "the 2020 or later form has no allowances",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE",
+        "allowances": "2"
+      },
+      "expectError": "allowances"
+    },
+    {
+      "name": "Form W-4 steps 2-4 on a 2019 form are refused",
+      "evidence": "the 2019 or earlier form has no steps 2-4",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "employer": {},
+      "employee": {
+        "w4Version": "FORM_2019_OR_EARLIER",
+        "filingStatus": "SINGLE",
+        "dependentsAmount": "2000"
+      },
+      "expectError": "steps 2"
+    },
+    {
+      "name": "2027 is not covered",
+      "evidence": "2027 tables are published in December 2026",
+      "periodStart": "2027-01-01",
+      "periodEnd": "2027-01-31",
+      "paymentDate": "2027-01-29",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE"
+      },
+      "expectError": "a newer template version is needed"
+    }
+  ]
+}

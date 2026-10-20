@@ -48,6 +48,12 @@ class PayrollTemplateEngineTest {
                     .anySatisfy(p -> assertThat(p).contains("parameter rate: dates must be contiguous"))
                     .anySatisfy(p -> assertThat(p).contains("parameter rate cites unknown source nowhere"))
                     .anySatisfy(p -> assertThat(p).contains("table pit version 2030-01-01: brackets must start at 0"))
+                    .anySatisfy(p ->
+                        assertThat(p).contains("table schedules version 2030-01-01 schedule A: base 150 at 1000 should be about 100")
+                    )
+                    .anySatisfy(p ->
+                        assertThat(p).contains("table halfKeyed version 2030-01-01: either every bracket has a schedule key or none does")
+                    )
                     .anySatisfy(p -> assertThat(p).contains("step literal: decimal literal 0.5"))
                     .anySatisfy(p -> assertThat(p).contains("step divides: forbidden token '/'"))
                     .anySatisfy(p -> assertThat(p).contains("step typo: #grosEarnings is not defined"))

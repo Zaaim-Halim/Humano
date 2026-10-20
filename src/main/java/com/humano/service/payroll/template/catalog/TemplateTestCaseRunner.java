@@ -61,10 +61,16 @@ public final class TemplateTestCaseRunner {
             c.socialEarnings() != null ? c.socialEarnings() : c.grossEarnings(),
             c.taxableEarnings() != null ? c.taxableEarnings() : c.grossEarnings(),
             c.reductions() != null ? c.reductions() : BigDecimal.ZERO,
-            c.preTaxDeductions() != null ? c.preTaxDeductions() : BigDecimal.ZERO,
+            c.preTaxDeductions() != null
+                ? c.preTaxDeductions()
+                : c.preTaxDeductionsByType() != null
+                    ? c.preTaxDeductionsByType().values().stream().reduce(BigDecimal.ZERO, BigDecimal::add)
+                    : BigDecimal.ZERO,
+            c.preTaxDeductionsByType() != null ? c.preTaxDeductionsByType() : Map.of(),
             c.fullPeriod() == null || c.fullPeriod(),
             BigDecimal.ONE,
             c.birthDate(),
+            c.employmentStartDate() != null ? c.employmentStartDate() : c.periodStart(),
             c.employer() != null ? c.employer() : Map.of(),
             c.employee() != null ? c.employee() : Map.of(),
             c.ytd() != null ? c.ytd() : Map.of()

@@ -737,6 +737,7 @@ public class PayrollProcessingService {
         // ============================================================
         List<Deduction> activeDeductions = activeDeductionsForPeriod(employee, period);
         PayComponent generalDeductionComponent = componentsByCode.get(PayComponentCode.DEDUCTION);
+        Map<String, BigDecimal> preTaxDeductionsByType = new HashMap<>();
         for (Deduction d : activeDeductions.stream().filter(d -> Boolean.TRUE.equals(d.getIsPreTax())).toList()) {
             BigDecimal amt = computeDeductionAmount(d, grossPay);
             if (amt.signum() == 0) continue;
@@ -751,6 +752,7 @@ public class PayrollProcessingService {
                 )
             );
             preTaxDeductions = preTaxDeductions.add(amt);
+            preTaxDeductionsByType.merge(d.getType() != null ? d.getType().name() : "OTHER", amt, BigDecimal::add);
         }
 
         // ============================================================
@@ -800,9 +802,11 @@ public class PayrollProcessingService {
                     grossPay.subtract(nonTaxableEarnings),
                     leaveReductions,
                     otherPreTaxDeductions,
+                    preTaxDeductionsByType,
                     fullPeriod,
                     employee.getFte(),
                     employee.getBirthDate(),
+                    employee.getStartDate(),
                     applied.settings(),
                     applied.attributes(),
                     payrollTemplateService.yearToDate(employee.getId(), template, period.getStartDate(), period.getPaymentDate())

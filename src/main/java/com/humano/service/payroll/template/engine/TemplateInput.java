@@ -19,9 +19,12 @@ import java.util.Map;
  * @param reductions      remuneration not earned in the period (unpaid-leave deductions)
  * @param preTaxDeductions other deductions the tenant marked pre-tax (e.g. pension or 401(k) plans);
  *                        each template decides whether its law lets them reduce a base
+ * @param preTaxDeductionsByType the same deductions by deduction type (e.g. RETIREMENT, INSURANCE),
+ *                        for laws that treat them differently per base
  * @param fullPeriod      employed full-time for the whole period with no unpaid leave
  * @param fte             full-time equivalent (1 when unknown)
  * @param birthDate       date of birth, or null when unknown
+ * @param employmentStartDate first day of employment, or null when unknown
  * @param employer        the tenant's raw settings for the template
  * @param employee        the employee's raw attributes for the template
  * @param ytd             year-to-date sums before this period ({@link YtdAccess} keys)
@@ -37,9 +40,11 @@ public record TemplateInput(
     BigDecimal taxableEarnings,
     BigDecimal reductions,
     BigDecimal preTaxDeductions,
+    Map<String, BigDecimal> preTaxDeductionsByType,
     boolean fullPeriod,
     BigDecimal fte,
     LocalDate birthDate,
+    LocalDate employmentStartDate,
     Map<String, String> employer,
     Map<String, String> employee,
     Map<String, BigDecimal> ytd

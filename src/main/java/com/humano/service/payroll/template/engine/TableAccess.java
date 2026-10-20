@@ -84,6 +84,14 @@ public final class TableAccess {
 
     /** Progressive tax on {@code amount} over a BRACKETS table: each slice taxed at its bracket's rate (unrounded). */
     public BigDecimal bracketTax(String tableName, BigDecimal amount) {
+        return bracketTax(tableName, null, amount);
+    }
+
+    /**
+     * Progressive tax on {@code amount} over the schedule {@code key} of a BRACKETS table (unrounded).
+     * With published bases: base + (amount − lower) × rate of the bracket holding the amount.
+     */
+    public BigDecimal bracketTax(String tableName, Object key, BigDecimal amount) {
         Table table = table(tableName);
         if (table.kind() != Table.Kind.BRACKETS) {
             throw new TemplateCalculationException("Table " + tableName + " is not a BRACKETS table");
@@ -91,8 +99,28 @@ public final class TableAccess {
         if (amount == null) {
             throw new TemplateCalculationException("#table.bracketTax on " + tableName + " received a missing amount");
         }
+        List<Table.Row> rows = version(table, tableName).rows();
+        boolean keyed = rows.get(0).key() != null;
+        if (keyed != (key != null)) {
+            throw new TemplateCalculationException(
+                keyed ? "Table " + tableName + " holds several schedules; name one" : "Table " + tableName + " has a single schedule"
+            );
+        }
+        String keyText = key != null ? text(key) : null;
+        List<Table.Row> schedule = keyed ? rows.stream().filter(r -> keyText.equals(r.key())).toList() : rows;
+        if (schedule.isEmpty()) {
+            throw new TemplateCalculationException("Table " + tableName + " has no schedule " + keyText);
+        }
+        if (schedule.get(0).base() != null) {
+            for (Table.Row row : schedule) {
+                if (amount.compareTo(row.upper()) < 0) {
+                    return row.base().add(amount.max(row.lower()).subtract(row.lower()).multiply(row.rate()));
+                }
+            }
+            throw new TemplateCalculationException(amount.toPlainString() + " is above the last bracket of " + tableName);
+        }
         BigDecimal tax = BigDecimal.ZERO;
-        for (Table.Row row : version(table, tableName).rows()) {
+        for (Table.Row row : schedule) {
             if (amount.compareTo(row.lower()) <= 0) break;
             BigDecimal slice = amount.min(row.upper()).subtract(row.lower());
             tax = tax.add(slice.multiply(row.rate()));

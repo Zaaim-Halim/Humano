@@ -1,5 +1,6 @@
 package com.humano.service.payroll.template.engine;
 
+import com.humano.domain.enumeration.payroll.DeductionType;
 import com.humano.service.payroll.template.extension.PayrollTemplateExtension;
 import com.humano.service.payroll.template.extension.PayrollTemplateExtensionRegistry;
 import com.humano.service.payroll.template.model.DatedValue;
@@ -29,9 +30,11 @@ import org.springframework.stereotype.Component;
  *   {@code #isCalendarMonth}.</li>
  *   <li>Earnings: {@code #grossEarnings}, {@code #socialEarnings}, {@code #taxableEarnings},
  *   {@code #reductions} (unpaid leave), {@code #preTaxDeductions} (tenant pre-tax deductions; a template
- *   that doesn't model them should REQUIRE them to be zero).</li>
+ *   that doesn't model them should REQUIRE them to be zero), {@code #preTaxDeductionsByType['RETIREMENT']}
+ *   (the same by deduction type; 0 for a type with none).</li>
  *   <li>Employee: {@code #fullPeriod}, {@code #fte}, {@code #birthYear}, {@code #ageAtPeriodEnd}
- *   (an expression using either fails when the birth date is unknown), {@code #employee['key']}.</li>
+ *   (an expression using either fails when the birth date is unknown), {@code #employmentStartDate}
+ *   (fails when unknown), {@code #employee['key']}.</li>
  *   <li>Employer: {@code #employer['key']}.</li>
  *   <li>Data: {@code #p['parameter']} (the value in force for the period), {@code #table.lookup(...)},
  *   {@code #table.bracketTax(...)}, {@code #ytd.base(step, side)}, {@code #ytd.amount(step, side)}.</li>
@@ -59,10 +62,12 @@ public class PayrollTemplateEngine {
         "taxableEarnings",
         "reductions",
         "preTaxDeductions",
+        "preTaxDeductionsByType",
         "fullPeriod",
         "fte",
         "birthYear",
         "ageAtPeriodEnd",
+        "employmentStartDate",
         "currency",
         "employee",
         "employer",
@@ -111,10 +116,17 @@ public class PayrollTemplateEngine {
         vars.put("taxableEarnings", nz(in.taxableEarnings()));
         vars.put("reductions", nz(in.reductions()));
         vars.put("preTaxDeductions", nz(in.preTaxDeductions()));
+        Map<String, BigDecimal> preTaxByType = new HashMap<>();
+        for (DeductionType type : DeductionType.values()) {
+            BigDecimal amount = in.preTaxDeductionsByType() == null ? null : in.preTaxDeductionsByType().get(type.name());
+            preTaxByType.put(type.name(), nz(amount));
+        }
+        vars.put("preTaxDeductionsByType", new StrictMap("pre-tax deduction type", preTaxByType));
         vars.put("fullPeriod", in.fullPeriod());
         vars.put("fte", in.fte() != null ? in.fte() : BigDecimal.ONE);
         vars.put("birthYear", in.birthDate() != null ? in.birthDate().getYear() : null);
         vars.put("ageAtPeriodEnd", in.birthDate() != null ? Period.between(in.birthDate(), in.periodEnd()).getYears() : null);
+        vars.put("employmentStartDate", in.employmentStartDate());
         vars.put("currency", in.currency());
         vars.put("employer", TemplateInputs.coerce(template.inputs().employer(), in.employer(), "employer setting", true));
         vars.put("employee", TemplateInputs.coerce(template.inputs().employee(), in.employee(), "employee attribute", true));

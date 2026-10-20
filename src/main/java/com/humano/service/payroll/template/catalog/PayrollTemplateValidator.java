@@ -1,6 +1,7 @@
 package com.humano.service.payroll.template.catalog;
 
 import com.humano.domain.enumeration.CountryCode;
+import com.humano.domain.enumeration.payroll.DeductionType;
 import com.humano.service.payroll.template.engine.PayrollTemplateEngine;
 import com.humano.service.payroll.template.engine.TemplateCalculationException;
 import com.humano.service.payroll.template.engine.TemplateExpressions;
@@ -20,8 +21,10 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.MonthDay;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,6 +47,7 @@ public class PayrollTemplateValidator {
     private static final Pattern EMPLOYEE_KEY = Pattern.compile("#employee\\['([^']+)'\\]");
     private static final Pattern EMPLOYER_KEY = Pattern.compile("#employer\\['([^']+)'\\]");
     private static final Pattern PARAMETER = Pattern.compile("#p\\['([^']+)'\\]");
+    private static final Pattern PRE_TAX_TYPE = Pattern.compile("#preTaxDeductionsByType\\['([^']+)'\\]");
     private static final Pattern TABLE_CALL = Pattern.compile("#table\\.(\\w+)\\(\\s*('([^']*)')?");
     private static final Pattern YTD_CALL = Pattern.compile("#ytd\\.(\\w+)\\(\\s*'([^']*)'\\s*,\\s*'([^']*)'\\s*\\)");
     private static final Set<String> TABLE_METHODS = Set.of("lookup", "bracketTax");
@@ -238,8 +242,28 @@ public class PayrollTemplateValidator {
         }
     }
 
+    /** Tolerance between a published bracket base and the tax recomputed from the brackets below it. */
+    private static final BigDecimal BASE_TOLERANCE = BigDecimal.ONE;
+
     private static void checkBrackets(List<Table.Row> rows, String at, List<String> problems) {
+        boolean keyed = rows.get(0).key() != null;
+        if (rows.stream().anyMatch(r -> (r.key() != null) != keyed)) {
+            problems.add(at + ": either every bracket has a schedule key or none does");
+            return;
+        }
+        Map<String, List<Table.Row>> schedules = new LinkedHashMap<>();
+        rows.forEach(r -> schedules.computeIfAbsent(keyed ? r.key() : "", k -> new ArrayList<>()).add(r));
+        schedules.forEach((key, schedule) -> checkSchedule(schedule, keyed ? at + " schedule " + key : at, problems));
+    }
+
+    private static void checkSchedule(List<Table.Row> rows, String at, List<String> problems) {
+        boolean withBase = rows.get(0).base() != null;
+        if (rows.stream().anyMatch(r -> (r.base() != null) != withBase)) {
+            problems.add(at + ": either every bracket has a published base or none does");
+            return;
+        }
         BigDecimal expectedLower = BigDecimal.ZERO;
+        BigDecimal cumulative = BigDecimal.ZERO;
         for (Table.Row r : rows) {
             if (r.lower() == null || r.upper() == null || r.rate() == null) {
                 problems.add(at + ": each bracket needs lower, upper and rate");
@@ -252,6 +276,13 @@ public class PayrollTemplateValidator {
             }
             if (r.upper().compareTo(r.lower()) <= 0) problems.add(at + ": bracket upper must exceed lower at " + r.lower());
             if (r.rate().signum() < 0 || r.rate().compareTo(BigDecimal.ONE) > 0) problems.add(at + ": rate must be 0–1 at " + r.lower());
+            // A published base must agree with the brackets below it (catches transcription errors).
+            if (withBase && r.base().subtract(cumulative).abs().compareTo(BASE_TOLERANCE) > 0) {
+                problems.add(
+                    at + ": base " + r.base().toPlainString() + " at " + r.lower() + " should be about " + cumulative.toPlainString()
+                );
+            }
+            cumulative = cumulative.add(r.upper().subtract(r.lower()).multiply(r.rate()));
             expectedLower = r.upper();
         }
     }
@@ -380,6 +411,11 @@ public class PayrollTemplateValidator {
         });
         matchAll(PARAMETER, expr, k -> {
             if (!parameters.contains(k)) problems.add(at + ": parameter '" + k + "' does not exist");
+        });
+        matchAll(PRE_TAX_TYPE, expr, k -> {
+            if (Arrays.stream(DeductionType.values()).noneMatch(d -> d.name().equals(k))) {
+                problems.add(at + ": deduction type '" + k + "' does not exist");
+            }
         });
         Matcher table = TABLE_CALL.matcher(expr);
         while (table.find()) {

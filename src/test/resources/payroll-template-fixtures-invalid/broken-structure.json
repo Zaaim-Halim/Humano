@@ -4,18 +4,55 @@
   "name": "Broken on purpose",
   "version": "1.0.0",
   "status": "LAW_DERIVED",
-  "jurisdiction": { "country": "BG" },
-  "validity": { "from": "2030-01-01", "to": "2030-12-31" },
+  "jurisdiction": {
+    "country": "BG"
+  },
+  "validity": {
+    "from": "2030-01-01",
+    "to": "2030-12-31"
+  },
   "currency": "EUR",
   "payFrequencies": ["MONTHLY"],
   "taxYearStart": "--01-01",
-  "changelog": [{ "version": "0.9.0", "date": "2030-01-01", "summary": "stale changelog" }],
-  "sources": { "law": { "title": "Law", "url": "https://example.org/law", "retrieved": "2030-01-01" } },
-  "inputs": { "employer": [], "employee": [{ "key": "group", "type": "INTEGER", "required": false, "description": "Group" }] },
+  "changelog": [
+    {
+      "version": "0.9.0",
+      "date": "2030-01-01",
+      "summary": "stale changelog"
+    }
+  ],
+  "sources": {
+    "law": {
+      "title": "Law",
+      "url": "https://example.org/law",
+      "retrieved": "2030-01-01"
+    }
+  },
+  "inputs": {
+    "employer": [],
+    "employee": [
+      {
+        "key": "group",
+        "type": "INTEGER",
+        "required": false,
+        "description": "Group"
+      }
+    ]
+  },
   "parameters": {
     "rate": [
-      { "from": "2030-01-01", "to": "2030-05-31", "value": "0.10", "source": "law" },
-      { "from": "2030-07-01", "to": "2030-12-31", "value": "0.12", "source": "nowhere" }
+      {
+        "from": "2030-01-01",
+        "to": "2030-05-31",
+        "value": "0.10",
+        "source": "law"
+      },
+      {
+        "from": "2030-07-01",
+        "to": "2030-12-31",
+        "value": "0.12",
+        "source": "nowhere"
+      }
     ]
   },
   "tables": {
@@ -28,29 +65,130 @@
           "to": "2030-12-31",
           "source": "law",
           "rows": [
-            { "lower": "100", "upper": "1000", "rate": "0.1" },
-            { "lower": "2000", "upper": "999999", "rate": "0.2" }
+            {
+              "lower": "100",
+              "upper": "1000",
+              "rate": "0.1"
+            },
+            {
+              "lower": "2000",
+              "upper": "999999",
+              "rate": "0.2"
+            }
+          ]
+        }
+      ]
+    },
+    "schedules": {
+      "kind": "BRACKETS",
+      "description": "A published base that disagrees with the brackets below it",
+      "versions": [
+        {
+          "from": "2030-01-01",
+          "to": "2030-12-31",
+          "source": "law",
+          "rows": [
+            {
+              "key": "A",
+              "lower": "0",
+              "upper": "1000",
+              "rate": "0.1",
+              "base": "0"
+            },
+            {
+              "key": "A",
+              "lower": "1000",
+              "upper": "999999",
+              "rate": "0.2",
+              "base": "150"
+            },
+            {
+              "key": "B",
+              "lower": "0",
+              "upper": "999999",
+              "rate": "0.1",
+              "base": "0"
+            }
+          ]
+        }
+      ]
+    },
+    "halfKeyed": {
+      "kind": "BRACKETS",
+      "description": "Only some brackets name a schedule",
+      "versions": [
+        {
+          "from": "2030-01-01",
+          "to": "2030-12-31",
+          "source": "law",
+          "rows": [
+            {
+              "key": "A",
+              "lower": "0",
+              "upper": "1000",
+              "rate": "0.1"
+            },
+            {
+              "lower": "1000",
+              "upper": "999999",
+              "rate": "0.2"
+            }
           ]
         }
       ]
     }
   },
   "steps": [
-    { "id": "literal", "type": "VALUE", "expr": "#grossEarnings * 0.5" },
-    { "id": "divides", "type": "VALUE", "expr": "#grossEarnings / 2" },
-    { "id": "typo", "type": "VALUE", "expr": "#grosEarnings" },
-    { "id": "undeclared", "type": "VALUE", "expr": "#employee['qualification']" },
-    { "id": "noParam", "type": "VALUE", "expr": "#p['missing']" },
-    { "id": "wrongTable", "type": "VALUE", "expr": "#table.lookup('pit', 1)" },
-    { "id": "literal", "type": "VALUE", "expr": "#grossEarnings" },
-    { "id": "taxes", "type": "VALUE", "expr": "#grossEarnings" },
+    {
+      "id": "literal",
+      "type": "VALUE",
+      "expr": "#grossEarnings * 0.5"
+    },
+    {
+      "id": "divides",
+      "type": "VALUE",
+      "expr": "#grossEarnings / 2"
+    },
+    {
+      "id": "typo",
+      "type": "VALUE",
+      "expr": "#grosEarnings"
+    },
+    {
+      "id": "undeclared",
+      "type": "VALUE",
+      "expr": "#employee['qualification']"
+    },
+    {
+      "id": "noParam",
+      "type": "VALUE",
+      "expr": "#p['missing']"
+    },
+    {
+      "id": "wrongTable",
+      "type": "VALUE",
+      "expr": "#table.lookup('pit', 1)"
+    },
+    {
+      "id": "literal",
+      "type": "VALUE",
+      "expr": "#grossEarnings"
+    },
+    {
+      "id": "taxes",
+      "type": "VALUE",
+      "expr": "#grossEarnings"
+    },
     {
       "id": "contrib",
       "type": "CONTRIBUTION",
       "label": "C",
       "ledger": "SOCIAL_SECURITY",
       "base": "#grossEarnings",
-      "employee": { "rate": "#p['rate']", "amount": "#grossEarnings" }
+      "employee": {
+        "rate": "#p['rate']",
+        "amount": "#grossEarnings"
+      }
     }
   ],
   "limitations": [],

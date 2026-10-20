@@ -15,7 +15,11 @@ import java.util.List;
  *   {@link #requireMostSpecific}, a key that the table refines further (e.g. "86" when rows name
  *   "86.1") is refused.</li>
  *   <li>{@link Kind#BRACKETS} — contiguous progressive brackets starting at 0, used by
- *   {@code #table.bracketTax}.</li>
+ *   {@code #table.bracketTax}. Rows may carry a {@code key} to hold several schedules in one table
+ *   (e.g. one per filing status; then every row has one and each schedule is contiguous on its own),
+ *   and a {@code base}: the tax at the bracket's lower bound as the authority publishes it. With bases
+ *   the tax is {@code base + (amount − lower) × rate} for the bracket holding the amount — the published
+ *   figure wins over a recomputed sum where the authority rounded its bracket bounds.</li>
  * </ul>
  * EXACT and HIERARCHICAL rows hold one value per entry of {@link #columns} (or a single value when
  * there are no columns). A null value means the published table leaves that column empty for the row:
@@ -50,7 +54,8 @@ public record Table(
         List<BigDecimal> values,
         BigDecimal lower,
         BigDecimal upper,
-        BigDecimal rate
+        BigDecimal rate,
+        BigDecimal base
     ) {}
 
     public record Codes(List<String> include, List<String> exclude) {}
