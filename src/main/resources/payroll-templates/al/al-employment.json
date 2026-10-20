@@ -1,0 +1,812 @@
+{
+  "schemaVersion": 1,
+  "id": "al-employment",
+  "name": "Albania — employment income",
+  "version": "2026.1.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": {
+    "country": "AL"
+  },
+  "validity": {
+    "from": "2026-01-01",
+    "to": "2026-12-31"
+  },
+  "currency": "ALL",
+  "payFrequencies": ["MONTHLY"],
+  "taxYearStart": "--01-01",
+  "rounding": {
+    "scale": 2,
+    "mode": "HALF_UP"
+  },
+  "changelog": [
+    {
+      "version": "2026.1.0",
+      "date": "2026-10-20",
+      "summary": "2026: minimum wage 50,000 and maximum social-insurance base 186,416 ALL; law 29/2023 employment tax (arts. 22, 24) and VKM 77/2015 contribution rates."
+    }
+  ],
+  "sources": {
+    "law-29-2023": {
+      "title": "Ligji nr. 29/2023 “Për tatimin mbi të ardhurat”, i përditësuar (versioni 6, 11.12.2025) — neni 12 (të ardhurat nga punësimi), 22 (zbritjet), 24 (normat), 65 (agjenti i listëpagesës); PDF SHA-256 46b7391bd5a4fd726a012ddad835fab5a358f5c89e4671ef22e6d0d3a63ad10f",
+      "url": "https://qbz.gov.al/eli/ligj/2023/03/30/29",
+      "retrieved": "2026-10-20"
+    },
+    "udhezim-26-2023": {
+      "title": "Udhëzimi i përgjithshëm nr. 26, datë 8.9.2023 “Për tatimin mbi të ardhurat”, pikat 22–24 (zbritja mujore; 13% deri 170 000 lekë/muaj, 23% mbi) — text as republished by AlProfit Consult",
+      "url": "https://alprofitconsult.al/udhezim-i-pergjithshem-nr-26-date-8-9-20203-per-tatimin-mbi-te-ardhurat/",
+      "retrieved": "2026-10-20"
+    },
+    "vkm-77-2015": {
+      "title": "VKM nr. 77, datë 28.1.2015 “Për kontributet e detyrueshme…”, i përditësuar (deri VKM nr. 702, datë 13.11.2024) — pika 3, 4, 5 (masa dhe baza e kontributeve), pika 15; PDF SHA-256 7a861489d34dccf3e974a92e7777931c3590edb9cce1bee7022fcb0536097c7e",
+      "url": "https://qbz.gov.al/eli/vendim/2015/01/28/77",
+      "retrieved": "2026-10-20"
+    },
+    "vkm-776-2025": {
+      "title": "VKM nr. 776, datë 19.12.2025 “Për përcaktimin e pagës minimale në shkallë vendi” — 50 000 lekë nga 1.1.2026 (FZ 239/2025); PDF SHA-256 b285dc87394a43ab3d5cbe73c0902370637d4932040175edaab1ee802b2250e4",
+      "url": "https://qbz.gov.al/eli/vendim/2025/12/19/776",
+      "retrieved": "2026-10-20"
+    },
+    "law-10383-2011": {
+      "title": "Ligji nr. 10383/2011 “Për sigurimin e detyrueshëm të kujdesit shëndetësor”, ndryshuar me ligjin nr. 184/2013 — neni 7 (baza = paga bruto), neni 8 (3,4%, 50/50)",
+      "url": "https://www.qsut.gov.al/wp-content/uploads/2020/01/ligji-nr-10383-per-sigurimin-shendetesor.pdf",
+      "retrieved": "2026-10-20"
+    },
+    "max-wage-2026": {
+      "title": "Paga maksimale për kontributet shoqërore 186 416 lekë nga 1.1.2026 (DPT notice “Nga 1 janari 2026, rritet paga minimale dhe maksimale”, since removed from tatime.gov.al; confirmed by Boga & Associates Tax Alert on VKM 776/2025, which also states health contributions stay on gross salary)",
+      "url": "https://www.bogalaw.com/pdf/2025%20-%204%20-%20Tax%20Alert%20-%20On%20Determining%20the%20National%20Minimum%20Wage.pdf",
+      "retrieved": "2026-10-20"
+    }
+  },
+  "inputs": {
+    "employer": [],
+    "employee": [
+      {
+        "key": "personalStatusDeclaration",
+        "type": "ENUM",
+        "required": true,
+        "values": ["SIGNED_WITH_THIS_EMPLOYER", "NOT_SIGNED"],
+        "description": "Whether the employee signed the personal-status declaration (law 29/2023 art. 66) with this employer; only then is the monthly personal deduction applied (art. 65)"
+      },
+      {
+        "key": "contractHours",
+        "type": "ENUM",
+        "required": false,
+        "values": ["MORE_THAN_87_HOURS", "LESS_THAN_87_HOURS", "LESS_THAN_ONE_WEEK"],
+        "defaultValue": "MORE_THAN_87_HOURS",
+        "description": "Contract length for social-insurance rates (VKM 77/2015 pts 3-5)"
+      },
+      {
+        "key": "otherEmployment",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Whether the employee also works for another employer (VKM 77/2015 pt 15)"
+      },
+      {
+        "key": "minimumContributionBase",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "description": "Minimum contribution base in ALL replacing the minimum wage — for partial months, where the floor must be prorated"
+      }
+    ]
+  },
+  "parameters": {
+    "minimumWage": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "50000",
+        "source": "vkm-776-2025"
+      }
+    ],
+    "maximumSocialBase": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "186416",
+        "source": "max-wage-2026"
+      }
+    ],
+    "socialEmployee": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.095",
+        "source": "vkm-77-2015"
+      }
+    ],
+    "socialEmployer": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.15",
+        "source": "vkm-77-2015"
+      }
+    ],
+    "socialEmployeeUnder87": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.094",
+        "source": "vkm-77-2015"
+      }
+    ],
+    "socialEmployerUnder87": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.139",
+        "source": "vkm-77-2015"
+      }
+    ],
+    "socialEmployerUnderWeek": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.003",
+        "source": "vkm-77-2015"
+      }
+    ],
+    "healthEmployee": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.017",
+        "source": "vkm-77-2015"
+      }
+    ],
+    "healthEmployer": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.017",
+        "source": "vkm-77-2015"
+      }
+    ],
+    "deductionUpTo50000": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "50000",
+        "source": "law-29-2023"
+      }
+    ],
+    "deductionUpTo60000": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "35000",
+        "source": "law-29-2023"
+      }
+    ],
+    "deductionAbove60000": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "30000",
+        "source": "law-29-2023"
+      }
+    ],
+    "deductionBand1": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "50000",
+        "source": "law-29-2023"
+      }
+    ],
+    "deductionBand2": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "60000",
+        "source": "law-29-2023"
+      }
+    ]
+  },
+  "tables": {
+    "monthlyEmploymentTax": {
+      "kind": "BRACKETS",
+      "description": "Monthly employment tax on the base after the personal deduction: 13% up to 170,000, 23% above (law 29/2023 art. 24; Instruction 26/2023 pt 24)",
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "udhezim-26-2023",
+          "rows": [
+            {
+              "lower": "0",
+              "upper": "170000",
+              "rate": "0.13"
+            },
+            {
+              "lower": "170000",
+              "upper": "999999999999",
+              "rate": "0.23"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "id": "calendarMonth",
+      "type": "REQUIRE",
+      "condition": "#isCalendarMonth",
+      "message": "Albanian payroll (listëpagesa) is monthly: the pay period must be a whole calendar month"
+    },
+    {
+      "id": "noPreTaxDeductions",
+      "type": "REQUIRE",
+      "condition": "#preTaxDeductions == 0",
+      "message": "Pre-tax deductions are not supported by this template: the law 29/2023 art. 20 private-pension deduction is not modelled"
+    },
+    {
+      "id": "contractHoursConsistent",
+      "type": "REQUIRE",
+      "condition": "#employee['contractHours'] != 'MORE_THAN_87_HOURS' or #fte * 2 >= 1",
+      "message": "The employee works under half time (under 87 hours a month) but contractHours says MORE_THAN_87_HOURS; set contractHours"
+    },
+    {
+      "id": "remuneration",
+      "type": "VALUE",
+      "expr": "#pos(#socialEarnings - #reductions)"
+    },
+    {
+      "id": "minimumBase",
+      "type": "VALUE",
+      "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : #p['minimumWage']",
+      "source": "vkm-776-2025"
+    },
+    {
+      "id": "partialMonthMinimum",
+      "type": "REQUIRE",
+      "when": "#remuneration > 0 and !(#employee['contractHours'] == 'LESS_THAN_ONE_WEEK') and #employee['minimumContributionBase'] == null",
+      "condition": "#fullPeriod or #remuneration >= #minimumBase",
+      "message": "Pay is below the minimum wage in a partial month (or part-time / unpaid leave); VKM 77/2015 does not say how the floor is prorated, so set the employee's minimumContributionBase"
+    },
+    {
+      "id": "otherEmploymentAboveMinimum",
+      "type": "REQUIRE",
+      "when": "#remuneration > 0 and #employee['otherEmployment']",
+      "condition": "#remuneration >= #p['minimumWage']",
+      "message": "The employee has other employment and earns below the minimum wage here; VKM 77/2015 pt 15 splits contributions across employers in a way this template does not model"
+    },
+    {
+      "id": "socialBase",
+      "type": "VALUE",
+      "expr": "#remuneration == 0 ? 0 : (#employee['contractHours'] == 'LESS_THAN_ONE_WEEK' ? #remuneration : #clamp(#remuneration, #minimumBase, #p['maximumSocialBase']))",
+      "source": "vkm-77-2015"
+    },
+    {
+      "id": "healthBase",
+      "type": "VALUE",
+      "expr": "#remuneration == 0 ? 0 : (#employee['contractHours'] == 'LESS_THAN_ONE_WEEK' ? #remuneration : #max(#remuneration, #minimumBase))",
+      "source": "law-10383-2011"
+    },
+    {
+      "id": "socialInsurance",
+      "type": "CONTRIBUTION",
+      "label": "Social insurance",
+      "ledger": "SOCIAL_SECURITY",
+      "source": "vkm-77-2015",
+      "base": "#socialBase",
+      "employee": {
+        "rate": "#employee['contractHours'] == 'LESS_THAN_ONE_WEEK' ? 0 : (#employee['contractHours'] == 'LESS_THAN_87_HOURS' ? #p['socialEmployeeUnder87'] : #p['socialEmployee'])"
+      },
+      "employer": {
+        "rate": "#employee['contractHours'] == 'LESS_THAN_ONE_WEEK' ? #p['socialEmployerUnderWeek'] : (#employee['contractHours'] == 'LESS_THAN_87_HOURS' ? #p['socialEmployerUnder87'] : #p['socialEmployer'])"
+      }
+    },
+    {
+      "id": "healthInsurance",
+      "type": "CONTRIBUTION",
+      "label": "Health insurance",
+      "ledger": "MEDICARE",
+      "source": "law-10383-2011",
+      "base": "#healthBase",
+      "employee": {
+        "rate": "#p['healthEmployee']"
+      },
+      "employer": {
+        "rate": "#p['healthEmployer']"
+      }
+    },
+    {
+      "id": "monthlyIncome",
+      "type": "VALUE",
+      "expr": "#pos(#taxableEarnings - #reductions)"
+    },
+    {
+      "id": "personalDeduction",
+      "type": "VALUE",
+      "when": "#employee['personalStatusDeclaration'] == 'SIGNED_WITH_THIS_EMPLOYER'",
+      "expr": "#monthlyIncome <= #p['deductionBand1'] ? #p['deductionUpTo50000'] : (#monthlyIncome <= #p['deductionBand2'] ? #p['deductionUpTo60000'] : #p['deductionAbove60000'])",
+      "source": "law-29-2023"
+    },
+    {
+      "id": "incomeTax",
+      "type": "TAX",
+      "label": "Tax on employment income",
+      "ledger": "INCOME_TAX",
+      "source": "law-29-2023",
+      "base": "#pos(#monthlyIncome - #personalDeduction)",
+      "amount": "#table.bracketTax('monthlyEmploymentTax', #incomeTax_base)"
+    }
+  ],
+  "limitations": [
+    "Monthly payroll calendars whose periods are whole calendar months, paid in ALL.",
+    "Employees with a pay below the minimum wage in a partial month, or below the minimum wage at one of several employers (VKM 77/2015 pt 15), are refused unless a minimumContributionBase is set.",
+    "The art. 20 private-pension deduction and the annual-return deductions (children, education) are not applied; employees with tenant pre-tax deductions are refused.",
+    "Social insurance across several employers is computed per employer on its own pay (capped at the maximum each); the refund of the excess by the Social Insurance Institute is outside payroll.",
+    "The maximum social-insurance base (186,416 ALL) comes from the tax administration's 2026 notice, since removed from its website, and Boga & Associates' alert; not from a gazette text.",
+    "Amounts are rounded to 0.01 ALL, half up, line by line; rounding to whole lek on the e-payroll declaration is not modelled.",
+    "Status LAW_DERIVED: the tax amounts of three cases reproduce Instruction 26/2023's worked examples; contribution amounts are derived from the cited acts."
+  ],
+  "testCases": [
+    {
+      "name": "official example: 230,000 with the declaration",
+      "evidence": "Instruction 26/2023 pt 24: (2,760,000 - 360,000) a year taxed 2,040,000 x 13% + 360,000 x 23% = 265,200 + 82,800 (the instruction misprints the sum as 358,000; it is 348,000) = 29,000 a month. Contributions: law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "230000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "17709.52"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "27962.40"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "3910.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "3910.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "29000.00"
+        }
+      ]
+    },
+    {
+      "name": "official example: 40,000 job with the declaration",
+      "evidence": "Instruction 26/2023 pt 22: 40,000 a month at the employer holding the declaration, 50,000 deduction, base and tax 0. Contributions on the 2026 minimum wage 50,000: law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "40000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "4750.00"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "7500.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "850.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "850.00"
+        }
+      ]
+    },
+    {
+      "name": "official example: second job without the declaration",
+      "evidence": "Instruction 26/2023 pt 22: the other employer applies 13%/23% with no deduction, so 70,000 x 13%. Contributions: law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "70000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "NOT_SIGNED"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "6650.00"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "10500.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "1190.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "1190.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "9100.00"
+        }
+      ]
+    },
+    {
+      "name": "deduction band 50,001-60,000",
+      "evidence": "55,000 - 35,000 = 20,000 x 13%. law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "55000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "5225.00"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "8250.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "935.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "935.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "2600.00"
+        }
+      ]
+    },
+    {
+      "name": "deduction band upper edge 60,000",
+      "evidence": "60,000 is in the 35,000 band: 25,000 x 13%. law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "60000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "5700.00"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "9000.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "1020.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "1020.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "3250.00"
+        }
+      ]
+    },
+    {
+      "name": "deduction band above 60,000",
+      "evidence": "60,001 - 30,000 = 30,001 x 13%. law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "60001.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "5700.10"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "9000.15"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "1020.02"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "1020.02"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "3900.13"
+        }
+      ]
+    },
+    {
+      "name": "top of the 13% band",
+      "evidence": "200,000 - 30,000 = 170,000 x 13% = 22,100. law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "200000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "17709.52"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "27962.40"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "3400.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "3400.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "22100.00"
+        }
+      ]
+    },
+    {
+      "name": "contract under 87 hours a month",
+      "evidence": "VKM 77/2015 pt 4: 9.4%/13.9% on the 50,000 floor; health on 50,000. law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "30000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER",
+        "contractHours": "LESS_THAN_87_HOURS"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "4700.00"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "6950.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "850.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "850.00"
+        }
+      ]
+    },
+    {
+      "name": "contract under one week",
+      "evidence": "VKM 77/2015 pt 5: social 0.3% employer only, health 3.4% on pay, no floor. law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "10000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER",
+        "contractHours": "LESS_THAN_ONE_WEEK"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "30.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "170.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "170.00"
+        }
+      ]
+    },
+    {
+      "name": "partial month with an explicit minimum base",
+      "evidence": "minimumContributionBase 25,000 set by the tenant for a half month. law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "25000.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER",
+        "minimumContributionBase": "25000"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "2375.00"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "3750.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "425.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "425.00"
+        }
+      ]
+    },
+    {
+      "name": "no earnings, no lines",
+      "evidence": "nothing is insured or taxed",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "0",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "expectLines": []
+    },
+    {
+      "name": "missing personal-status declaration answer",
+      "evidence": "whether the deduction applies must be stated per employee",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "100000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {},
+      "expectError": "personalStatusDeclaration"
+    },
+    {
+      "name": "partial month below the minimum wage refuses",
+      "evidence": "VKM 77/2015 does not say how the floor is prorated",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "25000.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "expectError": "minimumContributionBase"
+    },
+    {
+      "name": "pre-tax deductions refuse",
+      "evidence": "law 29/2023 art. 20 private-pension deduction not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "100000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "preTaxDeductions": "5000.00",
+      "expectError": "Pre-tax deductions are not supported"
+    },
+    {
+      "name": "second job below the minimum wage refuses",
+      "evidence": "VKM 77/2015 pt 15: contributions across employers",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "30000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "NOT_SIGNED",
+        "otherEmployment": "true"
+      },
+      "expectError": "other employment"
+    },
+    {
+      "name": "2027 is not covered",
+      "evidence": "2027 values not yet published",
+      "periodStart": "2027-01-01",
+      "periodEnd": "2027-01-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "100000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "expectError": "a newer template version is needed"
+    }
+  ]
+}

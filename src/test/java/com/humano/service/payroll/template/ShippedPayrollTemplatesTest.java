@@ -76,6 +76,37 @@ class ShippedPayrollTemplatesTest {
             .containsExactly("2026-01-01..2026-07-31=2111.64", "2026-08-01..2026-12-31=2300.00");
     }
 
+    @Test
+    void albaniaFiguresMatchTheGazetteTexts() {
+        PayrollTemplate albania = catalog.find("al-employment").orElseThrow();
+        Map<String, String> values = albania
+            .parameters()
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get(0).value().toPlainString()));
+
+        // VKM 776/2025: minimum wage 50,000 ALL from 1 January 2026.
+        assertThat(values).containsEntry("minimumWage", "50000");
+        // VKM 77/2015 pt 3 (> 87 h/month): social 9.5% / 15%, health 1.7% / 1.7%; pt 4 (< 87 h): 9.4% / 13.9%; pt 5 (< 1 week): 0.3%.
+        assertThat(values)
+            .containsEntry("socialEmployee", "0.095")
+            .containsEntry("socialEmployer", "0.15")
+            .containsEntry("socialEmployeeUnder87", "0.094")
+            .containsEntry("socialEmployerUnder87", "0.139")
+            .containsEntry("socialEmployerUnderWeek", "0.003")
+            .containsEntry("healthEmployee", "0.017")
+            .containsEntry("healthEmployer", "0.017");
+        // Law 29/2023 art. 22(1), monthly: 50,000 / 35,000 / 30,000 by monthly income band (50,000; 60,000).
+        assertThat(values)
+            .containsEntry("deductionUpTo50000", "50000")
+            .containsEntry("deductionUpTo60000", "35000")
+            .containsEntry("deductionAbove60000", "30000");
+        // Law 29/2023 art. 24 + Instruction 26/2023 pt 24: 13% up to 170,000 a month (2,040,000 a year), 23% above.
+        assertThat(albania.tables().get("monthlyEmploymentTax").versions().get(0).rows())
+            .extracting(r -> r.lower().toPlainString() + "@" + r.rate().toPlainString())
+            .containsExactly("0@0.13", "170000@0.23");
+    }
+
     private static Map<String, BigDecimal> rates(Table table, LocalDate date) {
         return table
             .versions()
