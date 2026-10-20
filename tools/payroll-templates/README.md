@@ -48,3 +48,4 @@ the exact rules that produced them. Posted runs are never recalculated by an upd
 
 - `bg/` — Bulgaria (`bg-employment`). Built from the State Gazette text by the scripts in `bg/`.
 - `al/` — Albania (`al-employment`). Written out with citations in `al/build_template.py`.
+- `gb/` — United Kingdom (`gb-paye-nic`). PAYE via the `uk.paye-routines-v24` extension; NICs declared.

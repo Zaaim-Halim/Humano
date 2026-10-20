@@ -19,6 +19,9 @@ import java.util.Map;
  *   (name → expression); binds {@code #<id>} to its outputs map.</li>
  * </ul>
  * A step with a {@code when} condition that evaluates false is skipped; its amounts bind as 0.
+ * Zero amounts produce no line unless {@code recordZero} is set (so year-to-date sums of the step's
+ * base include periods with nothing due); negative amounts are refused unless {@code allowNegative}
+ * is set (cumulative tax refunds).
  *
  * @param id        identifier, also the variable name later steps use
  * @param type      what the step does
@@ -37,6 +40,8 @@ import java.util.Map;
  * @param inputs    EXTENSION: input name → expression
  * @param rounding  rounding for this step's amounts, overriding the template default
  * @param source    id of the source the step's rule comes from
+ * @param recordZero    emit lines even when the amount is zero
+ * @param allowNegative accept negative amounts (refunds)
  */
 public record Step(
     String id,
@@ -55,7 +60,9 @@ public record Step(
     String extension,
     Map<String, String> inputs,
     PayrollTemplate.Rounding rounding,
-    String source
+    String source,
+    boolean recordZero,
+    boolean allowNegative
 ) {
     public enum Type {
         REQUIRE,

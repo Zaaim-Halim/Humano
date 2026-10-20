@@ -792,6 +792,7 @@ public class PayrollProcessingService {
                 TemplateInput input = new TemplateInput(
                     period.getStartDate(),
                     period.getEndDate(),
+                    period.getPaymentDate(),
                     period.getCalendar().getFrequency(),
                     compensation.getCurrency().getCode().getCode(),
                     grossPay,
@@ -804,7 +805,7 @@ public class PayrollProcessingService {
                     employee.getBirthDate(),
                     applied.settings(),
                     applied.attributes(),
-                    payrollTemplateService.yearToDate(employee.getId(), template, period.getStartDate())
+                    payrollTemplateService.yearToDate(employee.getId(), template, period.getStartDate(), period.getPaymentDate())
                 );
                 for (TemplateLine templateLine : payrollTemplateEngine.calculate(template, input)) {
                     boolean employerSide = templateLine.side() == LineSide.EMPLOYER;

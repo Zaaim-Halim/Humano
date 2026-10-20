@@ -1,0 +1,1364 @@
+{
+  "schemaVersion": 1,
+  "id": "gb-paye-nic",
+  "name": "United Kingdom — PAYE income tax and Class 1 National Insurance",
+  "version": "2026.1.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": {
+    "country": "GB"
+  },
+  "validity": {
+    "from": "2026-04-06",
+    "to": "2027-04-05"
+  },
+  "currency": "GBP",
+  "payFrequencies": ["WEEKLY", "BIWEEKLY", "MONTHLY"],
+  "taxYearStart": "--04-06",
+  "dateBasis": "PAYMENT_DATE",
+  "rounding": {
+    "scale": 2,
+    "mode": "HALF_UP"
+  },
+  "changelog": [
+    {
+      "version": "2026.1.0",
+      "date": "2026-10-20",
+      "summary": "2026/27: PAYE per HMRC's Specification for PAYE Tax Table Routines v24.0 (England & NI, Scottish and Welsh rates); Class 1 NICs, all category letters, by the exact percentage method."
+    }
+  ],
+  "sources": {
+    "hmrc-paye-spec-v24": {
+      "title": "HMRC Specification for PAYE Tax Table Routines, version 24.0 (February 2026) — paras 3–16, Appendices A (England & NI), B (Scotland), C (Wales) for 2026/27",
+      "url": "https://www.gov.uk/government/publications/payroll-technical-specifications-income-tax",
+      "retrieved": "2026-10-20"
+    },
+    "hmrc-ni-guidance-2026": {
+      "title": "HMRC National Insurance guidance for software developers 2026 to 2027 v1.1 — rounding (4), exact percentage method (5), earnings limits (9.2), rates (9.3), Appendix 1 (rates by category letter), worked examples",
+      "url": "https://www.gov.uk/government/publications/payroll-technical-specifications-national-insurance",
+      "retrieved": "2026-10-20"
+    },
+    "hmrc-rates-2026": {
+      "title": "HMRC Rates and thresholds for employers 2026 to 2027",
+      "url": "https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027",
+      "retrieved": "2026-10-20"
+    },
+    "hmrc-tables-bd-2026": {
+      "title": "HMRC Taxable Pay Tables Manual Method, use from 6 April 2026 (Tables B to D) — worked examples 1–13",
+      "url": "https://assets.publishing.service.gov.uk/media/69a05a803e672177d0bc773f/Tax_Tables_B-D_2026_to_2027.pdf",
+      "retrieved": "2026-10-20"
+    },
+    "hmrc-cwg2-2026": {
+      "title": "HMRC CWG2 Employer further guide to PAYE and NICs 2026 to 2027 — the regulatory limit applies to all tax codes",
+      "url": "https://www.gov.uk/government/publications/cwg2-further-guide-to-paye-and-national-insurance-contributions/2026-to-2027-employer-further-guide-to-paye-and-national-insurance-contributions",
+      "retrieved": "2026-10-20"
+    }
+  },
+  "inputs": {
+    "employer": [],
+    "employee": [
+      {
+        "key": "taxCode",
+        "type": "STRING",
+        "required": true,
+        "pattern": "^\\s*[SsCc]?(\\d{1,6}[LMNTlmnt]|[Kk]\\d{1,6}|[Bb][Rr]|[Dd]\\d|[Nn][Tt])(\\s*([WwMm]1|[Xx]))?\\s*$",
+        "description": "PAYE tax code as issued by HMRC (e.g. 1257L, S1257L, C1257L M1, K475, BR, D0, NT)"
+      },
+      {
+        "key": "niCategory",
+        "type": "ENUM",
+        "required": true,
+        "values": ["A", "B", "C", "D", "E", "F", "H", "I", "J", "K", "L", "M", "N", "S", "V", "Z"],
+        "description": "Class 1 National Insurance category letter (CA38 / NI guidance Appendix 1)"
+      },
+      {
+        "key": "broughtForwardTaxYear",
+        "type": "INTEGER",
+        "required": false,
+        "min": 2000,
+        "max": 2100,
+        "description": "Tax year (starting year, e.g. 2026) the brought-forward pay and tax belong to; other years' figures are ignored"
+      },
+      {
+        "key": "broughtForwardPay",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "description": "Pay to date in that tax year before the first payroll in Humano (P45 from a previous employer plus this employer's earlier payroll)"
+      },
+      {
+        "key": "broughtForwardTax",
+        "type": "DECIMAL",
+        "required": false,
+        "description": "Tax deducted to date in that tax year before the first payroll in Humano"
+      },
+      {
+        "key": "director",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Company director (NICs on an annual earnings period — not supported)"
+      },
+      {
+        "key": "studentLoan",
+        "type": "ENUM",
+        "required": false,
+        "values": ["NONE", "PLAN_1", "PLAN_2", "PLAN_4", "PLAN_5", "POSTGRADUATE"],
+        "defaultValue": "NONE",
+        "description": "Student or postgraduate loan plan (deductions not supported)"
+      }
+    ]
+  },
+  "parameters": {
+    "rukRate1": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.10",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "rukRate2": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.20",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "rukRate3": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.40",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "rukRate4": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.45",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "rukBand1": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "rukBand2": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "37700",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "rukBand3": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "125140",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "welshRate1": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.10",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "welshRate2": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.20",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "welshRate3": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.40",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "welshRate4": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.45",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "scotRate1": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.19",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "scotRate2": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.20",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "scotRate3": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.21",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "scotRate4": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.42",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "scotRate5": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.45",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "scotRate6": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.48",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "scotBand1": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "3967",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "scotBand2": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "16956",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "scotBand3": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "31092",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "scotBand4": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "62430",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "scotBand5": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "125140",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ],
+    "maxRate": [
+      {
+        "from": "2026-04-06",
+        "to": "2027-04-05",
+        "value": "0.50",
+        "source": "hmrc-paye-spec-v24"
+      }
+    ]
+  },
+  "tables": {
+    "niLimits": {
+      "kind": "EXACT",
+      "description": "Class 1 earnings limits per pay period: ST, LEL, PT, FUST/IZUST, UEL (= UST/AUST/VUST) — NI guidance 9.2",
+      "columns": ["ST", "LEL", "PT", "FUST", "UEL"],
+      "versions": [
+        {
+          "from": "2026-04-06",
+          "to": "2027-04-05",
+          "source": "hmrc-ni-guidance-2026",
+          "rows": [
+            {
+              "key": "WEEKLY",
+              "values": ["96", "129", "242", "481", "967"]
+            },
+            {
+              "key": "BIWEEKLY",
+              "values": ["193", "258", "484", "962", "1934"]
+            },
+            {
+              "key": "MONTHLY",
+              "values": ["417", "559", "1048", "2083", "4189"]
+            }
+          ]
+        }
+      ]
+    },
+    "niEmployeeRates": {
+      "kind": "EXACT",
+      "description": "Employee Class 1 rates by category letter for bands D (PT-FUST), E (FUST-UEL), F (above UEL) — NI guidance Appendix 1",
+      "columns": ["D", "E", "F"],
+      "versions": [
+        {
+          "from": "2026-04-06",
+          "to": "2027-04-05",
+          "source": "hmrc-ni-guidance-2026",
+          "rows": [
+            {
+              "key": "A",
+              "values": ["0.08", "0.08", "0.02"]
+            },
+            {
+              "key": "B",
+              "values": ["0.0185", "0.0185", "0.02"]
+            },
+            {
+              "key": "C",
+              "values": ["0", "0", "0"]
+            },
+            {
+              "key": "D",
+              "values": ["0.02", "0.02", "0.02"]
+            },
+            {
+              "key": "E",
+              "values": ["0.0185", "0.0185", "0.02"]
+            },
+            {
+              "key": "F",
+              "values": ["0.08", "0.08", "0.02"]
+            },
+            {
+              "key": "H",
+              "values": ["0.08", "0.08", "0.02"]
+            },
+            {
+              "key": "I",
+              "values": ["0.0185", "0.0185", "0.02"]
+            },
+            {
+              "key": "J",
+              "values": ["0.02", "0.02", "0.02"]
+            },
+            {
+              "key": "K",
+              "values": ["0", "0", "0"]
+            },
+            {
+              "key": "L",
+              "values": ["0.02", "0.02", "0.02"]
+            },
+            {
+              "key": "M",
+              "values": ["0.08", "0.08", "0.02"]
+            },
+            {
+              "key": "N",
+              "values": ["0.08", "0.08", "0.02"]
+            },
+            {
+              "key": "S",
+              "values": ["0", "0", "0"]
+            },
+            {
+              "key": "V",
+              "values": ["0.08", "0.08", "0.02"]
+            },
+            {
+              "key": "Z",
+              "values": ["0.02", "0.02", "0.02"]
+            }
+          ]
+        }
+      ]
+    },
+    "niEmployerRates": {
+      "kind": "EXACT",
+      "description": "Employer Class 1 rates by category letter for bands B-D (ST-FUST), E (FUST-UEL), F (above UEL) — NI guidance Appendix 1",
+      "columns": ["D", "E", "F"],
+      "versions": [
+        {
+          "from": "2026-04-06",
+          "to": "2027-04-05",
+          "source": "hmrc-ni-guidance-2026",
+          "rows": [
+            {
+              "key": "A",
+              "values": ["0.15", "0.15", "0.15"]
+            },
+            {
+              "key": "B",
+              "values": ["0.15", "0.15", "0.15"]
+            },
+            {
+              "key": "C",
+              "values": ["0.15", "0.15", "0.15"]
+            },
+            {
+              "key": "D",
+              "values": ["0", "0.15", "0.15"]
+            },
+            {
+              "key": "E",
+              "values": ["0", "0.15", "0.15"]
+            },
+            {
+              "key": "F",
+              "values": ["0", "0.15", "0.15"]
+            },
+            {
+              "key": "H",
+              "values": ["0", "0", "0.15"]
+            },
+            {
+              "key": "I",
+              "values": ["0", "0.15", "0.15"]
+            },
+            {
+              "key": "J",
+              "values": ["0.15", "0.15", "0.15"]
+            },
+            {
+              "key": "K",
+              "values": ["0", "0.15", "0.15"]
+            },
+            {
+              "key": "L",
+              "values": ["0", "0.15", "0.15"]
+            },
+            {
+              "key": "M",
+              "values": ["0", "0", "0.15"]
+            },
+            {
+              "key": "N",
+              "values": ["0", "0.15", "0.15"]
+            },
+            {
+              "key": "S",
+              "values": ["0", "0.15", "0.15"]
+            },
+            {
+              "key": "V",
+              "values": ["0", "0", "0.15"]
+            },
+            {
+              "key": "Z",
+              "values": ["0", "0", "0.15"]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "id": "notDirector",
+      "type": "REQUIRE",
+      "condition": "!#employee['director']",
+      "message": "Directors' NICs use an annual earnings period, which this template does not support"
+    },
+    {
+      "id": "noStudentLoan",
+      "type": "REQUIRE",
+      "condition": "#employee['studentLoan'] == 'NONE'",
+      "message": "Student and postgraduate loan deductions are not supported by this template"
+    },
+    {
+      "id": "noPreTaxDeductions",
+      "type": "REQUIRE",
+      "condition": "#preTaxDeductions == 0",
+      "message": "Pre-tax deductions (net pay pension schemes, salary sacrifice) are not supported by this template"
+    },
+    {
+      "id": "notWeek53",
+      "type": "REQUIRE",
+      "condition": "#frequency == 'MONTHLY' or #taxWeek <= 52",
+      "message": "Payments in week 53, 54 or 56 (CWG2) are not supported by this template"
+    },
+    {
+      "id": "categoryAge",
+      "type": "REQUIRE",
+      "when": "#employee['niCategory'] == 'M' or #employee['niCategory'] == 'Z'",
+      "condition": "#ageAtPeriodEnd < 21",
+      "message": "NI categories M and Z are for employees under 21"
+    },
+    {
+      "id": "categoryApprenticeAge",
+      "type": "REQUIRE",
+      "when": "#employee['niCategory'] == 'H'",
+      "condition": "#ageAtPeriodEnd < 25",
+      "message": "NI category H is for apprentices under 25"
+    },
+    {
+      "id": "taxPeriod",
+      "type": "VALUE",
+      "expr": "#frequency == 'MONTHLY' ? #taxMonth : #taxWeek"
+    },
+    {
+      "id": "intervalPeriods",
+      "type": "VALUE",
+      "expr": "#frequency == 'BIWEEKLY' ? 2 : 1"
+    },
+    {
+      "id": "broughtForward",
+      "type": "VALUE",
+      "expr": "#employee['broughtForwardTaxYear'] != null and #employee['broughtForwardTaxYear'] == #taxYear"
+    },
+    {
+      "id": "payePay",
+      "type": "VALUE",
+      "expr": "#taxableEarnings - #reductions"
+    },
+    {
+      "id": "paye",
+      "type": "EXTENSION",
+      "extension": "uk.paye-routines-v24",
+      "source": "hmrc-paye-spec-v24",
+      "inputs": {
+        "taxCode": "#employee['taxCode']",
+        "period": "#taxPeriod",
+        "periodsPerYear": "#frequency == 'MONTHLY' ? 12 : 52",
+        "intervalPeriods": "#intervalPeriods",
+        "pay": "#payePay",
+        "payToDate": "#ytd.base('incomeTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardPay'], 0) : 0)",
+        "taxToDate": "#ytd.amount('incomeTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardTax'], 0) : 0)",
+        "rates": "{#p['rukRate1'], #p['rukRate2'], #p['rukRate3'], #p['rukRate4']}",
+        "bands": "{#p['rukBand1'], #p['rukBand2'], #p['rukBand3']}",
+        "basicRateIndex": "2",
+        "scottishRates": "{#p['scotRate1'], #p['scotRate2'], #p['scotRate3'], #p['scotRate4'], #p['scotRate5'], #p['scotRate6']}",
+        "scottishBands": "{#p['scotBand1'], #p['scotBand2'], #p['scotBand3'], #p['scotBand4'], #p['scotBand5']}",
+        "scottishBasicRateIndex": "2",
+        "welshRates": "{#p['welshRate1'], #p['welshRate2'], #p['welshRate3'], #p['welshRate4']}",
+        "welshBands": "{#p['rukBand1'], #p['rukBand2'], #p['rukBand3']}",
+        "welshBasicRateIndex": "2",
+        "maxRate": "#p['maxRate']"
+      }
+    },
+    {
+      "id": "midYearStart",
+      "type": "REQUIRE",
+      "when": "#paye['cumulative'] == 1 and #taxPeriod > #intervalPeriods and #ytd.periods('incomeTax', 'TAX') == 0",
+      "condition": "#broughtForward",
+      "message": "No earlier payroll this tax year is recorded for this employee: set the pay and tax brought forward (P45 / previous payroll, 0 if none) and broughtForwardTaxYear before running a cumulative tax code"
+    },
+    {
+      "id": "incomeTax",
+      "type": "TAX",
+      "label": "Income tax (PAYE)",
+      "ledger": "INCOME_TAX",
+      "source": "hmrc-paye-spec-v24",
+      "base": "#payePay",
+      "amount": "#paye['tax']",
+      "recordZero": true,
+      "allowNegative": true
+    },
+    {
+      "id": "niPay",
+      "type": "VALUE",
+      "expr": "#socialEarnings - #reductions"
+    },
+    {
+      "id": "niBand2",
+      "type": "VALUE",
+      "expr": "#pos(#min(#niPay, #table.lookup('niLimits', #frequency, 'LEL')) - #table.lookup('niLimits', #frequency, 'ST'))"
+    },
+    {
+      "id": "niBand3",
+      "type": "VALUE",
+      "expr": "#pos(#min(#niPay, #table.lookup('niLimits', #frequency, 'PT')) - #table.lookup('niLimits', #frequency, 'LEL'))"
+    },
+    {
+      "id": "niBand4",
+      "type": "VALUE",
+      "expr": "#pos(#min(#niPay, #table.lookup('niLimits', #frequency, 'FUST')) - #table.lookup('niLimits', #frequency, 'PT'))"
+    },
+    {
+      "id": "niBand5",
+      "type": "VALUE",
+      "expr": "#pos(#min(#niPay, #table.lookup('niLimits', #frequency, 'UEL')) - #table.lookup('niLimits', #frequency, 'FUST'))"
+    },
+    {
+      "id": "niBand6",
+      "type": "VALUE",
+      "expr": "#pos(#niPay - #table.lookup('niLimits', #frequency, 'UEL'))"
+    },
+    {
+      "id": "nationalInsurance",
+      "type": "CONTRIBUTION",
+      "label": "National Insurance (Class 1)",
+      "ledger": "SOCIAL_SECURITY",
+      "source": "hmrc-ni-guidance-2026",
+      "when": "#niPay > #table.lookup('niLimits', #frequency, 'ST')",
+      "base": "#niPay",
+      "employee": {
+        "amount": "#round(#round((#niBand4 + #niBand5) * #table.lookup('niEmployeeRates', #employee['niCategory'], 'E'), 3, 'DOWN'), 2, 'HALF_DOWN') + #round(#round(#niBand6 * #table.lookup('niEmployeeRates', #employee['niCategory'], 'F'), 3, 'DOWN'), 2, 'HALF_DOWN')"
+      },
+      "employer": {
+        "amount": "#round(#round((#niBand2 + #niBand3 + #niBand4) * #table.lookup('niEmployerRates', #employee['niCategory'], 'D') + #niBand5 * #table.lookup('niEmployerRates', #employee['niCategory'], 'E'), 3, 'DOWN'), 2, 'HALF_DOWN') + #round(#round(#niBand6 * #table.lookup('niEmployerRates', #employee['niCategory'], 'F'), 3, 'DOWN'), 2, 'HALF_DOWN')"
+      }
+    }
+  ],
+  "limitations": [
+    "Weekly, two-weekly and monthly pay; payments in week 53, 54 or 56 are refused.",
+    "Directors (annual NIC earnings period), student and postgraduate loans, and pre-tax deductions (net pay pensions, salary sacrifice) are refused.",
+    "Mid-year starts and adoptions need the pay and tax brought forward for the tax year (P45 and/or previous payroll) on a cumulative code.",
+    "Payrolled benefits in kind are not included; the regulatory limit is applied to the whole pay for the period.",
+    "Employment Allowance, the Apprenticeship Levy and Small Employers' Relief are employer-level reliefs claimed outside the payslip.",
+    "The NI category letter, including employer reliefs (freeport, investment zone, veterans), is the employer's responsibility; M, Z and H are checked against age.",
+    "Status LAW_DERIVED: PAYE amounts of eight cases reproduce HMRC Tables B-D examples and NICs of four cases reproduce HMRC NI guidance examples; the others are derived from the same specifications."
+  ],
+  "testCases": [
+    {
+      "name": "Tables B-D example 1: 431L, month 4",
+      "evidence": "HMRC Tables B-D 2026/27 Example 1: £3,400 - £1,439.68 = £1,960 taxable to date; £392.00 due (Table B), nothing deducted before",
+      "periodStart": "2026-07-01",
+      "periodEnd": "2026-07-31",
+      "paymentDate": "2026-07-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "925.00",
+      "birthDate": "2007-03-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "431L",
+        "niCategory": "M",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "2475.00",
+        "broughtForwardTax": "0"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "392.00"
+        }
+      ]
+    },
+    {
+      "name": "Tables B-D example 2: BR, month 4",
+      "evidence": "HMRC Tables B-D 2026/27 Example 2: £3,200 to date at 20% = £640.00 due; £480.00 deducted in months 1-3",
+      "periodStart": "2026-07-01",
+      "periodEnd": "2026-07-31",
+      "paymentDate": "2026-07-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "800.00",
+      "birthDate": "2007-03-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "BR",
+        "niCategory": "M",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "2400.00",
+        "broughtForwardTax": "480.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "160.00"
+        }
+      ]
+    },
+    {
+      "name": "Tables B-D example 3: 431L, week 11",
+      "evidence": "HMRC Tables B-D 2026/27 Example 3: £2,030 - £913.66 = £1,116 taxable; £223.20 due; £200.00 deducted before",
+      "periodStart": "2026-06-15",
+      "periodEnd": "2026-06-21",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "203.00",
+      "birthDate": "2007-03-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "431L",
+        "niCategory": "M",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "1827.00",
+        "broughtForwardTax": "200.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "23.20"
+        }
+      ]
+    },
+    {
+      "name": "Tables B-D example 3 with the regulatory limit",
+      "evidence": "HMRC Tables B-D 2026/27 Example 3 with nothing deducted before: £223.20 due exceeds 50% of £203 (CWG2), so £101.50",
+      "periodStart": "2026-06-15",
+      "periodEnd": "2026-06-21",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "203.00",
+      "birthDate": "2007-03-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "431L",
+        "niCategory": "M",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "1827.00",
+        "broughtForwardTax": "0"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "101.50"
+        }
+      ]
+    },
+    {
+      "name": "Tables B-D example 4: BR, week 11",
+      "evidence": "HMRC Tables B-D 2026/27 Example 4: £1,500 to date = £300.00 due; £272.00 deducted before",
+      "periodStart": "2026-06-15",
+      "periodEnd": "2026-06-21",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "140.00",
+      "birthDate": "2007-03-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "BR",
+        "niCategory": "M",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "1360.00",
+        "broughtForwardTax": "272.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "28.00"
+        }
+      ]
+    },
+    {
+      "name": "Tables B-D example 7: S431L, week 18",
+      "evidence": "HMRC Tables B-D 2026/27 Example 7: £1,612 - £1,495.08 = £116 at the Scottish starter rate 19% = £22.04",
+      "periodStart": "2026-08-03",
+      "periodEnd": "2026-08-09",
+      "paymentDate": "2026-08-07",
+      "frequency": "WEEKLY",
+      "grossEarnings": "85.00",
+      "birthDate": "2007-03-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "S431L",
+        "niCategory": "M",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "1527.00",
+        "broughtForwardTax": "0"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "22.04"
+        }
+      ]
+    },
+    {
+      "name": "Tables B-D example 10: C431L, week 11",
+      "evidence": "HMRC Tables B-D 2026/27 Example 10: Welsh, as example 3",
+      "periodStart": "2026-06-15",
+      "periodEnd": "2026-06-21",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "203.00",
+      "birthDate": "2007-03-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "C431L",
+        "niCategory": "M",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "1827.00",
+        "broughtForwardTax": "200.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "23.20"
+        }
+      ]
+    },
+    {
+      "name": "Tables B-D example 11: CBR, week 11",
+      "evidence": "HMRC Tables B-D 2026/27 Example 11: Welsh, as example 4",
+      "periodStart": "2026-06-15",
+      "periodEnd": "2026-06-21",
+      "paymentDate": "2026-06-19",
+      "frequency": "WEEKLY",
+      "grossEarnings": "140.00",
+      "birthDate": "2007-03-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "CBR",
+        "niCategory": "M",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "1360.00",
+        "broughtForwardTax": "272.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "28.00"
+        }
+      ]
+    },
+    {
+      "name": "NI guidance example 1: A, £129.53 a week",
+      "evidence": "HMRC NI guidance 2026/27 Example 1: employee £0.00, employer £5.03",
+      "periodStart": "2026-04-06",
+      "periodEnd": "2026-04-12",
+      "paymentDate": "2026-04-10",
+      "frequency": "WEEKLY",
+      "grossEarnings": "129.53",
+      "birthDate": "1998-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "NT",
+        "niCategory": "A"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "0"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "5.03"
+        }
+      ]
+    },
+    {
+      "name": "NI guidance example 2: A, £1,000 a week",
+      "evidence": "HMRC NI guidance 2026/27 Example 2: employee £58.66, employer £135.60",
+      "periodStart": "2026-04-06",
+      "periodEnd": "2026-04-12",
+      "paymentDate": "2026-04-10",
+      "frequency": "WEEKLY",
+      "grossEarnings": "1000.00",
+      "birthDate": "1982-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "NT",
+        "niCategory": "A"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "0"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "58.66"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "135.60"
+        }
+      ]
+    },
+    {
+      "name": "NI guidance example 3: B, £508 two-weekly",
+      "evidence": "HMRC NI guidance 2026/27 Example 3: employee £0.44, employer £47.25",
+      "periodStart": "2026-04-06",
+      "periodEnd": "2026-04-19",
+      "paymentDate": "2026-04-17",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "508.00",
+      "birthDate": "1975-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "NT",
+        "niCategory": "B"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "0"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "0.44"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "47.25"
+        }
+      ]
+    },
+    {
+      "name": "NI guidance example 4: M, £1,004 a week",
+      "evidence": "HMRC NI guidance 2026/27 Example 4: employee £58.74, employer £5.55",
+      "periodStart": "2026-04-06",
+      "periodEnd": "2026-04-12",
+      "paymentDate": "2026-04-10",
+      "frequency": "WEEKLY",
+      "grossEarnings": "1004.00",
+      "birthDate": "2007-03-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "NT",
+        "niCategory": "M"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "0"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "58.74"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "5.55"
+        }
+      ]
+    },
+    {
+      "name": "standard monthly employee, month 7",
+      "evidence": "Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines()",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1990-05-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "A",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "18000.00",
+        "broughtForwardTax": "2412.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "320.40"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "156.16"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "387.45"
+        }
+      ]
+    },
+    {
+      "name": "higher rate at month 4 (example 5 shape)",
+      "evidence": "Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines(); tax to date £5,606.66 as HMRC example 5",
+      "periodStart": "2026-07-01",
+      "periodEnd": "2026-07-31",
+      "paymentDate": "2026-07-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5300.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "0T",
+        "niCategory": "A",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "15000.00",
+        "broughtForwardTax": "3000.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "2606.66"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "273.50"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "732.45"
+        }
+      ]
+    },
+    {
+      "name": "K code limited to 50% of pay",
+      "evidence": "Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines()",
+      "periodStart": "2026-07-01",
+      "periodEnd": "2026-07-31",
+      "paymentDate": "2026-07-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1500.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "K2500",
+        "niCategory": "A",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "4500.00",
+        "broughtForwardTax": "0"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "750.00"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "36.16"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "162.45"
+        }
+      ]
+    },
+    {
+      "name": "refund on a cumulative code",
+      "evidence": "Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines()",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "A",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "6000.00",
+        "broughtForwardTax": "700.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "-700.00"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "87.45"
+        }
+      ]
+    },
+    {
+      "name": "emergency code on a Month 1 basis",
+      "evidence": "Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines()",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L M1",
+        "niCategory": "A"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "390.20"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "156.16"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "387.45"
+        }
+      ]
+    },
+    {
+      "name": "Scottish higher rate, monthly",
+      "evidence": "Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines()",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "6000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "S1257L",
+        "niCategory": "A",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "36000.00",
+        "broughtForwardTax": "6500.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "3000.00"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "287.50"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "837.45"
+        }
+      ]
+    },
+    {
+      "name": "two-weekly cumulative in week 12",
+      "evidence": "Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines()",
+      "periodStart": "2026-06-15",
+      "periodEnd": "2026-06-28",
+      "paymentDate": "2026-06-26",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "2000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "A",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "10000.00",
+        "broughtForwardTax": "1100.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "798.40"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "117.32"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "271.05"
+        }
+      ]
+    },
+    {
+      "name": "freeport employer, category F",
+      "evidence": "Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines()",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "F",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "18000.00",
+        "broughtForwardTax": "2412.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "320.40"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "156.16"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "137.55"
+        }
+      ]
+    },
+    {
+      "name": "mid-year start without brought-forward figures",
+      "evidence": "cumulative code past period 1 with no earlier period recorded",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "A"
+      },
+      "expectError": "brought forward"
+    },
+    {
+      "name": "week 53 is refused",
+      "evidence": "CWG2 week 53 rules not modelled",
+      "periodStart": "2027-03-30",
+      "periodEnd": "2027-04-05",
+      "paymentDate": "2027-04-05",
+      "frequency": "WEEKLY",
+      "grossEarnings": "500.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "A",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "26000.00",
+        "broughtForwardTax": "2700.00"
+      },
+      "expectError": "week 53"
+    },
+    {
+      "name": "directors are refused",
+      "evidence": "annual earnings period not modelled",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "A",
+        "director": "true",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "18000.00",
+        "broughtForwardTax": "2412.00"
+      },
+      "expectError": "Directors"
+    },
+    {
+      "name": "student loans are refused",
+      "evidence": "student loan deductions not modelled",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "A",
+        "studentLoan": "PLAN_2",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "18000.00",
+        "broughtForwardTax": "2412.00"
+      },
+      "expectError": "Student"
+    },
+    {
+      "name": "category M needs an employee under 21",
+      "evidence": "category letter checked against age",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "M",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "18000.00",
+        "broughtForwardTax": "2412.00"
+      },
+      "expectError": "under 21"
+    },
+    {
+      "name": "tax code that is not a code",
+      "evidence": "unknown code format",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257Q",
+        "niCategory": "A",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "18000.00",
+        "broughtForwardTax": "2412.00"
+      },
+      "expectError": "must match"
+    },
+    {
+      "name": "2027/28 is not covered",
+      "evidence": "next tax year not yet published here",
+      "periodStart": "2027-04-01",
+      "periodEnd": "2027-04-30",
+      "paymentDate": "2027-04-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "A"
+      },
+      "expectError": "a newer template version is needed"
+    }
+  ]
+}

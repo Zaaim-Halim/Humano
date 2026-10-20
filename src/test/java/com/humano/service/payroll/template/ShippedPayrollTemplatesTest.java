@@ -24,7 +24,9 @@ import org.junit.jupiter.api.Test;
  */
 class ShippedPayrollTemplatesTest {
 
-    private final PayrollTemplateExtensionRegistry extensions = new PayrollTemplateExtensionRegistry(List.of());
+    private final PayrollTemplateExtensionRegistry extensions = new PayrollTemplateExtensionRegistry(
+        List.of(new com.humano.service.payroll.template.extension.uk.UkPayeTaxTableRoutines())
+    );
     private final PayrollTemplateCatalog catalog = new PayrollTemplateCatalog(
         new PayrollTemplateValidator(extensions),
         new PayrollTemplateEngine(extensions)
@@ -105,6 +107,39 @@ class ShippedPayrollTemplatesTest {
         assertThat(albania.tables().get("monthlyEmploymentTax").versions().get(0).rows())
             .extracting(r -> r.lower().toPlainString() + "@" + r.rate().toPlainString())
             .containsExactly("0@0.13", "170000@0.23");
+    }
+
+    @Test
+    void ukFiguresMatchHmrcPublications() {
+        PayrollTemplate uk = catalog.find("gb-paye-nic").orElseThrow();
+        Map<String, String> values = uk
+            .parameters()
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get(0).value().toPlainString()));
+        // PAYE specification v24.0 Appendix A (2026/27): R1-R4, C1-C3, M; Appendix B (Scotland): SR1-SR6, SC1-SC5.
+        assertThat(values)
+            .containsEntry("rukRate2", "0.20")
+            .containsEntry("rukRate3", "0.40")
+            .containsEntry("rukRate4", "0.45")
+            .containsEntry("rukBand2", "37700")
+            .containsEntry("rukBand3", "125140")
+            .containsEntry("maxRate", "0.50")
+            .containsEntry("scotRate1", "0.19")
+            .containsEntry("scotRate6", "0.48")
+            .containsEntry("scotBand1", "3967")
+            .containsEntry("scotBand4", "62430");
+        // NI guidance 2026/27, 9.2: monthly ST £417, LEL £559, PT £1,048, FUST £2,083, UEL £4,189.
+        assertThat(uk.tables().get("niLimits").versions().get(0).rows())
+            .filteredOn(r -> r.key().equals("MONTHLY"))
+            .singleElement()
+            .satisfies(r ->
+                assertThat(r.values()).extracting(BigDecimal::toPlainString).containsExactly("417", "559", "1048", "2083", "4189")
+            );
+        // Appendix 1: category A employee 8% / 8% / 2%, employer 15% throughout; C pays no employee NICs.
+        assertThat(rates(uk.tables().get("niEmployeeRates"), LocalDate.of(2026, 6, 1))).containsEntry("A", new BigDecimal("0.08"));
+        assertThat(rates(uk.tables().get("niEmployerRates"), LocalDate.of(2026, 6, 1))).containsEntry("A", new BigDecimal("0.15"));
+        assertThat(rates(uk.tables().get("niEmployeeRates"), LocalDate.of(2026, 6, 1))).containsEntry("C", new BigDecimal("0"));
     }
 
     private static Map<String, BigDecimal> rates(Table table, LocalDate date) {

@@ -15,6 +15,7 @@ import java.util.Map;
  * @param periodStart     pay period start
  * @param periodEnd       pay period end
  * @param frequency       pay frequency
+ * @param paymentDate     payment date (defaults to the period end)
  * @param grossEarnings   gross earnings in the period
  * @param socialEarnings  earnings subject to social contributions (defaults to gross)
  * @param taxableEarnings taxable earnings (defaults to gross)
@@ -34,6 +35,7 @@ public record TestCase(
     LocalDate periodStart,
     LocalDate periodEnd,
     Frequency frequency,
+    LocalDate paymentDate,
     BigDecimal grossEarnings,
     BigDecimal socialEarnings,
     BigDecimal taxableEarnings,

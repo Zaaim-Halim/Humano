@@ -72,6 +72,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 class PayrollTemplatePayrollRunIT {
 
     private static final String TEMPLATE = "bg-employment";
+    private static final String GB_TEMPLATE = "gb-paye-nic";
 
     @Autowired
     private PayrollTemplateService templateService;
@@ -223,8 +224,10 @@ class PayrollTemplatePayrollRunIT {
             compensations.deleteAll(
                 compensations.findAll().stream().filter(c -> c.getEmployee().getId().equals(employee.getId())).toList()
             );
-            profiles.findByEmployeeIdAndTemplateId(employee.getId(), TEMPLATE).ifPresent(profiles::delete);
-            adoptions.findByTemplateId(TEMPLATE).ifPresent(adoptions::delete);
+            for (String templateId : List.of(TEMPLATE, GB_TEMPLATE)) {
+                profiles.findByEmployeeIdAndTemplateId(employee.getId(), templateId).ifPresent(profiles::delete);
+                adoptions.findByTemplateId(templateId).ifPresent(adoptions::delete);
+            }
             Employee e = employees.findById(employee.getId()).orElseThrow();
             employees.delete(e);
             units.delete(e.getUnit());
@@ -331,8 +334,62 @@ class PayrollTemplatePayrollRunIT {
         assertThat(afterProfile).isNotEqualTo(afterSettings);
     }
 
+    @Test
+    void ukPayeIsCumulativeByPaymentDateAcrossPostedRuns() {
+        // A UK employee paid in GBP: £1,000 in April (paid 30 April, tax month 1), then £3,000 in May.
+        tx.executeWithoutResult(s -> {
+            Employee e = employees.findById(employee.getId()).orElseThrow();
+            e.setCountry(countries.findAll().stream().filter(c -> c.getCode() == CountryCode.GB).findFirst().orElseThrow());
+            e.setBirthDate(LocalDate.of(1990, 5, 1));
+            employees.save(e);
+            setPay("1000.00", CurrencyCode.GBP);
+        });
+        templateService.configure(GB_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of()));
+        templateService.saveProfile(GB_TEMPLATE, employee.getId(), Map.of("taxCode", "1257L", "niCategory", "A"));
+
+        // April 1-30 starts before the tax year (6 April) but is paid in tax month 1.
+        PayrollRunResponse april = calculate(period(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30)));
+        assertThat(april.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        List<PayrollLine> aprilLines = linesOf(resultOf(april.id())).stream().filter(l -> l.getTemplateRef() != null).toList();
+        // £1,000 is under the month-1 free pay of £1,048.26: no tax, but the zero line is recorded for pay to date.
+        assertThat(aprilLines)
+            .extracting(l -> l.getTemplateStep() + "/" + l.getLineCategory() + "=" + l.getAmount().stripTrailingZeros().toPlainString())
+            .containsExactlyInAnyOrder("incomeTax/INCOME_TAX=0", "nationalInsurance/EMPLOYER_CHARGE=87.45");
+        tx.executeWithoutResult(s -> {
+            PayrollRun run = runs.findById(april.id()).orElseThrow();
+            run.setStatus(RunStatus.POSTED);
+            runs.save(run);
+            setPay("3000.00", CurrencyCode.GBP);
+        });
+
+        PayrollRunResponse may = calculate(period(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31)));
+        assertThat(may.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        // Month 2: £4,000 to date − 2 × £1,048.26 = £1,903 at 20% = £380.60. Without April's recorded pay it
+        // would be £180.60; with April placed by its 1 April start date it would fall in the previous tax year.
+        assertThat(linesOf(resultOf(may.id())))
+            .filteredOn(l -> l.getTemplateRef() != null)
+            .extracting(l -> l.getTemplateStep() + "/" + l.getLineCategory() + "=" + l.getAmount().stripTrailingZeros().toPlainString())
+            .containsExactlyInAnyOrder(
+                "incomeTax/INCOME_TAX=380.6",
+                "nationalInsurance/WITHHOLDING=156.16",
+                "nationalInsurance/EMPLOYER_CHARGE=387.45"
+            );
+    }
+
+    private void setPay(String amount, CurrencyCode currency) {
+        compensations
+            .findAll()
+            .stream()
+            .filter(c -> c.getEmployee().getId().equals(employee.getId()))
+            .forEach(c -> {
+                c.setBaseAmount(new BigDecimal(amount));
+                c.setCurrency(currencies.findByCode(currency).orElseThrow());
+                compensations.save(c);
+            });
+    }
+
     private Map<String, BigDecimal> ytd(com.humano.service.payroll.template.model.PayrollTemplate template, LocalDate periodStart) {
-        return tx.execute(s -> templateService.yearToDate(employee.getId(), template, periodStart));
+        return tx.execute(s -> templateService.yearToDate(employee.getId(), template, periodStart, periodStart));
     }
 
     private PayrollPeriod period(LocalDate start, LocalDate end) {

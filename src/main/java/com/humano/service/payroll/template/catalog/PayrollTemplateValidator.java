@@ -47,7 +47,7 @@ public class PayrollTemplateValidator {
     private static final Pattern TABLE_CALL = Pattern.compile("#table\\.(\\w+)\\(\\s*('([^']*)')?");
     private static final Pattern YTD_CALL = Pattern.compile("#ytd\\.(\\w+)\\(\\s*'([^']*)'\\s*,\\s*'([^']*)'\\s*\\)");
     private static final Set<String> TABLE_METHODS = Set.of("lookup", "bracketTax");
-    private static final Set<String> YTD_METHODS = Set.of("base", "amount");
+    private static final Set<String> YTD_METHODS = Set.of("base", "amount", "periods");
 
     private final PayrollTemplateExtensionRegistry extensions;
 
@@ -263,6 +263,9 @@ public class PayrollTemplateValidator {
         }
         Set<String> defined = new HashSet<>(PayrollTemplateEngine.ENGINE_VARIABLES);
         Set<String> stepIds = new HashSet<>();
+        // #ytd may name any step, including later ones: it reads what that step produced in earlier periods.
+        Set<String> allStepIds = new HashSet<>();
+        t.steps().forEach(s -> allStepIds.add(s.id()));
         Set<String> employeeKeys = keys(t.inputs() == null ? null : t.inputs().employee());
         Set<String> employerKeys = keys(t.inputs() == null ? null : t.inputs().employer());
         Set<String> parameters = t.parameters() == null ? Set.of() : t.parameters().keySet();
@@ -317,11 +320,11 @@ public class PayrollTemplateValidator {
                 }
             }
             for (String expr : before) {
-                checkExpression(expr, at, defined, stepIds, employeeKeys, employerKeys, parameters, tables, problems);
+                checkExpression(expr, at, defined, allStepIds, employeeKeys, employerKeys, parameters, tables, problems);
             }
             if (s.type() == Step.Type.CONTRIBUTION || s.type() == Step.Type.TAX) defined.add(s.id() + "_base");
             for (String expr : after) {
-                checkExpression(expr, at, defined, stepIds, employeeKeys, employerKeys, parameters, tables, problems);
+                checkExpression(expr, at, defined, allStepIds, employeeKeys, employerKeys, parameters, tables, problems);
             }
             // Names a step defines become usable by the steps after it.
             switch (s.type()) {

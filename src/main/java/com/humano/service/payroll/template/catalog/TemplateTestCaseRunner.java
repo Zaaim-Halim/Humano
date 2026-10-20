@@ -54,6 +54,7 @@ public final class TemplateTestCaseRunner {
         return new TemplateInput(
             c.periodStart(),
             c.periodEnd(),
+            c.paymentDate() != null ? c.paymentDate() : c.periodEnd(),
             c.frequency(),
             template.currency(),
             c.grossEarnings(),

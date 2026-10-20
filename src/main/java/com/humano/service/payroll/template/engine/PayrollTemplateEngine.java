@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +46,11 @@ public class PayrollTemplateEngine {
     public static final Set<String> ENGINE_VARIABLES = Set.of(
         "periodStart",
         "periodEnd",
+        "paymentDate",
+        "taxYear",
+        "taxYearStartDate",
+        "taxMonth",
+        "taxWeek",
         "frequency",
         "periodsPerYear",
         "isCalendarMonth",
@@ -77,10 +83,22 @@ public class PayrollTemplateEngine {
     }
 
     public List<TemplateLine> calculate(PayrollTemplate template, TemplateInput in) {
-        checkApplicable(template, in);
+        LocalDate paymentDate = in.paymentDate() != null ? in.paymentDate() : in.periodEnd();
+        boolean byPaymentDate = template.effectiveDateBasis() == PayrollTemplate.DateBasis.PAYMENT_DATE;
+        // The dates that must fall within the template's validity and select its dated values.
+        LocalDate valuesFrom = byPaymentDate ? paymentDate : in.periodStart();
+        LocalDate valuesTo = byPaymentDate ? paymentDate : in.periodEnd();
+        checkApplicable(template, in, valuesFrom, valuesTo);
+        LocalDate taxYearStart = taxYearStart(template, valuesFrom);
         Map<String, Object> vars = new HashMap<>();
         vars.put("periodStart", in.periodStart());
         vars.put("periodEnd", in.periodEnd());
+        vars.put("paymentDate", paymentDate);
+        vars.put("taxYear", taxYearStart.getYear());
+        vars.put("taxYearStartDate", taxYearStart);
+        // Tax month / week of the basis date, counted from the tax-year start (UK: month 1 = 6 April-5 May).
+        vars.put("taxMonth", (int) ChronoUnit.MONTHS.between(taxYearStart, valuesFrom) + 1);
+        vars.put("taxWeek", (int) (ChronoUnit.DAYS.between(taxYearStart, valuesFrom) / 7) + 1);
         vars.put("frequency", in.frequency().name());
         vars.put("periodsPerYear", in.frequency().periodsPerYear());
         vars.put(
@@ -100,8 +118,8 @@ public class PayrollTemplateEngine {
         vars.put("currency", in.currency());
         vars.put("employer", TemplateInputs.coerce(template.inputs().employer(), in.employer(), "employer setting", true));
         vars.put("employee", TemplateInputs.coerce(template.inputs().employee(), in.employee(), "employee attribute", true));
-        vars.put("p", new StrictMap("parameter", resolveParameters(template, in.periodStart(), in.periodEnd())));
-        vars.put("table", new TableAccess(template.id(), template.tables(), in.periodStart(), in.periodEnd()));
+        vars.put("p", new StrictMap("parameter", resolveParameters(template, valuesFrom, valuesTo)));
+        vars.put("table", new TableAccess(template.id(), template.tables(), valuesFrom, valuesTo));
         vars.put("ytd", new YtdAccess(in.ytd()));
         vars.put("employeeContributions", BigDecimal.ZERO);
         vars.put("employerContributions", BigDecimal.ZERO);
@@ -161,7 +179,7 @@ public class PayrollTemplateEngine {
                     BigDecimal raw = rate != null ? base.multiply(rate) : decimal(step.amount(), vars, "amount of " + step.id());
                     tax = round(template, step, raw);
                     requireNonNegative(template, step, tax);
-                    if (tax.signum() != 0) {
+                    if (tax.signum() != 0 || step.recordZero()) {
                         lines.add(line(template, step, LineSide.TAX, base, rate, tax));
                     }
                 }
@@ -210,7 +228,7 @@ public class PayrollTemplateEngine {
         BigDecimal rate = share.rate() != null ? decimal(share.rate(), vars, "rate of " + what) : null;
         BigDecimal amount = round(template, step, rate != null ? base.multiply(rate) : decimal(share.amount(), vars, "amount of " + what));
         requireNonNegative(template, step, amount);
-        if (amount.signum() != 0) {
+        if (amount.signum() != 0 || step.recordZero()) {
             lines.add(line(template, step, side, base, rate, amount));
         }
         return amount;
@@ -244,7 +262,13 @@ public class PayrollTemplateEngine {
         return new TemplateLine(template.ref(), step.id(), side, label, step.ledger(), base, rate, amount, explain.toString());
     }
 
-    private static void checkApplicable(PayrollTemplate template, TemplateInput in) {
+    /** First day of the template's tax year containing {@code date}. */
+    public static LocalDate taxYearStart(PayrollTemplate template, LocalDate date) {
+        LocalDate start = java.time.MonthDay.parse(template.taxYearStart()).atYear(date.getYear());
+        return start.isAfter(date) ? start.minusYears(1) : start;
+    }
+
+    private static void checkApplicable(PayrollTemplate template, TemplateInput in, LocalDate from, LocalDate to) {
         if (!template.payFrequencies().contains(in.frequency())) {
             throw new TemplateCalculationException(
                 template.ref() + " supports " + template.payFrequencies() + " pay, not " + in.frequency()
@@ -255,7 +279,7 @@ public class PayrollTemplateEngine {
                 template.ref() + " computes in " + template.currency() + "; this employee is paid in " + in.currency()
             );
         }
-        if (!template.validity().contains(in.periodStart()) || !template.validity().contains(in.periodEnd())) {
+        if (!template.validity().contains(from) || !template.validity().contains(to)) {
             throw new TemplateCalculationException(
                 template.ref() +
                 " has data for " +
@@ -263,9 +287,8 @@ public class PayrollTemplateEngine {
                 "–" +
                 template.validity().to() +
                 ", not for " +
-                in.periodStart() +
-                "–" +
-                in.periodEnd() +
+                from +
+                (from.equals(to) ? "" : "–" + to) +
                 "; a newer template version is needed"
             );
         }
@@ -307,7 +330,7 @@ public class PayrollTemplateEngine {
     }
 
     private static void requireNonNegative(PayrollTemplate template, Step step, BigDecimal amount) {
-        if (amount.signum() < 0) {
+        if (amount.signum() < 0 && !step.allowNegative()) {
             throw new TemplateCalculationException(
                 template.ref() + " step '" + step.id() + "' produced a negative amount " + amount.toPlainString()
             );

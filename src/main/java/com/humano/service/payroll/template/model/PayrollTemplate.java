@@ -24,6 +24,8 @@ import java.util.Map;
  * @param currency      ISO 4217 code all amounts are in
  * @param payFrequencies pay frequencies the template supports
  * @param taxYearStart  first day of the tax year as {@code --MM-DD} (year-to-date sums reset here)
+ * @param dateBasis     which date places a payment in the tax year and selects dated values: the
+ *                      period's dates (default) or the payment date (e.g. UK PAYE)
  * @param rounding      default rounding for emitted amounts
  * @param changelog     what changed in each version, newest first
  * @param sources       legal and official sources, by id
@@ -45,6 +47,7 @@ public record PayrollTemplate(
     String currency,
     List<Frequency> payFrequencies,
     String taxYearStart,
+    DateBasis dateBasis,
     Rounding rounding,
     List<ChangelogEntry> changelog,
     Map<String, Source> sources,
@@ -58,6 +61,21 @@ public record PayrollTemplate(
     /** {@code id@version}, recorded on every payroll line the template produces. */
     public String ref() {
         return id + "@" + version;
+    }
+
+    /** The date basis, defaulting to {@link DateBasis#PERIOD}. */
+    public DateBasis effectiveDateBasis() {
+        return dateBasis != null ? dateBasis : DateBasis.PERIOD;
+    }
+
+    /**
+     * PERIOD: the pay period's dates fall within the validity, select dated values and place the payment
+     * in a tax year. PAYMENT_DATE: the payment date does (UK PAYE: "tax week/month covering the date of
+     * payment").
+     */
+    public enum DateBasis {
+        PERIOD,
+        PAYMENT_DATE,
     }
 
     public record Jurisdiction(String country, String subdivision) {}

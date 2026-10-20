@@ -10,6 +10,7 @@ import java.util.Map;
  *
  * @param periodStart     first day of the pay period
  * @param periodEnd       last day of the pay period
+ * @param paymentDate     date the pay is paid (selects the tax period under a PAYMENT_DATE basis)
  * @param frequency       pay frequency of the calendar
  * @param currency        ISO 4217 code of the employee's pay
  * @param grossEarnings   all earnings in the period
@@ -28,6 +29,7 @@ import java.util.Map;
 public record TemplateInput(
     LocalDate periodStart,
     LocalDate periodEnd,
+    LocalDate paymentDate,
     Frequency frequency,
     String currency,
     BigDecimal grossEarnings,

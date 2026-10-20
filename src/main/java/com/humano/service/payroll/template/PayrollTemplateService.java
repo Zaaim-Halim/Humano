@@ -29,6 +29,7 @@ import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.payroll.template.catalog.PayrollTemplateCatalog;
+import com.humano.service.payroll.template.engine.PayrollTemplateEngine;
 import com.humano.service.payroll.template.engine.TemplateCalculationException;
 import com.humano.service.payroll.template.engine.TemplateInputs;
 import com.humano.service.payroll.template.engine.YtdAccess;
@@ -39,7 +40,6 @@ import com.humano.service.payroll.template.model.Step;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.MonthDay;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -283,18 +283,30 @@ public class PayrollTemplateService {
     }
 
     /**
-     * What {@code template} produced for the employee earlier in the tax year that contains
-     * {@code periodStart}, from POSTED runs only, keyed for {@link YtdAccess}.
+     * What {@code template} produced for the employee earlier in the tax year, from POSTED runs only,
+     * keyed for {@link YtdAccess}. Periods are placed in the tax year by their start date, or by their
+     * payment date for templates on a payment-date basis.
      */
     @Transactional(value = "tenantTransactionManager", readOnly = true)
-    public Map<String, BigDecimal> yearToDate(UUID employeeId, PayrollTemplate template, LocalDate periodStart) {
-        LocalDate taxYearStart = taxYearStart(template, periodStart);
+    public Map<String, BigDecimal> yearToDate(UUID employeeId, PayrollTemplate template, LocalDate periodStart, LocalDate paymentDate) {
+        boolean byPaymentDate = template.effectiveDateBasis() == PayrollTemplate.DateBasis.PAYMENT_DATE;
+        LocalDate basis = byPaymentDate ? paymentDate : periodStart;
+        LocalDate taxYearStart = PayrollTemplateEngine.taxYearStart(template, basis);
+        String refPrefix = template.id() + "@%";
+        List<TemplateYtdRow> rows = byPaymentDate
+            ? payrollLineRepository.sumTemplateLinesByPaymentDate(employeeId, refPrefix, taxYearStart, basis)
+            : payrollLineRepository.sumTemplateLines(employeeId, refPrefix, taxYearStart, basis);
         Map<String, BigDecimal> sums = new HashMap<>();
-        for (TemplateYtdRow row : payrollLineRepository.sumTemplateLines(employeeId, template.id() + "@%", taxYearStart, periodStart)) {
+        for (TemplateYtdRow row : rows) {
             LineSide side = sideOf(row.category());
             if (side == null) continue;
             sums.merge(YtdAccess.key(row.step(), side, "base"), nz(row.base()), BigDecimal::add);
             sums.merge(YtdAccess.key(row.step(), side, "amount"), nz(row.amount()), BigDecimal::add);
+            sums.merge(
+                YtdAccess.key(row.step(), side, "periods"),
+                BigDecimal.valueOf(row.lines() != null ? row.lines() : 0),
+                BigDecimal::add
+            );
         }
         return sums;
     }
@@ -318,12 +330,6 @@ public class PayrollTemplateService {
             .collect(Collectors.joining(";"));
         Instant profiles = profileRepository.findMaxLastModifiedDate().orElse(null);
         return adoptions + "|" + (profiles == null ? "0" : profiles.toString());
-    }
-
-    /** First day of the template's tax year containing {@code date}. */
-    static LocalDate taxYearStart(PayrollTemplate template, LocalDate date) {
-        LocalDate start = MonthDay.parse(template.taxYearStart()).atYear(date.getYear());
-        return start.isAfter(date) ? start.minusYears(1) : start;
     }
 
     static LineSide sideOf(PayrollLineCategory category) {
