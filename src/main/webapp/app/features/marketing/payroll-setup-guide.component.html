@@ -1,0 +1,67 @@
+<div class="hum-auth__head">
+  <span class="hum-auth__icon"><lucide-icon name="function-square" [size]="22" /></span>
+  <h1 class="hum-auth__title">{{ 'register.payrollGuide.heading' | translate }}</h1>
+  <p class="hum-auth__desc">{{ 'register.payrollGuide.intro' | translate }}</p>
+</div>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">{{ 'register.payrollGuide.stepsHeading' | translate }}</h2>
+  <ol class="hum-guide__steps">
+    <li>{{ 'register.payrollGuide.step1' | translate }}</li>
+    <li>{{ 'register.payrollGuide.step2' | translate }}</li>
+    <li>{{ 'register.payrollGuide.step3' | translate }}</li>
+    <li>{{ 'register.payrollGuide.step4' | translate }}</li>
+    <li>{{ 'register.payrollGuide.step5' | translate }}</li>
+  </ol>
+  <p class="hum-guide__note">{{ 'register.payrollGuide.responsibility' | translate }}</p>
+</section>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">{{ 'register.payrollGuide.recipesHeading' | translate }}</h2>
+  <div class="hum-guide__grid">
+    @for (r of recipes; track r.title) {
+      <div class="hum-guide__item">
+        <div class="hum-guide__item-title">{{ r.title }}</div>
+        <div class="hum-guide__item-desc">{{ r.description }}</div>
+        <code class="hum-guide__code">{{ r.formula }}</code>
+      </div>
+    }
+  </div>
+</section>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">{{ 'register.payrollGuide.functionsHeading' | translate }}</h2>
+  @for (c of categories; track c.label) {
+    <h3 class="hum-guide__h3">{{ c.label }}</h3>
+    <div class="hum-guide__grid">
+      @for (f of c.functions; track f.signature) {
+        <div class="hum-guide__item">
+          <code class="hum-guide__code">{{ f.signature }} → {{ f.returns }}</code>
+          <div class="hum-guide__item-desc">{{ f.description }}</div>
+          @if (f.example) {
+            <code class="hum-guide__code hum-guide__code--example">{{ f.example }}</code>
+          }
+        </div>
+      }
+    </div>
+  }
+</section>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">{{ 'register.payrollGuide.variablesHeading' | translate }}</h2>
+  @for (g of variableGroups; track g.label) {
+    <h3 class="hum-guide__h3">{{ g.label }}</h3>
+    <div class="hum-guide__grid hum-guide__grid--compact">
+      @for (v of g.variables; track v.name) {
+        <div class="hum-guide__var">
+          <code class="hum-guide__code">{{ v.name }}</code>
+          <span class="hum-guide__item-desc">{{ v.description }}</span>
+        </div>
+      }
+    </div>
+  }
+</section>
+
+<p class="hum-auth__meta">
+  <a routerLink="/signup">{{ 'register.payrollGuide.back' | translate }}</a>
+</p>

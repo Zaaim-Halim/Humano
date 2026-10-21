@@ -1,6 +1,7 @@
 package com.humano.service.demo;
 
 import com.humano.domain.billing.SubscriptionPlan;
+import com.humano.domain.enumeration.CountryCode;
 import com.humano.domain.enumeration.tenant.DemoSetupStatus;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.shared.User;
@@ -290,6 +291,8 @@ public class DemoWorkspaceService {
     private void startSetup(Tenant tenant, String password, boolean sampleData) {
         UUID id = tenant.getId();
         String subdomain = tenant.getSubdomain();
+        // The sample company is set in the demo's country: local pay, and its payroll template where one is shipped.
+        CountryCode country = tenant.getCountry() != null ? tenant.getCountry() : CountryCode.US;
         TenantRegistrationDTO registration = registration(tenant, password);
         executor.execute(() -> {
             try {
@@ -298,7 +301,7 @@ public class DemoWorkspaceService {
                 inTenant(subdomain, () -> {
                     personaService.createPersonas(password);
                     if (sampleData) {
-                        demoDataSeeder.getObject().seed();
+                        demoDataSeeder.getObject().seed(country);
                     }
                 });
                 setSetup(id, DemoSetupStatus.READY);

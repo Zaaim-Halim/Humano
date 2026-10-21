@@ -62,6 +62,7 @@ import com.humano.dto.hr.requests.UpdatePositionRequest;
 import com.humano.dto.hr.responses.EmployeePersonalDetails;
 import com.humano.dto.hr.responses.ReferenceDataRef;
 import com.humano.dto.payroll.request.ApprovePayrollRunRequest;
+import com.humano.dto.payroll.request.ConfigurePayrollTemplateRequest;
 import com.humano.dto.payroll.request.CreateCompensationRequest;
 import com.humano.dto.payroll.request.CreatePayComponentRequest;
 import com.humano.dto.payroll.request.CreatePayRuleRequest;
@@ -109,6 +110,10 @@ import com.humano.service.payroll.PayrollCalendarService;
 import com.humano.service.payroll.PayrollProcessingService;
 import com.humano.service.payroll.PayslipService;
 import com.humano.service.payroll.TaxCalculationService;
+import com.humano.service.payroll.template.PayrollTemplateService;
+import com.humano.service.payroll.template.catalog.PayrollTemplateCatalog;
+import com.humano.service.payroll.template.engine.PayrollTemplateEngine;
+import com.humano.service.payroll.template.model.PayrollTemplate;
 import com.humano.service.storage.StorageFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -118,6 +123,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -125,6 +131,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -227,8 +234,16 @@ public class DemoDataSeeder {
     /** Every seeded employee, in creation order (managers before their reports). */
     private final List<Seeded> people = new ArrayList<>();
     private final Map<String, Seeded> byKey = new HashMap<>();
-    private UUID usaId;
-    private UUID usdId;
+    /** The employees' country and pay currency: the demo's country when it has a {@link DemoCountry}, else the US. */
+    private UUID countryId;
+    private UUID currencyId;
+    private CountryCode country = CountryCode.US;
+    /** The country localisation when the demo's country has a shipped template; null for the generic US sample. */
+    private DemoCountry local;
+    /** Draws for the localisation only, so the base company is identical in every country. */
+    private final Random localRandom = new Random(20261021L);
+    private final PayrollTemplateService payrollTemplateService;
+    private final PayrollTemplateCatalog payrollTemplateCatalog;
 
     public DemoDataSeeder(
         OrganizationalUnitService unitService,
@@ -271,7 +286,9 @@ public class DemoDataSeeder {
         PayrollPeriodRepository payrollPeriodRepository,
         PayrollRunRepository payrollRunRepository,
         @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager,
-        StorageFactory storageFactory
+        StorageFactory storageFactory,
+        PayrollTemplateService payrollTemplateService,
+        PayrollTemplateCatalog payrollTemplateCatalog
     ) {
         this.unitService = unitService;
         this.departmentService = departmentService;
@@ -314,6 +331,8 @@ public class DemoDataSeeder {
         this.payrollRunRepository = payrollRunRepository;
         this.tenantTx = new TransactionTemplate(tenantTransactionManager);
         this.storageFactory = storageFactory;
+        this.payrollTemplateService = payrollTemplateService;
+        this.payrollTemplateCatalog = payrollTemplateCatalog;
     }
 
     /** One seeded person: the key is the persona local part or the staff login. */
@@ -334,8 +353,19 @@ public class DemoDataSeeder {
         boolean persona
     ) {}
 
-    /** Must run with the demo tenant already set in {@code TenantContext}. */
+    /** The generic sample company (employees in the US). Must run with the demo tenant already set in {@code TenantContext}. */
     public void seed() {
+        seed(CountryCode.US);
+    }
+
+    /**
+     * The sample company for a workspace in {@code country}: where the country has a shipped payroll
+     * template ({@link DemoCountry}) the employees work there, are paid in its currency and their
+     * payroll runs through the template; elsewhere the generic US sample. Must run with the demo tenant
+     * already set in {@code TenantContext}.
+     */
+    public void seed(CountryCode country) {
+        this.country = country;
         if (!section("reference data", this::resolveReferenceData)) {
             return;
         }
@@ -366,13 +396,19 @@ public class DemoDataSeeder {
         if (inTx(expenseClaimRepository::count) == 0) {
             section("expenses", this::seedExpenses);
         }
-        if (inTx(taxBracketRepository::count) == 0) {
-            section("payroll configuration", this::seedPayrollConfiguration);
+        // A company seeded earlier with the generic tax brackets keeps them: adding a template on top would deduct twice.
+        if (local != null && inTx(taxBracketRepository::count) == 0) {
+            section("payroll template", this::seedPayrollTemplate);
+            section("template payroll", this::seedTemplatePayroll);
+        } else {
+            if (inTx(taxBracketRepository::count) == 0) {
+                section("payroll configuration", this::seedPayrollConfiguration);
+            }
+            if (inTx(payslipRepository::count) == 0) {
+                section("payroll", this::seedPayroll);
+            }
+            section("payroll history", this::seedPayrollHistory);
         }
-        if (inTx(payslipRepository::count) == 0) {
-            section("payroll", this::seedPayroll);
-        }
-        section("payroll history", this::seedPayrollHistory);
         if (
             inTx(() ->
                 entityManager
@@ -444,17 +480,27 @@ public class DemoDataSeeder {
     // ---------------------------------------------------------------- reference data
 
     private void resolveReferenceData() {
-        usaId = countryRepository
+        // Only a template this build can run: one the catalog withheld would leave the demo without payroll.
+        local = DemoCountry.of(country).filter(d -> payrollTemplateCatalog.find(d.templateId()).isPresent()).orElse(null);
+        CountryCode code = local != null ? local.country() : CountryCode.US;
+        CurrencyCode currency = local != null ? local.currency() : CurrencyCode.USD;
+        countryId = countryRepository
             .findAll()
             .stream()
-            .filter(c -> c.getCode() == CountryCode.US)
+            .filter(c -> c.getCode() == code)
             .findFirst()
-            .orElseThrow(() -> new IllegalStateException("country US missing"))
+            .orElseThrow(() -> new IllegalStateException("country " + code + " missing"))
             .getId();
-        usdId = currencyRepository
-            .findByCode(CurrencyCode.USD)
-            .orElseThrow(() -> new IllegalStateException("currency USD missing"))
+        currencyId = currencyRepository
+            .findByCode(currency)
+            .orElseThrow(() -> new IllegalStateException("currency " + currency + " missing"))
             .getId();
+        log.info(
+            "[demo-data] company in {} paid in {}{}",
+            code,
+            currency,
+            local != null ? ", payroll by template " + local.templateId() : ""
+        );
     }
 
     private ReferenceDataRef ref(List<? extends AbstractReferenceData> all, String code) {
@@ -985,7 +1031,7 @@ public class DemoDataSeeder {
                 startDateFor(person.level()),
                 null,
                 EmployeeStatus.ACTIVE,
-                usaId,
+                countryId,
                 departmentIds.get(person.department()),
                 position(person.unit(), person.title(), person.level()),
                 unitIds.get(person.unit()),
@@ -994,7 +1040,7 @@ public class DemoDataSeeder {
                     employeeNumber(),
                     birthDate(),
                     person.gender(),
-                    pickOne(CITIES)[0],
+                    pickOne(cities())[0],
                     phone(),
                     workLocation(),
                     "INTERN".equals(person.level()) ? new BigDecimal("0.50") : BigDecimal.ONE,
@@ -1043,8 +1089,8 @@ public class DemoDataSeeder {
             e.setJobTitle(person.title());
             e.setStatus(EmployeeStatus.ACTIVE);
             e.setStartDate(startDateFor(person.level()));
-            e.setCountry(countryRepository.getReferenceById(usaId));
-            e.setNationality(countryRepository.getReferenceById(usaId));
+            e.setCountry(countryRepository.getReferenceById(countryId));
+            e.setNationality(countryRepository.getReferenceById(countryId));
             e.setDepartment(departmentRepository.getReferenceById(departmentIds.get(person.department())));
             e.setPosition(positionRepository.getReferenceById(positionId));
             e.setUnit(unitRepository.getReferenceById(unitId));
@@ -1109,7 +1155,7 @@ public class DemoDataSeeder {
                 UUID positionId = positionIds.get(person.title());
                 LocalDate start = inTx(() -> employeeRepository.findById(seeded.id()).orElseThrow().getStartDate());
                 compensationService.createCompensation(
-                    new CreateCompensationRequest(seeded.id(), positionId, usdId, seeded.salary(), Basis.MONTHLY, start, null)
+                    new CreateCompensationRequest(seeded.id(), positionId, currencyId, seeded.salary(), Basis.MONTHLY, start, null)
                 );
                 log.info("[demo-data] added persona {} as an employee", person.key());
             }
@@ -1117,7 +1163,15 @@ public class DemoDataSeeder {
     }
 
     private void remember(Person person, UUID id, UUID managerId) {
-        Seeded seeded = new Seeded(person.key(), id, person.department(), person.title(), managerId, BigDecimal.valueOf(person.salary()));
+        BigDecimal salary = BigDecimal.valueOf(person.salary());
+        Seeded seeded = new Seeded(
+            person.key(),
+            id,
+            person.department(),
+            person.title(),
+            managerId,
+            local != null ? local.salary(salary) : salary
+        );
         people.removeIf(p -> p.id().equals(id)); // a repaired persona was already loaded
         people.add(seeded);
         byKey.put(person.key(), seeded);
@@ -1280,9 +1334,9 @@ public class DemoDataSeeder {
             String lastName = entity.getLastName();
 
             compensationService.createCompensation(
-                new CreateCompensationRequest(e.id(), positionId, usdId, e.salary(), Basis.MONTHLY, start, null)
+                new CreateCompensationRequest(e.id(), positionId, currencyId, e.salary(), Basis.MONTHLY, start, null)
             );
-            String[] city = pickOne(CITIES);
+            String[] city = pickOne(cities());
             addressService.create(
                 new CreateAddressRequest(
                     e.id(),
@@ -1293,7 +1347,7 @@ public class DemoDataSeeder {
                     city[0],
                     city[1],
                     city[2],
-                    usaId,
+                    countryId,
                     true
                 )
             );
@@ -2038,7 +2092,7 @@ public class DemoDataSeeder {
         for (Object[] b : brackets) {
             taxCalculationService.createTaxBracket(
                 new CreateTaxBracketRequest(
-                    usaId,
+                    countryId,
                     TaxCode.PIT,
                     new BigDecimal((String) b[0]),
                     new BigDecimal((String) b[1]),
@@ -2158,6 +2212,96 @@ public class DemoDataSeeder {
         );
     }
 
+    /**
+     * The country's statutory template, enabled with the demo company's employer settings, and every
+     * employee's profile from {@link DemoCountry#employeeAttributes}. Taxes and contributions then come
+     * from the template, so no generic deduction rule is added — only the plain DEDUCTION component that
+     * unpaid-leave deductions need. Idempotent: existing profiles are kept.
+     */
+    private void seedPayrollTemplate() {
+        boolean hasDeduction = inTx(() -> payComponentRepository.findAll().stream().anyMatch(c -> c.getCode() == PayComponentCode.DEDUCTION)
+        );
+        if (!hasDeduction) {
+            payComponentService.createComponent(
+                new CreatePayComponentRequest(
+                    PayComponentCode.DEDUCTION,
+                    "Deductions",
+                    Kind.DEDUCTION,
+                    Measurement.AMOUNT,
+                    false,
+                    true,
+                    false,
+                    null
+                )
+            );
+        }
+        payrollTemplateService.configure(local.templateId(), new ConfigurePayrollTemplateRequest(true, local.employerSettings()));
+        record Who(UUID id, String level, LocalDate birthDate) {}
+        List<Who> employees = inTx(() ->
+            employeeRepository
+                .findAll()
+                .stream()
+                .sorted(Comparator.comparing(e -> e.getEmployeeNumber() == null ? "" : e.getEmployeeNumber()))
+                .map(e -> new Who(e.getId(), e.getLevel() == null ? "MID" : e.getLevel().getCode(), e.getBirthDate()))
+                .toList()
+        );
+        int saved = 0;
+        for (Who who : employees) {
+            if (who.birthDate() == null || !payrollTemplateService.getProfile(local.templateId(), who.id()).attributes().isEmpty()) {
+                continue;
+            }
+            payrollTemplateService.saveProfile(
+                local.templateId(),
+                who.id(),
+                local.employeeAttributes(localRandom, who.level(), who.birthDate())
+            );
+            saved++;
+        }
+        log.info("[demo-data] payroll template {} enabled; {} employee profiles", local.templateId(), saved);
+    }
+
+    /**
+     * Template payroll from the start of the tax year: every completed month whose date (the period, or
+     * the payment date for templates on that basis) is within the template's validity, posted, and the
+     * latest one calculated and approved. A demo created after the template's last year shows that year.
+     */
+    private void seedTemplatePayroll() {
+        PayrollTemplate template = payrollTemplateCatalog.find(local.templateId()).orElseThrow();
+        UUID calendarId = inTx(() -> payrollCalendarRepository.findAll().stream().findFirst().orElseThrow().getId());
+        payrollCalendarService.generatePeriods(
+            new GeneratePayrollPeriodsRequest(
+                calendarId,
+                template.validity().from().minusMonths(1).withDayOfMonth(1),
+                today.withDayOfMonth(1).plusMonths(2).minusDays(1),
+                5,
+                true
+            )
+        );
+        boolean byPayment = template.effectiveDateBasis() == PayrollTemplate.DateBasis.PAYMENT_DATE;
+        Function<PayrollPeriod, LocalDate> dateOf = p -> byPayment ? p.getPaymentDate() : p.getStartDate();
+        List<PayrollPeriod> eligible = inTx(() ->
+            payrollPeriodRepository
+                .findAll()
+                .stream()
+                .filter(p -> p.getEndDate().isBefore(today.withDayOfMonth(1)))
+                .filter(p -> template.validity().contains(dateOf.apply(p)))
+                .sorted(Comparator.comparing(PayrollPeriod::getStartDate))
+                .toList()
+        );
+        if (eligible.isEmpty()) {
+            log.info("[demo-data] no completed period within {} validity; no template payroll", template.ref());
+            return;
+        }
+        PayrollPeriod last = eligible.get(eligible.size() - 1);
+        LocalDate yearStart = PayrollTemplateEngine.taxYearStart(template, dateOf.apply(last));
+        for (PayrollPeriod period : eligible) {
+            if (dateOf.apply(period).isBefore(yearStart)) continue;
+            boolean post = period != last;
+            if (post && inTx(() -> payrollRunRepository.existsByPeriodIdAndStatus(period.getId(), RunStatus.POSTED))) continue;
+            runPayroll(period, post);
+        }
+    }
+
     /** Initiate → calculate → approve → payslips (→ post) for one period, resuming wherever it stopped. */
     private void runPayroll(PayrollPeriod period, boolean post) {
         // Idempotent: re-initiating the same period returns the existing run.
@@ -2174,7 +2318,17 @@ public class DemoDataSeeder {
         UUID runId = run.id();
         RunStatus status = run.status();
         if (status == RunStatus.DRAFT) {
-            status = payrollProcessingService.calculatePayroll(runId).status();
+            PayrollRunResponse calculated = payrollProcessingService.calculatePayroll(runId);
+            status = calculated.status();
+            // The seeder is fail-soft: make employees the run had to leave out visible in the log.
+            if (calculated.validationErrors() != null && !calculated.validationErrors().isEmpty()) {
+                log.warn(
+                    "[demo-data] payroll {}: {} validation error(s), e.g. {}",
+                    period.getCode(),
+                    calculated.validationErrors().size(),
+                    calculated.validationErrors().stream().limit(3).map(v -> v.employeeName() + ": " + v.message()).toList()
+                );
+            }
         }
         if (status == RunStatus.CALCULATED) {
             Seeded approver = byKey.get("payroll.admin");
@@ -2223,7 +2377,9 @@ public class DemoDataSeeder {
             };
         // A handful of recent joiners so the dashboard feed has something fresh.
         int months = random.nextInt(6) == 0 ? random.nextInt(2) : 2 + random.nextInt(maxMonths);
-        return today.minusMonths(months).minusDays(random.nextInt(28));
+        LocalDate start = today.minusMonths(months).minusDays(random.nextInt(28));
+        // Statutory templates refuse or prorate a first partial month (e.g. Germany): demo hires start on the 1st.
+        return local != null ? start.withDayOfMonth(1) : start;
     }
 
     private LocalDate birthDate() {
@@ -2231,7 +2387,13 @@ public class DemoDataSeeder {
     }
 
     private String phone() {
-        return String.format("+1 (%03d) 555-%04d", 200 + random.nextInt(700), random.nextInt(10000));
+        int a = 200 + random.nextInt(700);
+        int b = random.nextInt(10000);
+        return local != null ? local.phone(a, b) : String.format("+1 (%03d) 555-%04d", a, b);
+    }
+
+    private String[][] cities() {
+        return local != null ? local.cities() : CITIES;
     }
 
     private int employeeCounter = 1000;

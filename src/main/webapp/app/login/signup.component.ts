@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -7,8 +7,16 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
-import { MarketingService, PublicPricing, SubdomainCheck } from 'app/features/marketing/marketing.service';
-import { AlertComponent, ButtonComponent, FormFieldComponent, InputComponent, SelectComponent } from 'app/shared/ui';
+import { MarketingService, PublicPayrollTemplate, PublicPricing, SubdomainCheck } from 'app/features/marketing/marketing.service';
+import {
+  AlertComponent,
+  BadgeComponent,
+  ButtonComponent,
+  FormFieldComponent,
+  InputComponent,
+  RadioComponent,
+  SelectComponent,
+} from 'app/shared/ui';
 import { countryOptions } from 'app/shared/util/countries';
 
 const SUBDOMAIN = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
@@ -25,24 +33,34 @@ function slugify(name: string): string {
     .replace(/-+$/g, '');
 }
 
+/** The "no template" choice in the payroll template radios. */
+const NO_TEMPLATE = '';
+
 /**
  * Start a free trial — `POST /api/public/signup`. The visitor picks a plan (preselected from the
  * pricing page's `?plan=`), names the company and its workspace address (checked as they type), and
  * gets a confirmation link by email; the workspace is only created once they open it.
+ * <p>
+ * Once a country is chosen, and if the plan includes payroll, the statutory payroll templates for
+ * that country are offered (`GET /api/public/payroll-templates`): the first one is suggested, and
+ * "no template" is always a choice. The chosen template is added to the workspace switched off; an
+ * administrator fills in its settings before the first payroll run.
  */
 @Component({
   selector: 'hum-signup',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'hum-auth-screen' },
+  host: { class: 'hum-auth-screen hum-auth-screen--wide' },
   imports: [
     ReactiveFormsModule,
     RouterLink,
     TranslatePipe,
     LucideAngularModule,
     AlertComponent,
+    BadgeComponent,
     ButtonComponent,
     FormFieldComponent,
     InputComponent,
+    RadioComponent,
     SelectComponent,
   ],
   templateUrl: './signup.component.html',
@@ -68,8 +86,32 @@ export default class SignupComponent {
     subdomain: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(25), Validators.pattern(SUBDOMAIN)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
     country: ['', [Validators.required]],
+    payrollTemplateId: [NO_TEMPLATE],
     website: [''],
   });
+
+  protected readonly noTemplate = NO_TEMPLATE;
+  private readonly planId = toSignal(this.form.controls.planId.valueChanges, { initialValue: '' });
+
+  /** The chosen plan includes payroll (or the catalog does not gate it), so a payroll template can be chosen. */
+  protected readonly planHasPayroll = computed(() => {
+    const pricing = this.pricing();
+    const payroll = pricing?.features.find(f => f.code === 'PAYROLL');
+    if (!payroll) return true;
+    const plan = pricing?.plans.find(p => p.id === (this.planId() || this.form.controls.planId.value));
+    return !!plan?.items.some(i => i.featureId === payroll.id && i.included);
+  });
+
+  /** Templates for the chosen country; null while none is chosen or loading. */
+  protected readonly templates = toSignal(
+    this.form.controls.country.valueChanges.pipe(
+      distinctUntilChanged(),
+      switchMap(country =>
+        country ? this.marketing.payrollTemplates(country).pipe(catchError(() => of<PublicPayrollTemplate[]>([]))) : of(null),
+      ),
+    ),
+    { initialValue: null },
+  );
 
   protected readonly planOptions = computed(() =>
     (this.pricing()?.plans ?? []).map(p => ({
@@ -110,9 +152,23 @@ export default class SignupComponent {
     const locale = /-([a-z]{2})$/i.exec(navigator.language);
     const region = locale ? locale[1].toUpperCase() : '';
     if (this.countryOptions.some(c => c.value === region)) this.form.controls.country.setValue(region);
+    // A new country's templates replace the choice: suggest the first one (one click to choose none instead).
+    toObservable(this.templates)
+      .pipe(takeUntilDestroyed())
+      .subscribe(list => this.form.controls.payrollTemplateId.setValue(list?.length ? list[0].id : NO_TEMPLATE));
     this.form.controls.companyName.valueChanges.pipe(takeUntilDestroyed()).subscribe(name => {
       if (!this.subdomainTouched) this.form.controls.subdomain.setValue(slugify(name));
     });
+  }
+
+  protected chooseTemplate(id: string): void {
+    this.form.controls.payrollTemplateId.setValue(id);
+  }
+
+  /** "1 Jan 2026 – 31 Dec 2026" for a template's rules. */
+  protected period(t: PublicPayrollTemplate): string {
+    const format = (d: string) => new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(d));
+    return `${format(t.validFrom)} – ${format(t.validTo)}`;
   }
 
   protected onSubdomainInput(): void {
@@ -148,6 +204,7 @@ export default class SignupComponent {
         country: f.country,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         planId: f.planId,
+        payrollTemplateId: this.planHasPayroll() && f.payrollTemplateId ? f.payrollTemplateId : undefined,
         website: f.website || undefined,
       })
       .subscribe({
@@ -182,6 +239,8 @@ export function signupErrorKey(err: HttpErrorResponse): string {
     'subdomainreserved',
     'subdomaininvalid',
     'planunavailable',
+    'payrolltemplateunavailable',
+    'payrollnotinplan',
     'invalidlink',
     'linkexpired',
   ];

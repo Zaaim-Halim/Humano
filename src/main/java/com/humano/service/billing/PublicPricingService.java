@@ -85,6 +85,7 @@ public class PublicPricingService {
                 .map(f ->
                     new PublicPricingResponse.Feature(
                         f.getId(),
+                        f.getCode(),
                         f.getName(),
                         f.getDescription(),
                         f.getCategory(),

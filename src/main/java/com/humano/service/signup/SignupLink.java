@@ -28,7 +28,10 @@ public class SignupLink {
     private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder DECODER = Base64.getUrlDecoder();
 
-    /** What the visitor filled in on the public form. */
+    /**
+     * What the visitor filled in on the public form. {@code payrollTemplateId} is optional (null in
+     * links issued before it existed, which still read).
+     */
     public record Payload(
         String email,
         String companyName,
@@ -36,6 +39,7 @@ public class SignupLink {
         CountryCode country,
         String timezone,
         UUID planId,
+        String payrollTemplateId,
         Instant expiresAt
     ) {
         public boolean expired() {

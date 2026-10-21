@@ -1567,19 +1567,27 @@ public class PayrollProcessingService {
 
     private List<Employee> getEmployeesForScope(String scope, PayrollPeriod period) {
         if ("ALL".equals(scope)) {
-            // Working people, plus anyone who left during or after this period (their final pay).
+            // Working people, plus anyone who left during or after this period (their final pay);
+            // not someone who only starts after the period ends — they had no pay in it.
             return employeeRepository.findAll(
                 (Specification<Employee>) (root, query, cb) -> {
                     var working = root.get("status").in(com.humano.domain.enumeration.hr.EmployeeStatus.WORKING);
                     if (period == null || period.getStartDate() == null) {
                         return working;
                     }
-                    return cb.or(
+                    var employed = cb.or(
                         working,
                         cb.and(
                             cb.equal(root.get("status"), com.humano.domain.enumeration.hr.EmployeeStatus.TERMINATED),
                             cb.greaterThanOrEqualTo(root.<LocalDate>get("endDate"), period.getStartDate())
                         )
+                    );
+                    if (period.getEndDate() == null) {
+                        return employed;
+                    }
+                    return cb.and(
+                        employed,
+                        cb.or(cb.isNull(root.get("startDate")), cb.lessThanOrEqualTo(root.<LocalDate>get("startDate"), period.getEndDate()))
                     );
                 }
             );

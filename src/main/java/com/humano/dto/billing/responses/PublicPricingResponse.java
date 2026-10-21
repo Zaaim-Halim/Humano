@@ -23,5 +23,14 @@ public record PublicPricingResponse(String currency, List<Plan> plans, List<Feat
         List<PlanFeatureItem> items
     ) {}
 
-    public record Feature(UUID id, String name, String description, String category, FeatureLimitType limitType, String unit) {}
+    /** {@code code} is the stable feature code (e.g. {@code PAYROLL}), for forms that depend on a feature. */
+    public record Feature(
+        UUID id,
+        String code,
+        String name,
+        String description,
+        String category,
+        FeatureLimitType limitType,
+        String unit
+    ) {}
 }

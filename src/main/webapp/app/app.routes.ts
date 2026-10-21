@@ -68,6 +68,11 @@ const routes: Routes = [
         loadComponent: () => import('./login/signup.component'),
       },
       {
+        path: 'help/payroll-setup',
+        title: 'register.payrollGuide.title',
+        loadComponent: () => import('./features/marketing/payroll-setup-guide.component'),
+      },
+      {
         path: 'signup/verify',
         title: 'register.verify.title',
         loadComponent: () => import('./login/signup-verify.component'),

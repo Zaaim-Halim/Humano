@@ -28,63 +28,110 @@
       <hum-select [options]="planOptions()" formControlName="planId" [invalid]="invalid('planId')" />
     </hum-form-field>
 
-    <hum-form-field [label]="'register.form.company' | translate" controlId="su-company">
-      <hum-input
-        inputId="su-company"
-        autocomplete="organization"
-        formControlName="companyName"
-        [placeholder]="'register.form.companyPlaceholder' | translate"
-        [invalid]="invalid('companyName')"
-      />
-    </hum-form-field>
+    <div class="hum-auth__row">
+      <hum-form-field [label]="'register.form.company' | translate" controlId="su-company">
+        <hum-input
+          inputId="su-company"
+          autocomplete="organization"
+          formControlName="companyName"
+          [placeholder]="'register.form.companyPlaceholder' | translate"
+          [invalid]="invalid('companyName')"
+        />
+      </hum-form-field>
 
-    <hum-form-field
-      [label]="'register.form.workspace' | translate"
-      controlId="su-workspace"
-      [hint]="
-        subdomainUnavailable()
-          ? undefined
-          : check()?.available
-            ? ('register.form.workspaceFree' | translate)
-            : ('register.form.workspaceHint' | translate)
-      "
-      [error]="
-        subdomainUnavailable()
-          ? ('register.form.workspace_' + check()!.reason | translate)
-          : invalid('subdomain')
-            ? ('register.form.workspaceFormat' | translate)
-            : undefined
-      "
-    >
-      <hum-input
-        inputId="su-workspace"
-        autocomplete="off"
-        formControlName="subdomain"
-        [mono]="true"
-        [placeholder]="'register.form.workspacePlaceholder' | translate"
-        [invalid]="invalid('subdomain') || subdomainUnavailable()"
-        (input)="onSubdomainInput()"
-      />
-    </hum-form-field>
+      <hum-form-field
+        [label]="'register.form.workspace' | translate"
+        controlId="su-workspace"
+        [hint]="
+          subdomainUnavailable()
+            ? undefined
+            : check()?.available
+              ? ('register.form.workspaceFree' | translate)
+              : ('register.form.workspaceHint' | translate)
+        "
+        [error]="
+          subdomainUnavailable()
+            ? ('register.form.workspace_' + check()!.reason | translate)
+            : invalid('subdomain')
+              ? ('register.form.workspaceFormat' | translate)
+              : undefined
+        "
+      >
+        <hum-input
+          inputId="su-workspace"
+          autocomplete="off"
+          formControlName="subdomain"
+          [mono]="true"
+          [placeholder]="'register.form.workspacePlaceholder' | translate"
+          [invalid]="invalid('subdomain') || subdomainUnavailable()"
+          (input)="onSubdomainInput()"
+        />
+      </hum-form-field>
+    </div>
 
-    <hum-form-field
-      [label]="'register.form.email' | translate"
-      controlId="su-email"
-      [error]="invalid('email') ? ('global.messages.validate.email.invalid' | translate) : undefined"
-    >
-      <hum-input
-        inputId="su-email"
-        autocomplete="email"
-        type="email"
-        formControlName="email"
-        [placeholder]="'login.form.email.placeholder' | translate"
-        [invalid]="invalid('email')"
-      />
-    </hum-form-field>
+    <div class="hum-auth__row">
+      <hum-form-field
+        [label]="'register.form.email' | translate"
+        controlId="su-email"
+        [error]="invalid('email') ? ('global.messages.validate.email.invalid' | translate) : undefined"
+      >
+        <hum-input
+          inputId="su-email"
+          autocomplete="email"
+          type="email"
+          formControlName="email"
+          [placeholder]="'login.form.email.placeholder' | translate"
+          [invalid]="invalid('email')"
+        />
+      </hum-form-field>
 
-    <hum-form-field [label]="'register.form.country' | translate" controlId="su-country">
-      <hum-select [options]="countryOptions" formControlName="country" [invalid]="invalid('country')" />
-    </hum-form-field>
+      <hum-form-field [label]="'register.form.country' | translate" controlId="su-country">
+        <hum-select [options]="countryOptions" formControlName="country" [invalid]="invalid('country')" />
+      </hum-form-field>
+    </div>
+
+    @if (planHasPayroll() && templates(); as list) {
+      <fieldset class="hum-auth__choices">
+        <legend class="hum-auth__choices-legend">{{ 'register.form.payrollTemplate' | translate }}</legend>
+        <p class="hum-auth__choices-hint">
+          {{ (list.length ? 'register.form.payrollTemplateHint' : 'register.form.payrollTemplateNone') | translate }}
+        </p>
+        @for (t of list; track t.id; let first = $first) {
+          <div class="hum-auth__choice" [class.hum-auth__choice--on]="form.controls.payrollTemplateId.value === t.id">
+            <hum-radio
+              name="payrollTemplate"
+              [value]="t.id"
+              [label]="t.name"
+              [checked]="form.controls.payrollTemplateId.value === t.id"
+              (selected)="chooseTemplate($event)"
+            />
+            <div class="hum-auth__choice-meta">
+              @if (first) {
+                <hum-badge tone="brand" [label]="'register.form.payrollTemplateSuggested' | translate" />
+              }
+              <span>{{ 'register.form.payrollTemplateRules' | translate: { period: period(t), currency: t.currency } }}</span>
+            </div>
+          </div>
+        }
+        <div class="hum-auth__choice" [class.hum-auth__choice--on]="form.controls.payrollTemplateId.value === noTemplate">
+          <hum-radio
+            name="payrollTemplate"
+            [value]="noTemplate"
+            [label]="'register.form.payrollTemplateSkip' | translate"
+            [checked]="form.controls.payrollTemplateId.value === noTemplate"
+            (selected)="chooseTemplate($event)"
+          />
+          @if (form.controls.payrollTemplateId.value === noTemplate) {
+            <p class="hum-auth__choice-note">
+              {{ 'register.form.payrollManual' | translate }}
+              <a routerLink="/help/payroll-setup" target="_blank" rel="noopener">{{ 'register.form.payrollManualLink' | translate }}</a>
+            </p>
+          }
+        </div>
+      </fieldset>
+    } @else if (!planHasPayroll()) {
+      <p class="hum-auth__choices-hint">{{ 'register.form.payrollNotInPlan' | translate }}</p>
+    }
 
     <!-- Honeypot: hidden from people; bots that fill it in are ignored. -->
     <div class="lp-demo-form__hp" aria-hidden="true">

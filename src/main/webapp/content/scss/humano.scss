@@ -1601,6 +1601,10 @@ dt {
     0 1px 2px rgba(15, 23, 42, 0.04),
     0 24px 48px -24px rgba(15, 23, 42, 0.18);
 }
+/* Longer forms (sign-up, its payroll guide) get room for two fields per row. */
+.hum-auth__panel:has(.hum-auth-screen--wide) {
+  max-width: 640px;
+}
 /* The routed screen (login, reset, activate…) renders into its own host
    element, so the vertical rhythm between its head / alert / form / meta
    blocks lives here rather than on .hum-auth__panel. */
@@ -2033,6 +2037,7 @@ dt {
 .hum-auth__row {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: start;
   gap: var(--space-3);
 }
 .hum-auth__label-row {
@@ -2056,6 +2061,132 @@ dt {
   color: var(--text-default);
   cursor: pointer;
   user-select: none;
+}
+/* Public payroll set-up guide (formula reference): a wide reference page in the auth shell. */
+.hum-auth__panel:has(.hum-guide) {
+  max-width: 1040px;
+}
+.hum-guide .hum-auth__desc,
+.hum-guide__steps,
+.hum-guide__note {
+  max-width: 75ch;
+}
+.hum-guide__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-2);
+}
+.hum-guide__grid--compact {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-2) var(--space-4);
+}
+.hum-guide__var {
+  display: grid;
+  gap: 2px;
+}
+.hum-guide__section {
+  display: grid;
+  gap: var(--space-2);
+}
+.hum-guide__h2 {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-strong);
+}
+.hum-guide__h3 {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-default);
+}
+.hum-guide__steps {
+  margin: 0;
+  list-style: decimal;
+  padding-left: var(--space-5);
+  display: grid;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-default);
+}
+.hum-guide__note,
+.hum-guide__item-desc {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.hum-guide__item {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.hum-guide__item-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-strong);
+}
+.hum-guide__code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+  color: var(--text-strong);
+}
+.hum-guide__code--example {
+  color: var(--brand-text);
+}
+/* Sign-up: payroll template choice (radio cards). */
+.hum-auth__choices {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.hum-auth__choices-legend {
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-strong);
+}
+.hum-auth__choices-hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.hum-auth__choice {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+.hum-auth__choice--on {
+  border-color: var(--brand);
+  background: var(--brand-subtle);
+}
+.hum-auth__choice-note {
+  margin: 0;
+  padding-left: var(--space-6);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
+}
+.hum-auth__choice-note a {
+  color: var(--brand-text);
+  font-weight: var(--weight-medium);
+}
+.hum-auth__choice-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-left: var(--space-6);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 .hum-auth__meta {
   margin: var(--space-2) 0 0;
@@ -2191,6 +2322,9 @@ dt {
   }
   .hum-auth__ledger {
     display: none;
+  }
+  .hum-auth__row {
+    grid-template-columns: 1fr;
   }
 }
 

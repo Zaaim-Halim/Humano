@@ -20,7 +20,16 @@
       "workspace_invalid": "Use 3–25 lowercase letters, numbers or hyphens (not at the start or end).",
       "email": "Work email",
       "country": "Country",
-      "button": "Email me a confirmation link"
+      "button": "Email me a confirmation link",
+      "payrollTemplate": "Payroll template (optional)",
+      "payrollTemplateHint": "Start with the statutory taxes and contributions for your country. It is added switched off: you complete its settings under Payroll before your first run.",
+      "payrollTemplateNone": "We don't have a payroll template for this country yet. You can set up your own payroll rules in the workspace.",
+      "payrollTemplateSuggested": "Suggested",
+      "payrollTemplateRules": "Rules for {{ period }}, paid in {{ currency }}",
+      "payrollTemplateSkip": "No template — I'll set up payroll myself",
+      "payrollManual": "You'll set up payroll yourself in the workspace: pay components and rules whose amounts you write as formulas, with functions such as #pct, #min, #cap and #band.",
+      "payrollManualLink": "How to set up payroll with formulas",
+      "payrollNotInPlan": "The plan you chose doesn't include payroll. Choose a plan with payroll to start with a statutory payroll template."
     },
     "sent": {
       "heading": "Check your inbox",
@@ -59,7 +68,9 @@
       "subdomaininvalid": "Use 3–25 lowercase letters, numbers or hyphens for the organization ID.",
       "planunavailable": "This plan is no longer available. Please pick another one.",
       "invalidlink": "This link is not valid. Please use the link from your email, or start again.",
-      "linkexpired": "This link has expired. Please start again — it only takes a minute."
+      "linkexpired": "This link has expired. Please start again — it only takes a minute.",
+      "payrolltemplateunavailable": "This payroll template is no longer available. Choose another one or none.",
+      "payrollnotinplan": "The plan you chose doesn't include payroll, so a payroll template can't be added."
     },
     "strength": {
       "label": "Password strength:",
@@ -68,6 +79,22 @@
       "fair": "Fair",
       "good": "Good",
       "strong": "Strong"
+    },
+    "payrollGuide": {
+      "title": "Set up payroll with formulas",
+      "heading": "Setting up payroll without a template",
+      "intro": "When there is no statutory template for your country — or you chose not to use one — you configure payroll yourself: each earning, deduction and employer charge is a pay component whose amount is a formula.",
+      "stepsHeading": "In your workspace",
+      "step1": "Open Payroll → Pay rules. The earnings, deductions and employer charges there are your pay components; add one for every tax, contribution and benefit you pay.",
+      "step2": "Give each component a rule: a formula that computes the amount for the pay period, built from the functions and variables below — for example #pct(#min(#grossSalary, 5000), 9.5) for a 9.5% contribution capped at 5,000.",
+      "step3": "For progressive income tax, use #band with your country's brackets (annualise monthly pay with × 12 and divide back when the brackets are annual), or set up tax brackets.",
+      "step4": "Use each rule's effective dates when rates change, so past periods keep the rates that applied then.",
+      "step5": "Run payroll for one period, compare the payslips with an amount you trust, then post.",
+      "responsibility": "You are responsible for the rates and ceilings you enter. Where Humano has a statutory template for your country, it keeps them up to date for you.",
+      "recipesHeading": "Worked examples",
+      "functionsHeading": "Functions",
+      "variablesHeading": "Variables",
+      "back": "Back to sign-up"
     }
   }
 }

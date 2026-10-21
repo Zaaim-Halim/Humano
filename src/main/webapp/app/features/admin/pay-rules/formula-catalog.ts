@@ -53,7 +53,7 @@ export const FUNCTION_DOCS: Record<string, FunctionDoc> = {
     params: ['a', 'b'],
     returns: 'number',
     description: 'The smaller of two values.',
-    example: '#min(#grossSalary, 176100)',
+    example: '#min(#grossSalary, 15375)',
   },
   max: {
     category: 'math',
@@ -127,7 +127,7 @@ export const FUNCTION_DOCS: Record<string, FunctionDoc> = {
     params: ['value', 'bands'],
     returns: 'number',
     description: 'Progressive brackets. bands is a list of {low, high, rate}.',
-    example: '#band(#max(0, #grossSalary * 12 - 12570), {{0, 37700, 0.20}, {37700, 112430, 0.40}}) / 12',
+    example: '#band(#max(0, #grossSalary * 12 - 12570), {{0, 37700, 0.20}, {37700, 112570, 0.40}}) / 12',
   },
 
   // ----- Dates -----
@@ -259,8 +259,9 @@ export interface Recipe {
 export const RECIPES: Recipe[] = [
   {
     title: 'US Social Security (6.2%, capped)',
-    description: '6.2% of wages up to the annual cap.',
-    formula: '#pct(#min(#grossSalary, 176100), 6.2)',
+    description:
+      '6.2% of monthly wages up to 15,375 (the 2026 wage base of 184,500 / 12). An approximation: the real cap applies to wages paid so far in the year, as the US federal template does.',
+    formula: '#pct(#min(#grossSalary, 15375), 6.2)',
   },
   {
     title: 'Romania CAS (25%, capped)',
@@ -268,9 +269,10 @@ export const RECIPES: Recipe[] = [
     formula: '#cap(#pct(#grossSalary, 25), 24 * #MINIMUM_WAGE)',
   },
   {
-    title: 'UK PAYE (progressive bands)',
-    description: 'Banded income tax above the personal allowance. Annual bands, so monthly pay is annualised (× 12) and divided back.',
-    formula: '#band(#max(0, #grossSalary * 12 - 12570), {{0, 37700, 0.20}, {37700, 112430, 0.40}, {112430, 9999999, 0.45}}) / 12',
+    title: 'UK income tax (progressive bands, 2026/27)',
+    description:
+      'Banded income tax above the 12,570 personal allowance (England, Wales and NI rates). Annual bands, so monthly pay is annualised (× 12) and divided back. Not PAYE itself: no tax codes or cumulative basis, which the UK template applies exactly.',
+    formula: '#band(#max(0, #grossSalary * 12 - 12570), {{0, 37700, 0.20}, {37700, 112570, 0.40}, {112570, 9999999, 0.45}}) / 12',
   },
   {
     title: 'Seniority bonus (5%/yr, cap 30%)',

@@ -1,30 +1,38 @@
 package com.humano.service.signup;
 
+import com.humano.domain.billing.Feature;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.payroll.OrganizationSettings;
 import com.humano.domain.tenant.Tenant;
 import com.humano.dto.billing.requests.CreateSubscriptionRequest;
+import com.humano.dto.payroll.request.ConfigurePayrollTemplateRequest;
 import com.humano.dto.signup.CompleteSignupRequest;
 import com.humano.dto.signup.SignupView;
 import com.humano.dto.signup.StartSignupRequest;
 import com.humano.dto.signup.SubdomainCheck;
 import com.humano.dto.tenant.TenantRegistrationDTO;
+import com.humano.repository.billing.FeatureRepository;
+import com.humano.repository.billing.PlanFeatureRepository;
 import com.humano.repository.billing.SubscriptionPlanRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.payroll.OrganizationSettingsRepository;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.billing.BillingMailService;
 import com.humano.service.billing.SubscriptionService;
+import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.errors.BadRequestAlertException;
 import com.humano.service.multitenancy.TenantProvisioningService;
+import com.humano.service.payroll.template.PayrollTemplateService;
+import com.humano.service.payroll.template.PayrollTemplateSuggestions;
 import com.humano.tenancy.MultiTenantProperties;
 import com.humano.tenancy.TenantContext;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
@@ -52,8 +60,8 @@ import tech.jhipster.config.JHipsterProperties;
  *   <li>{@link #complete}: opening the link confirms the email; the person chooses their name and
  *       password, and the workspace is recorded (a {@link Tenant}, whose demo contact fields hold who
  *       signed up) and set up in the background, like a demo workspace.</li>
- *   <li>Once it is ready the trial starts (a {@code TRIAL} subscription on the chosen plan) and the
- *       welcome email goes out. The same link follows the setup ({@link #view}) and retries a failed
+ *   <li>Once it is ready the trial starts (a {@code TRIAL} subscription on the chosen plan), the payroll
+ *       template the visitor chose (if any) is recorded in the workspace, and the welcome email goes out. The same link follows the setup ({@link #view}) and retries a failed
  *       one — provisioning resumes where it stopped.</li>
  * </ol>
  * One trial per email: signing up again with an address that already has a workspace emails a
@@ -107,6 +115,10 @@ public class SignupService {
     private final Executor executor;
     private final TransactionTemplate masterTx;
     private final TransactionTemplate tenantTx;
+    private final PayrollTemplateSuggestions suggestions;
+    private final PayrollTemplateService payrollTemplateService;
+    private final FeatureRepository featureRepository;
+    private final PlanFeatureRepository planFeatureRepository;
 
     /** Workspaces whose setup is running in this instance right now. */
     private final Set<UUID> running = ConcurrentHashMap.newKeySet();
@@ -125,7 +137,11 @@ public class SignupService {
         Environment environment,
         @Qualifier("taskExecutor") Executor executor,
         @Qualifier("masterTransactionManager") PlatformTransactionManager masterTransactionManager,
-        @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager
+        @Qualifier("tenantTransactionManager") PlatformTransactionManager tenantTransactionManager,
+        PayrollTemplateSuggestions suggestions,
+        PayrollTemplateService payrollTemplateService,
+        FeatureRepository featureRepository,
+        PlanFeatureRepository planFeatureRepository
     ) {
         this.tenantRepository = tenantRepository;
         this.planRepository = planRepository;
@@ -141,6 +157,10 @@ public class SignupService {
         this.executor = executor;
         this.masterTx = new TransactionTemplate(masterTransactionManager);
         this.tenantTx = new TransactionTemplate(tenantTransactionManager);
+        this.suggestions = suggestions;
+        this.payrollTemplateService = payrollTemplateService;
+        this.featureRepository = featureRepository;
+        this.planFeatureRepository = planFeatureRepository;
     }
 
     /** Whether a workspace address can be used (the form checks it as the visitor types). */
@@ -176,6 +196,17 @@ public class SignupService {
             throw new BadRequestAlertException("This workspace address cannot be used", ENTITY_NAME, "subdomain" + check.reason());
         }
         SubscriptionPlan plan = masterTx.execute(tx -> planOnSale(request.planId()));
+        String templateId = request.payrollTemplateId() == null || request.payrollTemplateId().isBlank()
+            ? null
+            : request.payrollTemplateId().trim();
+        if (templateId != null) {
+            if (suggestions.suitable(templateId, request.country()).isEmpty()) {
+                throw new BadRequestAlertException("This payroll template is not available", ENTITY_NAME, "payrolltemplateunavailable");
+            }
+            if (!Boolean.TRUE.equals(masterTx.execute(tx -> planIncludesPayroll(plan.getId())))) {
+                throw new BadRequestAlertException("This plan does not include payroll", ENTITY_NAME, "payrollnotinplan");
+            }
+        }
 
         Optional<Tenant> existing = masterTx.execute(tx -> ownWorkspace(email));
         if (existing != null && existing.isPresent()) {
@@ -193,6 +224,7 @@ public class SignupService {
                 request.country(),
                 validZone(request.timezone()),
                 plan.getId(),
+                templateId,
                 Instant.now().plus(LINK_VALID_HOURS, ChronoUnit.HOURS)
             )
         );
@@ -302,6 +334,7 @@ public class SignupService {
                     provisioningService.provisionTenant(registration);
                 }
                 applyTimezone(tenant.getSubdomain(), registration.getTimezone());
+                recordPayrollTemplate(tenant.getSubdomain(), p);
                 // The trial starts when the workspace is ready, not when the email was confirmed.
                 if (subscriptionRepository.findByTenantId(id).isEmpty()) {
                     subscriptionService.createSubscription(
@@ -349,6 +382,49 @@ public class SignupService {
                 TenantContext.clear();
             }
         }
+    }
+
+    /**
+     * The payroll template chosen at sign-up, recorded in the workspace but not enabled: enabling it
+     * needs the employer's settings (and each employee's profile), which an administrator fills in
+     * first. Re-checked against the catalog, which can change between sign-up and setup; a template
+     * that is no longer offered is skipped, never fatal to the setup. Idempotent on retry.
+     */
+    private void recordPayrollTemplate(String subdomain, SignupLink.Payload p) {
+        if (p.payrollTemplateId() == null) {
+            return;
+        }
+        if (suggestions.suitable(p.payrollTemplateId(), p.country()).isEmpty()) {
+            log.warn("Payroll template {} chosen at sign-up of '{}' is no longer offered; skipped", p.payrollTemplateId(), subdomain);
+            return;
+        }
+        String previous = TenantContext.getCurrentTenant();
+        TenantContext.setCurrentTenant(subdomain);
+        try {
+            payrollTemplateService.configure(p.payrollTemplateId(), new ConfigurePayrollTemplateRequest(false, Map.of()));
+            log.info("Workspace '{}' starts with payroll template {} (not enabled yet)", subdomain, p.payrollTemplateId());
+        } catch (RuntimeException e) {
+            log.warn("Could not record payroll template {} for '{}': {}", p.payrollTemplateId(), subdomain, e.getMessage());
+        } finally {
+            if (previous != null) {
+                TenantContext.setCurrentTenant(previous);
+            } else {
+                TenantContext.clear();
+            }
+        }
+    }
+
+    /** As the workspace's entitlements will see it: included unless the feature catalog gates payroll and the plan lacks it. */
+    private boolean planIncludesPayroll(UUID planId) {
+        if (featureRepository.findOneByCode(FeatureCodes.PAYROLL).filter(Feature::isActive).isEmpty()) {
+            return true;
+        }
+        return planFeatureRepository
+            .findAllWithPlanAndFeature()
+            .stream()
+            .anyMatch(
+                pf -> pf.getPlan().getId().equals(planId) && FeatureCodes.PAYROLL.equals(pf.getFeature().getCode()) && pf.isIncluded()
+            );
     }
 
     private SignupView toView(SignupLink.Payload p, Tenant tenant) {

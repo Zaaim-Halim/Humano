@@ -23,6 +23,7 @@ export interface PublicPlan {
 
 export interface PublicFeature {
   id: string;
+  code: string;
   name: string;
   description: string | null;
   category: string | null;
@@ -50,7 +51,23 @@ export interface SignupForm {
   country: string;
   timezone?: string;
   planId: string;
+  /** The statutory payroll template the workspace starts with; omitted when the visitor chose none. */
+  payrollTemplateId?: string;
   website?: string;
+}
+
+/** `GET /api/public/payroll-templates?country=` — a template a new workspace in that country can start with. */
+export interface PublicPayrollTemplate {
+  id: string;
+  name: string;
+  version: string;
+  status: 'OFFICIAL_VECTORS' | 'LAW_DERIVED' | 'DRAFT';
+  country: string;
+  currency: string;
+  validFrom: string;
+  validTo: string;
+  payFrequencies: string[];
+  limitations: string[];
 }
 
 /** `GET /api/public/signup/subdomains/{subdomain}`. */
@@ -82,6 +99,11 @@ export class MarketingService {
 
   requestDemo(form: DemoRequestForm): Observable<void> {
     return this.http.post<void>(this.config.getEndpointFor('api/public/demo-requests'), form);
+  }
+
+  /** Statutory payroll templates for a country, the one valid longest first. */
+  payrollTemplates(country: string): Observable<PublicPayrollTemplate[]> {
+    return this.http.get<PublicPayrollTemplate[]>(this.config.getEndpointFor('api/public/payroll-templates'), { params: { country } });
   }
 
   checkSubdomain(subdomain: string): Observable<SubdomainCheck> {

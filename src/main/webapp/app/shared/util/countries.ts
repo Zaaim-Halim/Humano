@@ -23,6 +23,9 @@ export const COMMON_COUNTRIES = [
   'SG',
   'AU',
   'BR',
+  // Countries with a shipped payroll template.
+  'AL',
+  'BG',
 ] as const;
 
 /** `FR` → `France` in the given language (the code itself if the browser can't name it). */
