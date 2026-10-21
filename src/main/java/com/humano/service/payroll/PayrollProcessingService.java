@@ -814,6 +814,7 @@ public class PayrollProcessingService {
                     employee.getFte(),
                     employee.getBirthDate(),
                     employee.getStartDate(),
+                    employedThroughout(employee, period),
                     applied.settings(),
                     applied.attributes(),
                     payrollTemplateService.yearToDate(employee.getId(), template, period.getStartDate(), period.getPaymentDate())

@@ -27,6 +27,7 @@ import java.util.Map;
  * @param fte             full-time equivalent (1 when unknown)
  * @param birthDate       date of birth, or null when unknown
  * @param employmentStartDate first day of employment, or null when unknown
+ * @param employedThroughout employed from the first to the last day of the period
  * @param employer        the tenant's raw settings for the template
  * @param employee        the employee's raw attributes for the template
  * @param ytd             year-to-date sums before this period ({@link YtdAccess} keys)
@@ -48,6 +49,7 @@ public record TemplateInput(
     BigDecimal fte,
     LocalDate birthDate,
     LocalDate employmentStartDate,
+    boolean employedThroughout,
     Map<String, String> employer,
     Map<String, String> employee,
     Map<String, BigDecimal> ytd

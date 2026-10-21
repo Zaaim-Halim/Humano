@@ -25,7 +25,10 @@ import org.junit.jupiter.api.Test;
 class ShippedPayrollTemplatesTest {
 
     private final PayrollTemplateExtensionRegistry extensions = new PayrollTemplateExtensionRegistry(
-        List.of(new com.humano.service.payroll.template.extension.uk.UkPayeTaxTableRoutines())
+        List.of(
+            new com.humano.service.payroll.template.extension.uk.UkPayeTaxTableRoutines(),
+            new com.humano.service.payroll.template.extension.de.DeLohnsteuerPap2026()
+        )
     );
     private final PayrollTemplateCatalog catalog = new PayrollTemplateCatalog(
         new PayrollTemplateValidator(extensions),
@@ -216,6 +219,34 @@ class ShippedPayrollTemplatesTest {
         assertThat(nl.tables().get("maxPremiumWage").versions().get(0).rows())
             .extracting(r -> r.key() + "=" + plain(r.values().get(0)))
             .containsExactlyInAnyOrder("MONTHLY=6617.41", "WEEKLY=1527.09");
+    }
+
+    @Test
+    void germanFiguresMatchTheStatutes() {
+        PayrollTemplate de = catalog.find("de-employment").orElseThrow();
+        Map<String, String> values = de
+            .parameters()
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> plain(e.getValue().get(0).value())));
+        // SVBezGrV 2026 §§ 2, 4; § 241 SGB V; BSV 2018; § 341 SGB III; PBAV 2025 / § 55, § 58 SGB XI; § 360 SGB III.
+        // Regular wages count in the year the pay period ends (§ 38a Abs. 1 Satz 2 EStG), not when they are paid.
+        assertThat(de.effectiveDateBasis()).isEqualTo(PayrollTemplate.DateBasis.PERIOD);
+        assertThat(values)
+            .containsEntry("kvBbgMonth", "5812.5")
+            .containsEntry("rvBbgMonth", "8450")
+            .containsEntry("kvHalf", "0.073")
+            .containsEntry("rvHalf", "0.093")
+            .containsEntry("avHalf", "0.013")
+            .containsEntry("pvHalf", "0.018")
+            .containsEntry("pvSaxonyEmployee", "0.023")
+            .containsEntry("pvSaxonyEmployer", "0.013")
+            .containsEntry("pvChildless", "0.006")
+            .containsEntry("pvChildReduction", "0.0025")
+            .containsEntry("insolvencyLevy", "0.0015")
+            .containsEntry("churchRate", "0.09")
+            .containsEntry("churchRateByBw", "0.08");
+        assertThat(de.steps()).anySatisfy(s -> assertThat(s.extension()).isEqualTo("de.lohnsteuer-pap-2026"));
     }
 
     private static String plain(BigDecimal value) {

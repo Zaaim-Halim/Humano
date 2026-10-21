@@ -1,0 +1,2375 @@
+{
+  "schemaVersion": 1,
+  "id": "de-employment",
+  "name": "Deutschland — Lohnsteuer, Solidaritätszuschlag, Kirchensteuer und Gesamtsozialversicherungsbeitrag",
+  "version": "2026.1.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": {
+    "country": "DE"
+  },
+  "validity": {
+    "from": "2026-01-01",
+    "to": "2026-12-31"
+  },
+  "currency": "EUR",
+  "payFrequencies": ["MONTHLY"],
+  "taxYearStart": "--01-01",
+  "dateBasis": "PERIOD",
+  "rounding": {
+    "scale": 2,
+    "mode": "HALF_UP"
+  },
+  "changelog": [
+    {
+      "version": "2026.1.0",
+      "date": "2026-10-21",
+      "summary": "2026: Lohnsteuer, Solidaritätszuschlag and Maßstabsteuer by the BMF PAP 2026 (generated from the official XML pseudocode); Kirchensteuer; KV, RV, AV, PV contributions and the U1, U2, U3 levies for regular monthly wages."
+    }
+  ],
+  "sources": {
+    "bmf-pap-2026": {
+      "title": "BMF-Schreiben vom 12. November 2025 (IV C 5 - S 2361/00025/016/028), Anlage 1: Programmablaufplan für die maschinelle Berechnung der vom Arbeitslohn einzubehaltenden Lohnsteuer, des Solidaritätszuschlags und der Maßstabsteuer für die Kirchenlohnsteuer für 2026; XML-Pseudocode Lohnsteuer2026 (ITZBund)",
+      "url": "https://www.bmf-steuerrechner.de/javax.faces.resource/daten/xmls/Lohnsteuer2026.xml.xhtml",
+      "retrieved": "2026-10-21"
+    },
+    "estg": {
+      "title": "Einkommensteuergesetz §§ 9a, 10c, 24a, 24b, 32 Abs. 6, 32a, 39b, 39f, 51a",
+      "url": "https://www.gesetze-im-internet.de/estg/",
+      "retrieved": "2026-10-21"
+    },
+    "solzg": {
+      "title": "Solidaritätszuschlaggesetz 1995 §§ 3, 4",
+      "url": "https://www.gesetze-im-internet.de/solzg_1995/",
+      "retrieved": "2026-10-21"
+    },
+    "svbezgrv-2026": {
+      "title": "Sozialversicherungsrechengrößen-Verordnung 2026 §§ 2, 4 (BGBl. 2025 I Nr. 278)",
+      "url": "https://www.gesetze-im-internet.de/svbezgrv_2026/",
+      "retrieved": "2026-10-21"
+    },
+    "sgb5": {
+      "title": "SGB V § 241 (allgemeiner Beitragssatz 14,6 %), § 242 (Zusatzbeitrag), § 249 (Tragung)",
+      "url": "https://www.gesetze-im-internet.de/sgb_5/__241.html",
+      "retrieved": "2026-10-21"
+    },
+    "bsv-2018": {
+      "title": "Beitragssatzverordnung 2018 § 1: allgemeine Rentenversicherung 18,6 % (no later Beitragssatzverordnung)",
+      "url": "https://www.gesetze-im-internet.de/bsv_2018/__1.html",
+      "retrieved": "2026-10-21"
+    },
+    "sgb3": {
+      "title": "SGB III § 341 (Arbeitslosenversicherung 2,6 %), §§ 358, 360 (Insolvenzgeldumlage 0,15 % of the RV wage)",
+      "url": "https://www.gesetze-im-internet.de/sgb_3/__341.html",
+      "retrieved": "2026-10-21"
+    },
+    "sgb11": {
+      "title": "SGB XI § 55 (Beitragssatz, Kinderlosenzuschlag 0,6, Abschläge 0,25), § 58 (Tragung, Sachsen); PBAV 2025 § 1 (3,6 %)",
+      "url": "https://www.gesetze-im-internet.de/pbav_2025/__1.html",
+      "retrieved": "2026-10-21"
+    },
+    "aag": {
+      "title": "Aufwendungsausgleichsgesetz §§ 1, 7 (U1 for employers with up to 30 employees, U1/U2 on the RV wage)",
+      "url": "https://www.gesetze-im-internet.de/aufag/__7.html",
+      "retrieved": "2026-10-21"
+    },
+    "bvv": {
+      "title": "Beitragsverfahrensverordnung §§ 1, 2 (calendar month, rounding, halves)",
+      "url": "https://www.gesetze-im-internet.de/beitrvv/__2.html",
+      "retrieved": "2026-10-21"
+    },
+    "sgb4": {
+      "title": "SGB IV § 20 Abs. 2 (Übergangsbereich up to 2 000 EUR)",
+      "url": "https://www.gesetze-im-internet.de/sgb_4/__20.html",
+      "retrieved": "2026-10-21"
+    },
+    "sgb6": {
+      "title": "SGB VI § 5 Abs. 4, § 172 (pensioners, Regelaltersgrenze: employer-only share), § 235 (Regelaltersgrenze)",
+      "url": "https://www.gesetze-im-internet.de/sgb_6/__235.html",
+      "retrieved": "2026-10-21"
+    },
+    "ekd-kist-2026": {
+      "title": "EKD-Statistik Kirchensteuer: Kirchensteuerhebesatz 9 %, in Baden-Württemberg und Bayern 8 % (2026)",
+      "url": "https://www.ekd.de/statistik-kirchensteuer-44297.htm",
+      "retrieved": "2026-10-21"
+    },
+    "kist-rounding": {
+      "title": "Kirchensteuerbeschluss der Nordkirche § 7 Abs. 2 and the Bavarian KirchStG: fractions of a cent are disregarded",
+      "url": "https://www.kirchenrecht-nordkirche.de/document/28498",
+      "retrieved": "2026-10-21"
+    }
+  },
+  "inputs": {
+    "employer": [
+      {
+        "key": "state",
+        "type": "ENUM",
+        "required": true,
+        "values": ["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"],
+        "description": "Bundesland of the Betriebsstätte: Kirchensteuer rate (8 % in BY and BW, 9 % elsewhere) and care-insurance split in Sachsen (taken as the place of work)"
+      },
+      {
+        "key": "u1Participation",
+        "type": "BOOLEAN",
+        "required": true,
+        "description": "The employer takes part in the U1 procedure (as a rule up to 30 employees, § 1 AAG)"
+      },
+      {
+        "key": "insolvencyLevyExempt",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Public employer not liable for the Insolvenzgeldumlage (§ 358 Abs. 1 SGB III)"
+      }
+    ],
+    "employee": [
+      {
+        "key": "taxClass",
+        "type": "ENUM",
+        "required": true,
+        "values": ["1", "2", "3", "4", "5", "6"],
+        "description": "Steuerklasse (ELStAM)"
+      },
+      {
+        "key": "childAllowances",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "max": 20,
+        "defaultValue": "0",
+        "description": "Zahl der Kinderfreibeträge (ELStAM, e.g. 0.5, 1.0, 1.5)"
+      },
+      {
+        "key": "churchMember",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Kirchensteuerpflichtig (a church-tax religion in ELStAM)"
+      },
+      {
+        "key": "taxAllowance",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "defaultValue": "0",
+        "description": "Monatlicher Freibetrag (ELStAM) in EUR"
+      },
+      {
+        "key": "taxAddition",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "defaultValue": "0",
+        "description": "Monatlicher Hinzurechnungsbetrag (ELStAM) in EUR"
+      },
+      {
+        "key": "factor",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0.001,
+        "max": 0.999,
+        "description": "Faktor (§ 39f EStG, Steuerklasse IV only, three decimals)"
+      },
+      {
+        "key": "healthFundAdditionalRate",
+        "type": "DECIMAL",
+        "required": true,
+        "min": 0,
+        "max": 10,
+        "description": "Kassenindividueller Zusatzbeitragssatz of the employee's Krankenkasse in percent (e.g. 2.90)"
+      },
+      {
+        "key": "pvParent",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Elterneigenschaft nachgewiesen (§ 55 Abs. 3a SGB XI); without proof the childless surcharge applies from age 23"
+      },
+      {
+        "key": "pvChildrenUnder25",
+        "type": "INTEGER",
+        "required": false,
+        "min": 0,
+        "max": 20,
+        "defaultValue": "0",
+        "description": "Nachgewiesene Kinder unter 25 Jahren (reductions from the 2nd to the 5th child)"
+      },
+      {
+        "key": "employmentType",
+        "type": "ENUM",
+        "required": true,
+        "values": ["REGULAR", "MIDIJOB", "MINIJOB"],
+        "description": "REGULAR employment (regular wage above 2 000 EUR); Midijobs (Übergangsbereich) and Minijobs are not supported"
+      },
+      {
+        "key": "privateHealthInsurance",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Privately health-insured (not supported)"
+      },
+      {
+        "key": "oldAgePensioner",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Draws an old-age pension (Altersrente) or a Versorgung (other contribution groups and KV rate — not supported)"
+      },
+      {
+        "key": "pensionInsuranceExempt",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Exempt from statutory pension insurance, e.g. member of a berufsständische Versorgungseinrichtung (not supported)"
+      },
+      {
+        "key": "u1Rate",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "max": 10,
+        "defaultValue": "0",
+        "description": "U1 Umlagesatz of the employee's Krankenkasse in percent (when the employer takes part in U1)"
+      },
+      {
+        "key": "u2Rate",
+        "type": "DECIMAL",
+        "required": true,
+        "min": 0,
+        "max": 10,
+        "description": "U2 Umlagesatz of the employee's Krankenkasse in percent"
+      }
+    ]
+  },
+  "parameters": {
+    "kvBbgMonth": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "5812.50",
+        "source": "svbezgrv-2026"
+      }
+    ],
+    "rvBbgMonth": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "8450",
+        "source": "svbezgrv-2026"
+      }
+    ],
+    "kvHalf": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.073",
+        "source": "sgb5"
+      }
+    ],
+    "rvHalf": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.093",
+        "source": "bsv-2018"
+      }
+    ],
+    "avHalf": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.013",
+        "source": "sgb3"
+      }
+    ],
+    "pvHalf": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.018",
+        "source": "sgb11"
+      }
+    ],
+    "pvSaxonyEmployee": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.023",
+        "source": "sgb11"
+      }
+    ],
+    "pvSaxonyEmployer": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.013",
+        "source": "sgb11"
+      }
+    ],
+    "pvChildless": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.006",
+        "source": "sgb11"
+      }
+    ],
+    "pvChildReduction": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0025",
+        "source": "sgb11"
+      }
+    ],
+    "insolvencyLevy": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0015",
+        "source": "sgb3"
+      }
+    ],
+    "churchRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.09",
+        "source": "ekd-kist-2026"
+      }
+    ],
+    "churchRateByBw": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.08",
+        "source": "ekd-kist-2026"
+      }
+    ],
+    "transitionZoneUpper": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "2000",
+        "source": "sgb4"
+      }
+    ]
+  },
+  "tables": {},
+  "steps": [
+    {
+      "id": "calendarMonth",
+      "type": "REQUIRE",
+      "condition": "#isCalendarMonth",
+      "message": "German contributions are computed per calendar month (BVV § 1): the pay period must be a calendar month"
+    },
+    {
+      "id": "wholeMonth",
+      "type": "REQUIRE",
+      "condition": "#employedThroughout",
+      "message": "Joining or leaving during the month (Teillohnzahlungszeitraum, anteilige Beitragsbemessungsgrenze) is not supported: employ the whole calendar month"
+    },
+    {
+      "id": "noBonus",
+      "type": "REQUIRE",
+      "condition": "#earningsByComponent['BONUS'] == 0",
+      "message": "Sonstige Bezüge (bonus, Weihnachts-/Urlaubsgeld) need the annual-wage method and one-off-payment contribution rules, which this template does not support"
+    },
+    {
+      "id": "noPreTax",
+      "type": "REQUIRE",
+      "condition": "#preTaxDeductions == 0",
+      "message": "Pre-tax deductions (Entgeltumwandlung, § 3 Nr. 63 EStG / § 1 SvEV) are not supported"
+    },
+    {
+      "id": "regular",
+      "type": "REQUIRE",
+      "condition": "#employee['employmentType'] == 'REGULAR'",
+      "message": "Midijob (Übergangsbereich) and Minijob employment are not supported"
+    },
+    {
+      "id": "aboveTransitionZone",
+      "type": "REQUIRE",
+      "when": "#reductions == 0",
+      "condition": "#socialEarnings - #reductions > #p['transitionZoneUpper']",
+      "message": "A regular monthly wage of 2 000 EUR or less is in the Übergangsbereich (§ 20 Abs. 2 SGB IV) or below; such employment (and apprentices' low wages) is not supported"
+    },
+    {
+      "id": "statutoryHealth",
+      "type": "REQUIRE",
+      "condition": "!#employee['privateHealthInsurance']",
+      "message": "Employees with private health insurance are not supported"
+    },
+    {
+      "id": "standardGroups",
+      "type": "REQUIRE",
+      "condition": "!#employee['oldAgePensioner'] and !#employee['pensionInsuranceExempt']",
+      "message": "Old-age pensioners and employees exempt from statutory pension insurance pay other contribution groups (§ 5 Abs. 4 and § 172 SGB VI, § 243 SGB V), which this template does not support"
+    },
+    {
+      "id": "belowStandardRetirementAge",
+      "type": "REQUIRE",
+      "condition": "#ageAtPeriodEnd < 66",
+      "message": "From the Regelaltersgrenze (66 years and some months for those born from 1958, § 235 SGB VI) unemployment and pension insurance change to employer-only shares (§ 28, § 346 Abs. 3 SGB III, § 172 SGB VI); employees aged 66 or over are not supported"
+    },
+    {
+      "id": "factorClassIV",
+      "type": "REQUIRE",
+      "when": "#employee['factor'] != null",
+      "condition": "#employee['taxClass'] == '4' and #employee['taxAllowance'] == 0",
+      "message": "A Faktor (§ 39f EStG) applies only in Steuerklasse IV and not together with a Freibetrag"
+    },
+    {
+      "id": "noAdditionClassVI",
+      "type": "REQUIRE",
+      "when": "#employee['taxAddition'] > 0",
+      "condition": "#employee['taxClass'] != '6'",
+      "message": "A Hinzurechnungsbetrag is not possible in Steuerklasse VI"
+    },
+    {
+      "id": "alter1",
+      "type": "VALUE",
+      "expr": "#birthDate.plusYears(64).minusDays(1) < #taxYearStartDate ? 1 : 0"
+    },
+    {
+      "id": "ajahr",
+      "type": "VALUE",
+      "expr": "#birthDate.plusYears(64).minusDays(1).getYear() + 1"
+    },
+    {
+      "id": "pvChildless",
+      "type": "VALUE",
+      "expr": "!#employee['pvParent'] and #birthYear >= 1940 and #periodStart >= #birthDate.plusYears(23).minusDays(1).withDayOfMonth(1).plusMonths(1) ? 1 : 0"
+    },
+    {
+      "id": "pvReductions",
+      "type": "VALUE",
+      "expr": "#employee['pvParent'] ? #min(#pos(#employee['pvChildrenUnder25'] - 1), 4) : 0"
+    },
+    {
+      "id": "saxony",
+      "type": "VALUE",
+      "expr": "#employer['state'] == 'SN' ? 1 : 0"
+    },
+    {
+      "id": "pap",
+      "type": "EXTENSION",
+      "extension": "de.lohnsteuer-pap-2026",
+      "source": "bmf-pap-2026",
+      "inputs": {
+        "stkl": "#employee['taxClass']",
+        "lzz": "2",
+        "wage": "#pos(#taxableEarnings - #reductions)",
+        "allowance": "#employee['taxAllowance']",
+        "addition": "#employee['taxAddition']",
+        "childAllowances": "#employee['childAllowances']",
+        "church": "#employee['churchMember'] ? 1 : 0",
+        "kvz": "#employee['healthFundAdditionalRate']",
+        "pvs": "#saxony",
+        "pvz": "#pvChildless",
+        "pva": "#pvReductions",
+        "alter1": "#alter1",
+        "ajahr": "#ajahr",
+        "factorProcedure": "#employee['factor'] != null ? 1 : 0",
+        "factor": "#coalesce(#employee['factor'], 1)"
+      }
+    },
+    {
+      "id": "lohnsteuer",
+      "type": "TAX",
+      "label": "Lohnsteuer",
+      "ledger": "INCOME_TAX",
+      "source": "bmf-pap-2026",
+      "base": "#pos(#taxableEarnings - #reductions)",
+      "amount": "#pap['lst']"
+    },
+    {
+      "id": "solidaritaetszuschlag",
+      "type": "TAX",
+      "label": "Solidaritätszuschlag",
+      "ledger": "OTHER",
+      "source": "bmf-pap-2026",
+      "amount": "#pap['solz']"
+    },
+    {
+      "id": "kirchensteuer",
+      "type": "TAX",
+      "label": "Kirchensteuer",
+      "ledger": "OTHER",
+      "source": "ekd-kist-2026",
+      "when": "#employee['churchMember']",
+      "base": "#pap['bk']",
+      "amount": "#round(#pap['bk'] * (#employer['state'] == 'BY' or #employer['state'] == 'BW' ? #p['churchRateByBw'] : #p['churchRate']), 2, 'FLOOR')"
+    },
+    {
+      "id": "kvBase",
+      "type": "VALUE",
+      "expr": "#min(#socialEarnings - #reductions, #p['kvBbgMonth'])"
+    },
+    {
+      "id": "rvBase",
+      "type": "VALUE",
+      "expr": "#min(#socialEarnings - #reductions, #p['rvBbgMonth'])"
+    },
+    {
+      "id": "kvRateHalf",
+      "type": "VALUE",
+      "expr": "#p['kvHalf'] + #divide(#employee['healthFundAdditionalRate'], 200, 8, 'HALF_UP')"
+    },
+    {
+      "id": "krankenversicherung",
+      "type": "CONTRIBUTION",
+      "label": "Krankenversicherung",
+      "ledger": "MEDICARE",
+      "source": "sgb5",
+      "base": "#kvBase",
+      "employee": {
+        "rate": "#kvRateHalf"
+      },
+      "employer": {
+        "rate": "#kvRateHalf"
+      }
+    },
+    {
+      "id": "rentenversicherung",
+      "type": "CONTRIBUTION",
+      "label": "Rentenversicherung",
+      "ledger": "PENSION_CONTRIBUTION",
+      "source": "bsv-2018",
+      "base": "#rvBase",
+      "employee": {
+        "rate": "#p['rvHalf']"
+      },
+      "employer": {
+        "rate": "#p['rvHalf']"
+      }
+    },
+    {
+      "id": "arbeitslosenversicherung",
+      "type": "CONTRIBUTION",
+      "label": "Arbeitslosenversicherung",
+      "ledger": "UNEMPLOYMENT",
+      "source": "sgb3",
+      "base": "#rvBase",
+      "employee": {
+        "rate": "#p['avHalf']"
+      },
+      "employer": {
+        "rate": "#p['avHalf']"
+      }
+    },
+    {
+      "id": "pflegeversicherung",
+      "type": "CONTRIBUTION",
+      "label": "Pflegeversicherung",
+      "ledger": "OTHER",
+      "source": "sgb11",
+      "base": "#kvBase",
+      "employee": {
+        "rate": "(#saxony == 1 ? #p['pvSaxonyEmployee'] : #p['pvHalf']) + (#pvChildless == 1 ? #p['pvChildless'] : 0) - #pvReductions * #p['pvChildReduction']"
+      },
+      "employer": {
+        "rate": "#saxony == 1 ? #p['pvSaxonyEmployer'] : #p['pvHalf']"
+      }
+    },
+    {
+      "id": "umlageU1",
+      "type": "CONTRIBUTION",
+      "label": "Umlage U1",
+      "ledger": "OTHER",
+      "source": "aag",
+      "when": "#employer['u1Participation']",
+      "base": "#rvBase",
+      "employer": {
+        "rate": "#divide(#employee['u1Rate'], 100, 8, 'HALF_UP')"
+      }
+    },
+    {
+      "id": "umlageU2",
+      "type": "CONTRIBUTION",
+      "label": "Umlage U2",
+      "ledger": "OTHER",
+      "source": "aag",
+      "base": "#rvBase",
+      "employer": {
+        "rate": "#divide(#employee['u2Rate'], 100, 8, 'HALF_UP')"
+      }
+    },
+    {
+      "id": "umlageU3",
+      "type": "CONTRIBUTION",
+      "label": "Insolvenzgeldumlage",
+      "ledger": "OTHER",
+      "source": "sgb3",
+      "when": "!#employer['insolvencyLevyExempt']",
+      "base": "#rvBase",
+      "employer": {
+        "rate": "#p['insolvencyLevy']"
+      }
+    }
+  ],
+  "limitations": [
+    "Regular monthly wages (laufender Arbeitslohn) for whole calendar months; joining or leaving mid-month, sonstige Bezüge (bonus, Weihnachts-/Urlaubsgeld) and Entgeltumwandlung are refused.",
+    "Beitragsgruppe 1111 (KV general rate, RV, AV, PV all statutory); Midijobs (Übergangsbereich), Minijobs, private health insurance, old-age pensioners, employees exempt from pension insurance, employees aged 66 or over (Regelaltersgrenze), Werkstudenten, apprentices below 2 000 EUR and other Personengruppen are refused or out of scope.",
+    "Voluntary KV members above the Jahresarbeitsentgeltgrenze are computed as in the Firmenzahlerverfahren (contribution withheld, employer share paid); Selbstzahler with a § 257 SGB V subsidy are not supported.",
+    "Kirchensteuer: 8 % in BY and BW, 9 % elsewhere, by the Betriebsstätte's Land, cents truncated; a Mindestkirchensteuer (where a church still levies one) and the Kappung are not applied.",
+    "Care insurance in Sachsen follows the employer's Land, taken as the place of work.",
+    "U1/U2 rates are the employee's Krankenkasse's; U1 applies when the employer takes part (§ 1 AAG).",
+    "Status LAW_DERIVED: the Lohnsteuer code is generated from the BMF's XML pseudocode and reproduced 180,000 amounts of an implementation written from the EStG text (all Steuerklassen, Kinderfreibeträge, church base, Sachsen, PV surcharge/reductions, Altersentlastungsbetrag, Frei-/Hinzurechnungsbeträge, Faktor); the BMF's own calculator interface has not been used."
+  ],
+  "testCases": [
+    {
+      "name": "Steuerklasse I, 4.000 EUR, childless, no church",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "524.50"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "350.00"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "350.00"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "372.00"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "372.00"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "52.00"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "52.00"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "96.00"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "72.00"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "9.60"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "6.00"
+        }
+      ]
+    },
+    {
+      "name": "Steuerklasse III, 6.500 EUR, 2 Kinderfreibeträge, church in NRW, parent of 2",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "6500.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "3",
+        "healthFundAdditionalRate": "2.50",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "childAllowances": "2.0",
+        "churchMember": "true",
+        "pvParent": "true",
+        "pvChildrenUnder25": "2"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "765.33"
+        },
+        {
+          "step": "kirchensteuer",
+          "side": "TAX",
+          "amount": "29.43"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "496.97"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "496.97"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "604.50"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "604.50"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "84.50"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "84.50"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "90.09"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "104.63"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "15.60"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "9.75"
+        }
+      ]
+    },
+    {
+      "name": "Steuerklasse IV with Faktor 0,912",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3800.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "4",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "factor": "0.912",
+        "churchMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "434.16"
+        },
+        {
+          "step": "kirchensteuer",
+          "side": "TAX",
+          "amount": "39.07"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "332.50"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "332.50"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "353.40"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "353.40"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "49.40"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "49.40"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "91.20"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "68.40"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "9.12"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "5.70"
+        }
+      ]
+    },
+    {
+      "name": "Steuerklasse II, single parent, 1 Kinderfreibetrag",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3100.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "2",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "childAllowances": "1.0",
+        "pvParent": "true",
+        "pvChildrenUnder25": "1"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "224.33"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "271.25"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "271.25"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "288.30"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "288.30"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "40.30"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "40.30"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "55.80"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "55.80"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "7.44"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "4.65"
+        }
+      ]
+    },
+    {
+      "name": "Steuerklasse V",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2600.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "5",
+        "healthFundAdditionalRate": "3.10",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "498.08"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "230.10"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "230.10"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "241.80"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "241.80"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "33.80"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "33.80"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "62.40"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "46.80"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "6.24"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "3.90"
+        }
+      ]
+    },
+    {
+      "name": "Steuerklasse VI (second job)",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2400.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "6",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "churchMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "476.41"
+        },
+        {
+          "step": "kirchensteuer",
+          "side": "TAX",
+          "amount": "42.87"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "210.00"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "210.00"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "223.20"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "223.20"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "31.20"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "31.20"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "57.60"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "43.20"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "5.76"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "3.60"
+        }
+      ]
+    },
+    {
+      "name": "above both contribution ceilings, church in Bavaria (8 %)",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "9500.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "BY",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "churchMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "2422.75"
+        },
+        {
+          "step": "solidaritaetszuschlag",
+          "side": "TAX",
+          "amount": "86.50"
+        },
+        {
+          "step": "kirchensteuer",
+          "side": "TAX",
+          "amount": "193.82"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "508.59"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "508.59"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "785.85"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "785.85"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "109.85"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "109.85"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "139.50"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "104.63"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "20.28"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "12.68"
+        }
+      ]
+    },
+    {
+      "name": "Sachsen: employee 2,3 % plus 0,6 % childless, employer 1,3 %",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4500.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "SN",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "642.91"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "393.75"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "393.75"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "418.50"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "418.50"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "58.50"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "58.50"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "130.50"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "58.50"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "10.80"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "6.75"
+        }
+      ]
+    },
+    {
+      "name": "parent of 5 children under 25: four 0,25-point reductions",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5200.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "3",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "childAllowances": "5.0",
+        "pvParent": "true",
+        "pvChildrenUnder25": "5"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "465.33"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "455.00"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "455.00"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "483.60"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "483.60"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "67.60"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "67.60"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "41.60"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "93.60"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "12.48"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "7.80"
+        }
+      ]
+    },
+    {
+      "name": "monthly Freibetrag 250 EUR",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3900.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "taxAllowance": "250.00",
+        "churchMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "425.66"
+        },
+        {
+          "step": "kirchensteuer",
+          "side": "TAX",
+          "amount": "38.30"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "341.25"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "341.25"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "362.70"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "362.70"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "50.70"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "50.70"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "93.60"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "70.20"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "9.36"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "5.85"
+        }
+      ]
+    },
+    {
+      "name": "monthly Hinzurechnungsbetrag 400 EUR",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2700.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "taxAddition": "400.00"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "337.41"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "236.25"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "236.25"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "251.10"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "251.10"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "35.10"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "35.10"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "64.80"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "48.60"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "6.48"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "4.05"
+        }
+      ]
+    },
+    {
+      "name": "born 1 January 1962: completed 64 on 31 December 2025, Altersentlastungsbetrag (AJAHR 2026)",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "birthDate": "1962-01-01",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "pvParent": "true",
+        "pvChildrenUnder25": "0"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "775.41"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "437.50"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "437.50"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "465.00"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "465.00"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "65.00"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "65.00"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "90.00"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "90.00"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "12.00"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "7.50"
+        }
+      ]
+    },
+    {
+      "name": "born 2 January 1962: completes 64 in 2026, no Altersentlastungsbetrag yet",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "birthDate": "1962-01-02",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "pvParent": "true",
+        "pvChildrenUnder25": "0"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "792.58"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "437.50"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "437.50"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "465.00"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "465.00"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "65.00"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "65.00"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "90.00"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "90.00"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "12.00"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "7.50"
+        }
+      ]
+    },
+    {
+      "name": "born 1 June 2003: completed 23 on 31 May, childless surcharge from June",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3200.00",
+      "birthDate": "2003-06-01",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "337.25"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "280.00"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "280.00"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "297.60"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "297.60"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "41.60"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "41.60"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "76.80"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "57.60"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "7.68"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "4.80"
+        }
+      ]
+    },
+    {
+      "name": "born 2 June 2003: completes 23 on 1 June, childless surcharge only from July",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3200.00",
+      "birthDate": "2003-06-02",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "342.58"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "280.00"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "280.00"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "297.60"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "297.60"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "41.60"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "41.60"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "57.60"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "57.60"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "7.68"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "4.80"
+        }
+      ]
+    },
+    {
+      "name": "U1 participation (employer with up to 30 employees)",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3600.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "HE",
+        "u1Participation": "true"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "u1Rate": "1.60"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "428.75"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "315.00"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "315.00"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "334.80"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "334.80"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "46.80"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "46.80"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "86.40"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "64.80"
+        },
+        {
+          "step": "umlageU1",
+          "side": "EMPLOYER",
+          "amount": "57.60"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "8.64"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "5.40"
+        }
+      ]
+    },
+    {
+      "name": "public employer without Insolvenzgeldumlage",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4100.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "BE",
+        "u1Participation": "false",
+        "insolvencyLevyExempt": "true"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "549.08"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "358.75"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "358.75"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "381.30"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "381.30"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "53.30"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "53.30"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "98.40"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "73.80"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "9.84"
+        }
+      ]
+    },
+    {
+      "name": "December 2026 wages paid on 8 January 2027 use the 2026 rules",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-12-01",
+      "periodEnd": "2026-12-31",
+      "paymentDate": "2027-01-08",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4400.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "churchMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "lohnsteuer",
+          "side": "TAX",
+          "amount": "624.50"
+        },
+        {
+          "step": "kirchensteuer",
+          "side": "TAX",
+          "amount": "56.20"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "385.00"
+        },
+        {
+          "step": "krankenversicherung",
+          "side": "EMPLOYER",
+          "amount": "385.00"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "409.20"
+        },
+        {
+          "step": "rentenversicherung",
+          "side": "EMPLOYER",
+          "amount": "409.20"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYEE",
+          "amount": "57.20"
+        },
+        {
+          "step": "arbeitslosenversicherung",
+          "side": "EMPLOYER",
+          "amount": "57.20"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYEE",
+          "amount": "105.60"
+        },
+        {
+          "step": "pflegeversicherung",
+          "side": "EMPLOYER",
+          "amount": "79.20"
+        },
+        {
+          "step": "umlageU2",
+          "side": "EMPLOYER",
+          "amount": "10.56"
+        },
+        {
+          "step": "umlageU3",
+          "side": "EMPLOYER",
+          "amount": "6.60"
+        }
+      ]
+    },
+    {
+      "name": "a pay period that is not a calendar month is refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-15",
+      "periodEnd": "2026-07-14",
+      "paymentDate": "2026-07-14",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "expectError": "calendar month"
+    },
+    {
+      "name": "joining or leaving during the month is refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "employedThroughout": false,
+      "expectError": "whole calendar month"
+    },
+    {
+      "name": "sonstige Bezüge (bonus) are refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "6000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "earningsByComponent": {
+        "BASIC": "4000.00",
+        "BONUS": "2000.00"
+      },
+      "expectError": "Sonstige Bezüge"
+    },
+    {
+      "name": "pre-tax deductions (Entgeltumwandlung) are refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "preTaxDeductionsByType": {
+        "RETIREMENT": "200.00"
+      },
+      "expectError": "Entgeltumwandlung"
+    },
+    {
+      "name": "a regular wage of 2.000 EUR or less is refused (Übergangsbereich)",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1900.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "expectError": "Übergangsbereich"
+    },
+    {
+      "name": "a Minijob is refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "500.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "MINIJOB",
+        "u2Rate": "0.24"
+      },
+      "expectError": "Minijob"
+    },
+    {
+      "name": "private health insurance is refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "7000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "privateHealthInsurance": "true"
+      },
+      "expectError": "private"
+    },
+    {
+      "name": "an old-age pensioner is refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "birthDate": "1961-05-10",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "oldAgePensioner": "true"
+      },
+      "expectError": "Old-age pensioners"
+    },
+    {
+      "name": "an employee exempt from pension insurance is refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "6000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "pensionInsuranceExempt": "true"
+      },
+      "expectError": "exempt from statutory pension insurance"
+    },
+    {
+      "name": "an employee aged 66 is refused (Regelaltersgrenze)",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "birthDate": "1960-05-31",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "expectError": "Regelaltersgrenze"
+    },
+    {
+      "name": "a Faktor outside Steuerklasse IV is refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "factor": "0.900"
+      },
+      "expectError": "Faktor"
+    },
+    {
+      "name": "a Faktor together with a Freibetrag is refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "4",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "factor": "0.900",
+        "taxAllowance": "100.00"
+      },
+      "expectError": "Faktor"
+    },
+    {
+      "name": "a Hinzurechnungsbetrag in Steuerklasse VI is refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "6",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "taxAddition": "100.00"
+      },
+      "expectError": "Hinzurechnungsbetrag"
+    },
+    {
+      "name": "2027 is not covered",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2027-01-01",
+      "periodEnd": "2027-01-31",
+      "paymentDate": "2027-01-29",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "expectError": "a newer template version is needed"
+    }
+  ]
+}

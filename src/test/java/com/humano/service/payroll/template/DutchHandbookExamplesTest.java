@@ -165,6 +165,7 @@ class DutchHandbookExamplesTest {
             BigDecimal.ONE,
             LocalDate.parse(birth),
             start,
+            true,
             Map.of("aofPremium", "LOW", "whkRate", "0.10"),
             Map.of("applyLoonheffingskorting", "true", "awfPremium", "LOW"),
             ytd

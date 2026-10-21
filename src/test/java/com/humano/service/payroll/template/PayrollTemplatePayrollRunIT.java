@@ -78,6 +78,7 @@ class PayrollTemplatePayrollRunIT {
     private static final String GB_TEMPLATE = "gb-paye-nic";
     private static final String US_TEMPLATE = "us-federal-employment";
     private static final String NL_TEMPLATE = "nl-employment";
+    private static final String DE_TEMPLATE = "de-employment";
 
     @Autowired
     private PayrollTemplateService templateService;
@@ -233,7 +234,7 @@ class PayrollTemplatePayrollRunIT {
                 compensations.findAll().stream().filter(c -> c.getEmployee().getId().equals(employee.getId())).toList()
             );
             deductions.deleteAll(deductions.findAll().stream().filter(d -> d.getEmployee().getId().equals(employee.getId())).toList());
-            for (String templateId : List.of(TEMPLATE, GB_TEMPLATE, US_TEMPLATE, NL_TEMPLATE)) {
+            for (String templateId : List.of(TEMPLATE, GB_TEMPLATE, US_TEMPLATE, NL_TEMPLATE, DE_TEMPLATE)) {
                 profiles.findByEmployeeIdAndTemplateId(employee.getId(), templateId).ifPresent(profiles::delete);
                 adoptions.findByTemplateId(templateId).ifPresent(adoptions::delete);
             }
@@ -491,6 +492,44 @@ class PayrollTemplatePayrollRunIT {
         );
     }
 
+    @Test
+    void germanWagesUseThePapExtensionAndTheYearOfThePayPeriod() {
+        // Steuerklasse I, € 4.000, Zusatzbeitrag 2,90 %, childless (born 1985), Betriebsstätte in NRW.
+        tx.executeWithoutResult(s -> {
+            Employee e = employees.findById(employee.getId()).orElseThrow();
+            e.setCountry(countries.findAll().stream().filter(c -> c.getCode() == CountryCode.DE).findFirst().orElseThrow());
+            employees.save(e);
+            setPay("4000.00", CurrencyCode.EUR);
+        });
+        templateService.configure(
+            DE_TEMPLATE,
+            new ConfigurePayrollTemplateRequest(true, Map.of("state", "NW", "u1Participation", "false"))
+        );
+        templateService.saveProfile(
+            DE_TEMPLATE,
+            employee.getId(),
+            Map.of("taxClass", "1", "healthFundAdditionalRate", "2.90", "employmentType", "REGULAR", "u2Rate", "0.24")
+        );
+
+        // December 2026 wages paid on 8 January 2027 are 2026 wages (§ 38a Abs. 1 Satz 2 EStG): the 2026 PAP and ceilings apply.
+        PayrollRunResponse december = calculate(period(LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 31), LocalDate.of(2027, 1, 8)));
+        assertThat(december.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        // Same amounts as the template case "Steuerklasse I, 4.000 EUR" (lohnsteuer_statute.py and BVV).
+        assertThat(templateLines(december)).containsExactlyInAnyOrder(
+            "lohnsteuer/INCOME_TAX=524.5",
+            "krankenversicherung/WITHHOLDING=350",
+            "krankenversicherung/EMPLOYER_CHARGE=350",
+            "rentenversicherung/WITHHOLDING=372",
+            "rentenversicherung/EMPLOYER_CHARGE=372",
+            "arbeitslosenversicherung/WITHHOLDING=52",
+            "arbeitslosenversicherung/EMPLOYER_CHARGE=52",
+            "pflegeversicherung/WITHHOLDING=96",
+            "pflegeversicherung/EMPLOYER_CHARGE=72",
+            "umlageU2/EMPLOYER_CHARGE=9.6",
+            "umlageU3/EMPLOYER_CHARGE=6"
+        );
+    }
+
     private List<String> templateLines(PayrollRunResponse run) {
         return linesOf(resultOf(run.id()))
             .stream()
@@ -516,12 +555,16 @@ class PayrollTemplatePayrollRunIT {
     }
 
     private PayrollPeriod period(LocalDate start, LocalDate end) {
+        return period(start, end, end);
+    }
+
+    private PayrollPeriod period(LocalDate start, LocalDate end, LocalDate paid) {
         return tx.execute(s -> {
             PayrollPeriod p = new PayrollPeriod();
             p.setCalendar(calendar);
             p.setStartDate(start);
             p.setEndDate(end);
-            p.setPaymentDate(end);
+            p.setPaymentDate(paid);
             p.setClosed(false);
             p.setCode("BG-" + start + "-" + UUID.randomUUID().toString().substring(0, 6));
             return periods.saveAndFlush(p);

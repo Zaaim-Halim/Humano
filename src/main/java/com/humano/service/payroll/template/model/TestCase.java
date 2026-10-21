@@ -26,6 +26,7 @@ import java.util.Map;
  * @param fullPeriod      employed full-time for the whole period (defaults to true)
  * @param birthDate       employee's birth date
  * @param employmentStartDate first day of employment (defaults to the period start)
+ * @param employedThroughout employed for the whole period (defaults to true)
  * @param employer        employer settings
  * @param employee        employee attributes
  * @param ytd             year-to-date sums before this period, keyed {@code step.SIDE.base|amount}
@@ -49,6 +50,7 @@ public record TestCase(
     Boolean fullPeriod,
     LocalDate birthDate,
     LocalDate employmentStartDate,
+    Boolean employedThroughout,
     Map<String, String> employer,
     Map<String, String> employee,
     Map<String, BigDecimal> ytd,

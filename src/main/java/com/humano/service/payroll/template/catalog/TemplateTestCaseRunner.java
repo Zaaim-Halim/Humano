@@ -72,6 +72,7 @@ public final class TemplateTestCaseRunner {
             BigDecimal.ONE,
             c.birthDate(),
             c.employmentStartDate() != null ? c.employmentStartDate() : c.periodStart(),
+            c.employedThroughout() == null || c.employedThroughout(),
             c.employer() != null ? c.employer() : Map.of(),
             c.employee() != null ? c.employee() : Map.of(),
             c.ytd() != null ? c.ytd() : Map.of()

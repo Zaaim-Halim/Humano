@@ -36,7 +36,8 @@ import org.springframework.stereotype.Component;
  *   (the same by deduction type; 0 for a type with none).</li>
  *   <li>Employee: {@code #fullPeriod}, {@code #fte}, {@code #birthDate}, {@code #birthYear}, {@code #ageAtPeriodEnd}
  *   (an expression using any of them fails when the birth date is unknown), {@code #employmentStartDate}
- *   (fails when unknown), {@code #employee['key']}.</li>
+ *   (fails when unknown), {@code #employedThroughout} (employed from the first to the last day of the
+ *   period), {@code #employee['key']}.</li>
  *   <li>Employer: {@code #employer['key']}.</li>
  *   <li>Data: {@code #p['parameter']} (the value in force for the period), {@code #table.lookup(...)},
  *   {@code #table.bracketTax(...)}, {@code #ytd.base(step, side)}, {@code #ytd.amount(step, side)}.</li>
@@ -72,6 +73,7 @@ public class PayrollTemplateEngine {
         "birthYear",
         "ageAtPeriodEnd",
         "employmentStartDate",
+        "employedThroughout",
         "currency",
         "employee",
         "employer",
@@ -138,6 +140,7 @@ public class PayrollTemplateEngine {
         vars.put("birthYear", in.birthDate() != null ? in.birthDate().getYear() : null);
         vars.put("ageAtPeriodEnd", in.birthDate() != null ? Period.between(in.birthDate(), in.periodEnd()).getYears() : null);
         vars.put("employmentStartDate", in.employmentStartDate());
+        vars.put("employedThroughout", in.employedThroughout());
         vars.put("currency", in.currency());
         vars.put("employer", TemplateInputs.coerce(template.inputs().employer(), in.employer(), "employer setting", true));
         vars.put("employee", TemplateInputs.coerce(template.inputs().employee(), in.employee(), "employee attribute", true));
