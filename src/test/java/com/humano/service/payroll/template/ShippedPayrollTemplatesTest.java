@@ -181,6 +181,43 @@ class ShippedPayrollTemplatesTest {
             );
     }
 
+    @Test
+    void dutchFiguresMatchTheBelastingdienstPublications() {
+        PayrollTemplate nl = catalog.find("nl-employment").orElseThrow();
+        Map<String, String> values = nl
+            .parameters()
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> plain(e.getValue().get(0).value())));
+        // Rekenvoorschriften 2026 tabel 1a, 3, 6; Handboek Loonheffingen 2026 Bijlage 1 tabellen 9, 11, 12; §18.21.
+        assertThat(values)
+            .containsEntry("lv", "54")
+            .containsEntry("lmax", "133110")
+            .containsEntry("ahkg1", "29736")
+            .containsEntry("arkg4", "132920")
+            .containsEntry("aowAgeYears", "67")
+            .containsEntry("maxPremiumWageYear", "79409")
+            .containsEntry("awfLow", "0.0274")
+            .containsEntry("awfHigh", "0.0774")
+            .containsEntry("aofLow", "0.0627")
+            .containsEntry("aofHigh", "0.0763")
+            .containsEntry("wko", "0.005")
+            .containsEntry("zvw", "0.061");
+        // Tabel 2, younger than AOW age: 35,75% to € 38.883, 37,56% to € 78.426 (c = € 13.900), 49,50% above (c = € 28.752).
+        assertThat(nl.tables().get("tariff").versions().get(0).rows())
+            .filteredOn(r -> r.key().equals("1"))
+            .singleElement()
+            .satisfies(r ->
+                assertThat(r.values())
+                    .extracting(ShippedPayrollTemplatesTest::plain)
+                    .containsExactly("38883", "78426", "0.3575", "0.3756", "0.495", "13900", "28752")
+            );
+        // Handboek tabel 11: € 6.617,41 a month, € 1.527,09 a week.
+        assertThat(nl.tables().get("maxPremiumWage").versions().get(0).rows())
+            .extracting(r -> r.key() + "=" + plain(r.values().get(0)))
+            .containsExactlyInAnyOrder("MONTHLY=6617.41", "WEEKLY=1527.09");
+    }
+
     private static String plain(BigDecimal value) {
         return value.stripTrailingZeros().toPlainString();
     }

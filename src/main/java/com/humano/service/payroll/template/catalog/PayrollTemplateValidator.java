@@ -2,6 +2,7 @@ package com.humano.service.payroll.template.catalog;
 
 import com.humano.domain.enumeration.CountryCode;
 import com.humano.domain.enumeration.payroll.DeductionType;
+import com.humano.domain.enumeration.payroll.PayComponentCode;
 import com.humano.service.payroll.template.engine.PayrollTemplateEngine;
 import com.humano.service.payroll.template.engine.TemplateCalculationException;
 import com.humano.service.payroll.template.engine.TemplateExpressions;
@@ -48,6 +49,7 @@ public class PayrollTemplateValidator {
     private static final Pattern EMPLOYER_KEY = Pattern.compile("#employer\\['([^']+)'\\]");
     private static final Pattern PARAMETER = Pattern.compile("#p\\['([^']+)'\\]");
     private static final Pattern PRE_TAX_TYPE = Pattern.compile("#preTaxDeductionsByType\\['([^']+)'\\]");
+    private static final Pattern COMPONENT = Pattern.compile("#earningsByComponent\\['([^']+)'\\]");
     private static final Pattern TABLE_CALL = Pattern.compile("#table\\.(\\w+)\\(\\s*('([^']*)')?");
     private static final Pattern YTD_CALL = Pattern.compile("#ytd\\.(\\w+)\\(\\s*'([^']*)'\\s*,\\s*'([^']*)'\\s*\\)");
     private static final Set<String> TABLE_METHODS = Set.of("lookup", "bracketTax");
@@ -411,6 +413,11 @@ public class PayrollTemplateValidator {
         });
         matchAll(PARAMETER, expr, k -> {
             if (!parameters.contains(k)) problems.add(at + ": parameter '" + k + "' does not exist");
+        });
+        matchAll(COMPONENT, expr, k -> {
+            if (Arrays.stream(PayComponentCode.values()).noneMatch(c -> c.name().equals(k))) {
+                problems.add(at + ": pay component '" + k + "' does not exist");
+            }
         });
         matchAll(PRE_TAX_TYPE, expr, k -> {
             if (Arrays.stream(DeductionType.values()).noneMatch(d -> d.name().equals(k))) {

@@ -515,6 +515,8 @@ public class PayrollProcessingService {
         );
 
         BigDecimal gross = BigDecimal.ZERO;
+        // Gross earnings by pay-component code, for payroll templates whose law taxes some kinds of pay differently.
+        Map<String, BigDecimal> earningsByComponent = new HashMap<>();
         BigDecimal nonTaxableEarnings = BigDecimal.ZERO;
         // Earnings whose component is not subject to social contributions; payroll templates use
         // gross minus these as their contribution base.
@@ -556,6 +558,7 @@ public class PayrollProcessingService {
             log.warn("Step 1 — no BASIC PayComponent seeded; base salary {} counted in gross without a line", fmt(baseSalary));
         }
         gross = gross.add(baseSalary);
+        earningsByComponent.merge(PayComponentCode.BASIC.name(), baseSalary, BigDecimal::add);
 
         // ============================================================
         // Step 2a — PayrollInput earnings (deterministic by id)
@@ -577,6 +580,7 @@ public class PayrollProcessingService {
                 )
             );
             gross = gross.add(amt);
+            earningsByComponent.merge(input.getComponent().getCode().name(), amt, BigDecimal::add);
             if (!Boolean.TRUE.equals(input.getComponent().getTaxable())) {
                 nonTaxableEarnings = nonTaxableEarnings.add(amt);
             }
@@ -612,6 +616,7 @@ public class PayrollProcessingService {
                 String explain = "Step 2b — Bonus (" + bonus.getType() + ", awarded " + bonus.getAwardDate() + "): " + fmt(amt);
                 lines.add(emitLine(result, bonusComponent, null, null, amt, seq.next(), explain).lineCategory(PayrollLineCategory.EARNING));
                 gross = gross.add(amt);
+                earningsByComponent.merge(PayComponentCode.BONUS.name(), amt, BigDecimal::add);
                 if (!Boolean.TRUE.equals(bonusComponent.getTaxable())) {
                     nonTaxableEarnings = nonTaxableEarnings.add(amt);
                 }
@@ -631,6 +636,7 @@ public class PayrollProcessingService {
             String explain = "Step 2c — Earning '" + component.getCode() + "' via PayRule formula: " + fmt(amt);
             lines.add(emitLine(result, component, null, null, amt, seq.next(), explain).lineCategory(PayrollLineCategory.EARNING));
             gross = gross.add(amt);
+            earningsByComponent.merge(component.getCode().name(), amt, BigDecimal::add);
             if (!Boolean.TRUE.equals(component.getTaxable())) {
                 nonTaxableEarnings = nonTaxableEarnings.add(amt);
             }
@@ -798,6 +804,7 @@ public class PayrollProcessingService {
                     period.getCalendar().getFrequency(),
                     compensation.getCurrency().getCode().getCode(),
                     grossPay,
+                    earningsByComponent,
                     grossPay.subtract(nonSocialEarnings),
                     grossPay.subtract(nonTaxableEarnings),
                     leaveReductions,

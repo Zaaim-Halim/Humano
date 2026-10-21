@@ -14,6 +14,8 @@ import java.util.Map;
  * @param frequency       pay frequency of the calendar
  * @param currency        ISO 4217 code of the employee's pay
  * @param grossEarnings   all earnings in the period
+ * @param earningsByComponent the same by pay-component code (e.g. BASIC, BONUS), for laws that tax some
+ *                        kinds of pay differently
  * @param socialEarnings  earnings whose pay component is subject to social contributions
  * @param taxableEarnings earnings whose pay component is taxable
  * @param reductions      remuneration not earned in the period (unpaid-leave deductions)
@@ -36,6 +38,7 @@ public record TemplateInput(
     Frequency frequency,
     String currency,
     BigDecimal grossEarnings,
+    Map<String, BigDecimal> earningsByComponent,
     BigDecimal socialEarnings,
     BigDecimal taxableEarnings,
     BigDecimal reductions,

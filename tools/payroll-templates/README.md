@@ -50,3 +50,4 @@ the exact rules that produced them. Posted runs are never recalculated by an upd
 - `al/` — Albania (`al-employment`). Written out with citations in `al/build_template.py`.
 - `gb/` — United Kingdom (`gb-paye-nic`). PAYE via the `uk.paye-routines-v24` extension; NICs declared.
 - `us/` — United States federal (`us-federal-employment`). Pub 15-T withholding, FICA, FUTA; all declared, no extension.
+- `nl/` — Nederland (`nl-employment`). Rekenvoorschriften wage tax, AWf/Aof/Wko/Whk and Zvw with VCR; all declared, no extension.

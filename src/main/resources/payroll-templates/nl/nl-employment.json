@@ -1,0 +1,1855 @@
+{
+  "schemaVersion": 1,
+  "id": "nl-employment",
+  "name": "Nederland — loonheffingen (witte tabel), premies werknemersverzekeringen en werkgeversheffing Zvw",
+  "version": "2026.1.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": {
+    "country": "NL"
+  },
+  "validity": {
+    "from": "2026-01-01",
+    "to": "2026-12-31"
+  },
+  "currency": "EUR",
+  "payFrequencies": ["MONTHLY", "WEEKLY"],
+  "taxYearStart": "--01-01",
+  "dateBasis": "PAYMENT_DATE",
+  "rounding": {
+    "scale": 2,
+    "mode": "HALF_UP"
+  },
+  "changelog": [
+    {
+      "version": "2026.1.0",
+      "date": "2026-10-21",
+      "summary": "2026: loonbelasting/premie volksverzekeringen per de Rekenvoorschriften 2026 (witte tabel, standaardsituatie, wonen in Nederland); AWf, Aof, opslag Wko, Whk en werkgeversheffing Zvw met voortschrijdend cumulatief rekenen."
+    }
+  ],
+  "sources": {
+    "bd-rekenvoorschriften-2026": {
+      "title": "Belastingdienst, Rekenvoorschriften voor de geautomatiseerde loonadministratie 2026, uitgave januari 2026, versie 2 — hoofdstuk 2, tabellen 1a t/m 6",
+      "url": "https://download.belastingdienst.nl/belastingdienst/docs/rekenvoorschriften_voor_geautomatiseerde_loonadministratie_lh991z62fd.pdf",
+      "retrieved": "2026-10-21"
+    },
+    "bd-witte-tabellen-2026": {
+      "title": "Belastingdienst, loonbelastingtabellen 2026 — witte tijdvaktabellen, standaardsituatie, wonen in Nederland (maand, week, vier weken, kwartaal; v01, 1 januari 2026)",
+      "url": "https://download.belastingdienst.nl/belastingdienst/dl/rekenhulpen/loonheffing/2026/v01/excel/wit_mnd_nl_std_20260101.xlsx",
+      "retrieved": "2026-10-21"
+    },
+    "bd-handboek-2026": {
+      "title": "Belastingdienst, Handboek Loonheffingen 2026, versie maart 2026 — hoofdstuk 6 (VCR), 7.4-7.6 (AWf, Aof, Wko, Whk), 8.2 (werkgeversheffing Zvw), 18.21 (AOW-leeftijd), Bijlage 1 tabellen 9, 11, 12",
+      "url": "https://download.belastingdienst.nl/belastingdienst/docs/handboek-loonheffingen-lh0221t61fd.pdf",
+      "retrieved": "2026-10-21"
+    }
+  },
+  "inputs": {
+    "employer": [
+      {
+        "key": "aofPremium",
+        "type": "ENUM",
+        "required": true,
+        "values": ["LOW", "HIGH"],
+        "description": "Gedifferentieerde premie Aof: LOW for a small employer (premieloon 2024 ≤ € 1.082.500, see the Whk beschikking), HIGH otherwise"
+      },
+      {
+        "key": "whkRate",
+        "type": "DECIMAL",
+        "required": true,
+        "min": -1,
+        "max": 1,
+        "description": "Gedifferentieerde premie Whk from the 2026 beschikking/mededeling, as a fraction (e.g. 0.0152 for 1,52%)"
+      },
+      {
+        "key": "governmentEmployer",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Overheidswerkgever (Ufo premium instead of AWf for government employees — not supported)"
+      }
+    ],
+    "employee": [
+      {
+        "key": "applyLoonheffingskorting",
+        "type": "BOOLEAN",
+        "required": true,
+        "description": "The employee asked in writing to apply the loonheffingskorting with this employer"
+      },
+      {
+        "key": "alleenstaandeOuderenkorting",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Apply the alleenstaande-ouderenkorting (AOW age only, at the employee's written request)"
+      },
+      {
+        "key": "awfPremium",
+        "type": "ENUM",
+        "required": true,
+        "values": ["LOW", "HIGH"],
+        "description": "Premie AWf: LOW for a written permanent contract (or the other cases of Handboek §7.4), HIGH otherwise"
+      },
+      {
+        "key": "jonggehandicaptenkorting",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The employee is entitled to the jonggehandicaptenkorting (not supported)"
+      },
+      {
+        "key": "residentOfNetherlands",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "true",
+        "description": "Lives in the Netherlands (other countries use other tables — not supported)"
+      },
+      {
+        "key": "zvwWithheldFromEmployee",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Bijdrage Zvw is withheld from the employee (e.g. a dga) instead of the werkgeversheffing (not supported)"
+      },
+      {
+        "key": "broughtForwardYear",
+        "type": "INTEGER",
+        "required": false,
+        "min": 2000,
+        "max": 2100,
+        "description": "Year the brought-forward figures belong to; other years' figures are ignored"
+      },
+      {
+        "key": "broughtForwardPeriods",
+        "type": "INTEGER",
+        "required": false,
+        "min": 0,
+        "max": 53,
+        "description": "Loontijdvakken with wage this year before the first payroll in Humano"
+      },
+      {
+        "key": "broughtForwardWage",
+        "type": "DECIMAL",
+        "required": false,
+        "description": "Cumulative loon voor de werknemersverzekeringen this year before the first payroll in Humano"
+      },
+      {
+        "key": "broughtForwardPremiumBase",
+        "type": "DECIMAL",
+        "required": false,
+        "description": "Cumulative premieloon (grondslag werknemersverzekeringen) this year before the first payroll in Humano"
+      },
+      {
+        "key": "broughtForwardZvwBase",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "description": "Cumulative bijdrageloon Zvw (grondslag) this year before the first payroll in Humano"
+      }
+    ]
+  },
+  "parameters": {
+    "lv": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "54",
+        "source": "bd-rekenvoorschriften-2026"
+      }
+    ],
+    "lmax": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "133110",
+        "source": "bd-rekenvoorschriften-2026"
+      }
+    ],
+    "ahkg1": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "29736",
+        "source": "bd-rekenvoorschriften-2026"
+      }
+    ],
+    "ahkg2": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "78426",
+        "source": "bd-rekenvoorschriften-2026"
+      }
+    ],
+    "oukg1": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "46002",
+        "source": "bd-rekenvoorschriften-2026"
+      }
+    ],
+    "oukg2": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "59782",
+        "source": "bd-rekenvoorschriften-2026"
+      }
+    ],
+    "arkg1": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "11965",
+        "source": "bd-rekenvoorschriften-2026"
+      }
+    ],
+    "arkg2": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "25845",
+        "source": "bd-rekenvoorschriften-2026"
+      }
+    ],
+    "arkg3": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "45592",
+        "source": "bd-rekenvoorschriften-2026"
+      }
+    ],
+    "arkg4": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "132920",
+        "source": "bd-rekenvoorschriften-2026"
+      }
+    ],
+    "aowAgeYears": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "67",
+        "source": "bd-handboek-2026"
+      }
+    ],
+    "maxPremiumWageYear": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "79409",
+        "source": "bd-handboek-2026"
+      }
+    ],
+    "awfLow": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0274",
+        "source": "bd-handboek-2026"
+      }
+    ],
+    "awfHigh": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0774",
+        "source": "bd-handboek-2026"
+      }
+    ],
+    "aofLow": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0627",
+        "source": "bd-handboek-2026"
+      }
+    ],
+    "aofHigh": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0763",
+        "source": "bd-handboek-2026"
+      }
+    ],
+    "wko": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0050",
+        "source": "bd-handboek-2026"
+      }
+    ],
+    "zvw": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0610",
+        "source": "bd-handboek-2026"
+      }
+    ]
+  },
+  "tables": {
+    "tariff": {
+      "kind": "EXACT",
+      "description": "Rekenvoorschriften tabel 2 per age group (1 younger than AOW age, 2 AOW age born 1945 or earlier, 3 AOW age born 1946 or later)",
+      "columns": ["a2", "a3", "b1", "b2", "b3", "c2", "c3"],
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "bd-rekenvoorschriften-2026",
+          "rows": [
+            {
+              "key": "1",
+              "values": ["38883", "78426", "0.3575", "0.3756", "0.4950", "13900", "28752"]
+            },
+            {
+              "key": "2",
+              "values": ["41123", "78426", "0.1785", "0.3756", "0.4950", "7340", "21351"]
+            },
+            {
+              "key": "3",
+              "values": ["38883", "78426", "0.1785", "0.3756", "0.4950", "6940", "21792"]
+            }
+          ]
+        }
+      ]
+    },
+    "credits": {
+      "kind": "EXACT",
+      "description": "Rekenvoorschriften tabellen 3-6 per age group: AHK, OUK, AOK and ARK amounts and factors",
+      "columns": ["ahkm", "ahka", "oukm", "ouka", "aok", "arko1", "arko2", "arko3", "arka", "arkm1", "arkm2", "arkm3"],
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "bd-rekenvoorschriften-2026",
+          "rows": [
+            {
+              "key": "1",
+              "values": ["3115", "0.06398", "0", "0", "0", "0.08324", "0.31009", "0.01950", "0.06510", "996", "5300", "5685"]
+            },
+            {
+              "key": "2",
+              "values": ["1556", "0.03195", "2067", "0.15000", "540", "0.04156", "0.15483", "0.00974", "0.03250", "498", "2647", "2840"]
+            },
+            {
+              "key": "3",
+              "values": ["1556", "0.03195", "2067", "0.15000", "540", "0.04156", "0.15483", "0.00974", "0.03250", "498", "2647", "2840"]
+            }
+          ]
+        }
+      ]
+    },
+    "maxPremiumWage": {
+      "kind": "EXACT",
+      "description": "Handboek Bijlage 1 tabel 11: loontijdvakbedrag maximumpremieloon/-bijdrageloon",
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "bd-handboek-2026",
+          "rows": [
+            {
+              "key": "MONTHLY",
+              "values": ["6617.41"]
+            },
+            {
+              "key": "WEEKLY",
+              "values": ["1527.09"]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "id": "noBonus",
+      "type": "REQUIRE",
+      "condition": "#earningsByComponent['BONUS'] == 0",
+      "message": "A bijzondere beloning (bonus, vakantiebijslag, 13e maand) is taxed with the tabel bijzondere beloningen, which this template does not support"
+    },
+    {
+      "id": "sameWage",
+      "type": "REQUIRE",
+      "condition": "#socialEarnings == #taxableEarnings",
+      "message": "Every earning must count for both the wage tax and the werknemersverzekeringen in this template (check the pay components' taxable and social flags)"
+    },
+    {
+      "id": "onlyPension",
+      "type": "REQUIRE",
+      "condition": "#preTaxDeductions == #preTaxDeductionsByType['RETIREMENT']",
+      "message": "Only the employee's pensioenpremie (pre-tax RETIREMENT deduction) is supported as a deduction for the loonheffingen"
+    },
+    {
+      "id": "resident",
+      "type": "REQUIRE",
+      "condition": "#employee['residentOfNetherlands']",
+      "message": "Only employees living in Nederland are supported (standard white table)"
+    },
+    {
+      "id": "noJgk",
+      "type": "REQUIRE",
+      "condition": "!#employee['jonggehandicaptenkorting']",
+      "message": "The jonggehandicaptenkorting is not supported"
+    },
+    {
+      "id": "noGovernment",
+      "type": "REQUIRE",
+      "condition": "!#employer['governmentEmployer']",
+      "message": "Overheidswerkgevers (Ufo premium) are not supported"
+    },
+    {
+      "id": "zvwByEmployer",
+      "type": "REQUIRE",
+      "condition": "!#employee['zvwWithheldFromEmployee']",
+      "message": "Inhouding van de bijdrage Zvw (instead of the werkgeversheffing) is not supported"
+    },
+    {
+      "id": "aow",
+      "type": "VALUE",
+      "expr": "#paymentDate >= #birthDate.plusYears(#p['aowAgeYears']).withDayOfMonth(1)"
+    },
+    {
+      "id": "group",
+      "type": "VALUE",
+      "expr": "#aow ? (#birthYear <= 1945 ? 2 : 3) : 1"
+    },
+    {
+      "id": "aokOnlyAow",
+      "type": "REQUIRE",
+      "when": "#employee['alleenstaandeOuderenkorting']",
+      "condition": "#aow",
+      "message": "The alleenstaande-ouderenkorting only applies from the month the employee reaches the AOW age"
+    },
+    {
+      "id": "broughtForward",
+      "type": "VALUE",
+      "expr": "#employee['broughtForwardYear'] != null and #employee['broughtForwardYear'] == #taxYear"
+    },
+    {
+      "id": "earlierPayThisYear",
+      "type": "REQUIRE",
+      "when": "#ytd.periods('wageTax', 'TAX') == 0 and #employmentStartDate < #periodStart and #periodStart > #taxYearStartDate",
+      "condition": "#broughtForward",
+      "message": "No earlier payroll this year is recorded for this employee, who was employed before this period: set broughtForwardYear and this year's cumulative figures (loontijdvakken, SV-loon, premieloon, bijdrageloon Zvw; 0 if none) so the maximum premium wage applies correctly"
+    },
+    {
+      "id": "wage",
+      "type": "VALUE",
+      "expr": "#taxableEarnings - #reductions - #preTaxDeductions"
+    },
+    {
+      "id": "annualWage",
+      "type": "VALUE",
+      "expr": "#wage * #periodsPerYear"
+    },
+    {
+      "id": "tableWage",
+      "type": "VALUE",
+      "expr": "#annualWage <= 0 ? 0 : (#annualWage > #p['lmax'] ? #p['lmax'] : #divide(#annualWage, #p['lv'], 0, 'FLOOR') * #p['lv'])"
+    },
+    {
+      "id": "x1",
+      "type": "VALUE",
+      "expr": "#pos(#round(#tableWage <= #table.lookup('tariff', #group, 'a2') ? #tableWage * #table.lookup('tariff', #group, 'b1') : (#tableWage <= #table.lookup('tariff', #group, 'a3') ? (#tableWage - #table.lookup('tariff', #group, 'a2')) * #table.lookup('tariff', #group, 'b2') + #table.lookup('tariff', #group, 'c2') : (#tableWage - #table.lookup('tariff', #group, 'a3')) * #table.lookup('tariff', #group, 'b3') + #table.lookup('tariff', #group, 'c3')), 0, 'FLOOR'))"
+    },
+    {
+      "id": "ahk",
+      "type": "VALUE",
+      "expr": "#tableWage <= #p['ahkg1'] ? #table.lookup('credits', #group, 'ahkm') : (#tableWage <= #p['ahkg2'] ? #pos(#round(#table.lookup('credits', #group, 'ahkm') - (#tableWage - #p['ahkg1']) * #table.lookup('credits', #group, 'ahka'), 0, 'CEILING')) : 0)"
+    },
+    {
+      "id": "ouk",
+      "type": "VALUE",
+      "expr": "#tableWage <= #p['oukg1'] ? #table.lookup('credits', #group, 'oukm') : (#tableWage <= #p['oukg2'] ? #pos(#round(#table.lookup('credits', #group, 'oukm') - (#tableWage - #p['oukg1']) * #table.lookup('credits', #group, 'ouka'), 0, 'CEILING')) : 0)"
+    },
+    {
+      "id": "ark1",
+      "type": "VALUE",
+      "expr": "#min(#round(#table.lookup('credits', #group, 'arko1') * #tableWage, 5, 'HALF_UP'), #table.lookup('credits', #group, 'arkm1'))"
+    },
+    {
+      "id": "ark2",
+      "type": "VALUE",
+      "expr": "#min(#ark1 + #round(#table.lookup('credits', #group, 'arko2') * #pos(#tableWage - #p['arkg1']), 5, 'HALF_UP'), #table.lookup('credits', #group, 'arkm2'))"
+    },
+    {
+      "id": "ark3",
+      "type": "VALUE",
+      "expr": "#min(#ark2 + #round(#table.lookup('credits', #group, 'arko3') * #pos(#tableWage - #p['arkg2']), 5, 'HALF_UP'), #table.lookup('credits', #group, 'arkm3'))"
+    },
+    {
+      "id": "ark",
+      "type": "VALUE",
+      "expr": "#tableWage > #p['arkg4'] ? 0 : #pos(#round(#ark3 - #round(#table.lookup('credits', #group, 'arka') * #pos(#tableWage - #p['arkg3']), 5, 'HALF_UP'), 0, 'CEILING'))"
+    },
+    {
+      "id": "aok",
+      "type": "VALUE",
+      "when": "#employee['alleenstaandeOuderenkorting']",
+      "expr": "#table.lookup('credits', #group, 'aok')"
+    },
+    {
+      "id": "credits",
+      "type": "VALUE",
+      "expr": "#employee['applyLoonheffingskorting'] ? #ahk + #ouk + #ark + #aok : 0"
+    },
+    {
+      "id": "annualTax",
+      "type": "VALUE",
+      "expr": "#pos(#x1 - #credits)"
+    },
+    {
+      "id": "aboveTable",
+      "type": "VALUE",
+      "when": "#annualWage > #p['lmax']",
+      "expr": "#round((#wage - #divide(#p['lmax'], #periodsPerYear, 2, 'CEILING')) * #table.lookup('tariff', #group, 'b3'), 2, 'FLOOR')"
+    },
+    {
+      "id": "wageTax",
+      "type": "TAX",
+      "label": "Loonbelasting/premie volksverzekeringen",
+      "ledger": "INCOME_TAX",
+      "source": "bd-rekenvoorschriften-2026",
+      "when": "#wage != 0",
+      "base": "#wage",
+      "recordZero": true,
+      "amount": "#divide(#annualTax, #periodsPerYear, 2, 'HALF_UP') + #aboveTable"
+    },
+    {
+      "id": "periods",
+      "type": "VALUE",
+      "expr": "#ytd.periods('wageTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardPeriods'], 0) : 0) + (#wage != 0 ? 1 : 0)"
+    },
+    {
+      "id": "cumulativeMaximum",
+      "type": "VALUE",
+      "expr": "#min(#periods * #table.lookup('maxPremiumWage', #frequency), #p['maxPremiumWageYear'])"
+    },
+    {
+      "id": "cumulativeWage",
+      "type": "VALUE",
+      "expr": "#ytd.base('wageTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardWage'], 0) : 0) + #wage"
+    },
+    {
+      "id": "premiumBase",
+      "type": "VALUE",
+      "when": "!#aow and #wage != 0",
+      "expr": "#min(#cumulativeWage, #cumulativeMaximum) - (#ytd.base('awf', 'EMPLOYER') + (#broughtForward ? #coalesce(#employee['broughtForwardPremiumBase'], 0) : 0))"
+    },
+    {
+      "id": "awf",
+      "type": "CONTRIBUTION",
+      "label": "Premie AWf",
+      "ledger": "UNEMPLOYMENT",
+      "source": "bd-handboek-2026",
+      "when": "#premiumBase != 0",
+      "base": "#premiumBase",
+      "recordZero": true,
+      "allowNegative": true,
+      "employer": {
+        "rate": "#employee['awfPremium'] == 'LOW' ? #p['awfLow'] : #p['awfHigh']"
+      }
+    },
+    {
+      "id": "aof",
+      "type": "CONTRIBUTION",
+      "label": "Premie Aof",
+      "ledger": "DISABILITY",
+      "source": "bd-handboek-2026",
+      "when": "#premiumBase != 0",
+      "base": "#premiumBase",
+      "allowNegative": true,
+      "employer": {
+        "rate": "#employer['aofPremium'] == 'LOW' ? #p['aofLow'] : #p['aofHigh']"
+      }
+    },
+    {
+      "id": "wko",
+      "type": "CONTRIBUTION",
+      "label": "Opslag Wko",
+      "ledger": "OTHER",
+      "source": "bd-handboek-2026",
+      "when": "#premiumBase != 0",
+      "base": "#premiumBase",
+      "allowNegative": true,
+      "employer": {
+        "rate": "#p['wko']"
+      }
+    },
+    {
+      "id": "whk",
+      "type": "CONTRIBUTION",
+      "label": "Premie Whk",
+      "ledger": "DISABILITY",
+      "source": "bd-handboek-2026",
+      "when": "#premiumBase != 0",
+      "base": "#premiumBase",
+      "allowNegative": true,
+      "employer": {
+        "rate": "#employer['whkRate']"
+      }
+    },
+    {
+      "id": "zvwBase",
+      "type": "VALUE",
+      "when": "#wage != 0",
+      "expr": "#pos(#min(#cumulativeWage, #cumulativeMaximum)) - (#ytd.base('zvw', 'EMPLOYER') + (#broughtForward ? #coalesce(#employee['broughtForwardZvwBase'], 0) : 0))"
+    },
+    {
+      "id": "zvw",
+      "type": "CONTRIBUTION",
+      "label": "Werkgeversheffing Zvw",
+      "ledger": "MEDICARE",
+      "source": "bd-handboek-2026",
+      "when": "#zvwBase != 0",
+      "base": "#zvwBase",
+      "recordZero": true,
+      "allowNegative": true,
+      "employer": {
+        "rate": "#p['zvw']"
+      }
+    }
+  ],
+  "limitations": [
+    "Monthly and weekly pay (Dutch loontijdvakken); four-weekly, quarterly and daily tables are not used by Humano's pay frequencies.",
+    "White table, standard situation, employee living in the Netherlands; herleidingssituaties, non-residents and the green table are refused or out of scope.",
+    "Bijzondere beloningen (bonus, vakantiebijslag, 13e maand) need the tabel bijzondere beloningen: a period with BONUS earnings is refused, and holiday allowance must not be paid through another earning component.",
+    "Above the highest table wage the 'tabelsystematiek' (systematiek 1) is used; the Rekenvoorschriften allow a small difference with the rekenregel.",
+    "The verrekende arbeidskorting is not recorded on the payslip (needed for the loonaangifte).",
+    "Not supported: jonggehandicaptenkorting, overheidswerkgevers (Ufo), inhouding bijdrage Zvw (dga's), eigenrisicodragers, the premiekorting/LIV and other reliefs, deductions other than the employee's pensioenpremie.",
+    "The AWf premium (LOW/HIGH) and the Aof size class and Whk rate are the employer's responsibility; the AWf correction for flexible hours is not applied, and one AWf rate applies per employee per period (no pro-rata split for concurrent contracts, Handboek §6.7.2).",
+    "A negative period wage gives no wage tax (no refund through the period table); premiums and the Zvw follow VCR, including negative premiums.",
+    "Status LAW_DERIVED: the wage tax reproduces all 108,460 amounts of the 2026 white tables (maand, week, vier weken, kwartaal; checked by build_template.py; 14 of them are test cases); premiums are derived from the Handboek."
+  ],
+  "testCases": [
+    {
+      "name": "witte maandtabel: 225.00 — younger than AOW age, zonder loonheffingskorting",
+      "evidence": "Belastingdienst witte maandtabel 2026 (standaard, Nederland), tabelloon 225.00: € 80.42 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "225.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "false",
+        "alleenstaandeOuderenkorting": "false"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "80.42"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "6.17"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "14.11"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "1.13"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "3.42"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "13.73"
+        }
+      ]
+    },
+    {
+      "name": "witte maandtabel: 1115.99 — AOW age, born 1945 or earlier, met loonheffingskorting",
+      "evidence": "Belastingdienst witte maandtabel 2026 (standaard, Nederland), tabelloon 1111.50: € 0.00 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1115.99",
+      "birthDate": "1944-02-10",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "false"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "0.00"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "68.08"
+        }
+      ]
+    },
+    {
+      "name": "witte maandtabel: 2443.50 — AOW age, born 1946 or later, met loonheffingskorting incl. alleenstaande-ouderenkorting",
+      "evidence": "Belastingdienst witte maandtabel 2026 (standaard, Nederland), tabelloon 2443.50: € 0.00 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2443.50",
+      "birthDate": "1955-09-30",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "true"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "0.00"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "149.05"
+        }
+      ]
+    },
+    {
+      "name": "witte maandtabel: 3887.99 — younger than AOW age, met loonheffingskorting",
+      "evidence": "Belastingdienst witte maandtabel 2026 (standaard, Nederland), tabelloon 3883.50: € 761.92 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3887.99",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "false"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "761.92"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "106.53"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "243.78"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "19.44"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "59.10"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "237.17"
+        }
+      ]
+    },
+    {
+      "name": "witte maandtabel: 5548.50 — AOW age, born 1945 or earlier, met loonheffingskorting incl. alleenstaande-ouderenkorting",
+      "evidence": "Belastingdienst witte maandtabel 2026 (standaard, Nederland), tabelloon 5548.50: € 1152.08 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5548.50",
+      "birthDate": "1944-02-10",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "true"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "1152.08"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "338.46"
+        }
+      ]
+    },
+    {
+      "name": "witte maandtabel: 6992.99 — AOW age, born 1946 or later, zonder loonheffingskorting",
+      "evidence": "Belastingdienst witte maandtabel 2026 (standaard, Nederland), tabelloon 6988.50: € 2040.17 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "6992.99",
+      "birthDate": "1955-09-30",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "false",
+        "alleenstaandeOuderenkorting": "false"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "2040.17"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "403.66"
+        }
+      ]
+    },
+    {
+      "name": "witte maandtabel: 8878.50 — AOW age, born 1945 or earlier, zonder loonheffingskorting",
+      "evidence": "Belastingdienst witte maandtabel 2026 (standaard, Nederland), tabelloon 8878.50: € 2939.00 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "8878.50",
+      "birthDate": "1944-02-10",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "false",
+        "alleenstaandeOuderenkorting": "false"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "2939.00"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "403.66"
+        }
+      ]
+    },
+    {
+      "name": "witte maandtabel: 11087.99 — AOW age, born 1946 or later, met loonheffingskorting",
+      "evidence": "Belastingdienst witte maandtabel 2026 (standaard, Nederland), tabelloon 11083.50: € 4067.25 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "11087.99",
+      "birthDate": "1955-09-30",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "false"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "4067.25"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "403.66"
+        }
+      ]
+    },
+    {
+      "name": "witte weektabel: 128.77 — younger than AOW age, met loonheffingskorting",
+      "evidence": "Belastingdienst witte weektabel 2026 (standaard, Nederland), tabelloon 128.77: € 0.00 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-12",
+      "frequency": "WEEKLY",
+      "grossEarnings": "128.77",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "false"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "0.00"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "3.53"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "8.07"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "0.64"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "1.96"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "7.85"
+        }
+      ]
+    },
+    {
+      "name": "witte weektabel: 769.49 — AOW age, born 1945 or earlier, met loonheffingskorting incl. alleenstaande-ouderenkorting",
+      "evidence": "Belastingdienst witte weektabel 2026 (standaard, Nederland), tabelloon 768.47: € 9.81 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-12",
+      "frequency": "WEEKLY",
+      "grossEarnings": "769.49",
+      "birthDate": "1944-02-10",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "true"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "9.81"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "46.94"
+        }
+      ]
+    },
+    {
+      "name": "witte weektabel: 1152.70 — AOW age, born 1946 or later, zonder loonheffingskorting",
+      "evidence": "Belastingdienst witte weektabel 2026 (standaard, Nederland), tabelloon 1152.70: € 285.56 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-12",
+      "frequency": "WEEKLY",
+      "grossEarnings": "1152.70",
+      "birthDate": "1955-09-30",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "false",
+        "alleenstaandeOuderenkorting": "false"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "285.56"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "70.31"
+        }
+      ]
+    },
+    {
+      "name": "witte weektabel: 1793.42 — AOW age, born 1945 or earlier, zonder loonheffingskorting",
+      "evidence": "Belastingdienst witte weektabel 2026 (standaard, Nederland), tabelloon 1792.39: € 551.27 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-12",
+      "frequency": "WEEKLY",
+      "grossEarnings": "1793.42",
+      "birthDate": "1944-02-10",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "false",
+        "alleenstaandeOuderenkorting": "false"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "551.27"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "93.15"
+        }
+      ]
+    },
+    {
+      "name": "witte weektabel: 2304.35 — AOW age, born 1946 or later, met loonheffingskorting",
+      "evidence": "Belastingdienst witte weektabel 2026 (standaard, Nederland), tabelloon 2304.35: € 804.94 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-12",
+      "frequency": "WEEKLY",
+      "grossEarnings": "2304.35",
+      "birthDate": "1955-09-30",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "false"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "804.94"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "93.15"
+        }
+      ]
+    },
+    {
+      "name": "witte weektabel: 2558.76 — younger than AOW age, zonder loonheffingskorting",
+      "evidence": "Belastingdienst witte weektabel 2026 (standaard, Nederland), tabelloon 2557.74: € 1072.44 in that column; premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-12",
+      "frequency": "WEEKLY",
+      "grossEarnings": "2558.76",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "false",
+        "alleenstaandeOuderenkorting": "false"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "1072.44"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "41.84"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "95.75"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "7.64"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "23.21"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "93.15"
+        }
+      ]
+    },
+    {
+      "name": "Handboek Zvw example: € 2.400 with € 100 pension premium",
+      "evidence": "Handboek Loonheffingen 2026 §8.2 'Voorbeeldberekening werkgeversheffing Zvw': € 2.300 loon voor de Zvw, werkgeversheffing 6,10% = € 140,30; wage tax and premiums by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2400.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "preTaxDeductionsByType": {
+        "RETIREMENT": "100.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "117.83"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "63.02"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "144.21"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "11.50"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "34.96"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "140.30"
+        }
+      ]
+    },
+    {
+      "name": "above the highest table wage, monthly",
+      "evidence": "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py; tax at € 11.092,50 plus 49,50% of the excess, rounded down",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "15000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "6585.88"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "181.32"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "414.91"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "33.09"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "100.58"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "403.66"
+        }
+      ]
+    },
+    {
+      "name": "above the highest table wage, weekly, AOW incl. alleenstaande-ouderenkorting",
+      "evidence": "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py",
+      "periodStart": "2026-06-08",
+      "periodEnd": "2026-06-14",
+      "paymentDate": "2026-06-12",
+      "frequency": "WEEKLY",
+      "grossEarnings": "3100.00",
+      "birthDate": "1955-09-30",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "true"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "1196.62"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "93.15"
+        }
+      ]
+    },
+    {
+      "name": "high AWf premium and large-employer Aof",
+      "evidence": "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4200.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "HIGH",
+        "whkRate": "0.0094"
+      },
+      "employee": {
+        "awfPremium": "HIGH",
+        "applyLoonheffingskorting": "true"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "920.83"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "325.08"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "320.46"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "21.00"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "39.48"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "256.20"
+        }
+      ]
+    },
+    {
+      "name": "cumulative maximum catches up in March",
+      "evidence": "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py; Handboek §6.3 voorbeeld 2 with the 2026 maximum",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "paymentDate": "2026-03-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "8000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "ytd": {
+        "wageTax.TAX.base": "12000.00",
+        "wageTax.TAX.periods": "2",
+        "awf.EMPLOYER.base": "12000.00",
+        "zvw.EMPLOYER.base": "12000.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "2918.58"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "215.15"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "492.33"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "39.26"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "119.35"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "478.99"
+        }
+      ]
+    },
+    {
+      "name": "cumulative maximum already reached",
+      "evidence": "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py",
+      "periodStart": "2026-07-01",
+      "periodEnd": "2026-07-31",
+      "paymentDate": "2026-07-24",
+      "frequency": "MONTHLY",
+      "grossEarnings": "9000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "ytd": {
+        "wageTax.TAX.base": "54000.00",
+        "wageTax.TAX.periods": "6",
+        "awf.EMPLOYER.base": "39704.46",
+        "zvw.EMPLOYER.base": "39704.46"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "3480.67"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "181.32"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "414.91"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "33.09"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "100.58"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "403.66"
+        }
+      ]
+    },
+    {
+      "name": "annual maximum in a 53-week year",
+      "evidence": "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py; Handboek §6.3 Let op 1: € 79.409 is an absolute maximum",
+      "periodStart": "2026-12-28",
+      "periodEnd": "2027-01-03",
+      "paymentDate": "2026-12-31",
+      "frequency": "WEEKLY",
+      "grossEarnings": "2000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "ytd": {
+        "wageTax.TAX.base": "104000.00",
+        "wageTax.TAX.periods": "52",
+        "awf.EMPLOYER.base": "79408.68",
+        "zvw.EMPLOYER.base": "79408.68"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "759.62"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "0.01"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "0.02"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "0.02"
+        }
+      ]
+    },
+    {
+      "name": "turns 67 in June: AOW column, no employee-insurance premiums, Zvw continues",
+      "evidence": "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py; Handboek §18.21",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3500.00",
+      "birthDate": "1959-06-20",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "171.42"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "213.50"
+        }
+      ]
+    },
+    {
+      "name": "turns 67 in July: still younger than AOW age in June",
+      "evidence": "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py; Handboek §18.21",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3500.00",
+      "birthDate": "1959-07-02",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "592.08"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "95.90"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "219.45"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "17.50"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "53.20"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "213.50"
+        }
+      ]
+    },
+    {
+      "name": "mid-year adoption with brought-forward figures",
+      "evidence": "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-23",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "broughtForwardYear": "2026",
+        "broughtForwardPeriods": "9",
+        "broughtForwardWage": "45000.00",
+        "broughtForwardPremiumBase": "45000.00",
+        "broughtForwardZvwBase": "45000.00"
+      },
+      "employmentStartDate": "2018-02-01",
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "1325.08"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "137.00"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "313.50"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "25.00"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "76.00"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "305.00"
+        }
+      ]
+    },
+    {
+      "name": "no wage in the period: no loontijdvak, nothing charged",
+      "evidence": "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py; Handboek §6.2 d",
+      "periodStart": "2026-07-01",
+      "periodEnd": "2026-07-31",
+      "paymentDate": "2026-07-24",
+      "frequency": "MONTHLY",
+      "grossEarnings": "0.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "broughtForwardYear": "2026",
+        "broughtForwardPeriods": "5",
+        "broughtForwardWage": "40000.00",
+        "broughtForwardPremiumBase": "30000.00",
+        "broughtForwardZvwBase": "30000.00"
+      },
+      "employmentStartDate": "2018-02-01",
+      "expectLines": []
+    },
+    {
+      "name": "bonus in the period is refused",
+      "evidence": "bijzondere beloningen use the special-rewards table (not modelled)",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "6000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "earningsByComponent": {
+        "BASIC": "4000.00",
+        "BONUS": "2000.00"
+      },
+      "expectError": "bijzondere beloning"
+    },
+    {
+      "name": "employee paid earlier this year without brought-forward figures",
+      "evidence": "VCR needs this year's earlier wages",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-23",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "employmentStartDate": "2018-02-01",
+      "expectError": "No earlier payroll this year"
+    },
+    {
+      "name": "alleenstaande-ouderenkorting below AOW age is refused",
+      "evidence": "Rekenvoorschriften 2.2.3.3",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "true"
+      },
+      "expectError": "alleenstaande-ouderenkorting"
+    },
+    {
+      "name": "jonggehandicaptenkorting is refused",
+      "evidence": "not in the tables (Rekenvoorschriften chapter 5)",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "jonggehandicaptenkorting": "true"
+      },
+      "expectError": "jonggehandicaptenkorting"
+    },
+    {
+      "name": "non-resident is refused",
+      "evidence": "chapter 8 tables not modelled",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "residentOfNetherlands": "false"
+      },
+      "expectError": "Nederland"
+    },
+    {
+      "name": "government employer is refused",
+      "evidence": "Ufo premium not modelled",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152",
+        "governmentEmployer": "true"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "expectError": "Overheidswerkgevers"
+    },
+    {
+      "name": "employee-paid Zvw is refused",
+      "evidence": "inhouding bijdrage Zvw not modelled",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "zvwWithheldFromEmployee": "true"
+      },
+      "expectError": "bijdrage Zvw"
+    },
+    {
+      "name": "earnings not subject to employee insurance are refused",
+      "evidence": "SV wage must equal the wage for the wage tax",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "socialEarnings": "2500.00",
+      "expectError": "werknemersverzekeringen"
+    },
+    {
+      "name": "other pre-tax deduction types are refused",
+      "evidence": "only the employee's pension premium is deductible here",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "preTaxDeductionsByType": {
+        "INSURANCE": "50.00"
+      },
+      "expectError": "pensioenpremie"
+    },
+    {
+      "name": "2027 is not covered",
+      "evidence": "2027 tables are published in December 2026",
+      "periodStart": "2027-01-01",
+      "periodEnd": "2027-01-31",
+      "paymentDate": "2027-01-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "expectError": "a newer template version is needed"
+    }
+  ]
+}

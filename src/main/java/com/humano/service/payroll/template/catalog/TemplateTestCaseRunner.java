@@ -58,6 +58,7 @@ public final class TemplateTestCaseRunner {
             c.frequency(),
             template.currency(),
             c.grossEarnings(),
+            c.earningsByComponent() != null ? c.earningsByComponent() : Map.of("BASIC", c.grossEarnings()),
             c.socialEarnings() != null ? c.socialEarnings() : c.grossEarnings(),
             c.taxableEarnings() != null ? c.taxableEarnings() : c.grossEarnings(),
             c.reductions() != null ? c.reductions() : BigDecimal.ZERO,

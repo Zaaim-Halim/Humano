@@ -77,6 +77,7 @@ class PayrollTemplatePayrollRunIT {
     private static final String TEMPLATE = "bg-employment";
     private static final String GB_TEMPLATE = "gb-paye-nic";
     private static final String US_TEMPLATE = "us-federal-employment";
+    private static final String NL_TEMPLATE = "nl-employment";
 
     @Autowired
     private PayrollTemplateService templateService;
@@ -232,7 +233,7 @@ class PayrollTemplatePayrollRunIT {
                 compensations.findAll().stream().filter(c -> c.getEmployee().getId().equals(employee.getId())).toList()
             );
             deductions.deleteAll(deductions.findAll().stream().filter(d -> d.getEmployee().getId().equals(employee.getId())).toList());
-            for (String templateId : List.of(TEMPLATE, GB_TEMPLATE, US_TEMPLATE)) {
+            for (String templateId : List.of(TEMPLATE, GB_TEMPLATE, US_TEMPLATE, NL_TEMPLATE)) {
                 profiles.findByEmployeeIdAndTemplateId(employee.getId(), templateId).ifPresent(profiles::delete);
                 adoptions.findByTemplateId(templateId).ifPresent(adoptions::delete);
             }
@@ -444,6 +445,49 @@ class PayrollTemplatePayrollRunIT {
             "medicare/WITHHOLDING=1740",
             "medicare/EMPLOYER_CHARGE=1740",
             "additionalMedicare/WITHHOLDING=360"
+        );
+    }
+
+    @Test
+    void dutchPremiumsUseTheCumulativeMaximumAcrossPostedRuns() {
+        // € 8.000 in January, € 5.000 in February; monthly maximum premium wage € 6.617,41 (Handboek tabel 11).
+        tx.executeWithoutResult(s -> {
+            Employee e = employees.findById(employee.getId()).orElseThrow();
+            e.setCountry(countries.findAll().stream().filter(c -> c.getCode() == CountryCode.NL).findFirst().orElseThrow());
+            employees.save(e);
+            setPay("8000.00", CurrencyCode.EUR);
+        });
+        templateService.configure(NL_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of("aofPremium", "LOW", "whkRate", "0.0152")));
+        templateService.saveProfile(NL_TEMPLATE, employee.getId(), Map.of("applyLoonheffingskorting", "true", "awfPremium", "LOW"));
+
+        PayrollRunResponse january = calculate(period(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)));
+        assertThat(january.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        // Premiums on the € 6.617,41 maximum, not on € 8.000.
+        assertThat(templateLines(january)).containsExactlyInAnyOrder(
+            "wageTax/INCOME_TAX=2918.58",
+            "awf/EMPLOYER_CHARGE=181.32",
+            "aof/EMPLOYER_CHARGE=414.91",
+            "wko/EMPLOYER_CHARGE=33.09",
+            "whk/EMPLOYER_CHARGE=100.58",
+            "zvw/EMPLOYER_CHARGE=403.66"
+        );
+        tx.executeWithoutResult(s -> {
+            PayrollRun run = runs.findById(january.id()).orElseThrow();
+            run.setStatus(RunStatus.POSTED);
+            runs.save(run);
+            setPay("5000.00", CurrencyCode.EUR);
+        });
+
+        // February catches up: min(€ 13.000, 2 × € 6.617,41) − € 6.617,41 = € 6.382,59, more than February's own € 5.000.
+        PayrollRunResponse february = calculate(period(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28)));
+        assertThat(february.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        assertThat(templateLines(february)).containsExactlyInAnyOrder(
+            "wageTax/INCOME_TAX=1325.08",
+            "awf/EMPLOYER_CHARGE=174.88",
+            "aof/EMPLOYER_CHARGE=400.19",
+            "wko/EMPLOYER_CHARGE=31.91",
+            "whk/EMPLOYER_CHARGE=97.02",
+            "zvw/EMPLOYER_CHARGE=389.34"
         );
     }
 

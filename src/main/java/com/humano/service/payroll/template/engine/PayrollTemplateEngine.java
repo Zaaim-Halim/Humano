@@ -1,6 +1,7 @@
 package com.humano.service.payroll.template.engine;
 
 import com.humano.domain.enumeration.payroll.DeductionType;
+import com.humano.domain.enumeration.payroll.PayComponentCode;
 import com.humano.service.payroll.template.extension.PayrollTemplateExtension;
 import com.humano.service.payroll.template.extension.PayrollTemplateExtensionRegistry;
 import com.humano.service.payroll.template.model.DatedValue;
@@ -28,12 +29,13 @@ import org.springframework.stereotype.Component;
  * <ul>
  *   <li>Period: {@code #periodStart}, {@code #periodEnd}, {@code #frequency}, {@code #periodsPerYear},
  *   {@code #isCalendarMonth}.</li>
- *   <li>Earnings: {@code #grossEarnings}, {@code #socialEarnings}, {@code #taxableEarnings},
+ *   <li>Earnings: {@code #grossEarnings}, {@code #earningsByComponent['BONUS']} (by pay-component code; 0 for a
+ *   code with none), {@code #socialEarnings}, {@code #taxableEarnings},
  *   {@code #reductions} (unpaid leave), {@code #preTaxDeductions} (tenant pre-tax deductions; a template
  *   that doesn't model them should REQUIRE them to be zero), {@code #preTaxDeductionsByType['RETIREMENT']}
  *   (the same by deduction type; 0 for a type with none).</li>
- *   <li>Employee: {@code #fullPeriod}, {@code #fte}, {@code #birthYear}, {@code #ageAtPeriodEnd}
- *   (an expression using either fails when the birth date is unknown), {@code #employmentStartDate}
+ *   <li>Employee: {@code #fullPeriod}, {@code #fte}, {@code #birthDate}, {@code #birthYear}, {@code #ageAtPeriodEnd}
+ *   (an expression using any of them fails when the birth date is unknown), {@code #employmentStartDate}
  *   (fails when unknown), {@code #employee['key']}.</li>
  *   <li>Employer: {@code #employer['key']}.</li>
  *   <li>Data: {@code #p['parameter']} (the value in force for the period), {@code #table.lookup(...)},
@@ -58,6 +60,7 @@ public class PayrollTemplateEngine {
         "periodsPerYear",
         "isCalendarMonth",
         "grossEarnings",
+        "earningsByComponent",
         "socialEarnings",
         "taxableEarnings",
         "reductions",
@@ -65,6 +68,7 @@ public class PayrollTemplateEngine {
         "preTaxDeductionsByType",
         "fullPeriod",
         "fte",
+        "birthDate",
         "birthYear",
         "ageAtPeriodEnd",
         "employmentStartDate",
@@ -112,6 +116,12 @@ public class PayrollTemplateEngine {
             in.periodEnd().equals(in.periodStart().withDayOfMonth(in.periodStart().lengthOfMonth()))
         );
         vars.put("grossEarnings", nz(in.grossEarnings()));
+        Map<String, BigDecimal> byComponent = new HashMap<>();
+        for (PayComponentCode code : PayComponentCode.values()) {
+            BigDecimal amount = in.earningsByComponent() == null ? null : in.earningsByComponent().get(code.name());
+            byComponent.put(code.name(), nz(amount));
+        }
+        vars.put("earningsByComponent", new StrictMap("pay component", byComponent));
         vars.put("socialEarnings", nz(in.socialEarnings()));
         vars.put("taxableEarnings", nz(in.taxableEarnings()));
         vars.put("reductions", nz(in.reductions()));
@@ -124,6 +134,7 @@ public class PayrollTemplateEngine {
         vars.put("preTaxDeductionsByType", new StrictMap("pre-tax deduction type", preTaxByType));
         vars.put("fullPeriod", in.fullPeriod());
         vars.put("fte", in.fte() != null ? in.fte() : BigDecimal.ONE);
+        vars.put("birthDate", in.birthDate());
         vars.put("birthYear", in.birthDate() != null ? in.birthDate().getYear() : null);
         vars.put("ageAtPeriodEnd", in.birthDate() != null ? Period.between(in.birthDate(), in.periodEnd()).getYears() : null);
         vars.put("employmentStartDate", in.employmentStartDate());
@@ -381,7 +392,7 @@ public class PayrollTemplateEngine {
                     " needs #" +
                     name +
                     ", which is unknown for this employee" +
-                    (name.equals("birthYear") || name.equals("ageAtPeriodEnd") ? " (no birth date)" : "")
+                    (name.equals("birthDate") || name.equals("birthYear") || name.equals("ageAtPeriodEnd") ? " (no birth date)" : "")
                 );
             }
         }
