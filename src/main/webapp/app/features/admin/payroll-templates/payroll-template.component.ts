@@ -20,19 +20,15 @@ import { countryName } from 'app/shared/util/countries';
 
 import { PayrollTemplate } from '../models/payroll-template.model';
 import { PayrollTemplateService } from '../services/payroll-template.service';
+import { TemplateEmployeesComponent } from './template-employees.component';
 import { TemplateInputsComponent } from './template-inputs.component';
-import {
-  TemplateInputsGroup,
-  requireTemplateInputs,
-  templateInputLabel,
-  templateInputValues,
-  templateInputsGroup,
-} from './template-inputs';
+import { TemplateInputsGroup, requireTemplateInputs, templateInputValues, templateInputsGroup } from './template-inputs';
 import { templateState } from './template-state';
 
 /**
  * One statutory payroll template (`/payroll/templates/:id`): its employer settings, whether payroll
- * uses it, what changed since it was last reviewed, and what it covers (limitations, sources).
+ * uses it, its employees' profiles ({@link TemplateEmployeesComponent}), what changed since it was
+ * last reviewed, and what it covers (limitations, sources).
  * <p>
  * Settings and the on/off switch are saved together (`PUT .../adoption`). The template's required
  * settings are only required while it is switched on — the server's rule too — so a template chosen
@@ -54,6 +50,7 @@ import { templateState } from './template-state';
     PageHeaderComponent,
     SkeletonRowComponent,
     SwitchComponent,
+    TemplateEmployeesComponent,
     TemplateInputsComponent,
   ],
   templateUrl: './payroll-template.component.html',
@@ -98,8 +95,6 @@ export default class PayrollTemplateComponent {
     if (!t?.adoption?.updateAvailable || !seen) return [];
     return t.changelog.filter(c => compareVersions(c.version, seen) > 0).sort((a, b) => compareVersions(b.version, a.version));
   });
-
-  protected readonly label = templateInputLabel;
 
   private readonly service = inject(PayrollTemplateService);
   private readonly translate = inject(TranslateService);

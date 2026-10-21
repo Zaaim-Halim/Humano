@@ -2,9 +2,11 @@ package com.humano.web.rest.payroll;
 
 import com.humano.dto.payroll.request.ConfigurePayrollTemplateRequest;
 import com.humano.dto.payroll.request.EmployeeTemplateProfileRequest;
+import com.humano.dto.payroll.request.UpdateTemplateProfilesRequest;
 import com.humano.dto.payroll.response.EmployeeTemplateProfileResponse;
 import com.humano.dto.payroll.response.PayrollTemplateAdoptionResponse;
 import com.humano.dto.payroll.response.PayrollTemplateResponse;
+import com.humano.dto.payroll.response.TemplateEmployeeResponse;
 import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
@@ -60,6 +62,21 @@ public class PayrollTemplateResource {
     @PostMapping("/{templateId}/adoption/acknowledge")
     public ResponseEntity<PayrollTemplateResponse> acknowledge(@PathVariable String templateId) {
         return ResponseEntity.ok(templateService.acknowledge(templateId));
+    }
+
+    /** The employees the template covers, each with their profile and the required attributes it still lacks. */
+    @GetMapping("/{templateId}/employees")
+    public ResponseEntity<List<TemplateEmployeeResponse>> employees(@PathVariable String templateId) {
+        return ResponseEntity.ok(templateService.employees(templateId));
+    }
+
+    /** Sets the same attributes on several employees' profiles; their other attributes are kept. */
+    @PatchMapping("/{templateId}/employees")
+    public ResponseEntity<List<TemplateEmployeeResponse>> updateProfiles(
+        @PathVariable String templateId,
+        @Valid @RequestBody UpdateTemplateProfilesRequest request
+    ) {
+        return ResponseEntity.ok(templateService.updateProfiles(templateId, request));
     }
 
     @GetMapping("/{templateId}/employees/{employeeId}")

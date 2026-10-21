@@ -1,6 +1,7 @@
 package com.humano.service.payroll.template;
 
 import com.humano.domain.enumeration.CountryCode;
+import com.humano.domain.enumeration.hr.EmployeeStatus;
 import com.humano.domain.enumeration.payroll.Kind;
 import com.humano.domain.enumeration.payroll.Measurement;
 import com.humano.domain.enumeration.payroll.PayComponentCode;
@@ -14,9 +15,11 @@ import com.humano.domain.payroll.TaxBracket;
 import com.humano.domain.payroll.TaxWithholding;
 import com.humano.domain.shared.Employee;
 import com.humano.dto.payroll.request.ConfigurePayrollTemplateRequest;
+import com.humano.dto.payroll.request.UpdateTemplateProfilesRequest;
 import com.humano.dto.payroll.response.EmployeeTemplateProfileResponse;
 import com.humano.dto.payroll.response.PayrollTemplateAdoptionResponse;
 import com.humano.dto.payroll.response.PayrollTemplateResponse;
+import com.humano.dto.payroll.response.TemplateEmployeeResponse;
 import com.humano.repository.payroll.EmployeeTemplateProfileRepository;
 import com.humano.repository.payroll.PayComponentRepository;
 import com.humano.repository.payroll.PayrollCalendarRepository;
@@ -43,6 +46,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -51,8 +55,10 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -234,6 +240,125 @@ public class PayrollTemplateService {
         profile.setAttributes(attributes);
         profileRepository.save(profile);
         return new EmployeeTemplateProfileResponse(templateId, employeeId, new TreeMap<>(attributes));
+    }
+
+    /**
+     * The employees {@code templateId} covers (see {@link #coveredEmployees}), by name, each with their
+     * profile and the required attributes it still lacks.
+     */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public List<TemplateEmployeeResponse> employees(String templateId) {
+        PayrollTemplate template = template(templateId);
+        Map<UUID, Map<String, String>> profiles = profileRepository
+            .findByTemplateId(templateId)
+            .stream()
+            .collect(Collectors.toMap(p -> p.getEmployee().getId(), EmployeeTemplateProfile::getAttributes));
+        return coveredEmployees(template).stream().map(e -> employeeView(template, e, profiles.getOrDefault(e.getId(), Map.of()))).toList();
+    }
+
+    /**
+     * Sets the same attributes on several covered employees' profiles, keeping their other attributes
+     * and creating profiles where there are none. Every resulting profile is validated before any is
+     * saved, so a bad value or an employee the template doesn't cover rejects the whole request.
+     */
+    public List<TemplateEmployeeResponse> updateProfiles(String templateId, UpdateTemplateProfilesRequest request) {
+        PayrollTemplate template = template(templateId);
+        Map<String, String> changes = clean(request.attributes());
+        if (changes.isEmpty()) {
+            throw new BusinessRuleViolationException("Choose at least one value to set");
+        }
+        Set<UUID> ids = new LinkedHashSet<>(request.employeeIds());
+        Map<UUID, Employee> covered = coveredEmployees(template)
+            .stream()
+            .filter(e -> ids.contains(e.getId()))
+            .collect(Collectors.toMap(Employee::getId, e -> e));
+        if (covered.size() < ids.size()) {
+            throw new BusinessRuleViolationException(
+                (ids.size() - covered.size()) + " of the chosen employees are not covered by template " + templateId
+            );
+        }
+        Map<UUID, EmployeeTemplateProfile> existing = profileRepository
+            .findByTemplateId(templateId)
+            .stream()
+            .filter(p -> ids.contains(p.getEmployee().getId()))
+            .collect(Collectors.toMap(p -> p.getEmployee().getId(), p -> p));
+
+        List<EmployeeTemplateProfile> updated = new ArrayList<>();
+        for (UUID id : ids) {
+            EmployeeTemplateProfile profile = existing.computeIfAbsent(id, key -> {
+                EmployeeTemplateProfile created = new EmployeeTemplateProfile();
+                created.setEmployee(covered.get(key));
+                created.setTemplateId(templateId);
+                return created;
+            });
+            Map<String, String> merged = new TreeMap<>(profile.getAttributes());
+            merged.putAll(changes);
+            try {
+                TemplateInputs.coerce(template.inputs().employee(), merged, "employee attribute", false);
+            } catch (TemplateCalculationException e) {
+                throw new BusinessRuleViolationException(e.getMessage());
+            }
+            profile.setAttributes(merged);
+            updated.add(profile);
+        }
+        profileRepository.saveAll(updated);
+        log.info("Set {} on {} employee profile(s) for payroll template {}", changes.keySet(), updated.size(), templateId);
+        return updated.stream().map(p -> employeeView(template, covered.get(p.getEmployee().getId()), p.getAttributes())).toList();
+    }
+
+    /**
+     * Who a national template covers: employees whose country of employment is the template's and
+     * whom payroll can still pay under it — working now, or left on or after the start of its rules
+     * (their final pay).
+     */
+    private List<Employee> coveredEmployees(PayrollTemplate template) {
+        CountryCode country = CountryCode.valueOf(template.jurisdiction().country());
+        LocalDate rulesStart = template.validity().from();
+        return employeeRepository.findAll(
+            (Specification<Employee>) (root, query, cb) ->
+                cb.and(
+                    cb.equal(root.get("country").get("code"), country),
+                    cb.or(
+                        root.get("status").in(EmployeeStatus.WORKING),
+                        cb.and(
+                            cb.equal(root.get("status"), EmployeeStatus.TERMINATED),
+                            cb.greaterThanOrEqualTo(root.<LocalDate>get("endDate"), rulesStart)
+                        )
+                    )
+                ),
+            Sort.by("lastName", "firstName")
+        );
+    }
+
+    private static TemplateEmployeeResponse employeeView(PayrollTemplate template, Employee employee, Map<String, String> attributes) {
+        String name = Stream.of(employee.getFirstName(), employee.getLastName())
+            .filter(part -> part != null && !part.isBlank())
+            .collect(Collectors.joining(" "));
+        return new TemplateEmployeeResponse(
+            employee.getId(),
+            name.isEmpty() ? employee.getLogin() : name,
+            employee.getEmployeeNumber(),
+            employee.getJobTitle(),
+            employee.getDepartment() != null ? employee.getDepartment().getName() : null,
+            employee.getStatus(),
+            new TreeMap<>(attributes),
+            missingRequired(template.inputs().employee(), attributes)
+        );
+    }
+
+    /** Required attributes neither set nor defaulted: what {@link TemplateInputs#coerce} refuses at calculation. */
+    static List<String> missingRequired(List<InputField> fields, Map<String, String> attributes) {
+        if (fields == null) return List.of();
+        return fields
+            .stream()
+            .filter(InputField::required)
+            .filter(f -> f.defaultValue() == null)
+            .filter(f -> {
+                String value = attributes.get(f.key());
+                return value == null || value.isBlank();
+            })
+            .map(InputField::key)
+            .toList();
     }
 
     // ---------------------------------------------------------------- payroll run support
@@ -445,13 +570,24 @@ public class PayrollTemplateService {
                 " employees."
             );
         }
-        long employees = employeeRepository.count(
-            (Specification<Employee>) (root, query, cb) -> cb.equal(root.get("country").get("code"), countryCode)
-        );
-        long profiles = profileRepository.countByTemplateId(template.id());
-        if (employees > profiles && template.inputs().employee() != null && !template.inputs().employee().isEmpty()) {
+        // Same rule as the template's employee list, so the two counts agree.
+        List<Employee> covered = coveredEmployees(template);
+        Map<UUID, Map<String, String>> profiles = profileRepository
+            .findByTemplateId(template.id())
+            .stream()
+            .collect(Collectors.toMap(p -> p.getEmployee().getId(), EmployeeTemplateProfile::getAttributes));
+        long incomplete = covered
+            .stream()
+            .filter(e -> !missingRequired(template.inputs().employee(), profiles.getOrDefault(e.getId(), Map.of())).isEmpty())
+            .count();
+        if (incomplete > 0) {
             warnings.add(
-                (employees - profiles) + " of " + employees + " " + country + " employee(s) have no profile for this template yet."
+                incomplete +
+                " of " +
+                covered.size() +
+                " " +
+                country +
+                " employee(s) are missing required details for this template; payroll can't calculate them until they are filled in."
             );
         }
         return warnings;

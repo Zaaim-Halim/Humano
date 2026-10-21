@@ -4,7 +4,13 @@ import { Observable } from 'rxjs';
 
 import { ApplicationConfigService } from 'app/core/config/application-config.service';
 
-import { ConfigurePayrollTemplateRequest, PayrollTemplate, PayrollTemplateAdoptionResult } from '../models/payroll-template.model';
+import {
+  ConfigurePayrollTemplateRequest,
+  PayrollTemplate,
+  PayrollTemplateAdoptionResult,
+  TemplateEmployee,
+  UpdateTemplateProfilesRequest,
+} from '../models/payroll-template.model';
 
 /**
  * Statutory payroll templates — `/api/payroll/templates` (gated `MANAGE_TAX_BRACKETS`). Backs the
@@ -35,5 +41,20 @@ export class PayrollTemplateService {
   /** `POST /api/payroll/templates/{id}/adoption/acknowledge` — the shipped version has been reviewed. */
   acknowledge(id: string): Observable<PayrollTemplate> {
     return this.http.post<PayrollTemplate>(`${this.url}/${encodeURIComponent(id)}/adoption/acknowledge`, null);
+  }
+
+  /** `GET /api/payroll/templates/{id}/employees` — the employees the template covers, with their profiles. */
+  employees(id: string): Observable<TemplateEmployee[]> {
+    return this.http.get<TemplateEmployee[]>(`${this.url}/${encodeURIComponent(id)}/employees`);
+  }
+
+  /** `PUT /api/payroll/templates/{id}/employees/{employeeId}` — replace one employee's profile. */
+  saveProfile(id: string, employeeId: string, attributes: Record<string, string>): Observable<unknown> {
+    return this.http.put(`${this.url}/${encodeURIComponent(id)}/employees/${employeeId}`, { attributes });
+  }
+
+  /** `PATCH /api/payroll/templates/{id}/employees` — set the same values on several profiles, keeping their others. */
+  updateProfiles(id: string, body: UpdateTemplateProfilesRequest): Observable<TemplateEmployee[]> {
+    return this.http.patch<TemplateEmployee[]>(`${this.url}/${encodeURIComponent(id)}/employees`, body);
   }
 }

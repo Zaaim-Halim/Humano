@@ -1,0 +1,160 @@
+<section class="hum-set-card">
+  <header class="hum-set-card__head-row">
+    <div>
+      <h3>{{ 'humano.payrollTemplates.employees.title' | translate }}</h3>
+      <p>{{ 'humano.payrollTemplates.employees.hint' | translate }}</p>
+    </div>
+    @if (!loading() && !error()) {
+      <span class="hum-tpl-emp__count">
+        {{ 'humano.payrollTemplates.employees.count' | translate: { total: rows().length, missing: missingCount() } }}
+      </span>
+    }
+  </header>
+
+  @if (loading()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (!rows().length) {
+    <p class="hum-tpl-detail__note"><lucide-icon name="info" [size]="14" /> {{ 'humano.payrollTemplates.employees.none' | translate }}</p>
+  } @else {
+    @if (missingCount() && template().adoption?.enabled) {
+      <hum-alert tone="warning" [title]="'humano.payrollTemplates.employees.blocking' | translate: { count: missingCount() }">
+        <hum-button variant="outline" size="sm" icon="list-checks" (click)="selectMissing()">{{
+          'humano.payrollTemplates.employees.selectMissing' | translate: { count: missingCount() }
+        }}</hum-button>
+      </hum-alert>
+    }
+
+    <div class="hum-tpl-emp__toolbar">
+      <div class="hum-tpl-emp__search">
+        <hum-input
+          icon="search"
+          [placeholder]="'humano.payrollTemplates.employees.search' | translate"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+        />
+      </div>
+      <hum-checkbox
+        [label]="'humano.payrollTemplates.employees.onlyMissing' | translate"
+        [checked]="onlyMissing()"
+        (checkedChange)="onlyMissing.set($event)"
+      />
+      <span class="hum-tpl-emp__spacer"></span>
+      @if (selected().size) {
+        <hum-button variant="ghost" size="sm" (click)="clearSelection()">{{
+          'humano.payrollTemplates.employees.clearSelection' | translate
+        }}</hum-button>
+        <hum-button variant="primary" size="sm" icon="pencil" (click)="editSelected()">{{
+          'humano.payrollTemplates.employees.setFor' | translate: { count: selected().size }
+        }}</hum-button>
+      } @else if (missingCount() && !template().adoption?.enabled) {
+        <hum-button variant="outline" size="sm" icon="list-checks" (click)="selectMissing()">{{
+          'humano.payrollTemplates.employees.selectMissing' | translate: { count: missingCount() }
+        }}</hum-button>
+      }
+    </div>
+
+    <div class="hum-table-wrap">
+      <table class="hum-table">
+        <thead>
+          <tr>
+            <th class="hum-tpl-emp__check">
+              <hum-checkbox
+                [ariaLabel]="'humano.payrollTemplates.employees.selectAll' | translate"
+                [checked]="allVisibleSelected()"
+                (checkedChange)="toggleAllVisible($event)"
+              />
+            </th>
+            <th>{{ 'humano.payrollTemplates.employees.colName' | translate }}</th>
+            <th>{{ 'humano.payrollTemplates.employees.colDepartment' | translate }}</th>
+            <th>{{ 'humano.payrollTemplates.employees.colDetails' | translate }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of visible(); track r.employeeId) {
+            <tr [attr.data-selected]="selected().has(r.employeeId)">
+              <td class="hum-tpl-emp__check">
+                <hum-checkbox
+                  [ariaLabel]="r.name"
+                  [checked]="selected().has(r.employeeId)"
+                  (checkedChange)="toggle(r.employeeId, $event)"
+                />
+              </td>
+              <td>
+                <div class="hum-tpl-emp__name">{{ r.name }}</div>
+                <div class="hum-kpi__hint">
+                  {{ r.jobTitle ?? '' }}
+                  @if (r.status === 'TERMINATED') {
+                    · {{ 'humano.payrollTemplates.employees.left' | translate }}
+                  }
+                </div>
+              </td>
+              <td>{{ r.department ?? '—' }}</td>
+              <td>
+                @if (r.missing.length) {
+                  <hum-badge tone="warning" [label]="'humano.payrollTemplates.employees.missing' | translate" />
+                  <div class="hum-kpi__hint">{{ missingLabels(r) }}</div>
+                } @else {
+                  <hum-badge tone="success" [label]="'humano.payrollTemplates.employees.complete' | translate" />
+                }
+              </td>
+              <td class="hum-table__num">
+                <hum-button variant="ghost" size="sm" icon="pencil" (click)="edit(r)">{{
+                  'humano.payrollTemplates.employees.edit' | translate
+                }}</hum-button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="hum-kpi__hint">{{ 'humano.payrollTemplates.employees.noMatch' | translate }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<hum-drawer [open]="!!editing()" [title]="drawerTitle()" width="560px" hasFooter (closed)="close()">
+  @if (editing(); as e) {
+    @if (form(); as group) {
+      @if (e.mode === 'one') {
+        <p class="hum-tpl-detail__note">{{ 'humano.payrollTemplates.employees.oneHint' | translate }}</p>
+        <hum-template-inputs
+          [inputs]="inputs()"
+          [group]="group"
+          idPrefix="tpl-employee"
+          requiredKey="humano.payrollTemplates.input.requiredEmployee"
+        />
+      } @else {
+        <p class="hum-tpl-detail__note">{{ 'humano.payrollTemplates.employees.manyHint' | translate }}</p>
+        <div class="hum-tpl-emp__choices">
+          @for (i of inputs(); track i.key) {
+            <hum-checkbox [label]="label(i.key)" [checked]="chosenKeys().has(i.key)" (checkedChange)="choose(i, $event)" />
+          }
+        </div>
+        @if (chosenInputs().length) {
+          <hum-template-inputs
+            [inputs]="chosenInputs()"
+            [group]="group"
+            idPrefix="tpl-employees"
+            requiredKey="humano.payrollTemplates.input.requiredChosen"
+          />
+        }
+      }
+    }
+    @if (saveError(); as err) {
+      <hum-alert tone="danger" [title]="err" />
+    }
+  }
+  <ng-container hum-drawer-footer>
+    <hum-button variant="ghost" (click)="close()">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" (click)="save()">{{
+      'humano.payrollTemplates.save' | translate
+    }}</hum-button>
+  </ng-container>
+</hum-drawer>

@@ -10956,15 +10956,13 @@ button.hum-records__empty:hover {
   overflow-wrap: anywhere;
 }
 
-.hum-tpl-facts,
-.hum-tpl-defs {
+.hum-tpl-facts {
   display: grid;
   gap: var(--space-3);
   margin: 0;
 }
 
-.hum-tpl-facts dt,
-.hum-tpl-defs dt {
+.hum-tpl-facts dt {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -10973,17 +10971,52 @@ button.hum-records__empty:hover {
   color: var(--text-muted);
 }
 
-.hum-tpl-facts dd,
-.hum-tpl-defs dd {
+.hum-tpl-facts dd {
   margin: 2px 0 0;
   font-size: var(--text-sm);
   color: var(--text-default);
 }
 
-.hum-tpl-defs__label {
+.hum-tpl-emp__count {
   font-size: var(--text-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.hum-tpl-emp__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 var(--space-3);
+}
+
+.hum-tpl-emp__search {
+  flex: 1 1 260px;
+  max-width: 360px;
+}
+
+.hum-tpl-emp__spacer {
+  flex: 1;
+}
+
+.hum-tpl-emp__check {
+  width: 44px;
+}
+
+.hum-tpl-emp__name {
   font-weight: 500;
   color: var(--text-strong);
+}
+
+.hum-tpl-emp__choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-4);
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
 }
 
 .hum-tpl-inputs__switch {

@@ -1,5 +1,5 @@
 import { TemplateInput } from '../models/payroll-template.model';
-import { requireTemplateInputs, templateInputLabel, templateInputValues, templateInputsGroup } from './template-inputs';
+import { isTemplateSwitch, requireTemplateInputs, templateInputLabel, templateInputValues, templateInputsGroup } from './template-inputs';
 
 function field(key: string, type: TemplateInput['type'], extra: Partial<TemplateInput> = {}): TemplateInput {
   return { key, type, required: false, values: null, pattern: null, min: null, max: null, defaultValue: null, description: null, ...extra };
@@ -44,6 +44,25 @@ describe('payroll template inputs', () => {
     group.controls['whkRate'].setValue('  ');
     group.controls['governmentEmployer'].setValue(true);
     expect(templateInputValues(NL, group)).toEqual({ aofPremium: 'HIGH', governmentEmployer: 'true' });
+  });
+
+  it('asks for a required yes/no with no default instead of answering "no" for the user', () => {
+    // The Netherlands template's tax credit: someone has to decide, so it can't start as an "off" switch.
+    const credit = field('applyLoonheffingskorting', 'BOOLEAN', { required: true });
+    const resident = field('residentOfNetherlands', 'BOOLEAN', { defaultValue: 'true' });
+    expect(isTemplateSwitch(credit)).toBe(false);
+    expect(isTemplateSwitch(resident)).toBe(true);
+
+    const group = templateInputsGroup([credit, resident], {});
+    expect(group.controls['applyLoonheffingskorting'].value).toBe('');
+    expect(templateInputValues([credit, resident], group)).toEqual({ residentOfNetherlands: 'true' });
+    requireTemplateInputs(group, [credit, resident], true);
+    expect(group.controls['applyLoonheffingskorting'].hasError('required')).toBe(true);
+
+    group.controls['applyLoonheffingskorting'].setValue('false');
+    expect(group.valid).toBe(true);
+    expect(templateInputValues([credit], group)).toEqual({ applyLoonheffingskorting: 'false' });
+    expect(templateInputsGroup([credit], { applyLoonheffingskorting: 'true' }).controls['applyLoonheffingskorting'].value).toBe('true');
   });
 
   it('labels a key as words', () => {

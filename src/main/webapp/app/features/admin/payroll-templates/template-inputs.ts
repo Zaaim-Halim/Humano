@@ -4,6 +4,15 @@ import { TemplateInput } from '../models/payroll-template.model';
 
 /** A switch holds a boolean; every other input a string (as typed or chosen). */
 export type TemplateInputValue = string | boolean;
+
+/**
+ * Whether a yes/no input is shown as a switch. A required one with no default is not: a switch is
+ * always on or off, so it would answer "no" for whoever never looked at it. Such an input is a
+ * Yes / No choice that starts empty and must be answered (the template asks someone to decide).
+ */
+export function isTemplateSwitch(input: TemplateInput): boolean {
+  return input.type === 'BOOLEAN' && !(input.required && input.defaultValue === null);
+}
 export type TemplateInputsGroup = FormGroup<Record<string, FormControl<TemplateInputValue>>>;
 
 const INTEGER = /^-?\d+$/;
@@ -19,7 +28,7 @@ export function templateInputsGroup(inputs: TemplateInput[], saved: Partial<Reco
   const controls: Record<string, FormControl<TemplateInputValue>> = {};
   for (const input of inputs) {
     const value = saved[input.key] ?? input.defaultValue ?? '';
-    controls[input.key] = new FormControl<TemplateInputValue>(input.type === 'BOOLEAN' ? value === 'true' : value, {
+    controls[input.key] = new FormControl<TemplateInputValue>(isTemplateSwitch(input) ? value === 'true' : value, {
       nonNullable: true,
       validators: formatValidators(input),
     });
@@ -29,7 +38,7 @@ export function templateInputsGroup(inputs: TemplateInput[], saved: Partial<Reco
 
 /** Require (or stop requiring) the template's required inputs. A switch always has a value, so it is left alone. */
 export function requireTemplateInputs(group: TemplateInputsGroup, inputs: TemplateInput[], required: boolean): void {
-  for (const input of inputs.filter(i => i.required && i.type !== 'BOOLEAN')) {
+  for (const input of inputs.filter(i => i.required && !isTemplateSwitch(i))) {
     const control = group.controls[input.key];
     if (required) {
       control.addValidators(Validators.required);

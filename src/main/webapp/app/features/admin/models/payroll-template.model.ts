@@ -82,3 +82,24 @@ export interface PayrollTemplateAdoptionResult {
   template: PayrollTemplate;
   warnings: string[];
 }
+
+/**
+ * `GET /api/payroll/templates/{id}/employees` — an employee the template covers, with their profile.
+ * `missing` lists required attributes the profile lacks; payroll can't calculate them until it's empty.
+ */
+export interface TemplateEmployee {
+  employeeId: string;
+  name: string;
+  employeeNumber: string | null;
+  jobTitle: string | null;
+  department: string | null;
+  status: string;
+  attributes: Record<string, string>;
+  missing: string[];
+}
+
+/** Body for `PATCH /api/payroll/templates/{id}/employees` — the same values for several employees; others kept. */
+export interface UpdateTemplateProfilesRequest {
+  employeeIds: string[];
+  attributes: Record<string, string>;
+}

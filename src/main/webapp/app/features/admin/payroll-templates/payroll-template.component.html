@@ -92,25 +92,7 @@
         </div>
 
         @if (t.employeeInputs.length) {
-          <section class="hum-set-card">
-            <header>
-              <h3>{{ 'humano.payrollTemplates.employees.title' | translate }}</h3>
-              <p>{{ 'humano.payrollTemplates.employees.hint' | translate }}</p>
-            </header>
-            <dl class="hum-tpl-defs">
-              @for (i of t.employeeInputs; track i.key) {
-                <div>
-                  <dt>
-                    <span class="hum-tpl-defs__label">{{ label(i.key) }}</span>
-                    @if (i.required) {
-                      <hum-badge tone="neutral" [dot]="false" [label]="'humano.payrollTemplates.employees.required' | translate" />
-                    }
-                  </dt>
-                  <dd>{{ i.description }}</dd>
-                </div>
-              }
-            </dl>
-          </section>
+          <hum-template-employees [template]="t" />
         }
       </div>
 
