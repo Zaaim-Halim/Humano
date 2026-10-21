@@ -1,0 +1,102 @@
+{
+  "humano": {
+    "nav": {
+      "payrollTemplates": "Templates"
+    },
+    "payrollTemplates": {
+      "title": "Payroll templates",
+      "subtitle": "Statutory taxes and contributions by country, kept up to date by Humano — switch one on and payroll computes them for you",
+      "group": {
+        "inUse": "Your templates",
+        "available": "Other countries"
+      },
+      "state": {
+        "on": "In use",
+        "off": "Not switched on",
+        "draft": "Draft",
+        "available": "Available",
+        "update": "Update available"
+      },
+      "validRange": "{{ from }} – {{ to }}",
+      "offNote": "Complete its settings and switch it on to use it in payroll.",
+      "empty": "No payroll templates in this version",
+      "emptyHint": "Set up taxes and contributions with your own pay rules instead.",
+      "back": "All templates",
+      "offTitle": "This template isn't used by payroll yet",
+      "offIntro": "Fill in the employer settings below, switch it on and save. Your next payroll run then computes these taxes and contributions for employees in this country.",
+      "update": {
+        "title": "Version {{ version }} is available — you last reviewed {{ seen }}",
+        "markReviewed": "Mark as reviewed",
+        "reviewed": "Template update marked as reviewed"
+      },
+      "use": {
+        "title": "Use for payroll",
+        "hint": "When on, payroll computes these taxes and contributions for employees in {{ country }}, in place of your own tax brackets and income-tax and employer-charge rules for them.",
+        "on": "On",
+        "off": "Off"
+      },
+      "blocked": {
+        "draft": "This template is a draft: its results haven't been checked yet, so it can't be switched on.",
+        "subdivision": "State and municipal templates need employees' work locations, which aren't recorded yet, so this one can't be switched on."
+      },
+      "settings": {
+        "title": "Employer settings",
+        "hint": "Values from your own registrations and notices. Required ones must be filled in before the template can be switched on.",
+        "none": "This template needs no employer settings."
+      },
+      "input": {
+        "required": "Required to switch the template on",
+        "range": "Enter a value from {{ min }} to {{ max }}",
+        "min": "Enter {{ min }} or more",
+        "max": "Enter {{ max }} or less",
+        "number": "Enter a number",
+        "format": "This value isn't in the expected format"
+      },
+      "save": "Save",
+      "savedOn": "Template saved — payroll now uses it",
+      "savedOff": "Template saved — not used by payroll",
+      "warningsTitle": "Check these before your next payroll run",
+      "employees": {
+        "title": "What payroll needs from each employee",
+        "hint": "Each employee covered by this template has a profile with these details; payroll can't calculate an employee whose required details are missing.",
+        "required": "Required"
+      },
+      "about": {
+        "title": "About this template",
+        "valid": "Rules for",
+        "currency": "Currency",
+        "frequencies": "Pay frequencies",
+        "computes": "Computes",
+        "checked": "Checked",
+        "limitations": "Limitations",
+        "sources": "Sources",
+        "changelog": "Changes"
+      },
+      "frequency": {
+        "MONTHLY": "Monthly",
+        "SEMIMONTHLY": "Twice a month",
+        "BIWEEKLY": "Every two weeks",
+        "WEEKLY": "Weekly"
+      },
+      "ledger": {
+        "INCOME_TAX": "Income tax",
+        "STATE_INCOME_TAX": "State income tax",
+        "LOCAL_INCOME_TAX": "Local income tax",
+        "SOCIAL_SECURITY": "Social security",
+        "MEDICARE": "Health insurance",
+        "UNEMPLOYMENT": "Unemployment insurance",
+        "DISABILITY": "Disability insurance",
+        "PENSION_CONTRIBUTION": "Pension contributions",
+        "WORK_INJURY": "Work-injury insurance",
+        "CAPITAL_GAINS": "Capital gains tax",
+        "VALUE_ADDED_TAX": "Value-added tax",
+        "OTHER": "Other contributions"
+      },
+      "status": {
+        "OFFICIAL_VECTORS": "Against official worked examples ({{ count }})",
+        "LAW_DERIVED": "Derived from the law, with {{ count }} worked examples",
+        "DRAFT": "Not yet — draft"
+      }
+    }
+  }
+}

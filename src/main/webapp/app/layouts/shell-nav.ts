@@ -159,7 +159,13 @@ export const SHELL_NAV: ShellNavGroup[] = [
   },
   {
     headingKey: 'humano.nav.groups.payroll',
-    permissions: [Permission.VIEW_PAYROLL_RUN, Permission.VIEW_PAYSLIPS, Permission.APPROVE_LEAVE, Permission.MANAGE_PAY_COMPONENTS],
+    permissions: [
+      Permission.VIEW_PAYROLL_RUN,
+      Permission.VIEW_PAYSLIPS,
+      Permission.APPROVE_LEAVE,
+      Permission.MANAGE_PAY_COMPONENTS,
+      Permission.MANAGE_TAX_BRACKETS,
+    ],
     items: [
       {
         id: 'runs',
@@ -177,6 +183,15 @@ export const SHELL_NAV: ShellNavGroup[] = [
         link: '/payroll/pay-rules',
         keywords: 'formula rule pay component calculation tax',
         permissions: [Permission.MANAGE_PAY_COMPONENTS],
+        feature: PlanFeature.PAYROLL,
+      },
+      {
+        id: 'payroll-templates',
+        labelKey: 'humano.nav.payrollTemplates',
+        icon: 'landmark',
+        link: '/payroll/templates',
+        keywords: 'statutory tax contributions country template social security',
+        permissions: [Permission.MANAGE_TAX_BRACKETS],
         feature: PlanFeature.PAYROLL,
       },
       {

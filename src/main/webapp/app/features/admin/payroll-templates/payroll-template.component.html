@@ -1,0 +1,208 @@
+<div class="hum-page">
+  @if (loading()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (template(); as t) {
+    <hum-page-header [title]="t.name" [subtitle]="country() + ' · ' + t.version" hasActions>
+      <ng-container hum-page-actions>
+        <hum-button variant="ghost" icon="arrow-left" routerLink="/payroll/templates">{{
+          'humano.payrollTemplates.back' | translate
+        }}</hum-button>
+      </ng-container>
+    </hum-page-header>
+
+    <div class="hum-tpl-detail">
+      <div class="hum-tpl-detail__main">
+        @if (t.adoption && !t.adoption.enabled) {
+          <hum-alert tone="info" [title]="'humano.payrollTemplates.offTitle' | translate">
+            {{ 'humano.payrollTemplates.offIntro' | translate }}
+          </hum-alert>
+        }
+
+        @if (t.adoption?.updateAvailable) {
+          <hum-alert
+            tone="warning"
+            [title]="'humano.payrollTemplates.update.title' | translate: { version: t.version, seen: t.adoption.acknowledgedVersion }"
+          >
+            @for (c of newChanges(); track c.version) {
+              <p class="hum-tpl-change">
+                <strong>{{ c.version }}</strong> · {{ c.date | date: 'mediumDate' }} — {{ c.summary }}
+              </p>
+            }
+            <hum-button variant="outline" size="sm" icon="circle-check" [loading]="acknowledging()" (click)="acknowledge()">{{
+              'humano.payrollTemplates.update.markReviewed' | translate
+            }}</hum-button>
+          </hum-alert>
+        }
+
+        <section class="hum-set-card">
+          <header class="hum-set-card__head-row">
+            <div>
+              <h3>{{ 'humano.payrollTemplates.use.title' | translate }}</h3>
+              <p>{{ 'humano.payrollTemplates.use.hint' | translate: { country: country() } }}</p>
+            </div>
+            <hum-switch
+              [formControl]="enabled"
+              [ariaLabel]="'humano.payrollTemplates.use.title' | translate"
+              [label]="(enabled.value ? 'humano.payrollTemplates.use.on' : 'humano.payrollTemplates.use.off') | translate"
+            />
+          </header>
+          @if (blockedKey(); as b) {
+            <p class="hum-tpl-detail__note"><lucide-icon name="info" [size]="14" /> {{ b | translate }}</p>
+          }
+        </section>
+
+        <section class="hum-set-card">
+          <header>
+            <h3>{{ 'humano.payrollTemplates.settings.title' | translate }}</h3>
+            <p>{{ 'humano.payrollTemplates.settings.hint' | translate }}</p>
+          </header>
+          @if (settings(); as group) {
+            @if (t.employerInputs.length) {
+              <hum-template-inputs [inputs]="t.employerInputs" [group]="group" idPrefix="tpl-employer" />
+            } @else {
+              <p class="hum-tpl-detail__note">{{ 'humano.payrollTemplates.settings.none' | translate }}</p>
+            }
+          }
+        </section>
+
+        @if (saveError(); as e) {
+          <hum-alert tone="danger" [title]="e" />
+        }
+        @if (warnings().length) {
+          <hum-alert tone="warning" [title]="'humano.payrollTemplates.warningsTitle' | translate">
+            <ul class="hum-tpl-list">
+              @for (w of warnings(); track w) {
+                <li>{{ w }}</li>
+              }
+            </ul>
+          </hum-alert>
+        }
+
+        <div class="hum-set-actions">
+          @if (enabled.dirty || settings()?.dirty) {
+            <span class="hum-kpi__hint">{{ 'humano.settings.unsaved' | translate }}</span>
+          }
+          <hum-button variant="primary" icon="check" [loading]="saving()" (click)="save()">{{
+            'humano.payrollTemplates.save' | translate
+          }}</hum-button>
+        </div>
+
+        @if (t.employeeInputs.length) {
+          <section class="hum-set-card">
+            <header>
+              <h3>{{ 'humano.payrollTemplates.employees.title' | translate }}</h3>
+              <p>{{ 'humano.payrollTemplates.employees.hint' | translate }}</p>
+            </header>
+            <dl class="hum-tpl-defs">
+              @for (i of t.employeeInputs; track i.key) {
+                <div>
+                  <dt>
+                    <span class="hum-tpl-defs__label">{{ label(i.key) }}</span>
+                    @if (i.required) {
+                      <hum-badge tone="neutral" [dot]="false" [label]="'humano.payrollTemplates.employees.required' | translate" />
+                    }
+                  </dt>
+                  <dd>{{ i.description }}</dd>
+                </div>
+              }
+            </dl>
+          </section>
+        }
+      </div>
+
+      <aside class="hum-tpl-detail__side">
+        <section class="hum-set-card">
+          <header class="hum-set-card__head-row">
+            <h3>{{ 'humano.payrollTemplates.about.title' | translate }}</h3>
+            @if (state(); as s) {
+              <hum-badge [tone]="s.tone" [label]="s.key | translate" />
+            }
+          </header>
+          <dl class="hum-tpl-facts">
+            <div>
+              <dt>{{ 'humano.payrollTemplates.about.valid' | translate }}</dt>
+              <dd>{{ t.validFrom | date: 'mediumDate' }} – {{ t.validTo | date: 'mediumDate' }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'humano.payrollTemplates.about.currency' | translate }}</dt>
+              <dd>{{ t.currency }}</dd>
+            </div>
+            <div>
+              <dt>{{ 'humano.payrollTemplates.about.frequencies' | translate }}</dt>
+              <dd>
+                @for (f of t.payFrequencies; track f) {
+                  {{ 'humano.payrollTemplates.frequency.' + f | translate }}{{ $last ? '' : ', ' }}
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>{{ 'humano.payrollTemplates.about.computes' | translate }}</dt>
+              <dd>
+                @for (l of t.ledgers; track l) {
+                  {{ 'humano.payrollTemplates.ledger.' + l | translate }}{{ $last ? '' : ', ' }}
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>{{ 'humano.payrollTemplates.about.checked' | translate }}</dt>
+              <dd>{{ 'humano.payrollTemplates.status.' + t.status | translate: { count: t.testCases } }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        @if (t.limitations.length) {
+          <section class="hum-set-card">
+            <header>
+              <h3>{{ 'humano.payrollTemplates.about.limitations' | translate }}</h3>
+            </header>
+            <ul class="hum-tpl-list">
+              @for (l of t.limitations; track l) {
+                <li>{{ l }}</li>
+              }
+            </ul>
+          </section>
+        }
+
+        @if (t.sources.length) {
+          <section class="hum-set-card">
+            <header>
+              <h3>{{ 'humano.payrollTemplates.about.sources' | translate }}</h3>
+            </header>
+            <ul class="hum-tpl-list hum-tpl-list--plain">
+              @for (s of t.sources; track s.id) {
+                <li>
+                  <lucide-icon name="book-open" [size]="12" />
+                  @if (s.url) {
+                    <a [href]="s.url" target="_blank" rel="noopener noreferrer">{{ s.title }}</a>
+                  } @else {
+                    {{ s.title }}
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        @if (t.changelog.length) {
+          <section class="hum-set-card">
+            <header>
+              <h3>{{ 'humano.payrollTemplates.about.changelog' | translate }}</h3>
+            </header>
+            <ul class="hum-tpl-list hum-tpl-list--plain">
+              @for (c of t.changelog; track c.version) {
+                <li>
+                  <strong>{{ c.version }}</strong> · {{ c.date | date: 'mediumDate' }}<br />
+                  <span class="hum-kpi__hint">{{ c.summary }}</span>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </aside>
+    </div>
+  }
+</div>

@@ -10818,3 +10818,182 @@ button.hum-records__empty:hover {
   display: inline-flex;
   vertical-align: middle;
 }
+
+// ---------------------------------------------------------------- payroll templates (/payroll/templates)
+
+.hum-tpl-group {
+  margin-top: var(--space-5);
+}
+
+.hum-tpl-group__title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hum-tpl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+.hum-tpl-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  color: inherit;
+  text-decoration: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.hum-tpl-card:hover,
+.hum-tpl-card:focus-visible {
+  border-color: var(--brand);
+}
+
+.hum-tpl-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.hum-tpl-card__country {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.hum-tpl-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.hum-tpl-card__name {
+  font-size: var(--text-sm);
+  color: var(--text-default);
+}
+
+.hum-tpl-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.hum-tpl-card__meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hum-tpl-card__note {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--warning-fg);
+}
+
+.hum-tpl-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.hum-tpl-detail__main,
+.hum-tpl-detail__side {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.hum-tpl-detail__note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+@media (max-width: 900px) {
+  .hum-tpl-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.hum-tpl-change {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.hum-tpl-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: var(--text-sm);
+  color: var(--text-default);
+}
+
+.hum-tpl-list--plain {
+  padding-left: 0;
+  list-style: none;
+}
+
+.hum-tpl-list a {
+  color: var(--brand-text);
+  overflow-wrap: anywhere;
+}
+
+.hum-tpl-facts,
+.hum-tpl-defs {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.hum-tpl-facts dt,
+.hum-tpl-defs dt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.hum-tpl-facts dd,
+.hum-tpl-defs dd {
+  margin: 2px 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-default);
+}
+
+.hum-tpl-defs__label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.hum-tpl-inputs__switch {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+}
+
+.hum-tpl-inputs__hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}

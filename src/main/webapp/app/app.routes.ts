@@ -327,6 +327,20 @@ const routes: Routes = [
         data: { permissions: [Permission.MANAGE_PAY_COMPONENTS] },
       },
       {
+        path: 'payroll/templates',
+        title: 'humano.payrollTemplates.title',
+        loadComponent: () => import('./features/admin/payroll-templates/payroll-templates.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.MANAGE_TAX_BRACKETS] },
+      },
+      {
+        path: 'payroll/templates/:id',
+        title: 'humano.payrollTemplates.title',
+        loadComponent: () => import('./features/admin/payroll-templates/payroll-template.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.MANAGE_TAX_BRACKETS] },
+      },
+      {
         path: 'settings',
         title: 'humano.nav.settings',
         loadComponent: () => import('./features/admin/settings/settings.component'),

@@ -56,6 +56,8 @@
         "noCalendar": "Not set",
         "payRules": "Pay rules",
         "payRulesHint": "Formulas for earnings, deductions and employer charges.",
+        "templates": "Payroll templates",
+        "templatesHint": "Statutory taxes and contributions for your country, kept up to date by Humano.",
         "calendars": "Payroll calendars",
         "calendarsHint": "How often people are paid and when; each calendar generates its pay periods.",
         "newCalendar": "New calendar",

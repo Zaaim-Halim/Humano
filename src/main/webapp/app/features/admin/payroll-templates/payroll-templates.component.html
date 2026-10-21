@@ -1,0 +1,54 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.payrollTemplates.title' | translate" [subtitle]="'humano.payrollTemplates.subtitle' | translate" />
+
+  @if (loading()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else {
+    @for (g of groups(); track g.key) {
+      <section class="hum-tpl-group">
+        <h2 class="hum-tpl-group__title">{{ 'humano.payrollTemplates.group.' + g.key | translate }}</h2>
+        <div class="hum-tpl-grid">
+          @for (t of g.templates; track t.id) {
+            @let s = state(t);
+            <a class="hum-tpl-card" [routerLink]="['/payroll/templates', t.id]">
+              <div class="hum-tpl-card__top">
+                <span class="hum-tpl-card__country">{{ country(t) }}</span>
+                <span class="hum-tpl-card__badges">
+                  @if (t.adoption?.updateAvailable) {
+                    <hum-badge tone="brand" [label]="'humano.payrollTemplates.state.update' | translate" />
+                  }
+                  <hum-badge [tone]="s.tone" [label]="s.key | translate" />
+                </span>
+              </div>
+              <div class="hum-tpl-card__name">{{ t.name }}</div>
+              <div class="hum-tpl-card__meta">
+                <span
+                  ><lucide-icon name="calendar" [size]="12" />
+                  {{
+                    'humano.payrollTemplates.validRange'
+                      | translate: { from: t.validFrom | date: 'mediumDate', to: t.validTo | date: 'mediumDate' }
+                  }}</span
+                >
+                <span><lucide-icon name="coins" [size]="12" /> {{ t.currency }}</span>
+                <span><lucide-icon name="tag" [size]="12" /> {{ t.version }}</span>
+              </div>
+              @if (t.adoption && !t.adoption.enabled) {
+                <p class="hum-tpl-card__note">{{ 'humano.payrollTemplates.offNote' | translate }}</p>
+              }
+            </a>
+          }
+        </div>
+      </section>
+    } @empty {
+      <hum-empty-state
+        icon="file-text"
+        [title]="'humano.payrollTemplates.empty' | translate"
+        [description]="'humano.payrollTemplates.emptyHint' | translate"
+      />
+    }
+  }
+</div>
