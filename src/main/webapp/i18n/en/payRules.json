@@ -65,6 +65,12 @@
       "social": "counts toward social security",
       "addRule": "Add rule",
       "noEnd": "no end date",
+      "byTemplate": {
+        "TAX_PIT": "For employees in {{ country }}, income tax is computed by the {{ country }} payroll template; tax brackets and rules here don't apply to them.",
+        "EMPLOYER_CHARGE": "For employees in {{ country }}, employer contributions are computed by the {{ country }} payroll template; rules here don't apply to them.",
+        "open": "Open template",
+        "others": "Employees in other countries: {{ text }}"
+      },
       "engine": {
         "BASIC": "Calculated by the payroll engine from each employee's compensation — no formula needed.",
         "BONUS": "Paid from bonus awards recorded for the period — no formula needed.",

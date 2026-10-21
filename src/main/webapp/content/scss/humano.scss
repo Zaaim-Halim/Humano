@@ -6999,6 +6999,30 @@ a.hum-payslip-card:focus-visible {
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.hum-rule-row__template {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-default);
+  background: var(--brand-subtle);
+  border-radius: var(--radius-md);
+}
+
+.hum-rule-row__template lucide-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--brand-text);
+}
+
+.hum-rule-row__template a {
+  margin-left: var(--space-1);
+  color: var(--brand-text);
+  font-weight: 500;
+}
+
 .hum-rule-row:last-child {
   border-bottom: none;
 }

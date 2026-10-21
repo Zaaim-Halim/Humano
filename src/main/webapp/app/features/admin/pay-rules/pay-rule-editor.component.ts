@@ -1,10 +1,14 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 
+import { Permission } from 'app/config/permission.constants';
 import { normalizeHttpError } from 'app/core/api';
+import { AccountService } from 'app/core/auth/account.service';
+import { countryName } from 'app/shared/util/countries';
 import {
   AlertComponent,
   BadgeComponent,
@@ -23,6 +27,8 @@ import {
 } from 'app/shared/ui';
 
 import { PayRuleService } from '../services/pay-rule.service';
+import { PayrollTemplateService } from '../services/payroll-template.service';
+import { PayrollTemplate } from '../models/payroll-template.model';
 import { CreatePayRuleRequest, FormulaMetadata, FormulaValidationResult, PayComponent, PayRuleSummary } from '../models/pay-rule.model';
 import {
   CONSTANT_DOCS,
@@ -85,6 +91,7 @@ type RefTab = 'functions' | 'variables' | 'operators' | 'examples';
   imports: [
     ReactiveFormsModule,
     FormsModule,
+    RouterLink,
     TranslatePipe,
     LucideAngularModule,
     PageHeaderComponent,
@@ -106,11 +113,19 @@ export default class PayRuleEditorComponent {
   private readonly service = inject(PayRuleService);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
+  private readonly templateService = inject(PayrollTemplateService);
+  private readonly account = inject(AccountService);
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   protected readonly validating = signal(false);
   protected readonly saving = signal(false);
+  /**
+   * Statutory templates switched on in this workspace. For their countries' employees the template
+   * computes income tax (TAX_PIT) and employer charges (EMPLOYER_CHARGE): brackets and formula rules
+   * on those components are skipped, which the overview must say rather than describe the generic engine.
+   */
+  protected readonly templatesInUse = signal<PayrollTemplate[]>([]);
 
   protected readonly metadata = signal<FormulaMetadata | null>(null);
   protected readonly validation = signal<FormulaValidationResult | null>(null);
@@ -281,6 +296,7 @@ export default class PayRuleEditorComponent {
   protected load(): void {
     this.loading.set(true);
     this.error.set(null);
+    this.loadTemplatesInUse();
     this.service.formulaMetadata().subscribe({
       next: m => {
         this.metadata.set(m);
@@ -317,6 +333,15 @@ export default class PayRuleEditorComponent {
     });
   }
 
+  /** The components a switched-on template takes over for its countries' employees. */
+  protected takenOverByTemplate(code: string): boolean {
+    return (code === 'TAX_PIT' || code === 'EMPLOYER_CHARGE') && this.templatesInUse().length > 0;
+  }
+
+  protected templateCountry(t: PayrollTemplate): string {
+    return countryName(t.country);
+  }
+
   protected kindIcon(kind: string): string {
     return kind === 'EARNING' ? 'trending-up' : kind === 'DEDUCTION' ? 'trending-down' : 'building-2';
   }
@@ -345,6 +370,18 @@ export default class PayRuleEditorComponent {
         this.togglingId.set(null);
         this.toast.danger(normalizeHttpError(err));
       },
+    });
+  }
+
+  /**
+   * Templates need their own permission; without it the overview just doesn't mention them (and no
+   * request is made, so no access error is shown). A failed read is not this page's error either.
+   */
+  private loadTemplatesInUse(): void {
+    if (!this.account.hasPermission(Permission.MANAGE_TAX_BRACKETS)) return;
+    this.templateService.list().subscribe({
+      next: list => this.templatesInUse.set(list.filter(t => t.adoption?.enabled)),
+      error: () => this.templatesInUse.set([]),
     });
   }
 

@@ -40,7 +40,7 @@
       "viewPayslips": "View payslips",
       "paidTo": "Paid to {{ count }} people",
       "vsPrevious": "vs {{ amount }} last run",
-      "firstRun": "First posted run",
+      "firstRun": "No previous run to compare",
       "ofGross": "{{ pct }}% of gross",
       "totalCost": "Total cost",
       "employerCharges": "Incl. {{ amount }} employer charges",

@@ -60,6 +60,17 @@
                 </div>
               </div>
               <div class="hum-rule-row__rules">
+                @if (takenOverByTemplate(item.component.code)) {
+                  @for (t of templatesInUse(); track t.id) {
+                    <p class="hum-rule-row__template">
+                      <lucide-icon name="landmark" [size]="14" />
+                      <span>
+                        {{ 'humano.payRules.byTemplate.' + item.component.code | translate: { country: templateCountry(t) } }}
+                        <a [routerLink]="['/payroll/templates', t.id]">{{ 'humano.payRules.byTemplate.open' | translate }}</a>
+                      </span>
+                    </p>
+                  }
+                }
                 @for (r of item.rules; track r.id) {
                   <div class="hum-rule" [class.is-inactive]="!r.active">
                     <div class="hum-rule__body">
@@ -93,7 +104,16 @@
                   </div>
                 } @empty {
                   <p class="hum-rule-row__engine">
-                    <lucide-icon name="cpu" [size]="14" />{{ 'humano.payRules.engine.' + item.component.code | translate }}
+                    <lucide-icon name="cpu" [size]="14" />
+                    @if (takenOverByTemplate(item.component.code)) {
+                      <!-- The template note above covers its countries; the engine still applies to everyone else. -->
+                      {{
+                        'humano.payRules.byTemplate.others'
+                          | translate: { text: ('humano.payRules.engine.' + item.component.code | translate) }
+                      }}
+                    } @else {
+                      {{ 'humano.payRules.engine.' + item.component.code | translate }}
+                    }
                   </p>
                 }
               </div>
