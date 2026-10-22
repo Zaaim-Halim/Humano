@@ -31,5 +31,17 @@ public record PayrollRunResponse(
     OffsetDateTime createdAt,
     String createdBy
 ) {
-    public record PayrollValidationError(UUID employeeId, String employeeName, String errorCode, String message, String severity) {}
+    /**
+     * One employee the run couldn't calculate. {@code templateId} is set when the cause is the
+     * employee's missing details for that payroll template ({@code TEMPLATE_PROFILE_INCOMPLETE}), so
+     * the screen can link to them; null otherwise.
+     */
+    public record PayrollValidationError(
+        UUID employeeId,
+        String employeeName,
+        String errorCode,
+        String message,
+        String severity,
+        String templateId
+    ) {}
 }

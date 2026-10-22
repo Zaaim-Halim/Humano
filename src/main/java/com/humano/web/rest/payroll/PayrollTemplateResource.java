@@ -4,6 +4,7 @@ import com.humano.dto.payroll.request.ConfigurePayrollTemplateRequest;
 import com.humano.dto.payroll.request.EmployeeTemplateProfileRequest;
 import com.humano.dto.payroll.request.UpdateTemplateProfilesRequest;
 import com.humano.dto.payroll.response.EmployeeTemplateProfileResponse;
+import com.humano.dto.payroll.response.EmployeeTemplateResponse;
 import com.humano.dto.payroll.response.PayrollTemplateAdoptionResponse;
 import com.humano.dto.payroll.response.PayrollTemplateResponse;
 import com.humano.dto.payroll.response.TemplateEmployeeResponse;
@@ -62,6 +63,12 @@ public class PayrollTemplateResource {
     @PostMapping("/{templateId}/adoption/acknowledge")
     public ResponseEntity<PayrollTemplateResponse> acknowledge(@PathVariable String templateId) {
         return ResponseEntity.ok(templateService.acknowledge(templateId));
+    }
+
+    /** The switched-on templates that cover one employee, with their profile for each (the employee's page). */
+    @GetMapping("/by-employee/{employeeId}")
+    public ResponseEntity<List<EmployeeTemplateResponse>> templatesFor(@PathVariable UUID employeeId) {
+        return ResponseEntity.ok(templateService.templatesFor(employeeId));
     }
 
     /** The employees the template covers, each with their profile and the required attributes it still lacks. */

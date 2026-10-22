@@ -44,7 +44,15 @@
     <hum-alert tone="warning" [title]="'humano.payrollRun.validationTitle' | translate">
       <ul style="margin: 0; padding-left: var(--space-4)">
         @for (v of run()!.validationErrors; track v.errorCode + v.employeeId) {
-          <li>{{ v.employeeName ?? v.employeeId }} — {{ v.message }}</li>
+          <li>
+            {{ v.employeeName ?? v.employeeId }} — {{ v.message }}
+            @if (v.templateId && canEditTemplateDetails) {
+              ·
+              <a [routerLink]="['/payroll/templates', v.templateId]" [queryParams]="{ employee: v.employeeId }">{{
+                'humano.payrollRun.fillInDetails' | translate
+              }}</a>
+            }
+          </li>
         }
       </ul>
     </hum-alert>

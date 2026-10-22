@@ -34,22 +34,40 @@ public final class TemplateInputs {
             }
         }
         Map<String, Object> typed = new HashMap<>();
-        List<String> missing = new java.util.ArrayList<>();
         for (InputField field : declared) {
             String value = values.get(field.key());
             if (value == null || value.isBlank()) {
                 value = field.defaultValue();
             }
-            if (value == null) {
-                if (field.required()) missing.add(field.key());
-                continue;
+            if (value != null) {
+                typed.put(field.key(), convert(field, value.trim(), who));
             }
-            typed.put(field.key(), convert(field, value.trim(), who));
         }
+        List<String> missing = missingRequired(declared, values);
         if (enforceRequired && !missing.isEmpty()) {
             throw new TemplateCalculationException("Missing required " + who + (missing.size() > 1 ? "s " : " ") + missing);
         }
         return typed;
+    }
+
+    /**
+     * The required inputs that are neither set (blank counts as unset) nor defaulted, in declaration
+     * order: what {@link #coerce} refuses when it enforces required inputs. The one rule for "missing",
+     * shared by calculation, the employee list and the run's errors.
+     */
+    public static List<String> missingRequired(List<InputField> fields, Map<String, String> raw) {
+        if (fields == null) return List.of();
+        Map<String, String> values = raw == null ? Map.of() : raw;
+        return fields
+            .stream()
+            .filter(InputField::required)
+            .filter(f -> f.defaultValue() == null)
+            .filter(f -> {
+                String value = values.get(f.key());
+                return value == null || value.isBlank();
+            })
+            .map(InputField::key)
+            .toList();
     }
 
     private static Object convert(InputField field, String value, String who) {

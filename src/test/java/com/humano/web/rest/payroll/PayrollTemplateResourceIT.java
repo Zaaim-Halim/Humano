@@ -66,6 +66,7 @@ import org.springframework.transaction.annotation.Transactional;
 class PayrollTemplateResourceIT {
 
     private static final String EMPLOYEES = "/api/payroll/templates/nl-employment/employees";
+    private static final String BY_EMPLOYEE = "/api/payroll/templates/by-employee/";
 
     @Autowired
     private MockMvc mvc;
@@ -155,6 +156,24 @@ class PayrollTemplateResourceIT {
     }
 
     @Test
+    void anEmployeesPageListsTheSwitchedOnTemplatesThatCoverThem() throws Exception {
+        mvc
+            .perform(
+                put("/api/payroll/templates/nl-employment/adoption")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"enabled\":true,\"settings\":{\"aofPremium\":\"HIGH\",\"whkRate\":\"0.0152\"}}")
+            )
+            .andExpect(status().isOk());
+
+        mvc
+            .perform(get(BY_EMPLOYEE + hire.getId()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].templateId").value("nl-employment"))
+            .andExpect(jsonPath("$[0].employee.missing.length()").value(2));
+    }
+
+    @Test
     void anEmptyBulkRequestIsRefused() throws Exception {
         mvc
             .perform(patch(EMPLOYEES).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(bulk(List.of(), "LOW")))
@@ -173,6 +192,7 @@ class PayrollTemplateResourceIT {
     @WithMockUser(authorities = { AuthoritiesConstants.EMPLOYEE })
     void anEmployeeWithoutThePayrollAdminPermissionCanNotReadOrChangeProfiles() throws Exception {
         mvc.perform(get(EMPLOYEES)).andExpect(status().isForbidden());
+        mvc.perform(get(BY_EMPLOYEE + hire.getId())).andExpect(status().isForbidden());
         mvc
             .perform(patch(EMPLOYEES).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(bulk(List.of(hire.getId()), "LOW")))
             .andExpect(status().isForbidden());

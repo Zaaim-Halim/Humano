@@ -119,41 +119,37 @@
   }
 </section>
 
-<hum-drawer [open]="!!editing()" [title]="drawerTitle()" width="560px" hasFooter (closed)="close()">
-  @if (editing(); as e) {
-    @if (form(); as group) {
-      @if (e.mode === 'one') {
-        <p class="hum-tpl-detail__note">{{ 'humano.payrollTemplates.employees.oneHint' | translate }}</p>
-        <hum-template-inputs
-          [inputs]="inputs()"
-          [group]="group"
-          idPrefix="tpl-employee"
-          requiredKey="humano.payrollTemplates.input.requiredEmployee"
-        />
-      } @else {
-        <p class="hum-tpl-detail__note">{{ 'humano.payrollTemplates.employees.manyHint' | translate }}</p>
-        <div class="hum-tpl-emp__choices">
-          @for (i of inputs(); track i.key) {
-            <hum-checkbox [label]="label(i.key)" [checked]="chosenKeys().has(i.key)" (checkedChange)="choose(i, $event)" />
-          }
-        </div>
-        @if (chosenInputs().length) {
-          <hum-template-inputs
-            [inputs]="chosenInputs()"
-            [group]="group"
-            idPrefix="tpl-employees"
-            requiredKey="humano.payrollTemplates.input.requiredChosen"
-          />
-        }
+<hum-template-profile-drawer [template]="template()" [employee]="editingOne()" (saved)="onOneSaved()" (closed)="editingOne.set(null)" />
+
+<hum-drawer
+  [open]="editingMany() !== null"
+  [title]="'humano.payrollTemplates.employees.setForTitle' | translate: { count: editingMany() }"
+  width="560px"
+  hasFooter
+  (closed)="closeMany()"
+>
+  @if (form(); as group) {
+    <p class="hum-tpl-detail__note">{{ 'humano.payrollTemplates.employees.manyHint' | translate }}</p>
+    <div class="hum-tpl-emp__choices">
+      @for (i of inputs(); track i.key) {
+        <hum-checkbox [label]="label(i.key)" [checked]="chosenKeys().has(i.key)" (checkedChange)="choose(i, $event)" />
       }
-    }
-    @if (saveError(); as err) {
-      <hum-alert tone="danger" [title]="err" />
+    </div>
+    @if (chosenInputs().length) {
+      <hum-template-inputs
+        [inputs]="chosenInputs()"
+        [group]="group"
+        idPrefix="tpl-employees"
+        requiredKey="humano.payrollTemplates.input.requiredChosen"
+      />
     }
   }
+  @if (saveError(); as err) {
+    <hum-alert tone="danger" [title]="err" />
+  }
   <ng-container hum-drawer-footer>
-    <hum-button variant="ghost" (click)="close()">{{ 'humano.action.cancel' | translate }}</hum-button>
-    <hum-button variant="primary" icon="check" [loading]="saving()" (click)="save()">{{
+    <hum-button variant="ghost" (click)="closeMany()">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" (click)="saveMany()">{{
       'humano.payrollTemplates.save' | translate
     }}</hum-button>
   </ng-container>

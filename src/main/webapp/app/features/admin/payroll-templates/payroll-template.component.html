@@ -92,7 +92,7 @@
         </div>
 
         @if (t.employeeInputs.length) {
-          <hum-template-employees [template]="t" />
+          <hum-template-employees [template]="t" [focusEmployeeId]="employee() ?? null" />
         }
       </div>
 

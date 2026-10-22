@@ -58,6 +58,8 @@ import { templateState } from './template-state';
 export default class PayrollTemplateComponent {
   /** Template id from the route (`/payroll/templates/:id`). */
   readonly id = input.required<string>();
+  /** `?employee=` — an employee whose details to open (a refused payroll run links here). */
+  readonly employee = input<string>();
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);

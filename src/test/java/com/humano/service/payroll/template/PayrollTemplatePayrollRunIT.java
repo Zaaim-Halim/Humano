@@ -331,6 +331,32 @@ class PayrollTemplatePayrollRunIT {
     }
 
     @Test
+    void anEmployeeWithoutTheirTemplateDetailsIsReportedWithTheTemplateToFillThemIn() {
+        tx.executeWithoutResult(s -> {
+            Employee e = employees.findById(employee.getId()).orElseThrow();
+            e.setCountry(countries.findAll().stream().filter(c -> c.getCode() == CountryCode.NL).findFirst().orElseThrow());
+            employees.save(e);
+            setPay("3530.00", CurrencyCode.EUR);
+        });
+        templateService.configure(
+            NL_TEMPLATE,
+            new ConfigurePayrollTemplateRequest(true, Map.of("aofPremium", "HIGH", "whkRate", "0.0152"))
+        );
+        // A new hire: no profile yet.
+
+        PayrollRunResponse run = calculate(period(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30)));
+
+        assertThat(run.validationErrors())
+            .filteredOn(err -> employee.getId().equals(err.employeeId()))
+            .singleElement()
+            .satisfies(err -> {
+                assertThat(err.errorCode()).isEqualTo("TEMPLATE_PROFILE_INCOMPLETE");
+                assertThat(err.templateId()).isEqualTo(NL_TEMPLATE);
+                assertThat(err.message()).isEqualTo("Missing required employee attributes [applyLoonheffingskorting, awfPremium]");
+            });
+    }
+
+    @Test
     void templateChangesChangeTheRunFingerprint() {
         templateService.configure(TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of("kidCode", "62")));
         String before = tx.execute(s -> templateService.fingerprint());

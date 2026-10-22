@@ -143,6 +143,11 @@ public class PayrollTemplateEngine {
         vars.put("employedThroughout", in.employedThroughout());
         vars.put("currency", in.currency());
         vars.put("employer", TemplateInputs.coerce(template.inputs().employer(), in.employer(), "employer setting", true));
+        // Checked apart from coerce so the run can say which template's details to fill in, and link to them.
+        List<String> missingDetails = TemplateInputs.missingRequired(template.inputs().employee(), in.employee());
+        if (!missingDetails.isEmpty()) {
+            throw new TemplateProfileIncompleteException(template.id(), missingDetails);
+        }
         vars.put("employee", TemplateInputs.coerce(template.inputs().employee(), in.employee(), "employee attribute", true));
         vars.put("p", new StrictMap("parameter", resolveParameters(template, valuesFrom, valuesTo)));
         vars.put("table", new TableAccess(template.id(), template.tables(), valuesFrom, valuesTo));

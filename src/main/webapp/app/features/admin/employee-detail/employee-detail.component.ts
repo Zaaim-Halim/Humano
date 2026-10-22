@@ -18,6 +18,7 @@ import { CurrentEmployeeService } from 'app/features/employee';
 import { EmployeeHeroComponent } from 'app/features/employee/profile/employee-hero.component';
 import { EmployeeOverviewComponent } from 'app/features/employee/profile/employee-overview.component';
 import { EmployeeOnboardingCardComponent } from '../onboarding/employee-onboarding-card.component';
+import { EmployeeTemplateCardComponent } from '../payroll-templates/employee-template-card.component';
 import { EmployeeOffboardingCardComponent } from '../offboarding/employee-offboarding-card.component';
 import { EmployeeRecordsComponent } from 'app/features/employee/employee-records/employee-records.component';
 import { EmployeeLeaveComponent } from 'app/features/employee/insights/employee-leave.component';
@@ -94,6 +95,7 @@ const idle = <T>(): TabState<T> => ({ data: null, loading: false, error: null })
     EmployeeHeroComponent,
     EmployeeOverviewComponent,
     EmployeeOnboardingCardComponent,
+    EmployeeTemplateCardComponent,
     EmployeeOffboardingCardComponent,
     EmployeePayComponent,
     EmployeeCareerComponent,

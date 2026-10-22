@@ -22,11 +22,13 @@ interface Section {
   missingCount: () => number;
   form: () => TemplateInputsGroup | null;
   saveError: () => string | null;
+  editingOne: () => TemplateEmployee | null;
   selectMissing: () => void;
   edit: (row: TemplateEmployee) => void;
+  onOneSaved: () => void;
   editSelected: () => void;
   choose: (field: TemplateInput, on: boolean) => void;
-  save: () => void;
+  saveMany: () => void;
 }
 
 const ROWS = [
@@ -36,7 +38,7 @@ const ROWS = [
 ];
 
 describe('TemplateEmployeesComponent', () => {
-  let saveProfile: jest.Mock;
+  let employees: jest.Mock;
   let updateProfiles: jest.Mock;
   let section: Section;
   const template = nlTemplate({
@@ -49,22 +51,27 @@ describe('TemplateEmployeesComponent', () => {
   });
   const input = (key: string): TemplateInput => template.employeeInputs.find(i => i.key === key)!;
 
-  beforeEach(() => {
-    saveProfile = jest.fn(() => of({}));
-    updateProfiles = jest.fn(() => of([]));
+  function open(focusEmployeeId: string | null = null): Section {
     TestBed.configureTestingModule({
       imports: [TranslateModule.forRoot()],
       providers: [
         provideRouter([]),
         // The rendered page uses the app's icon set.
         importProvidersFrom(LucideAngularModule.pick(lucideIcons)),
-        { provide: PayrollTemplateService, useValue: { employees: () => of(ROWS), saveProfile, updateProfiles } },
+        { provide: PayrollTemplateService, useValue: { employees, saveProfile: () => of({}), updateProfiles } },
       ],
     });
     const fixture = TestBed.createComponent(TemplateEmployeesComponent);
     fixture.componentRef.setInput('template', template);
+    fixture.componentRef.setInput('focusEmployeeId', focusEmployeeId);
     fixture.detectChanges();
-    section = fixture.componentInstance as unknown as Section;
+    return fixture.componentInstance as unknown as Section;
+  }
+
+  beforeEach(() => {
+    employees = jest.fn(() => of(ROWS));
+    updateProfiles = jest.fn(() => of([]));
+    section = open();
   });
 
   it('counts who still lacks details and can show only them', () => {
@@ -85,28 +92,25 @@ describe('TemplateEmployeesComponent', () => {
     expect([...section.selected()]).toEqual(['daan-de-boer', 'femke-visser']);
   });
 
-  it('does not answer the tax credit for an employee whose admin never chose', () => {
-    section.edit(ROWS[0]);
-    section.form()!.controls['awfPremium'].setValue('LOW');
-
-    section.save();
-
-    expect(saveProfile).not.toHaveBeenCalled();
-    expect(section.form()!.controls['applyLoonheffingskorting'].hasError('required')).toBe(true);
+  it('opens an employee in the one-employee panel', () => {
+    section.edit(ROWS[1]);
+    expect(section.editingOne()?.name).toBe('Lotte Jansen');
   });
 
-  it("saves one employee's whole profile once it is answered", () => {
-    section.edit(ROWS[0]);
-    section.form()!.controls['awfPremium'].setValue('LOW');
-    section.form()!.controls['applyLoonheffingskorting'].setValue('true');
+  it('opens the employee a refused payroll run linked to, once: not again when a save reloads the list', () => {
+    TestBed.resetTestingModule();
+    const linked = open('femke-visser');
+    expect(linked.editingOne()?.name).toBe('Femke Visser');
 
-    section.save();
+    linked.onOneSaved();
 
-    expect(saveProfile).toHaveBeenCalledWith('nl-employment', 'daan-de-boer', {
-      applyLoonheffingskorting: 'true',
-      awfPremium: 'LOW',
-      residentOfNetherlands: 'true',
-    });
+    expect(employees).toHaveBeenCalledTimes(3); // the first open, the linked open, and the reload after saving
+    expect(linked.editingOne()).toBeNull();
+  });
+
+  it('opens nothing for a linked employee the template does not cover', () => {
+    TestBed.resetTestingModule();
+    expect(open('someone-else').editingOne()).toBeNull();
   });
 
   it('sets only the chosen details on every selected employee', () => {
@@ -115,7 +119,7 @@ describe('TemplateEmployeesComponent', () => {
     section.choose(input('awfPremium'), true);
     section.form()!.controls['awfPremium'].setValue('HIGH');
 
-    section.save();
+    section.saveMany();
 
     expect(updateProfiles).toHaveBeenCalledWith('nl-employment', {
       employeeIds: ['daan-de-boer', 'femke-visser'],
@@ -127,11 +131,11 @@ describe('TemplateEmployeesComponent', () => {
     section.selectMissing();
     section.editSelected();
 
-    section.save();
+    section.saveMany();
     expect(section.saveError()).toBe('humano.payrollTemplates.employees.chooseOne');
 
     section.choose(input('applyLoonheffingskorting'), true);
-    section.save();
+    section.saveMany();
     expect(updateProfiles).not.toHaveBeenCalled();
     expect(section.form()!.controls['applyLoonheffingskorting'].hasError('required')).toBe(true);
   });

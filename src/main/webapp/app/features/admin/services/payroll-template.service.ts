@@ -6,6 +6,7 @@ import { ApplicationConfigService } from 'app/core/config/application-config.ser
 
 import {
   ConfigurePayrollTemplateRequest,
+  EmployeeTemplate,
   PayrollTemplate,
   PayrollTemplateAdoptionResult,
   TemplateEmployee,
@@ -46,6 +47,11 @@ export class PayrollTemplateService {
   /** `GET /api/payroll/templates/{id}/employees` — the employees the template covers, with their profiles. */
   employees(id: string): Observable<TemplateEmployee[]> {
     return this.http.get<TemplateEmployee[]>(`${this.url}/${encodeURIComponent(id)}/employees`);
+  }
+
+  /** `GET /api/payroll/templates/by-employee/{employeeId}` — the switched-on templates that cover one employee. */
+  templatesFor(employeeId: string): Observable<EmployeeTemplate[]> {
+    return this.http.get<EmployeeTemplate[]>(`${this.url}/by-employee/${employeeId}`);
   }
 
   /** `PUT /api/payroll/templates/{id}/employees/{employeeId}` — replace one employee's profile. */

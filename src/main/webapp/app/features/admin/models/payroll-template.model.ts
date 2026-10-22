@@ -103,3 +103,11 @@ export interface UpdateTemplateProfilesRequest {
   employeeIds: string[];
   attributes: Record<string, string>;
 }
+
+/** `GET /api/payroll/templates/by-employee/{employeeId}` — a switched-on template that covers the employee, with their profile. */
+export interface EmployeeTemplate {
+  templateId: string;
+  templateName: string;
+  country: string;
+  employee: TemplateEmployee;
+}

@@ -7,6 +7,8 @@ export interface PayrollValidationError {
   errorCode: string;
   message: string;
   severity: string;
+  /** Set when the employee lacks details for this payroll template (`TEMPLATE_PROFILE_INCOMPLETE`): where to fill them in. */
+  templateId: string | null;
 }
 
 /** A payroll run — returned by initiate/calculate/approve/post/recalculate. */

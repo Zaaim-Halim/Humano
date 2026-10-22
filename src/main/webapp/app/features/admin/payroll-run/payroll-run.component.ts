@@ -7,7 +7,9 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { Observable } from 'rxjs';
 
+import { Permission } from 'app/config/permission.constants';
 import { normalizeHttpError } from 'app/core/api';
+import { AccountService } from 'app/core/auth/account.service';
 import { CurrentEmployeeService } from 'app/features/employee';
 import {
   AlertComponent,
@@ -73,6 +75,9 @@ const idle = <T>(): Holder<T> => ({ data: null, loading: false, error: null });
 export default class PayrollRunComponent {
   /** Run id from the route (`/payroll/runs/:id`). */
   readonly id = input.required<string>();
+
+  /** Who may fill in employees' payroll template details (and so follow a refused employee's link). */
+  protected readonly canEditTemplateDetails = inject(AccountService).hasPermission(Permission.MANAGE_TAX_BRACKETS);
 
   private readonly runService = inject(PayrollRunService);
   private readonly currentEmployee = inject(CurrentEmployeeService);

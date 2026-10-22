@@ -17,6 +17,7 @@ import com.humano.domain.shared.Employee;
 import com.humano.dto.payroll.request.ConfigurePayrollTemplateRequest;
 import com.humano.dto.payroll.request.UpdateTemplateProfilesRequest;
 import com.humano.dto.payroll.response.EmployeeTemplateProfileResponse;
+import com.humano.dto.payroll.response.EmployeeTemplateResponse;
 import com.humano.dto.payroll.response.PayrollTemplateAdoptionResponse;
 import com.humano.dto.payroll.response.PayrollTemplateResponse;
 import com.humano.dto.payroll.response.TemplateEmployeeResponse;
@@ -307,27 +308,60 @@ public class PayrollTemplateService {
     }
 
     /**
+     * The switched-on national templates that cover {@code employeeId} (see {@link #coveredBy}), each
+     * with the employee's profile and the required attributes it still lacks — for the employee's own
+     * page. Empty for an employee without a country or whom no template covers.
+     */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public List<EmployeeTemplateResponse> templatesFor(UUID employeeId) {
+        Employee employee = employee(employeeId);
+        if (employee.getCountry() == null) {
+            return List.of();
+        }
+        String country = employee.getCountry().getCode().name();
+        Specification<Employee> thisEmployee = (root, query, cb) -> cb.equal(root.get("id"), employeeId);
+        return adoptionRepository
+            .findByEnabledTrue()
+            .stream()
+            .filter(a -> a.getCountryCode().equals(country) && a.getSubdivision() == null)
+            .map(a -> catalog.find(a.getTemplateId()))
+            .flatMap(Optional::stream)
+            .filter(t -> employeeRepository.count(coveredBy(t).and(thisEmployee)) > 0)
+            .sorted(Comparator.comparing(PayrollTemplate::id))
+            .map(t -> {
+                Map<String, String> attributes = profileRepository
+                    .findByEmployeeIdAndTemplateId(employeeId, t.id())
+                    .map(EmployeeTemplateProfile::getAttributes)
+                    .orElse(Map.of());
+                return new EmployeeTemplateResponse(t.id(), t.name(), t.jurisdiction().country(), employeeView(t, employee, attributes));
+            })
+            .toList();
+    }
+
+    private List<Employee> coveredEmployees(PayrollTemplate template) {
+        return employeeRepository.findAll(coveredBy(template), Sort.by("lastName", "firstName"));
+    }
+
+    /**
      * Who a national template covers: employees whose country of employment is the template's and
      * whom payroll can still pay under it — working now, or left on or after the start of its rules
-     * (their final pay).
+     * (their final pay). The one definition, for the template's employee list, the warning shown on
+     * switching it on, and the employee's own page.
      */
-    private List<Employee> coveredEmployees(PayrollTemplate template) {
+    private static Specification<Employee> coveredBy(PayrollTemplate template) {
         CountryCode country = CountryCode.valueOf(template.jurisdiction().country());
         LocalDate rulesStart = template.validity().from();
-        return employeeRepository.findAll(
-            (Specification<Employee>) (root, query, cb) ->
-                cb.and(
-                    cb.equal(root.get("country").get("code"), country),
-                    cb.or(
-                        root.get("status").in(EmployeeStatus.WORKING),
-                        cb.and(
-                            cb.equal(root.get("status"), EmployeeStatus.TERMINATED),
-                            cb.greaterThanOrEqualTo(root.<LocalDate>get("endDate"), rulesStart)
-                        )
+        return (root, query, cb) ->
+            cb.and(
+                cb.equal(root.get("country").get("code"), country),
+                cb.or(
+                    root.get("status").in(EmployeeStatus.WORKING),
+                    cb.and(
+                        cb.equal(root.get("status"), EmployeeStatus.TERMINATED),
+                        cb.greaterThanOrEqualTo(root.<LocalDate>get("endDate"), rulesStart)
                     )
-                ),
-            Sort.by("lastName", "firstName")
-        );
+                )
+            );
     }
 
     private static TemplateEmployeeResponse employeeView(PayrollTemplate template, Employee employee, Map<String, String> attributes) {
@@ -346,19 +380,9 @@ public class PayrollTemplateService {
         );
     }
 
-    /** Required attributes neither set nor defaulted: what {@link TemplateInputs#coerce} refuses at calculation. */
+    /** Required attributes neither set nor defaulted: what calculation refuses ({@link TemplateInputs#missingRequired}). */
     static List<String> missingRequired(List<InputField> fields, Map<String, String> attributes) {
-        if (fields == null) return List.of();
-        return fields
-            .stream()
-            .filter(InputField::required)
-            .filter(f -> f.defaultValue() == null)
-            .filter(f -> {
-                String value = attributes.get(f.key());
-                return value == null || value.isBlank();
-            })
-            .map(InputField::key)
-            .toList();
+        return TemplateInputs.missingRequired(fields, attributes);
     }
 
     // ---------------------------------------------------------------- payroll run support

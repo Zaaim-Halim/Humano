@@ -19,22 +19,14 @@ import {
 import { PayrollTemplate, TemplateEmployee, TemplateInput } from '../models/payroll-template.model';
 import { PayrollTemplateService } from '../services/payroll-template.service';
 import { TemplateInputsComponent } from './template-inputs.component';
-import {
-  TemplateInputsGroup,
-  isTemplateSwitch,
-  requireTemplateInputs,
-  templateInputLabel,
-  templateInputValues,
-  templateInputsGroup,
-} from './template-inputs';
-
-/** The drawer: one employee's whole profile, or chosen values for every selected employee. */
-type Editing = { mode: 'one'; employee: TemplateEmployee } | { mode: 'many'; count: number };
+import { TemplateProfileDrawerComponent } from './template-profile-drawer.component';
+import { TemplateInputsGroup, isTemplateSwitch, templateInputLabel, templateInputValues, templateInputsGroup } from './template-inputs';
 
 /**
  * The employees a payroll template covers, on its page: who still lacks required details (payroll
- * can't calculate them), editing one employee's profile (`PUT .../employees/{id}`, replaces it), and
+ * can't calculate them), editing one employee's profile ({@link TemplateProfileDrawerComponent}), and
  * setting chosen values on every selected employee at once (`PATCH .../employees`, other values kept).
+ * `focusEmployeeId` (from a refused payroll run's link) opens that employee's details once loaded.
  */
 @Component({
   selector: 'hum-template-employees',
@@ -51,11 +43,14 @@ type Editing = { mode: 'one'; employee: TemplateEmployee } | { mode: 'many'; cou
     InputComponent,
     SkeletonRowComponent,
     TemplateInputsComponent,
+    TemplateProfileDrawerComponent,
   ],
   templateUrl: './template-employees.component.html',
 })
 export class TemplateEmployeesComponent {
   readonly template = input.required<PayrollTemplate>();
+  /** An employee whose details to open as soon as the list is loaded (once: not again after a save reloads it). */
+  readonly focusEmployeeId = input<string | null>(null);
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -64,9 +59,12 @@ export class TemplateEmployeesComponent {
   protected readonly search = signal('');
   protected readonly selected = signal(new Set<string>());
 
-  protected readonly editing = signal<Editing | null>(null);
+  /** The employee whose details are open in the one-employee panel. */
+  protected readonly editingOne = signal<TemplateEmployee | null>(null);
+  /** The "set details for N selected" panel: how many were selected when it opened. */
+  protected readonly editingMany = signal<number | null>(null);
   protected readonly form = signal<TemplateInputsGroup | null>(null);
-  /** In the "many" drawer: which details to set (the others are left as each employee has them). */
+  /** In the "many" panel: which details to set (the others are left as each employee has them). */
   protected readonly chosenKeys = signal(new Set<string>());
   protected readonly saving = signal(false);
   protected readonly saveError = signal<string | null>(null);
@@ -86,13 +84,6 @@ export class TemplateEmployeesComponent {
     const list = this.visible();
     return list.length > 0 && list.every(r => this.selected().has(r.employeeId));
   });
-  protected readonly drawerTitle = computed((): string => {
-    const e = this.editing();
-    if (!e) return '';
-    return e.mode === 'one'
-      ? e.employee.name
-      : String(this.translate.instant('humano.payrollTemplates.employees.setForTitle', { count: e.count }));
-  });
 
   protected readonly label = templateInputLabel;
 
@@ -100,6 +91,8 @@ export class TemplateEmployeesComponent {
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
+  /** The focus request already acted on, so a reload doesn't reopen the panel. */
+  private focusHandled: string | null = null;
 
   constructor() {
     effect(() => {
@@ -121,6 +114,7 @@ export class TemplateEmployeesComponent {
           const ids = new Set(rows.map(r => r.employeeId));
           this.selected.update(s => new Set([...s].filter(x => ids.has(x))));
           this.loading.set(false);
+          this.openFocused(rows);
         },
         error: (err: unknown) => {
           this.error.set(normalizeHttpError(err));
@@ -167,15 +161,20 @@ export class TemplateEmployeesComponent {
   }
 
   protected edit(row: TemplateEmployee): void {
-    const group = templateInputsGroup(this.inputs(), row.attributes);
-    // A profile is saved to make the employee payable: its required details are required here.
-    requireTemplateInputs(group, this.inputs(), true);
-    this.open({ mode: 'one', employee: row }, group);
+    this.editingOne.set(row);
+  }
+
+  /** The one-employee panel saved: close it and re-read what everyone still lacks. */
+  protected onOneSaved(): void {
+    this.editingOne.set(null);
+    this.load();
   }
 
   protected editSelected(): void {
     this.chosenKeys.set(new Set());
-    this.open({ mode: 'many', count: this.selected().size }, templateInputsGroup(this.inputs(), {}));
+    this.form.set(templateInputsGroup(this.inputs(), {}));
+    this.saveError.set(null);
+    this.editingMany.set(this.selected().size);
   }
 
   protected choose(field: TemplateInput, on: boolean): void {
@@ -194,16 +193,15 @@ export class TemplateEmployeesComponent {
     }
   }
 
-  protected close(): void {
-    this.editing.set(null);
+  protected closeMany(): void {
+    this.editingMany.set(null);
     this.form.set(null);
     this.saveError.set(null);
   }
 
-  protected save(): void {
-    const editing = this.editing();
+  protected saveMany(): void {
     const group = this.form();
-    if (!editing || !group) return;
+    if (this.editingMany() === null || !group) return;
     if (group.invalid) {
       group.markAllAsTouched();
       return;
@@ -211,13 +209,6 @@ export class TemplateEmployeesComponent {
     const id = this.template().id;
     this.saving.set(true);
     this.saveError.set(null);
-    if (editing.mode === 'one') {
-      this.service.saveProfile(id, editing.employee.employeeId, templateInputValues(this.inputs(), group)).subscribe({
-        next: () => this.saved('humano.payrollTemplates.employees.savedOne', { name: editing.employee.name }),
-        error: (err: unknown) => this.failed(err),
-      });
-      return;
-    }
     const chosen = this.chosenInputs();
     if (!chosen.length) {
       this.saving.set(false);
@@ -228,28 +219,25 @@ export class TemplateEmployeesComponent {
     this.service.updateProfiles(id, { employeeIds, attributes: templateInputValues(chosen, group) }).subscribe({
       next: () => {
         this.selected.set(new Set());
-        this.saved('humano.payrollTemplates.employees.savedMany', { count: employeeIds.length });
+        this.saving.set(false);
+        this.closeMany();
+        this.toast.success(this.translate.instant('humano.payrollTemplates.employees.savedMany', { count: employeeIds.length }));
+        // Re-read the list: it recomputes what each employee still lacks.
+        this.load();
       },
-      error: (err: unknown) => this.failed(err),
+      error: (err: unknown) => {
+        this.saving.set(false);
+        this.saveError.set(normalizeHttpError(err));
+      },
     });
   }
 
-  private open(editing: Editing, group: TemplateInputsGroup): void {
-    this.form.set(group);
-    this.saveError.set(null);
-    this.editing.set(editing);
-  }
-
-  private saved(key: string, params: Record<string, unknown>): void {
-    this.saving.set(false);
-    this.close();
-    this.toast.success(this.translate.instant(key, params));
-    // Re-read the list: it recomputes what each employee still lacks.
-    this.load();
-  }
-
-  private failed(err: unknown): void {
-    this.saving.set(false);
-    this.saveError.set(normalizeHttpError(err));
+  /** Open the employee a link asked for, once; nothing if they aren't on the list (not covered, or gone). */
+  private openFocused(rows: TemplateEmployee[]): void {
+    const id = this.focusEmployeeId();
+    if (!id || id === this.focusHandled) return;
+    this.focusHandled = id;
+    const row = rows.find(r => r.employeeId === id);
+    if (row) this.editingOne.set(row);
   }
 }

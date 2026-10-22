@@ -28,6 +28,7 @@ import com.humano.service.payroll.template.engine.PayrollTemplateEngine;
 import com.humano.service.payroll.template.engine.TemplateCalculationException;
 import com.humano.service.payroll.template.engine.TemplateInput;
 import com.humano.service.payroll.template.engine.TemplateLine;
+import com.humano.service.payroll.template.engine.TemplateProfileIncompleteException;
 import com.humano.service.payroll.template.model.LineSide;
 import com.humano.service.payroll.template.model.PayrollTemplate;
 import java.math.BigDecimal;
@@ -429,21 +430,31 @@ public class PayrollProcessingService {
                 });
                 processedCount++;
             } catch (Exception e) {
+                String name = employee.getFirstName() + " " + employee.getLastName();
+                TemplateProfileIncompleteException incomplete = causeOfType(e, TemplateProfileIncompleteException.class);
+                if (incomplete != null) {
+                    // Expected until an administrator fills in the details: no stack trace, and the
+                    // template is named so the screen can link to them.
+                    log.warn("Payroll for employee {} skipped: {} ({})", employeeId, incomplete.getMessage(), incomplete.getTemplateId());
+                    errors.add(
+                        new PayrollRunResponse.PayrollValidationError(
+                            employeeId,
+                            name,
+                            "TEMPLATE_PROFILE_INCOMPLETE",
+                            incomplete.getMessage(),
+                            "ERROR",
+                            incomplete.getTemplateId()
+                        )
+                    );
+                    continue;
+                }
                 // Log the full throwable (stack trace), not just getMessage(), so a
                 // production calc failure is actually diagnosable. The catch stays broad on
                 // purpose — per-employee isolation means one employee's failure must not abort
                 // the run — but the diagnostics are no longer discarded.
                 log.error("Error calculating payroll for employee {}", employeeId, e);
                 String message = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-                errors.add(
-                    new PayrollRunResponse.PayrollValidationError(
-                        employeeId,
-                        employee.getFirstName() + " " + employee.getLastName(),
-                        "CALCULATION_ERROR",
-                        message,
-                        "ERROR"
-                    )
-                );
+                errors.add(new PayrollRunResponse.PayrollValidationError(employeeId, name, "CALCULATION_ERROR", message, "ERROR", null));
             }
         }
 
@@ -1418,6 +1429,14 @@ public class PayrollProcessingService {
                 return cb.equal(root.get("run").get("id"), runId);
             }
         );
+    }
+
+    /** The first throwable of {@code type} in {@code e}'s cause chain (the per-employee transaction may wrap it), or null. */
+    private static <T extends Throwable> T causeOfType(Throwable e, Class<T> type) {
+        for (Throwable t = e; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            if (type.isInstance(t)) return type.cast(t);
+        }
+        return null;
     }
 
     private static BigDecimal grossOf(PayrollResult r, boolean reporting) {

@@ -141,6 +141,32 @@ class PayrollTemplateProfilesIT {
     }
 
     @Test
+    void anEmployeesPageShowsTheSwitchedOnTemplatesThatCoverThem() {
+        templateService.configure(
+            NL_TEMPLATE,
+            new ConfigurePayrollTemplateRequest(true, Map.of("aofPremium", "HIGH", "whkRate", "0.0152"))
+        );
+
+        assertThat(templateService.templatesFor(partlyFilledIn.getId()))
+            .singleElement()
+            .satisfies(t -> {
+                assertThat(t.templateId()).isEqualTo(NL_TEMPLATE);
+                assertThat(t.employee().missing()).containsExactly("awfPremium");
+            });
+        assertThat(templateService.templatesFor(leftThisYear.getId())).hasSize(1);
+        // Same coverage as the template's employee list: not someone who left before its rules, nor another country.
+        assertThat(templateService.templatesFor(leftBeforeTheRules.getId())).isEmpty();
+        assertThat(templateService.templatesFor(inGermany.getId())).isEmpty();
+    }
+
+    @Test
+    void aTemplateThatIsNotSwitchedOnIsNotShownOnAnEmployeesPage() {
+        templateService.configure(NL_TEMPLATE, new ConfigurePayrollTemplateRequest(false, Map.of()));
+
+        assertThat(templateService.templatesFor(partlyFilledIn.getId())).isEmpty();
+    }
+
+    @Test
     void enablingTheTemplateWarnsAboutEmployeesMissingRequiredDetails() {
         var result = templateService.configure(
             NL_TEMPLATE,

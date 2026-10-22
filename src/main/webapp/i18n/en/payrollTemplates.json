@@ -60,6 +60,14 @@
       "savedOn": "Template saved — payroll now uses it",
       "savedOff": "Template saved — not used by payroll",
       "warningsTitle": "Check these before your next payroll run",
+      "byTemplateOpen": "Open template",
+      "card": {
+        "title": "Payroll template · {{ country }}",
+        "missing": "Payroll can't calculate this employee until these details are filled in: {{ details }}.",
+        "complete": "Payroll has the details it needs for this employee.",
+        "fillIn": "Fill in details",
+        "edit": "Edit details"
+      },
       "employees": {
         "title": "Employees",
         "hint": "Everyone this template covers — employed in this country, or left this year — with the details it needs from each. Payroll can't calculate an employee whose required details are missing.",
