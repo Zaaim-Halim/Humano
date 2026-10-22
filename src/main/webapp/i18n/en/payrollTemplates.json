@@ -102,6 +102,8 @@
         "frequencies": "Pay frequencies",
         "computes": "Computes",
         "checked": "Checked",
+        "filing": "Filing",
+        "filingValue": "Not included: Humano calculates these amounts; you or your accountant file the payroll tax return and pay it to the tax authority.",
         "limitations": "Limitations",
         "sources": "Sources",
         "changelog": "Changes"

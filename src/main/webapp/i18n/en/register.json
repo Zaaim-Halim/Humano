@@ -22,7 +22,7 @@
       "country": "Country",
       "button": "Email me a confirmation link",
       "payrollTemplate": "Payroll template (optional)",
-      "payrollTemplateHint": "Start with the statutory taxes and contributions for your country. It is added switched off: you complete its settings under Payroll before your first run.",
+      "payrollTemplateHint": "Start with the statutory taxes and contributions for your country. It is added switched off: you complete its settings under Payroll before your first run. Humano calculates them; filing the payroll tax return stays with you or your accountant.",
       "payrollTemplateNone": "We don't have a payroll template for this country yet. You can set up your own payroll rules in the workspace.",
       "payrollTemplateSuggested": "Suggested",
       "payrollTemplateRules": "Rules for {{ period }}, paid in {{ currency }}",
