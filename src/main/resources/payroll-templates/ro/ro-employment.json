@@ -1,0 +1,1315 @@
+{
+  "schemaVersion": 1,
+  "id": "ro-employment",
+  "name": "Romania — salary income",
+  "version": "2026.1.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": {
+    "country": "RO"
+  },
+  "validity": {
+    "from": "2026-01-01",
+    "to": "2026-12-31"
+  },
+  "currency": "RON",
+  "payFrequencies": ["MONTHLY"],
+  "taxYearStart": "--01-01",
+  "dateBasis": "PERIOD",
+  "rounding": {
+    "scale": 0,
+    "mode": "HALF_UP"
+  },
+  "changelog": [
+    {
+      "version": "2026.1.0",
+      "date": "2026-10-23",
+      "summary": "2026: CAS 25 %, CASS 10 %, CAM 2.25 %, income tax 10 % with the art. 77 deduction; minimum wage 4,050 / 4,325 lei and the OUG 89/2025 tax-free amount 300 / 200 lei, changing on 1 July."
+    }
+  ],
+  "sources": {
+    "cod-fiscal": {
+      "title": "Legea nr. 227/2015 privind Codul fiscal, text consolidat ANAF cu normele metodologice (ultima actualizare: Legea nr. 170/2026) — art. 60 pct. 1 (scutire handicap grav/accentuat), art. 66 (sume fixe rotunjite la leu), art. 76–78 (venituri din salarii, deducere personală, impozit 10 %), art. 138 lit. a) (CAS 25 %), art. 139, art. 146 alin. (5^6)–(5^9) (CAS minimă pe salariul minim, diferența suportată de angajator), art. 156–157 (CASS 10 %), art. 168 alin. (6^1), art. 220^3–220^4 (CAM 2,25 %); Norme pct. 4 (baza de calcul rotunjită la leu, fracțiunile de până la 50 de bani inclusiv neglijate), pct. 13 (deducere personală), pct. 14 (venit brut lunar)",
+      "url": "https://static.anaf.ro/static/10/Anaf/legislatie/Cod_fiscal_norme_2023.htm",
+      "retrieved": "2026-10-23"
+    },
+    "oug-89-2025": {
+      "title": "OUG nr. 89/2025, art. III — 300 lei/lună (1 ianuarie–30 iunie 2026), respectiv 200 lei/lună (1 iulie–31 decembrie 2026) neimpozabili și excluși din baza contribuțiilor, pentru salariul de bază egal cu salariul minim, normă întreagă, funcția de bază, venit brut de cel mult 4.300 / 4.600 lei; alin. (5) salariul minim pentru art. 146 alin. (5^6) diminuat cu 300 / 200 lei; PDF SHA-256 135051fde8008bcddc8982586827fbfaddc49a57c1fa50b25d8dc4521e7ba728",
+      "url": "https://static.anaf.ro/static/10/Anaf/legislatie/OUG_89_2025.pdf",
+      "retrieved": "2026-10-23"
+    },
+    "hg-1506-2024": {
+      "title": "HG nr. 1506/2024 — salariul de bază minim brut pe țară garantat în plată 4.050 lei lunar (menținut pentru 1 ianuarie–30 iunie 2026, cf. preambulul OUG nr. 89/2025); PDF SHA-256 c829e477306d69e8f1e1d523baf2b6375cda7961dd34219bc36a9d6ae4d5e4f5",
+      "url": "https://static.anaf.ro/static/10/Anaf/legislatie/HG_1506_2024.pdf",
+      "retrieved": "2026-10-23"
+    },
+    "hg-146-2026": {
+      "title": "HG nr. 146/2026, art. 1 — salariul de bază minim brut pe țară garantat în plată 4.325 lei lunar de la 1 iulie 2026; PDF SHA-256 3dce4be85c2330ff6c79049014c538081c2e55de647125072e8b6937cc8f2488",
+      "url": "https://static.anaf.ro/static/10/Anaf/legislatie/HG_146_2026.pdf",
+      "retrieved": "2026-10-23"
+    },
+    "anaf-ghid-cas-minim": {
+      "title": "ANAF, DGRFP Brașov — „Modificări privind CAS și CASS datorate de angajatori în cazul contractelor de muncă cu timp parțial sau cu normă întreagă” (art. 146 alin. (5^6)-(5^9), art. 168 alin. (6^1)): diferența plătită de angajator în numele angajatului; salariul minim prorata zilelor lucrătoare în care contractul nu este suspendat",
+      "url": "https://static.anaf.ro/static/10/Brasov/Brasov/Contributii_contracte_2022.pdf",
+      "retrieved": "2026-10-23"
+    },
+    "published-net-2026": {
+      "title": "Net pay published for the 2026 minimum wage by independent payroll calculators: 2.574 lei for 4.050 lei gross (January–June) and 2.699 lei for 4.325 lei gross (July–December) — used as cross-checks of the rounding, not as legal sources",
+      "url": "https://folositor.ro/ghid/salariul-minim-romania",
+      "retrieved": "2026-10-23"
+    }
+  },
+  "inputs": {
+    "employer": [],
+    "employee": [
+      {
+        "key": "mainEmployer",
+        "type": "BOOLEAN",
+        "required": true,
+        "description": "Whether this employer is the employee's main job (funcția de bază): only there are the personal deduction (art. 77) and the OUG 89/2025 tax-free amount applied"
+      },
+      {
+        "key": "dependents",
+        "type": "INTEGER",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "max": 50,
+        "description": "Persons in the employee's care (persoane aflate în întreținere) for the basic personal deduction, art. 77 alin. (4)-(9); minor children count"
+      },
+      {
+        "key": "schoolChildren",
+        "type": "INTEGER",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "max": 50,
+        "description": "Children under 18 enrolled in education for whom this parent takes the 100 lei additional deduction, art. 77 alin. (10) lit. b)"
+      },
+      {
+        "key": "contractBaseSalaryAtMinimum",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Whether the base salary in the employment contract equals the national minimum gross wage (OUG 89/2025 art. III(1)(a)): with full time at the main job and gross pay within the cap, 300 lei (January-June) / 200 lei (July-December) are free of tax and contributions"
+      },
+      {
+        "key": "incomeTaxExempt",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Exempt from income tax on salary as a person with severe or pronounced disability (Codul fiscal art. 60 pct. 1); contributions remain due"
+      },
+      {
+        "key": "minimumContributionException",
+        "type": "ENUM",
+        "required": false,
+        "defaultValue": "NONE",
+        "values": ["NONE", "STUDENT_UNDER_26", "APPRENTICE_UNDER_18", "REDUCED_HOURS_DISABILITY", "AGE_PENSIONER", "MULTIPLE_CONTRACTS"],
+        "description": "Exception from the minimum CAS/CASS on the minimum wage (art. 146 alin. (5^7)): pupil or student under 26, apprentice under 18, person allowed by law to work under 8 hours a day, age pensioner, or several contracts whose combined base reaches the minimum wage"
+      },
+      {
+        "key": "minimumContributionBase",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "description": "Minimum CAS/CASS base in lei replacing the minimum wage less the tax-free amount, for months in which the contract was active only some working days (art. 146 alin. (5^6))"
+      },
+      {
+        "key": "nonTaxableAmountOverride",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "max": 300,
+        "description": "Tax-free amount in lei replacing 300 / 200 for a partial month (OUG 89/2025 art. III(4): prorated by the part of the month at the minimum wage)"
+      }
+    ]
+  },
+  "parameters": {
+    "minimumWage": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-06-30",
+        "value": "4050",
+        "source": "hg-1506-2024"
+      },
+      {
+        "from": "2026-07-01",
+        "to": "2026-12-31",
+        "value": "4325",
+        "source": "hg-146-2026"
+      }
+    ],
+    "nonTaxableAmount": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-06-30",
+        "value": "300",
+        "source": "oug-89-2025"
+      },
+      {
+        "from": "2026-07-01",
+        "to": "2026-12-31",
+        "value": "200",
+        "source": "oug-89-2025"
+      }
+    ],
+    "nonTaxableGrossCap": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-06-30",
+        "value": "4300",
+        "source": "oug-89-2025"
+      },
+      {
+        "from": "2026-07-01",
+        "to": "2026-12-31",
+        "value": "4600",
+        "source": "oug-89-2025"
+      }
+    ],
+    "casRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.25",
+        "source": "cod-fiscal"
+      }
+    ],
+    "cassRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.10",
+        "source": "cod-fiscal"
+      }
+    ],
+    "camRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0225",
+        "source": "cod-fiscal"
+      }
+    ],
+    "taxRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.10",
+        "source": "cod-fiscal"
+      }
+    ],
+    "deductionBandWidth": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "50",
+        "source": "cod-fiscal"
+      }
+    ],
+    "deductionLimitAboveMinimum": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "2000",
+        "source": "cod-fiscal"
+      }
+    ],
+    "maxDependentsColumn": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "4",
+        "source": "cod-fiscal"
+      }
+    ],
+    "youthDeductionRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.15",
+        "source": "cod-fiscal"
+      }
+    ],
+    "youthAgeLimit": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "26",
+        "source": "cod-fiscal"
+      }
+    ],
+    "schoolChildDeduction": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "100",
+        "source": "cod-fiscal"
+      }
+    ]
+  },
+  "tables": {
+    "basicDeduction": {
+      "kind": "EXACT",
+      "description": "Basic personal deduction as a share of the minimum wage, by 50-lei band of gross monthly salary above the minimum wage (band 0: up to the minimum wage) and number of dependents (Codul fiscal art. 77 alin. (4))",
+      "columns": ["0", "1", "2", "3", "4"],
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "cod-fiscal",
+          "rows": [
+            {
+              "key": "0",
+              "label": "up to the minimum wage",
+              "values": ["0.2", "0.25", "0.3", "0.35", "0.45"]
+            },
+            {
+              "key": "1",
+              "label": "minimum wage + 1 to + 50 lei",
+              "values": ["0.195", "0.245", "0.295", "0.345", "0.445"]
+            },
+            {
+              "key": "2",
+              "label": "minimum wage + 51 to + 100 lei",
+              "values": ["0.19", "0.24", "0.29", "0.34", "0.44"]
+            },
+            {
+              "key": "3",
+              "label": "minimum wage + 101 to + 150 lei",
+              "values": ["0.185", "0.235", "0.285", "0.335", "0.435"]
+            },
+            {
+              "key": "4",
+              "label": "minimum wage + 151 to + 200 lei",
+              "values": ["0.18", "0.23", "0.28", "0.33", "0.43"]
+            },
+            {
+              "key": "5",
+              "label": "minimum wage + 201 to + 250 lei",
+              "values": ["0.175", "0.225", "0.275", "0.325", "0.425"]
+            },
+            {
+              "key": "6",
+              "label": "minimum wage + 251 to + 300 lei",
+              "values": ["0.17", "0.22", "0.27", "0.32", "0.42"]
+            },
+            {
+              "key": "7",
+              "label": "minimum wage + 301 to + 350 lei",
+              "values": ["0.165", "0.215", "0.265", "0.315", "0.415"]
+            },
+            {
+              "key": "8",
+              "label": "minimum wage + 351 to + 400 lei",
+              "values": ["0.16", "0.21", "0.26", "0.31", "0.41"]
+            },
+            {
+              "key": "9",
+              "label": "minimum wage + 401 to + 450 lei",
+              "values": ["0.155", "0.205", "0.255", "0.305", "0.405"]
+            },
+            {
+              "key": "10",
+              "label": "minimum wage + 451 to + 500 lei",
+              "values": ["0.15", "0.2", "0.25", "0.3", "0.4"]
+            },
+            {
+              "key": "11",
+              "label": "minimum wage + 501 to + 550 lei",
+              "values": ["0.145", "0.195", "0.245", "0.295", "0.395"]
+            },
+            {
+              "key": "12",
+              "label": "minimum wage + 551 to + 600 lei",
+              "values": ["0.14", "0.19", "0.24", "0.29", "0.39"]
+            },
+            {
+              "key": "13",
+              "label": "minimum wage + 601 to + 650 lei",
+              "values": ["0.135", "0.185", "0.235", "0.285", "0.385"]
+            },
+            {
+              "key": "14",
+              "label": "minimum wage + 651 to + 700 lei",
+              "values": ["0.13", "0.18", "0.23", "0.28", "0.38"]
+            },
+            {
+              "key": "15",
+              "label": "minimum wage + 701 to + 750 lei",
+              "values": ["0.125", "0.175", "0.225", "0.275", "0.375"]
+            },
+            {
+              "key": "16",
+              "label": "minimum wage + 751 to + 800 lei",
+              "values": ["0.12", "0.17", "0.22", "0.27", "0.37"]
+            },
+            {
+              "key": "17",
+              "label": "minimum wage + 801 to + 850 lei",
+              "values": ["0.115", "0.165", "0.215", "0.265", "0.365"]
+            },
+            {
+              "key": "18",
+              "label": "minimum wage + 851 to + 900 lei",
+              "values": ["0.11", "0.16", "0.21", "0.26", "0.36"]
+            },
+            {
+              "key": "19",
+              "label": "minimum wage + 901 to + 950 lei",
+              "values": ["0.105", "0.155", "0.205", "0.255", "0.355"]
+            },
+            {
+              "key": "20",
+              "label": "minimum wage + 951 to + 1000 lei",
+              "values": ["0.1", "0.15", "0.2", "0.25", "0.35"]
+            },
+            {
+              "key": "21",
+              "label": "minimum wage + 1001 to + 1050 lei",
+              "values": ["0.095", "0.145", "0.195", "0.245", "0.345"]
+            },
+            {
+              "key": "22",
+              "label": "minimum wage + 1051 to + 1100 lei",
+              "values": ["0.09", "0.14", "0.19", "0.24", "0.34"]
+            },
+            {
+              "key": "23",
+              "label": "minimum wage + 1101 to + 1150 lei",
+              "values": ["0.085", "0.135", "0.185", "0.235", "0.335"]
+            },
+            {
+              "key": "24",
+              "label": "minimum wage + 1151 to + 1200 lei",
+              "values": ["0.08", "0.13", "0.18", "0.23", "0.33"]
+            },
+            {
+              "key": "25",
+              "label": "minimum wage + 1201 to + 1250 lei",
+              "values": ["0.075", "0.125", "0.175", "0.225", "0.325"]
+            },
+            {
+              "key": "26",
+              "label": "minimum wage + 1251 to + 1300 lei",
+              "values": ["0.07", "0.12", "0.17", "0.22", "0.32"]
+            },
+            {
+              "key": "27",
+              "label": "minimum wage + 1301 to + 1350 lei",
+              "values": ["0.065", "0.115", "0.165", "0.215", "0.315"]
+            },
+            {
+              "key": "28",
+              "label": "minimum wage + 1351 to + 1400 lei",
+              "values": ["0.06", "0.11", "0.16", "0.21", "0.31"]
+            },
+            {
+              "key": "29",
+              "label": "minimum wage + 1401 to + 1450 lei",
+              "values": ["0.055", "0.105", "0.155", "0.205", "0.305"]
+            },
+            {
+              "key": "30",
+              "label": "minimum wage + 1451 to + 1500 lei",
+              "values": ["0.05", "0.1", "0.15", "0.2", "0.3"]
+            },
+            {
+              "key": "31",
+              "label": "minimum wage + 1501 to + 1550 lei",
+              "values": ["0.045", "0.095", "0.145", "0.195", "0.295"]
+            },
+            {
+              "key": "32",
+              "label": "minimum wage + 1551 to + 1600 lei",
+              "values": ["0.04", "0.09", "0.14", "0.19", "0.29"]
+            },
+            {
+              "key": "33",
+              "label": "minimum wage + 1601 to + 1650 lei",
+              "values": ["0.035", "0.085", "0.135", "0.185", "0.285"]
+            },
+            {
+              "key": "34",
+              "label": "minimum wage + 1651 to + 1700 lei",
+              "values": ["0.03", "0.08", "0.13", "0.18", "0.28"]
+            },
+            {
+              "key": "35",
+              "label": "minimum wage + 1701 to + 1750 lei",
+              "values": ["0.025", "0.075", "0.125", "0.175", "0.275"]
+            },
+            {
+              "key": "36",
+              "label": "minimum wage + 1751 to + 1800 lei",
+              "values": ["0.02", "0.07", "0.12", "0.17", "0.27"]
+            },
+            {
+              "key": "37",
+              "label": "minimum wage + 1801 to + 1850 lei",
+              "values": ["0.015", "0.065", "0.115", "0.165", "0.265"]
+            },
+            {
+              "key": "38",
+              "label": "minimum wage + 1851 to + 1900 lei",
+              "values": ["0.01", "0.06", "0.11", "0.16", "0.26"]
+            },
+            {
+              "key": "39",
+              "label": "minimum wage + 1901 to + 1950 lei",
+              "values": ["0.005", "0.055", "0.105", "0.155", "0.255"]
+            },
+            {
+              "key": "40",
+              "label": "minimum wage + 1951 to + 2000 lei",
+              "values": ["0", "0.05", "0.1", "0.15", "0.25"]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "id": "calendarMonth",
+      "type": "REQUIRE",
+      "condition": "#isCalendarMonth",
+      "message": "Romanian salary tax is monthly: the pay period must be a whole calendar month"
+    },
+    {
+      "id": "noPreTaxDeductions",
+      "type": "REQUIRE",
+      "condition": "#preTaxDeductions == 0",
+      "message": "Pre-tax deductions are not supported by this template: union dues, voluntary pension and health insurance (art. 78 alin. (2) lit. a)) are not modelled"
+    },
+    {
+      "id": "grossIncome",
+      "type": "VALUE",
+      "expr": "#pos(#taxableEarnings - #reductions)"
+    },
+    {
+      "id": "socialIncome",
+      "type": "VALUE",
+      "expr": "#pos(#socialEarnings - #reductions)"
+    },
+    {
+      "id": "nonTaxableEligible",
+      "type": "VALUE",
+      "source": "oug-89-2025",
+      "expr": "#employee['mainEmployer'] and #employee['contractBaseSalaryAtMinimum'] and #fte == 1 and #grossIncome > 0 and #grossIncome <= #p['nonTaxableGrossCap'] ? 1 : 0"
+    },
+    {
+      "id": "partialMonthNonTaxable",
+      "type": "REQUIRE",
+      "when": "#nonTaxableEligible == 1 and #employee['nonTaxableAmountOverride'] == null",
+      "condition": "#fullPeriod and #reductions == 0",
+      "message": "Partial month at the minimum wage: the tax-free amount is prorated (OUG 89/2025 art. III(4)), so set the employee's nonTaxableAmountOverride"
+    },
+    {
+      "id": "nonTaxable",
+      "type": "VALUE",
+      "when": "#nonTaxableEligible == 1",
+      "source": "oug-89-2025",
+      "expr": "#min(#employee['nonTaxableAmountOverride'] != null ? #employee['nonTaxableAmountOverride'] : #p['nonTaxableAmount'], #grossIncome)"
+    },
+    {
+      "id": "contributionBase",
+      "type": "VALUE",
+      "expr": "#pos(#socialIncome - #nonTaxable)",
+      "source": "cod-fiscal"
+    },
+    {
+      "id": "cas",
+      "type": "CONTRIBUTION",
+      "label": "Pension contribution (CAS)",
+      "ledger": "PENSION_CONTRIBUTION",
+      "source": "cod-fiscal",
+      "base": "#contributionBase",
+      "employee": {
+        "rate": "#p['casRate']"
+      }
+    },
+    {
+      "id": "cass",
+      "type": "CONTRIBUTION",
+      "label": "Health contribution (CASS)",
+      "ledger": "MEDICARE",
+      "source": "cod-fiscal",
+      "base": "#contributionBase",
+      "employee": {
+        "rate": "#p['cassRate']"
+      }
+    },
+    {
+      "id": "partialMonthMinimum",
+      "type": "REQUIRE",
+      "when": "#socialIncome > 0 and #employee['minimumContributionException'] == 'NONE' and #employee['minimumContributionBase'] == null and #contributionBase < #p['minimumWage'] - #p['nonTaxableAmount']",
+      "condition": "#fullPeriod and #reductions == 0",
+      "source": "anaf-ghid-cas-minim",
+      "message": "Pay is below the minimum wage in a partial month: the minimum CAS/CASS base is prorated by working days (art. 146 alin. (5^6)), so set the employee's minimumContributionBase"
+    },
+    {
+      "id": "minimumBase",
+      "type": "VALUE",
+      "when": "#socialIncome > 0 and #employee['minimumContributionException'] == 'NONE'",
+      "source": "oug-89-2025",
+      "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : #p['minimumWage'] - #p['nonTaxableAmount']"
+    },
+    {
+      "id": "casMinimum",
+      "type": "CONTRIBUTION",
+      "label": "CAS up to the minimum wage, paid by the employer",
+      "ledger": "PENSION_CONTRIBUTION",
+      "source": "cod-fiscal",
+      "when": "#minimumBase > 0",
+      "base": "#minimumBase",
+      "employer": {
+        "amount": "#pos(#round(#minimumBase * #p['casRate'], 0, 'HALF_UP') - #cas_employee)"
+      }
+    },
+    {
+      "id": "cassMinimum",
+      "type": "CONTRIBUTION",
+      "label": "CASS up to the minimum wage, paid by the employer",
+      "ledger": "MEDICARE",
+      "source": "cod-fiscal",
+      "when": "#minimumBase > 0",
+      "base": "#minimumBase",
+      "employer": {
+        "amount": "#pos(#round(#minimumBase * #p['cassRate'], 0, 'HALF_UP') - #cass_employee)"
+      }
+    },
+    {
+      "id": "cam",
+      "type": "CONTRIBUTION",
+      "label": "Work insurance contribution (CAM)",
+      "ledger": "OTHER",
+      "source": "cod-fiscal",
+      "base": "#contributionBase",
+      "employer": {
+        "rate": "#p['camRate']"
+      }
+    },
+    {
+      "id": "taxableNet",
+      "type": "VALUE",
+      "expr": "#pos(#grossIncome - #nonTaxable - #cas_employee - #cass_employee)"
+    },
+    {
+      "id": "deductionBand",
+      "type": "VALUE",
+      "when": "#employee['mainEmployer'] and #grossIncome > 0",
+      "source": "cod-fiscal",
+      "expr": "#grossIncome <= #p['minimumWage'] ? 0 : #divide(#grossIncome - #p['minimumWage'], #p['deductionBandWidth'], 0, 'CEILING')"
+    },
+    {
+      "id": "withinDeductionLimit",
+      "type": "VALUE",
+      "source": "cod-fiscal",
+      "expr": "#employee['mainEmployer'] and #grossIncome > 0 and #grossIncome <= #p['minimumWage'] + #p['deductionLimitAboveMinimum'] ? 1 : 0"
+    },
+    {
+      "id": "basicDeduction",
+      "type": "VALUE",
+      "when": "#withinDeductionLimit == 1",
+      "source": "cod-fiscal",
+      "expr": "#round(#table.lookup('basicDeduction', #deductionBand, #min(#employee['dependents'], #p['maxDependentsColumn'])) * #p['minimumWage'], 0, 'HALF_DOWN')"
+    },
+    {
+      "id": "youthDeduction",
+      "type": "VALUE",
+      "when": "#withinDeductionLimit == 1",
+      "source": "cod-fiscal",
+      "expr": "#ageAtPeriodEnd < #p['youthAgeLimit'] ? #round(#p['minimumWage'] * #p['youthDeductionRate'], 0, 'HALF_DOWN') : 0"
+    },
+    {
+      "id": "childDeduction",
+      "type": "VALUE",
+      "when": "#employee['mainEmployer'] and #grossIncome > 0",
+      "source": "cod-fiscal",
+      "expr": "#p['schoolChildDeduction'] * #employee['schoolChildren']"
+    },
+    {
+      "id": "personalDeduction",
+      "type": "VALUE",
+      "source": "cod-fiscal",
+      "expr": "#min(#basicDeduction + #youthDeduction + #childDeduction, #taxableNet)"
+    },
+    {
+      "id": "incomeTax",
+      "type": "TAX",
+      "label": "Income tax on salary",
+      "ledger": "INCOME_TAX",
+      "source": "cod-fiscal",
+      "when": "!#employee['incomeTaxExempt']",
+      "base": "#round(#pos(#taxableNet - #personalDeduction), 0, 'HALF_DOWN')",
+      "rate": "#p['taxRate']"
+    }
+  ],
+  "limitations": [
+    "Monthly salary for whole calendar months in 2026, in RON; values follow the month the salary relates to (minimum wage and tax-free amount change on 1 July). Back pay for earlier periods taxed on the payment-date rules (art. 78 alin. (3)) is not modelled.",
+    "The basic deduction band uses the whole gross salary of the month, including the OUG 89/2025 tax-free amount (Norme pct. 14 alin. (1)); no official example settles this.",
+    "CAS, CASS, CAM and income tax are rounded to the leu with 50 bani rounded up (reproducing the published minimum-wage net pay); the tax base and the deduction are rounded to the leu with 50 bani and under dropped (Norme pct. 4, art. 66). No official text was found for the rounding of the contributions and of the tax itself.",
+    "Meal and holiday vouchers count for income tax and CASS but not for CAS or CAM, and are left out of the OUG 89/2025 cap; the template treats all social earnings alike, so vouchers must be kept out of the tenant's pay components.",
+    "The employer's CAS/CASS top-up up to the minimum wage (art. 146 alin. (5^9)) is neither deducted from nor added to the employee's tax base, so the employee's net pay is unchanged; no official text was found on this, and practice examples agree.",
+    "Partial months need the prorated tax-free amount and minimum contribution base entered per employee; the minimum-contribution exception for several contracts (art. 146 alin. (5^7) lit. e)) is entered, not verified.",
+    "The construction and agriculture minimum wages, special or difficult working conditions (art. 138 lit. b)-c)), the R&D exemption (art. 60 pct. 3) and the deductible union dues, voluntary pension and health insurance are not modelled; employees with pre-tax deductions are refused.",
+    "The youth deduction applies when the employee is under 26 at the end of the month; the employee's birth date is required at the main job when gross pay is within minimum wage + 2,000 lei.",
+    "Status LAW_DERIVED: values are cited from the acts; the cases are derived from them, two reproduce independently published minimum-wage net pay."
+  ],
+  "testCases": [
+    {
+      "name": "published net: minimum wage 4,050 in March",
+      "evidence": "Net 2,574 lei as published for 2026 H1: 300 lei tax-free; CAS 937.50 -> 938, CASS 375, deduction 20% x 4,050 = 810, tax base 1,627, tax 162.70 -> 163. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4050.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true",
+        "contractBaseSalaryAtMinimum": "true"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "938"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "375"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "84"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "163"
+        }
+      ]
+    },
+    {
+      "name": "published net: minimum wage 4,325 in August",
+      "evidence": "Net 2,699 lei as published for 2026 H2: 200 lei tax-free; CAS 1,031.25 -> 1,031, CASS 412.50 -> 413, deduction 865, tax 181.60 -> 182. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-08-01",
+      "periodEnd": "2026-08-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4325.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true",
+        "contractBaseSalaryAtMinimum": "true"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "1031"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "413"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "93"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "182"
+        }
+      ]
+    },
+    {
+      "name": "4,300 in June keeps the tax-free amount",
+      "evidence": "OUG 89 art. III(1)(b): 4,300 inclusive; band ceil(250/50) = 5, 17.5% x 4,050 = 708.75 -> 709 (the band uses the whole gross, Norme pct. 14). Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4300.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true",
+        "contractBaseSalaryAtMinimum": "true"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "1000"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "400"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "90"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "189"
+        }
+      ]
+    },
+    {
+      "name": "4,301 in June loses the tax-free amount",
+      "evidence": "Above the 4,300 cap: no tax-free amount. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4301.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true",
+        "contractBaseSalaryAtMinimum": "true"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "1075"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "430"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "97"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "211"
+        }
+      ]
+    },
+    {
+      "name": "4,500 in June",
+      "evidence": "Minimum 4,050: band 9, 15.5% x 4,050 = 627.75 -> 628. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4500.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "1125"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "450"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "101"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "230"
+        }
+      ]
+    },
+    {
+      "name": "4,500 in July",
+      "evidence": "Minimum 4,325: band 4, 18% x 4,325 = 778.50 -> 778 (art. 66: 50 bani dropped). Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-07-01",
+      "periodEnd": "2026-07-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4500.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "1125"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "450"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "101"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "215"
+        }
+      ]
+    },
+    {
+      "name": "above minimum + 2,000 with two school children",
+      "evidence": "No basic deduction above 6,050; 2 x 100 lei for children in school. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "7000.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true",
+        "schoolChildren": "2"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "1750"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "700"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "158"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "435"
+        }
+      ]
+    },
+    {
+      "name": "under 26: youth deduction",
+      "evidence": "Age 24: 15% x 4,050 = 607.50 -> 607 on top of band 19 (10.5% x 4,050 = 425.25 -> 425). Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "fullPeriod": true,
+      "birthDate": "2001-05-01",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "1250"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "500"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "113"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "222"
+        }
+      ]
+    },
+    {
+      "name": "26 by the end of the month: no youth deduction",
+      "evidence": "Age 26 on 31 March: art. 77 (10)(a) no longer applies. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "fullPeriod": true,
+      "birthDate": "2000-03-15",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "1250"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "500"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "113"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "283"
+        }
+      ]
+    },
+    {
+      "name": "four or more dependents",
+      "evidence": "5 dependents use the '4 și peste' column: 45% x 4,050 = 1,822.50 -> 1,822. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4050.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true",
+        "dependents": "5"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "1013"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "405"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "91"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "81"
+        }
+      ]
+    },
+    {
+      "name": "second job below the minimum: employer pays the CAS/CASS difference",
+      "evidence": "art. 146 (5^6)-(5^9): floor 4,050 - 300 = 3,750; CAS 750 vs 938, CASS 300 vs 375; no deduction outside the main job (art. 78 (2)(b)). Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "mainEmployer": "false"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "750"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "300"
+        },
+        {
+          "step": "casMinimum",
+          "side": "EMPLOYER",
+          "amount": "188"
+        },
+        {
+          "step": "cassMinimum",
+          "side": "EMPLOYER",
+          "amount": "75"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "68"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "195"
+        }
+      ]
+    },
+    {
+      "name": "student under 26: no minimum contribution",
+      "evidence": "art. 146 (5^7)(a): the floor does not apply. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "2004-09-01",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true",
+        "minimumContributionException": "STUDENT_UNDER_26"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "500"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "200"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "45"
+        }
+      ]
+    },
+    {
+      "name": "severe disability: no income tax",
+      "evidence": "art. 60 pt. 1: exempt from income tax; contributions still due. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "6000.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true",
+        "incomeTaxExempt": "true"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "1500"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "600"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "135"
+        }
+      ]
+    },
+    {
+      "name": "tax base ending in 50 bani rounds down",
+      "evidence": "Norme pct. 4: 5,204.50 -> 5,204, so the tax is 520 (not 521). Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "8007.50",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "mainEmployer": "false"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "2002"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "801"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "180"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "520"
+        }
+      ]
+    },
+    {
+      "name": "partial month with both overrides",
+      "evidence": "OUG 89 art. III(4) and art. 146 (5^6): tax-free amount and floor prorated by the tenant. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2025.00",
+      "fullPeriod": false,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true",
+        "contractBaseSalaryAtMinimum": "true",
+        "nonTaxableAmountOverride": "150",
+        "minimumContributionBase": "1875"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "469"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "188"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "42"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "41"
+        }
+      ]
+    },
+    {
+      "name": "no earnings, no lines",
+      "evidence": "nothing is insured or taxed",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "0",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true"
+      },
+      "expectLines": []
+    },
+    {
+      "name": "missing main-job answer",
+      "evidence": "the deduction and the tax-free amount apply only at the main job",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {},
+      "expectError": "mainEmployer"
+    },
+    {
+      "name": "main job without a birth date",
+      "evidence": "art. 77 (10)(a) needs the age",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true"
+      },
+      "expectError": "no birth date"
+    },
+    {
+      "name": "partial month eligible for the tax-free amount",
+      "evidence": "OUG 89 art. III(4): the amount is prorated",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2025.00",
+      "fullPeriod": false,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true",
+        "contractBaseSalaryAtMinimum": "true"
+      },
+      "expectError": "nonTaxableAmountOverride"
+    },
+    {
+      "name": "partial month below the minimum base",
+      "evidence": "art. 146 (5^6): the floor is prorated by working days",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1500.00",
+      "fullPeriod": false,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true"
+      },
+      "expectError": "minimumContributionBase"
+    },
+    {
+      "name": "pre-tax deductions refuse",
+      "evidence": "union dues, voluntary pension and health insurance (art. 78 (2)(a)(ii)-(iv)) are not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true"
+      },
+      "preTaxDeductions": "50.00",
+      "expectError": "Pre-tax deductions are not supported"
+    },
+    {
+      "name": "2027 is not covered",
+      "evidence": "2027 values not yet published",
+      "periodStart": "2027-03-01",
+      "periodEnd": "2027-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true"
+      },
+      "expectError": "a newer template version is needed"
+    }
+  ]
+}

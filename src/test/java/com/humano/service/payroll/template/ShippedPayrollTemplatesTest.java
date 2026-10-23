@@ -150,6 +150,38 @@ class ShippedPayrollTemplatesTest {
     }
 
     @Test
+    void romaniaFiguresMatchTheFiscalCodeAndTheOrdinances() {
+        PayrollTemplate romania = catalog.find("ro-employment").orElseThrow();
+        Map<String, List<String>> values = romania
+            .parameters()
+            .entrySet()
+            .stream()
+            .collect(
+                Collectors.toMap(Map.Entry::getKey, e ->
+                    e.getValue().stream().map(v -> v.from() + ".." + v.to() + "=" + v.value().toPlainString()).toList()
+                )
+            );
+
+        // Codul fiscal art. 138 lit. a), 156, 220^3, 78: CAS 25%, CASS 10%, CAM 2.25%, income tax 10%.
+        assertThat(values.get("casRate")).containsExactly("2026-01-01..2026-12-31=0.25");
+        assertThat(values.get("cassRate")).containsExactly("2026-01-01..2026-12-31=0.10");
+        assertThat(values.get("camRate")).containsExactly("2026-01-01..2026-12-31=0.0225");
+        assertThat(values.get("taxRate")).containsExactly("2026-01-01..2026-12-31=0.10");
+        // HG 1506/2024 and HG 146/2026: minimum wage 4,050 lei, 4,325 lei from 1 July 2026.
+        assertThat(values.get("minimumWage")).containsExactly("2026-01-01..2026-06-30=4050", "2026-07-01..2026-12-31=4325");
+        // OUG 89/2025 art. III: 300 / 200 lei tax-free, gross cap 4,300 / 4,600 lei.
+        assertThat(values.get("nonTaxableAmount")).containsExactly("2026-01-01..2026-06-30=300", "2026-07-01..2026-12-31=200");
+        assertThat(values.get("nonTaxableGrossCap")).containsExactly("2026-01-01..2026-06-30=4300", "2026-07-01..2026-12-31=4600");
+        // Codul fiscal art. 77 alin. (4): 20/25/30/35/45% up to the minimum wage, 0/5/10/15/25% at minimum wage + 2,000 lei.
+        List<Table.Row> deduction = romania.tables().get("basicDeduction").versions().get(0).rows();
+        assertThat(deduction).hasSize(41);
+        assertThat(deduction)
+            .filteredOn(r -> List.of("0", "5", "40").contains(r.key()))
+            .extracting(r -> r.key() + "=" + r.values().stream().map(BigDecimal::toPlainString).collect(Collectors.joining("/")))
+            .containsExactly("0=0.2/0.25/0.3/0.35/0.45", "5=0.175/0.225/0.275/0.325/0.425", "40=0/0.05/0.1/0.15/0.25");
+    }
+
+    @Test
     void ukFiguresMatchHmrcPublications() {
         PayrollTemplate uk = catalog.find("gb-paye-nic").orElseThrow();
         Map<String, String> values = uk
