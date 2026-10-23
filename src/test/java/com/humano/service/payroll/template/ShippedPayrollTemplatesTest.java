@@ -217,6 +217,36 @@ class ShippedPayrollTemplatesTest {
     }
 
     @Test
+    void hungaryFiguresMatchTheActsAndNavBooklets() {
+        Map<String, String> values = catalog
+            .find("hu-employment")
+            .orElseThrow()
+            .parameters()
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get(0).value().toPlainString()));
+
+        // Szja tv. 8. § (1); Tbj. 25. § (1); Szocho tv.: 15%, 18.5%, 13%.
+        assertThat(values)
+            .containsEntry("taxRate", "0.15")
+            .containsEntry("socialSecurityRate", "0.185")
+            .containsEntry("socialContributionTaxRate", "0.13");
+        // Tbj. 27. § (2) / NAV booklet 49: minimum base 30% of the 322,800 Ft minimum wage.
+        assertThat(values).containsEntry("minimumContributionBase", "96840");
+        // Szja tv. 29/A. § (2)-(2a): family allowance 133,340 / 266,660 / 440,000 Ft, +133,340 Ft for a disabled child.
+        assertThat(values)
+            .containsEntry("familyOneDependant", "133340")
+            .containsEntry("familyTwoDependants", "266660")
+            .containsEntry("familyThreeOrMoreDependants", "440000")
+            .containsEntry("familyDisabledSupplement", "133340");
+        // NAV booklet 73: under-25 limit 715,765 Ft, personal 107,600 Ft; Szja tv. 29/C. §: first-married 33,335 Ft.
+        assertThat(values)
+            .containsEntry("youthMonthlyLimit", "715765")
+            .containsEntry("personalAllowance", "107600")
+            .containsEntry("firstMarriedAllowance", "33335");
+    }
+
+    @Test
     void ukFiguresMatchHmrcPublications() {
         PayrollTemplate uk = catalog.find("gb-paye-nic").orElseThrow();
         Map<String, String> values = uk

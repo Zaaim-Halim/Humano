@@ -54,4 +54,5 @@ the exact rules that produced them. Posted runs are never recalculated by an upd
 - `hr/` — Hrvatska (`hr-employment`). Contributions with the MO I base reduction, local rates for all 556 units from the Tax Administration's table; all declared, no extension.
 - `ro/` — România (`ro-employment`). CAS/CASS/CAM, the art. 77 deduction table and the OUG 89/2025 tax-free amount, changing on 1 July; all declared, no extension.
 - `pl/` — Polska (`pl-employment`). ZUS contributions with the 282,600 zł limit, PIT advances with the 120,000 zł threshold and the 26-and-under relief, health capped at the 2021-rules advance; all declared, no extension.
+- `hu/` — Magyarország (`hu-employment`). Szja 15 % with the mothers', under-25, personal, first-married and family allowances, tb-járulék 18.5 % with the minimum base and family contribution relief, szocho 13 %; all declared, no extension.
 - `de/` — Deutschland (`de-employment`). Lohnsteuer via the `de.lohnsteuer-pap-2026` extension, generated from the BMF XML; contributions declared.

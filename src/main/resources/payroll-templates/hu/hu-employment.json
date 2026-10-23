@@ -1,0 +1,991 @@
+{
+  "schemaVersion": 1,
+  "id": "hu-employment",
+  "name": "Hungary — employment (munkaviszony)",
+  "version": "2026.1.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": {
+    "country": "HU"
+  },
+  "validity": {
+    "from": "2026-01-01",
+    "to": "2026-12-31"
+  },
+  "currency": "HUF",
+  "payFrequencies": ["MONTHLY"],
+  "taxYearStart": "--01-01",
+  "dateBasis": "PERIOD",
+  "rounding": {
+    "scale": 0,
+    "mode": "HALF_UP"
+  },
+  "changelog": [
+    {
+      "version": "2026.1.0",
+      "date": "2026-10-23",
+      "summary": "2026: szja 15 %, tb-járulék 18.5 % with the 96,840 Ft minimum base, szocho 13 %; mothers', under-25, personal, first-married and family allowances (family allowance doubled from 2026) with the family contribution relief."
+    }
+  ],
+  "sources": {
+    "szja": {
+      "title": "1995. évi CXVII. törvény a személyi jövedelemadóról (hatályos 2026.X.1.) — 8. § (1) 15 %, 26. § (1) (előző évi bér január 10-ig), 29/A. § (2)-(2a) családi kedvezmény 133 340 / 266 660 / 440 000 Ft + 133 340 Ft, 29/B. §, 29/C. § első házasok 33 335 Ft, 29/D. § és köv. anyák kedvezményei, 29/E. § személyi kedvezmény, 29/F. § 25 év alatti fiatalok",
+      "url": "https://net.jogtar.hu/jogszabaly?docid=99500117.tv",
+      "retrieved": "2026-10-23"
+    },
+    "tbj": {
+      "title": "2019. évi CXXII. törvény a társadalombiztosítás ellátásaira jogosultakról, valamint ezen ellátások fedezetéről (hatályos 2026.X.1.) — 6. § (1) (a kiegészítő tevékenységet folytató saját jogú nyugdíjas nem biztosított), 22. § (3) (a foglalkoztató fizeti a járulékfizetési alsó határ és a jövedelem különbözete utáni járulékot), 25. § (1) 18,5 %, 27. § (2)-(3) járulékfizetési alsó határ a minimálbér 30 %-a, 34. § családi járulékkedvezmény",
+      "url": "https://net.jogtar.hu/jogszabaly?docid=a1900122.tv",
+      "retrieved": "2026-10-23"
+    },
+    "szocho": {
+      "title": "2018. évi LII. törvény a szociális hozzájárulási adóról (hatályos 2026.X.1.) — adó mértéke 13 %, alapja munkaviszonyban a társadalombiztosítási járulék alapja; saját jogú nyugdíjas jövedelme mentes",
+      "url": "https://net.jogtar.hu/jogszabaly?docid=a1800052.tv",
+      "retrieved": "2026-10-23"
+    },
+    "nav-73": {
+      "title": "NAV információs füzet 73. „Szja adóalap-kedvezmények” (közzétéve 2026. 03. 19.) — kedvezmények sorrendje; 25 év alatti fiatalok kedvezménye 715 765 Ft/hó (utoljára a 25. életév betöltésének hónapjában); személyi kedvezmény 107 600 Ft; családi kedvezmény táblázata; családi járulékkedvezmény 15 %; minimálbér 322 800 Ft; PDF SHA-256 1c5323a8e9511d3d944b180cb095a8d23685a99fc38b91b5b226faa627b1df4a",
+      "url": "https://nav.gov.hu/pfile/file?path=/ugyfeliranytu/nezzen-utana/inf_fuz/2026/73.-Szja-adoalap-kedvezmenyek-2026.-03.19",
+      "retrieved": "2026-10-23"
+    },
+    "nav-49": {
+      "title": "NAV információs füzet 49. „A szociális hozzájárulási adó” (közzétéve 2026. 01. 16.) — 13 %; munkaviszonyban az alap a tb-járulék alapja, a járulékfizetési alsó határ 2026-ban 96 840 Ft; minimálbér 322 800 Ft a 426/2025. (XII. 23.) Korm. rendelet 2. § (1) alapján; PDF SHA-256 5fa18ac1f4f919912bc096d3d77a75de61bbbe57f85f38ee822ababb5c7b0c33",
+      "url": "https://nav.gov.hu/pfile/file?path=/ugyfeliranytu/nezzen-utana/inf_fuz/2026/49.-A-szocialis-hozzajarulasi-ado-2026.-01.-16",
+      "retrieved": "2026-10-23"
+    },
+    "published-net-2026": {
+      "title": "Net pay published for the 2026 minimum wage: 214 662 Ft for 322 800 Ft gross (szja 48 420 Ft, tb-járulék 59 718 Ft) — cross-check only",
+      "url": "https://berfigyelo.hu/minimalber",
+      "retrieved": "2026-10-23"
+    }
+  },
+  "inputs": {
+    "employer": [],
+    "employee": [
+      {
+        "key": "mothersAllowance",
+        "type": "ENUM",
+        "required": false,
+        "defaultValue": "NONE",
+        "values": ["NONE", "UNDER_30", "FOUR_OR_MORE_CHILDREN", "THREE_CHILDREN", "TWO_CHILDREN"],
+        "description": "Mothers' allowance declared on the tax-advance declaration (adóelőleg-nyilatkozat): under-30 mothers, mothers of four or more, of three, or of two children (Szja tv. 29/D. § ff., including the birth-year conditions); it clears the tax base of the month"
+      },
+      {
+        "key": "youthAllowanceLimit",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "max": 715765,
+        "description": "Under-25 allowance this employer may apply in a month, from the employee's declaration when shared between employers or waived (0); without it the full 715,765 Ft applies (Szja tv. 29/F. §, NAV booklet 73 point 13)"
+      },
+      {
+        "key": "personalAllowance",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Personal allowance for severe disability (Szja tv. 29/E. §): 107,600 Ft a month"
+      },
+      {
+        "key": "firstMarriedAllowance",
+        "type": "DECIMAL",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "max": 33335,
+        "description": "Part of the 33,335 Ft first-married couples' allowance this employee claims (Szja tv. 29/C. §; the spouses share it)"
+      },
+      {
+        "key": "dependants",
+        "type": "INTEGER",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "max": 30,
+        "description": "Number of dependants (eltartottak) setting the family allowance per beneficiary: 1, 2, 3 or more (Szja tv. 29/A. § (2))"
+      },
+      {
+        "key": "beneficiaries",
+        "type": "INTEGER",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "max": 30,
+        "description": "Number of beneficiary dependants (kedvezményezett eltartottak), e.g. children with family benefit, for whom the family allowance is claimed"
+      },
+      {
+        "key": "disabledBeneficiaries",
+        "type": "INTEGER",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "max": 30,
+        "description": "Beneficiaries who are permanently ill or severely disabled: +133,340 Ft each (Szja tv. 29/A. § (2a))"
+      },
+      {
+        "key": "alternateCareBeneficiaries",
+        "type": "INTEGER",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "max": 30,
+        "description": "Beneficiaries cared for alternately by the separated parents, who count at half (Szja tv. 29/B. § (1e))"
+      },
+      {
+        "key": "familyAllowanceShare",
+        "type": "DECIMAL",
+        "required": false,
+        "defaultValue": "1",
+        "min": 0,
+        "max": 1,
+        "description": "Share of the family allowance claimed by this employee when the parents claim it jointly (Szja tv. 29/B. §), e.g. 0.5"
+      },
+      {
+        "key": "ownRightPensioner",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Working own-right pensioner: not insured (Tbj. 6. § (1)), so no tb-járulék and no szocho; income tax only"
+      },
+      {
+        "key": "minimumBaseExempt",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The 96,840 Ft minimum contribution base does not apply: full-time student, or receiving childcare/nursing benefits (Tbj. 27. § (3))"
+      },
+      {
+        "key": "minimumContributionBase",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "description": "Minimum contribution base in Ft for a partial month or a month with sick pay, prorated by calendar days (Tbj. 27. § (2))"
+      }
+    ]
+  },
+  "parameters": {
+    "taxRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.15",
+        "source": "szja"
+      }
+    ],
+    "socialSecurityRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.185",
+        "source": "tbj"
+      }
+    ],
+    "socialContributionTaxRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.13",
+        "source": "szocho"
+      }
+    ],
+    "minimumContributionBase": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "96840",
+        "source": "nav-49"
+      }
+    ],
+    "youthMonthlyLimit": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "715765",
+        "source": "nav-73"
+      }
+    ],
+    "personalAllowance": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "107600",
+        "source": "nav-73"
+      }
+    ],
+    "firstMarriedAllowance": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "33335",
+        "source": "szja"
+      }
+    ],
+    "familyOneDependant": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "133340",
+        "source": "szja"
+      }
+    ],
+    "familyTwoDependants": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "266660",
+        "source": "szja"
+      }
+    ],
+    "familyThreeOrMoreDependants": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "440000",
+        "source": "szja"
+      }
+    ],
+    "familyDisabledSupplement": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "133340",
+        "source": "szja"
+      }
+    ],
+    "familyContributionReliefRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.15",
+        "source": "tbj"
+      }
+    ]
+  },
+  "tables": {},
+  "steps": [
+    {
+      "id": "calendarMonth",
+      "type": "REQUIRE",
+      "condition": "#isCalendarMonth",
+      "message": "Hungarian payroll is monthly: the pay period must be a whole calendar month"
+    },
+    {
+      "id": "noPreTaxDeductions",
+      "type": "REQUIRE",
+      "condition": "#preTaxDeductions == 0",
+      "message": "Pre-tax deductions are not supported by this template"
+    },
+    {
+      "id": "paidByTenthOfJanuary",
+      "type": "REQUIRE",
+      "source": "szja",
+      "condition": "#paymentDate.getYear() == #periodEnd.getYear() or #paymentDate <= #periodEnd.plusDays(10)",
+      "message": "Pay for the previous year paid after 10 January is income of the year of payment (Szja tv. 26. § (1)); it is not supported by this template"
+    },
+    {
+      "id": "familyCounts",
+      "type": "REQUIRE",
+      "source": "szja",
+      "condition": "#employee['beneficiaries'] <= #employee['dependants'] and #employee['disabledBeneficiaries'] <= #employee['beneficiaries'] and #employee['alternateCareBeneficiaries'] <= #employee['beneficiaries']",
+      "message": "The number of beneficiaries cannot exceed the number of dependants, nor disabled or alternate-care beneficiaries the beneficiaries (Szja tv. 29/A.-29/B. §)"
+    },
+    {
+      "id": "wage",
+      "type": "VALUE",
+      "expr": "#pos(#socialEarnings - #reductions)"
+    },
+    {
+      "id": "taxableWage",
+      "type": "VALUE",
+      "expr": "#pos(#taxableEarnings - #reductions)"
+    },
+    {
+      "id": "partialMonthMinimum",
+      "type": "REQUIRE",
+      "source": "tbj",
+      "when": "!#employee['ownRightPensioner'] and !#employee['minimumBaseExempt'] and #employee['minimumContributionBase'] == null and #wage > 0 and #wage < #p['minimumContributionBase']",
+      "condition": "#fullPeriod and #reductions == 0",
+      "message": "Pay is below the minimum contribution base in a partial month: the base is prorated by calendar days (Tbj. 27. § (2)), so set the employee's minimumContributionBase"
+    },
+    {
+      "id": "minimumBase",
+      "type": "VALUE",
+      "source": "tbj",
+      "when": "!#employee['ownRightPensioner'] and !#employee['minimumBaseExempt'] and #wage > 0",
+      "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : #p['minimumContributionBase']"
+    },
+    {
+      "id": "mothersBase",
+      "type": "VALUE",
+      "source": "szja",
+      "when": "#employee['mothersAllowance'] != 'NONE'",
+      "expr": "#taxableWage"
+    },
+    {
+      "id": "afterMothers",
+      "type": "VALUE",
+      "expr": "#taxableWage - #mothersBase"
+    },
+    {
+      "id": "youthEligible",
+      "type": "VALUE",
+      "source": "nav-73",
+      "when": "#employee['mothersAllowance'] == 'NONE' and #taxableWage > 0",
+      "expr": "#birthDate.plusYears(25) >= #periodStart ? 1 : 0"
+    },
+    {
+      "id": "youthBase",
+      "type": "VALUE",
+      "source": "szja",
+      "when": "#youthEligible == 1",
+      "expr": "#min(#afterMothers, #employee['youthAllowanceLimit'] != null ? #employee['youthAllowanceLimit'] : #p['youthMonthlyLimit'])"
+    },
+    {
+      "id": "afterYouth",
+      "type": "VALUE",
+      "expr": "#afterMothers - #youthBase"
+    },
+    {
+      "id": "personalBase",
+      "type": "VALUE",
+      "source": "nav-73",
+      "when": "#employee['personalAllowance']",
+      "expr": "#min(#afterYouth, #p['personalAllowance'])"
+    },
+    {
+      "id": "afterPersonal",
+      "type": "VALUE",
+      "expr": "#afterYouth - #personalBase"
+    },
+    {
+      "id": "firstMarriedBase",
+      "type": "VALUE",
+      "source": "szja",
+      "expr": "#min(#afterPersonal, #employee['firstMarriedAllowance'])"
+    },
+    {
+      "id": "afterFirstMarried",
+      "type": "VALUE",
+      "expr": "#afterPersonal - #firstMarriedBase"
+    },
+    {
+      "id": "familyPerBeneficiary",
+      "type": "VALUE",
+      "source": "szja",
+      "expr": "#employee['dependants'] == 0 ? 0 : (#employee['dependants'] == 1 ? #p['familyOneDependant'] : (#employee['dependants'] == 2 ? #p['familyTwoDependants'] : #p['familyThreeOrMoreDependants']))"
+    },
+    {
+      "id": "familyAllowance",
+      "type": "VALUE",
+      "source": "szja",
+      "expr": "#round((#employee['beneficiaries'] * #familyPerBeneficiary - #divide(#employee['alternateCareBeneficiaries'] * #familyPerBeneficiary, 2, 2, 'HALF_UP') + #employee['disabledBeneficiaries'] * #p['familyDisabledSupplement']) * #employee['familyAllowanceShare'], 0, 'HALF_UP')"
+    },
+    {
+      "id": "familyUsed",
+      "type": "VALUE",
+      "expr": "#min(#afterFirstMarried, #familyAllowance)"
+    },
+    {
+      "id": "familyContributionRelief",
+      "type": "VALUE",
+      "source": "tbj",
+      "when": "!#employee['ownRightPensioner']",
+      "expr": "#min(#round((#familyAllowance - #familyUsed) * #p['familyContributionReliefRate'], 0, 'HALF_UP'), #round(#wage * #p['socialSecurityRate'], 0, 'HALF_UP'))"
+    },
+    {
+      "id": "socialSecurity",
+      "type": "CONTRIBUTION",
+      "label": "Social security contribution (tb-járulék), after family contribution relief",
+      "ledger": "SOCIAL_SECURITY",
+      "source": "tbj",
+      "when": "!#employee['ownRightPensioner']",
+      "base": "#wage",
+      "employee": {
+        "amount": "#round(#wage * #p['socialSecurityRate'], 0, 'HALF_UP') - #familyContributionRelief"
+      }
+    },
+    {
+      "id": "socialSecurityMinimum",
+      "type": "CONTRIBUTION",
+      "label": "Social security contribution on the minimum base, paid by the employer",
+      "ledger": "SOCIAL_SECURITY",
+      "source": "tbj",
+      "when": "#minimumBase > #wage",
+      "base": "#minimumBase - #wage",
+      "employer": {
+        "rate": "#p['socialSecurityRate']"
+      }
+    },
+    {
+      "id": "socialContributionTax",
+      "type": "CONTRIBUTION",
+      "label": "Social contribution tax (szocho)",
+      "ledger": "OTHER",
+      "source": "szocho",
+      "when": "!#employee['ownRightPensioner'] and #wage > 0",
+      "base": "#max(#wage, #minimumBase)",
+      "employer": {
+        "rate": "#p['socialContributionTaxRate']"
+      }
+    },
+    {
+      "id": "incomeTax",
+      "type": "TAX",
+      "label": "Personal income tax advance (szja-előleg)",
+      "ledger": "INCOME_TAX",
+      "source": "szja",
+      "base": "#afterFirstMarried - #familyUsed",
+      "rate": "#p['taxRate']"
+    }
+  ],
+  "limitations": [
+    "Employment paid monthly in HUF in 2026, for whole calendar months; pay is placed in the month it is accounted for, and previous-year pay paid after 10 January is refused (Szja tv. 26. § (1)).",
+    "Allowances follow the employee's tax-advance declaration: mothers' eligibility (including the 2026 birth-year conditions), the split of the under-25, first-married and family allowances between employers or spouses are entered, not checked. The under-25 allowance is applied automatically from the birth date unless limited.",
+    "The family contribution relief reduces this employer's tb-járulék on the actual pay, never the employer's contribution on the gap to the minimum base (NAV booklet 73, point 11).",
+    "Not modelled: szocho reliefs (labour-market entrants, career starters and others), the rehabilitation contribution, sick pay and other benefits paid by the employer, tax-exempt income subject to contributions, and pre-tax deductions (refused).",
+    "Amounts are rounded to the forint, half up, per line; no official rounding rule for the monthly advance and contributions was found.",
+    "Status LAW_DERIVED: values are cited from the acts and NAV's 2026 booklets; one case reproduces the published minimum-wage net pay and four follow NAV's worked figures."
+  ],
+  "testCases": [
+    {
+      "name": "published net: minimum wage 322,800",
+      "evidence": "Net 214,662 Ft as published for 2026: tb-járulék 59,718, szja 48,420. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "322800",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {},
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "59718"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "41964"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "48420"
+        }
+      ]
+    },
+    {
+      "name": "two children at the minimum wage",
+      "evidence": "2 x 266,660 = 533,320 Ft family allowance; base 322,800 used, the rest x 15% = 31,578 Ft family contribution relief (net 294,660). Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "322800",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {
+        "dependants": "2",
+        "beneficiaries": "2"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "28140"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "41964"
+        }
+      ]
+    },
+    {
+      "name": "NAV table: three dependants, three beneficiaries",
+      "evidence": "NAV booklet 73 point 10.4: 3 x 440,000 = 1,320,000 Ft allowance. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1500000",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {
+        "dependants": "3",
+        "beneficiaries": "3"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "277500"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "195000"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "27000"
+        }
+      ]
+    },
+    {
+      "name": "NAV example: under-25 allowance shared between employers (case II)",
+      "evidence": "NAV booklet 73 point 13: 415,765 Ft declared at the 500,000 Ft employer. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "500000",
+      "fullPeriod": true,
+      "birthDate": "2003-05-20",
+      "employer": {},
+      "employee": {
+        "youthAllowanceLimit": "415765"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "92500"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "65000"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "12635"
+        }
+      ]
+    },
+    {
+      "name": "under 25 in the month of the 25th birthday",
+      "evidence": "Szja tv. 29/F. §; NAV: the month of turning 25 is the last eligible month. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "800000",
+      "fullPeriod": true,
+      "birthDate": "2001-03-31",
+      "employer": {},
+      "employee": {},
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "148000"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "104000"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "12635"
+        }
+      ]
+    },
+    {
+      "name": "the month after the 25th birthday",
+      "evidence": "Turned 25 on 28 February: no allowance in March. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "800000",
+      "fullPeriod": true,
+      "birthDate": "2001-02-28",
+      "employer": {},
+      "employee": {},
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "148000"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "104000"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "120000"
+        }
+      ]
+    },
+    {
+      "name": "mother of two with family allowance",
+      "evidence": "Szja tv. 29/D. § ff.: the mothers' allowance clears the base; the unused 533,320 x 15% = 79,998 Ft reduces tb-járulék (Tbj. 34. §). Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "600000",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "mothersAllowance": "TWO_CHILDREN",
+        "dependants": "2",
+        "beneficiaries": "2"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "31002"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "78000"
+        }
+      ]
+    },
+    {
+      "name": "part-time pay below the minimum base",
+      "evidence": "Tbj. 27. § (2), 22. § (3): employer pays 18.5% on 96,840 - 80,000; szocho on 96,840. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "80000",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {},
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "14800"
+        },
+        {
+          "step": "socialSecurityMinimum",
+          "side": "EMPLOYER",
+          "amount": "3115"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "12589"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "12000"
+        }
+      ]
+    },
+    {
+      "name": "full-time student: no minimum base",
+      "evidence": "Tbj. 27. § (3) b): the minimum base does not apply. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "80000",
+      "fullPeriod": true,
+      "birthDate": "2004-01-10",
+      "employer": {},
+      "employee": {
+        "minimumBaseExempt": "true"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "14800"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "10400"
+        }
+      ]
+    },
+    {
+      "name": "working pensioner: income tax only",
+      "evidence": "Tbj. 6. § (1): not insured; Szocho tv.: own-right pensioner exempt. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "400000",
+      "fullPeriod": true,
+      "birthDate": "1958-02-01",
+      "employer": {},
+      "employee": {
+        "ownRightPensioner": "true"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "60000"
+        }
+      ]
+    },
+    {
+      "name": "personal allowance and shared first-married allowance",
+      "evidence": "Szja tv. 29/E. § 107,600 Ft; 29/C. § half of 33,335 Ft. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "450000",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {
+        "personalAllowance": "true",
+        "firstMarriedAllowance": "16668"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "83250"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "58500"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "48860"
+        }
+      ]
+    },
+    {
+      "name": "disabled child and shared family allowance",
+      "evidence": "Szja tv. 29/A. § (2a): +133,340 Ft; claimed half by this parent. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "700000",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {
+        "dependants": "1",
+        "beneficiaries": "1",
+        "disabledBeneficiaries": "1",
+        "familyAllowanceShare": "0.5"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "129500"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "91000"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "84999"
+        }
+      ]
+    },
+    {
+      "name": "NAV example: child in alternate care (father's family)",
+      "evidence": "NAV booklet 73 point 10.5: 3 dependants, (2 x 440,000) + (440,000 / 2) = 1,100,000 Ft. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1500000",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {
+        "dependants": "3",
+        "beneficiaries": "3",
+        "alternateCareBeneficiaries": "1"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "277500"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "195000"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "60000"
+        }
+      ]
+    },
+    {
+      "name": "NAV example: child in alternate care (mother's family)",
+      "evidence": "NAV booklet 73 point 10.5: 2 dependants, 266,660 + (266,660 / 2) = 399,990 Ft. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1500000",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {
+        "dependants": "2",
+        "beneficiaries": "2",
+        "alternateCareBeneficiaries": "1"
+      },
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "277500"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "195000"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "165002"
+        }
+      ]
+    },
+    {
+      "name": "December 2026 salary paid on 8 January 2027",
+      "evidence": "Szja tv. 26. § (1): pay for the previous year paid by 10 January belongs to that year. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-12-01",
+      "periodEnd": "2026-12-31",
+      "frequency": "MONTHLY",
+      "paymentDate": "2027-01-08",
+      "grossEarnings": "500000",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {},
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "92500"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "65000"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "75000"
+        }
+      ]
+    },
+    {
+      "name": "no earnings, no lines",
+      "evidence": "nothing is insured or taxed",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "0",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {},
+      "expectLines": []
+    },
+    {
+      "name": "no birth date without a mothers' allowance",
+      "evidence": "the under-25 allowance depends on the age",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "400000",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {},
+      "expectError": "no birth date"
+    },
+    {
+      "name": "partial month below the minimum base",
+      "evidence": "Tbj. 27. § (2): the minimum base is prorated by calendar days",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "60000",
+      "fullPeriod": false,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {},
+      "expectError": "minimumContributionBase"
+    },
+    {
+      "name": "more beneficiaries than dependants",
+      "evidence": "Szja tv. 29/A. §: beneficiaries are among the dependants",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "500000",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {
+        "dependants": "1",
+        "beneficiaries": "2"
+      },
+      "expectError": "beneficiaries"
+    },
+    {
+      "name": "December 2026 salary paid on 15 January 2027",
+      "evidence": "Szja tv. 26. § (1): after 10 January it is income of 2027",
+      "periodStart": "2026-12-01",
+      "periodEnd": "2026-12-31",
+      "frequency": "MONTHLY",
+      "paymentDate": "2027-01-15",
+      "grossEarnings": "500000",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {},
+      "expectError": "10 January"
+    },
+    {
+      "name": "pre-tax deductions refuse",
+      "evidence": "not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "500000",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {},
+      "preTaxDeductions": "10000",
+      "expectError": "Pre-tax deductions are not supported"
+    },
+    {
+      "name": "2027 is not covered",
+      "evidence": "2027 amounts not yet published",
+      "periodStart": "2027-01-01",
+      "periodEnd": "2027-01-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "500000",
+      "fullPeriod": true,
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {},
+      "expectError": "a newer template version is needed"
+    }
+  ]
+}

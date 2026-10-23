@@ -29,6 +29,7 @@ export const COMMON_COUNTRIES = [
   'HR',
   'RO',
   'PL',
+  'HU',
 ] as const;
 
 /** `FR` → `France` in the given language (the code itself if the browser can't name it). */
