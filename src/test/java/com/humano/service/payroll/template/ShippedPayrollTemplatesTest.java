@@ -247,6 +247,44 @@ class ShippedPayrollTemplatesTest {
     }
 
     @Test
+    void irelandFiguresMatchTheActsAndRevenueGuidance() {
+        Map<String, List<String>> values = catalog
+            .find("ie-paye")
+            .orElseThrow()
+            .parameters()
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().stream().map(p -> p.value().toPlainString()).toList()));
+
+        // Revenue tax rates and bands 2026: 20% / 40%, single person's band EUR 44,000.
+        assertThat(values)
+            .containsEntry("standardRate", List.of("0.20"))
+            .containsEntry("higherRate", List.of("0.40"))
+            .containsEntry("singleCutOff", List.of("44000"));
+        // Finance Act 2025 s. 2 (TCA s. 531AN): USC 0.5% / 2% / 3% / 8%, bands to EUR 12,012 / 28,700 / 70,044.
+        assertThat(values)
+            .containsEntry("uscRate1", List.of("0.005"))
+            .containsEntry("uscRate2", List.of("0.02"))
+            .containsEntry("uscRate3", List.of("0.03"))
+            .containsEntry("uscRate4", List.of("0.08"))
+            .containsEntry("uscCutOff1", List.of("12012"))
+            .containsEntry("uscCutOff2", List.of("28700"))
+            .containsEntry("uscCutOff3", List.of("70044"));
+        // SW (MP) Act 2024 s. 3: Class A 4.2% / 8% / 10.25% to 30 September 2026, then 4.35% / 8.15% / 10.4%.
+        assertThat(values)
+            .containsEntry("prsiEmployeeRate", List.of("0.042", "0.0435"))
+            .containsEntry("prsiEmployerLowerRate", List.of("0.08", "0.0815"))
+            .containsEntry("prsiEmployerHigherRate", List.of("0.1025", "0.104"))
+            .containsEntry("nationalTrainingFundLevy", List.of("0.01"));
+        // SWP Act 2015 s. 10: PRSI credit EUR 12 tapering over EUR 352.01-424 a week; SW (AE) Act 2025: employer EUR 552.
+        assertThat(values)
+            .containsEntry("prsiExemptUpToWeekly", List.of("352"))
+            .containsEntry("prsiCreditUpToWeekly", List.of("424"))
+            .containsEntry("prsiMaxCreditWeekly", List.of("12"))
+            .containsEntry("prsiEmployerThresholdWeekly", List.of("552"));
+    }
+
+    @Test
     void ukFiguresMatchHmrcPublications() {
         PayrollTemplate uk = catalog.find("gb-paye-nic").orElseThrow();
         Map<String, String> values = uk
