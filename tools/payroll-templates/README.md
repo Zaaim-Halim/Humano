@@ -51,4 +51,5 @@ the exact rules that produced them. Posted runs are never recalculated by an upd
 - `gb/` — United Kingdom (`gb-paye-nic`). PAYE via the `uk.paye-routines-v24` extension; NICs declared.
 - `us/` — United States federal (`us-federal-employment`). Pub 15-T withholding, FICA, FUTA; all declared, no extension.
 - `nl/` — Nederland (`nl-employment`). Rekenvoorschriften wage tax, AWf/Aof/Wko/Whk and Zvw with VCR; all declared, no extension.
+- `hr/` — Hrvatska (`hr-employment`). Contributions with the MO I base reduction, local rates for all 556 units from the Tax Administration's table; all declared, no extension.
 - `de/` — Deutschland (`de-employment`). Lohnsteuer via the `de.lohnsteuer-pap-2026` extension, generated from the BMF XML; contributions declared.

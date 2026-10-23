@@ -156,7 +156,7 @@ export default class LandingPageComponent {
         'Gross, deductions, net and employer cost, with the change from last period',
         'Pay rules written as formulas, with priorities and effective dates',
         'PDF payslips, and pay in other currencies with exchange rates',
-        'Statutory tax and contributions for the Netherlands, Germany, the UK, the US, Bulgaria and Albania — you or your accountant still file the payroll tax return',
+        'Statutory tax and contributions for the Netherlands, Germany, the UK, the US, Bulgaria, Albania and Croatia — you or your accountant still file the payroll tax return',
       ],
     },
     {
@@ -267,7 +267,7 @@ export default class LandingPageComponent {
     },
     {
       q: 'Does Humano file payroll taxes for us?',
-      a: 'No. Humano calculates pay, income tax and social contributions — for six countries from statutory templates kept up to date for you — and produces payslips. It does not submit payroll tax returns or payments to tax authorities, such as the loonaangifte in the Netherlands, RTI in the UK or Form 941 in the US. Your accountant or a filing service files them, using the figures from your posted payroll runs.',
+      a: 'No. Humano calculates pay, income tax and social contributions — for seven countries from statutory templates kept up to date for you — and produces payslips. It does not submit payroll tax returns or payments to tax authorities, such as the loonaangifte in the Netherlands, RTI in the UK or Form 941 in the US. Your accountant or a filing service files them, using the figures from your posted payroll runs.',
     },
     {
       q: 'How is my data secured?',

@@ -1,0 +1,3836 @@
+{
+  "schemaVersion": 1,
+  "id": "hr-employment",
+  "name": "Croatia — salary (plaća)",
+  "version": "2026.1.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": {
+    "country": "HR"
+  },
+  "validity": {
+    "from": "2026-01-01",
+    "to": "2026-12-31"
+  },
+  "currency": "EUR",
+  "payFrequencies": ["MONTHLY"],
+  "taxYearStart": "--01-01",
+  "dateBasis": "PAYMENT_DATE",
+  "rounding": {
+    "scale": 2,
+    "mode": "HALF_UP"
+  },
+  "changelog": [
+    {
+      "version": "2026.1.0",
+      "date": "2026-10-23",
+      "summary": "2026: contribution bases from Naredba NN 150/25 (757.34 / 11,958.00 EUR), MO I base reduction (ZOD čl. 21.a), personal allowance 600 EUR, local rates for all 556 local units from the Tax Administration's 2026 table."
+    }
+  ],
+  "sources": {
+    "zpd": {
+      "title": "Zakon o porezu na dohodak (NN 115/16, 106/18, 121/19, 32/20, 138/20, 151/22, 114/23, 152/24), pročišćeni tekst na snazi od 1.1.2025. — čl. 14 (osobni odbitak 600,00 eura i koeficijenti), čl. 19.a (stope jedinica lokalne samouprave), čl. 23 (doprinosi iz plaće kao izdatak), čl. 24 (predujam: niža stopa do 5000,00 eura mjesečne osnovice, viša iznad; st. 5 umanjenje 50 % za I. skupinu razvijenosti i Grad Vukovar), čl. 46 st. 2 (umanjenje za mlade u godišnjem obračunu)",
+      "url": "https://www.zakon.hr/z/85/Zakon-o-porezu-na-dohodak",
+      "retrieved": "2026-10-23"
+    },
+    "zod": {
+      "title": "Zakon o doprinosima (NN 84/08 … 114/23, 152/24), pročišćeni tekst na snazi od 1.1.2025. — čl. 13 st. 1 t. 1 (MO I. stup 20 % / 15 %), čl. 14 st. 1 t. 1 (zdravstveno 16,5 %), čl. 17 st. 1 t. 1 (MO II. stup 5 %), čl. 20 (doprinosi iz i na plaću; st. 2–3 osoba koja se prvi put zapošljava), čl. 21 (osnovica = plaća), čl. 21.a (umanjenje osnovice MO I. stupa do 1300,00 eura), čl. 200 (najniža osnovica, razmjerno za nepuno radno vrijeme), čl. 204–205 (najviša mjesečna osnovica za MO I. i II. stup)",
+      "url": "https://www.zakon.hr/z/365/Zakon-o-doprinosima",
+      "retrieved": "2026-10-23"
+    },
+    "naredba-2026": {
+      "title": "Naredba o iznosima osnovica za obračun doprinosa za obvezna osiguranja za 2026. godinu (NN 150/25) — čl. 2 prosječna plaća 1.993,00 eura, čl. 3 najniža mjesečna osnovica 757,34 eura, čl. 4 najviša mjesečna osnovica 11.958,00 eura",
+      "url": "https://narodne-novine.nn.hr/clanci/sluzbeni/2025_12_150_2237.html",
+      "retrieved": "2026-10-23"
+    },
+    "naredba-2025": {
+      "title": "Naredba o iznosima osnovica za obračun doprinosa za obvezna osiguranja za 2025. godinu (NN 137/24; izmjena NN 25/25 mijenja samo čl. 14) — čl. 3 najniža mjesečna osnovica 683,24 eura, čl. 4 najviša mjesečna osnovica 10.788,00 eura",
+      "url": "https://www.zakon.hr/cms.htm?id=540573",
+      "retrieved": "2026-10-23"
+    },
+    "pravilnik-doprinosi-143-2023": {
+      "title": "Pravilnik o izmjenama i dopunama Pravilnika o doprinosima (NN 143/23) — umanjenje mjesečne osnovice iz čl. 21.a Zakona najviše do iznosa bruto plaće; više poslodavaca prema izjavi radnika ili podacima Porezne uprave",
+      "url": "https://narodne-novine.nn.hr/clanci/sluzbeni/2023_12_143_1957.html",
+      "retrieved": "2026-10-23"
+    },
+    "pu-stope-2026": {
+      "title": "Porezna uprava — Tablica poreznih stopa godišnjeg poreza na dohodak za 2026. godinu (556 jedinica lokalne samouprave; odluke objavljene u Narodnim novinama, stanje 1. siječnja 2026.); xlsx SHA-256 87733f3eb50a39650813a4ea7a6efbb8c556d4bf9c119ece9ea411f37e6f1592",
+      "url": "https://porezna-uprava.gov.hr/hr/porezne-stope-godisnjeg-poreza-na-dohodak/4764",
+      "retrieved": "2026-10-23"
+    }
+  },
+  "inputs": {
+    "employer": [],
+    "employee": [
+      {
+        "key": "municipalityCode",
+        "type": "INTEGER",
+        "required": true,
+        "min": 1,
+        "max": 99999,
+        "description": "Code (šifra) of the city or municipality of residence from the tax card (porezna kartica), e.g. 1333 Zagreb, 4090 Split, 3735 Rijeka; selects the local income-tax rates (ZPD čl. 19.a)"
+      },
+      {
+        "key": "personalAllowanceCoefficient",
+        "type": "DECIMAL",
+        "required": true,
+        "min": 0,
+        "max": 50,
+        "description": "Personal-allowance coefficient from the tax card, applied to 600 EUR (ZPD čl. 14): 1 basic; + 0.5 per dependent family member; children + 0.5, 0.7, 1.0, 1.4, 1.9, 2.5, 3.2, 4.0, 4.9 …; disability + 0.3 (or + 1.0 at 100 %). 0 at an employer that does not hold the tax card"
+      },
+      {
+        "key": "secondPillarMember",
+        "type": "BOOLEAN",
+        "required": true,
+        "description": "Whether the employee is a member of a mandatory pension fund (II. stup): then MO I is 15 % and MO II 5 %; otherwise MO I is 20 % (ZOD čl. 13, 17)"
+      },
+      {
+        "key": "otherEmployment",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Whether the employee also has a salary from another employer this month; the MO I base reduction is then shared (ZOD čl. 21.a st. 5)"
+      },
+      {
+        "key": "pensionBaseReduction",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "max": 300,
+        "description": "MO I base reduction in EUR this employer applies, from the employee's declaration or the Tax Administration's data (ZOD čl. 21.a st. 5); replaces the reduction computed from this employer's pay"
+      },
+      {
+        "key": "assistedAreaResident",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Resident in a local unit of development group I or in Grad Vukovar: the income-tax advance is reduced by 50 % (ZPD čl. 24 st. 5)"
+      },
+      {
+        "key": "firstPermanentEmployment",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "First employment on a permanent contract (ZOD čl. 7 t. 54): no employer health contribution for up to one year (čl. 20 st. 2-3); set back to false when the year ends"
+      },
+      {
+        "key": "minimumContributionBase",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "description": "Minimum contribution base in EUR replacing 757.34 — for part-time work (prorated by weekly hours, ZOD čl. 200 st. 2), partial months, or management-board members (0.65 x average wage)"
+      }
+    ]
+  },
+  "parameters": {
+    "pensionFirstPillarOnly": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.20",
+        "source": "zod"
+      }
+    ],
+    "pensionFirstPillarWithSecond": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.15",
+        "source": "zod"
+      }
+    ],
+    "pensionSecondPillar": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.05",
+        "source": "zod"
+      }
+    ],
+    "healthEmployer": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.165",
+        "source": "zod"
+      }
+    ],
+    "reductionFlatLimit": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "700.00",
+        "source": "zod"
+      }
+    ],
+    "reductionFlatAmount": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "300.00",
+        "source": "zod"
+      }
+    ],
+    "reductionTaperLimit": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "1300.00",
+        "source": "zod"
+      }
+    ],
+    "reductionTaperRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.5",
+        "source": "zod"
+      }
+    ],
+    "basicPersonalAllowance": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "600.00",
+        "source": "zpd"
+      }
+    ],
+    "lowerRateMonthlyLimit": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "5000.00",
+        "source": "zpd"
+      }
+    ],
+    "assistedAreaTaxShare": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.5",
+        "source": "zpd"
+      }
+    ]
+  },
+  "tables": {
+    "contributionBases": {
+      "kind": "EXACT",
+      "description": "Minimum and maximum monthly contribution base by the year the salary month belongs to (ZOD čl. 200, 204-205; Naredba čl. 3-4: NN 137/24 for 2025, NN 150/25 for 2026)",
+      "columns": ["minimum", "maximum"],
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "naredba-2026",
+          "rows": [
+            {
+              "key": "2025",
+              "label": "Naredba NN 137/24",
+              "values": ["683.24", "10788.00"]
+            },
+            {
+              "key": "2026",
+              "label": "Naredba NN 150/25",
+              "values": ["757.34", "11958.00"]
+            }
+          ]
+        }
+      ]
+    },
+    "municipalTaxRates": {
+      "kind": "EXACT",
+      "description": "Lower and higher income-tax rate by local-unit code (ZPD čl. 19.a; Porezna uprava 2026 table)",
+      "columns": ["lower", "higher"],
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "pu-stope-2026",
+          "rows": [
+            {
+              "key": "19",
+              "label": "ANDRIJAŠEVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "27",
+              "label": "ANTUNOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "35",
+              "label": "BABINA GREDA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "43",
+              "label": "BAKAR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "51",
+              "label": "BALE - VALLE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "60",
+              "label": "BARBAN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "78",
+              "label": "BARILOVIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "86",
+              "label": "BAŠKA",
+              "values": ["0.15", "0.25"]
+            },
+            {
+              "key": "94",
+              "label": "BAŠKA VODA",
+              "values": ["0.17", "0.27"]
+            },
+            {
+              "key": "108",
+              "label": "BEBRINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "116",
+              "label": "BEDEKOVČINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "124",
+              "label": "BEDNJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "132",
+              "label": "BELI MANASTIR",
+              "values": ["0.21", "0.27"]
+            },
+            {
+              "key": "159",
+              "label": "BELICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "167",
+              "label": "BELIŠĆE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "175",
+              "label": "BENKOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "183",
+              "label": "BEREK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "191",
+              "label": "BERETINEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "205",
+              "label": "BIBINJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "213",
+              "label": "BILJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "221",
+              "label": "BIOGRAD NA MORU",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "230",
+              "label": "BIZOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "248",
+              "label": "BJELOVAR",
+              "values": ["0.18", "0.25"]
+            },
+            {
+              "key": "256",
+              "label": "BLATO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "264",
+              "label": "BOGDANOVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "272",
+              "label": "BOL",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "299",
+              "label": "BOROVO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "302",
+              "label": "BOSILJEVO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "329",
+              "label": "BOŠNJACI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "337",
+              "label": "BRCKOVLJANI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "345",
+              "label": "BRDOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "353",
+              "label": "BRESTOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "361",
+              "label": "BREZNICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "370",
+              "label": "BRINJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "388",
+              "label": "BROD MORAVICE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "396",
+              "label": "BRODSKI STUPNIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "400",
+              "label": "BRTONIGLA - VERTENEGLIO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "418",
+              "label": "BUDINŠČINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "426",
+              "label": "BUJE - BUIE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "434",
+              "label": "BUZET",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "442",
+              "label": "CERNA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "469",
+              "label": "CERNIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "477",
+              "label": "CEROVLJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "485",
+              "label": "CESTICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "493",
+              "label": "CETINGRAD",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "507",
+              "label": "CISTA PROVO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "515",
+              "label": "CIVLJANE",
+              "values": ["0.15", "0.25"]
+            },
+            {
+              "key": "523",
+              "label": "CRES",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "531",
+              "label": "CRIKVENICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "540",
+              "label": "CRNAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "558",
+              "label": "ČABAR",
+              "values": ["0.19", "0.3"]
+            },
+            {
+              "key": "566",
+              "label": "ČAČINCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "574",
+              "label": "ČAĐAVICA",
+              "values": ["0.2", "0.25"]
+            },
+            {
+              "key": "582",
+              "label": "ČAGLIN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "604",
+              "label": "ČAKOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "612",
+              "label": "ČAVLE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "639",
+              "label": "ČAZMA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "647",
+              "label": "ČEMINAC",
+              "values": ["0.2", "0.25"]
+            },
+            {
+              "key": "655",
+              "label": "ČEPIN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "663",
+              "label": "DARDA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "671",
+              "label": "DARUVAR",
+              "values": ["0.21", "0.3"]
+            },
+            {
+              "key": "680",
+              "label": "DAVOR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "698",
+              "label": "DELNICE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "701",
+              "label": "DESINIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "710",
+              "label": "DEŽANOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "728",
+              "label": "DICMO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "744",
+              "label": "DOBRINJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "752",
+              "label": "DOMAŠINEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "779",
+              "label": "BRELA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "787",
+              "label": "DONJA DUBRAVA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "795",
+              "label": "DONJA STUBICA",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "809",
+              "label": "DONJA VOĆA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "817",
+              "label": "DONJI ANDRIJEVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "825",
+              "label": "DONJI KRALJEVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "833",
+              "label": "DONJI KUKURUZARI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "841",
+              "label": "DONJI LAPAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "850",
+              "label": "MARTIJANEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "868",
+              "label": "DONJI MIHOLJAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "876",
+              "label": "MUĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "884",
+              "label": "PROLOŽAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "892",
+              "label": "DONJI VIDOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "906",
+              "label": "DRAGANIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "914",
+              "label": "DRAŽ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "922",
+              "label": "DRENOVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "949",
+              "label": "DRENJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "957",
+              "label": "DRNIŠ",
+              "values": ["0.2", "0.25"]
+            },
+            {
+              "key": "965",
+              "label": "DRNJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "973",
+              "label": "DUBRAVA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "981",
+              "label": "DUBROVNIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "990",
+              "label": "DUGA RESA",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "1007",
+              "label": "DUGI RAT",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1015",
+              "label": "DUGO SELO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1023",
+              "label": "DVOR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1031",
+              "label": "ĐAKOVO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1040",
+              "label": "ĐELEKOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1058",
+              "label": "ĐULOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1066",
+              "label": "ĐURĐENOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1074",
+              "label": "ĐURĐEVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1082",
+              "label": "ĐURMANEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1104",
+              "label": "ERDUT",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1112",
+              "label": "ERNESTINOVO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1139",
+              "label": "ERVENIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1147",
+              "label": "FARKAŠEVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1155",
+              "label": "FERDINANDOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1163",
+              "label": "FERIČANCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1171",
+              "label": "FUŽINE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1180",
+              "label": "GARČIN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1198",
+              "label": "GAREŠNICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1201",
+              "label": "GENERALSKI STOL",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1210",
+              "label": "GLINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1228",
+              "label": "GOLA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1236",
+              "label": "GORIČAN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1244",
+              "label": "GORJANI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1252",
+              "label": "GORNJA STUBICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1279",
+              "label": "GORNJI BOGIĆEVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1295",
+              "label": "GORNJI KNEGINEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1309",
+              "label": "GOSPIĆ",
+              "values": ["0.22", "0.32"]
+            },
+            {
+              "key": "1317",
+              "label": "GRAČAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1325",
+              "label": "GRAČIŠĆE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1333",
+              "label": "ZAGREB",
+              "values": ["0.23", "0.33"]
+            },
+            {
+              "key": "1341",
+              "label": "GRADAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1350",
+              "label": "GRADEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1368",
+              "label": "GRADINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1376",
+              "label": "GRADIŠTE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1384",
+              "label": "GROŽNJAN - GRISIGNANA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1392",
+              "label": "GRUBIŠNO POLJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1406",
+              "label": "GUNDINCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1414",
+              "label": "GUNJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1449",
+              "label": "HERCEGOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1457",
+              "label": "HLEBINE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1465",
+              "label": "HRAŠĆINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1481",
+              "label": "HRVACE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1490",
+              "label": "HRVATSKA DUBICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1503",
+              "label": "HRVATSKA KOSTAJNICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1511",
+              "label": "BREZNIČKI HUM",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1520",
+              "label": "HUM NA SUTLI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1538",
+              "label": "HVAR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1546",
+              "label": "ILOK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1554",
+              "label": "IMOTSKI",
+              "values": ["0.2", "0.25"]
+            },
+            {
+              "key": "1562",
+              "label": "IVANEC",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "1589",
+              "label": "IVANIĆ-GRAD",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "1597",
+              "label": "IVANKOVO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1619",
+              "label": "IVANSKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1635",
+              "label": "JAKOVLJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1643",
+              "label": "JAKŠIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1651",
+              "label": "JALŽABET",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1660",
+              "label": "JARMINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1678",
+              "label": "JASENICE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1686",
+              "label": "JASENOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1694",
+              "label": "JASTREBARSKO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1708",
+              "label": "JELENJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1716",
+              "label": "JELSA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1724",
+              "label": "JOSIPDOL",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1732",
+              "label": "KALI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1759",
+              "label": "KANFANAR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1767",
+              "label": "KAPELA",
+              "values": ["0.15", "0.25"]
+            },
+            {
+              "key": "1775",
+              "label": "KAPTOL",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1783",
+              "label": "KARLOBAG",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1791",
+              "label": "KARLOVAC",
+              "values": ["0.19", "0.29"]
+            },
+            {
+              "key": "1805",
+              "label": "KASTAV",
+              "values": ["0.2", "0.31"]
+            },
+            {
+              "key": "1813",
+              "label": "KAŠTELA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1830",
+              "label": "KIJEVO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1848",
+              "label": "KISTANJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1856",
+              "label": "KLAKAR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1864",
+              "label": "KLANA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1872",
+              "label": "KLANJEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1899",
+              "label": "KLENOVNIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1902",
+              "label": "KLINČA SELA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1929",
+              "label": "KLIS",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1937",
+              "label": "KLOŠTAR IVANIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1945",
+              "label": "KLOŠTAR PODRAVSKI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1953",
+              "label": "KNEŽEVI VINOGRADI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1961",
+              "label": "KNIN",
+              "values": ["0.21", "0.3"]
+            },
+            {
+              "key": "1970",
+              "label": "KOMIŽA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1988",
+              "label": "KONAVLE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "1996",
+              "label": "KONČANICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2003",
+              "label": "KONJŠČINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2011",
+              "label": "KOPRIVNICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2020",
+              "label": "KOPRIVNIČKI BREGI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2038",
+              "label": "KOPRIVNIČKI IVANEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2046",
+              "label": "KORČULA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2054",
+              "label": "KOŠKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2062",
+              "label": "KOTORIBA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2089",
+              "label": "KRALJEVEC NA SUTLI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2097",
+              "label": "KRALJEVICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2119",
+              "label": "KRAPINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2127",
+              "label": "KRAPINSKE TOPLICE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2135",
+              "label": "KRIŽ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2143",
+              "label": "KRIŽEVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2151",
+              "label": "KRK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2160",
+              "label": "KRNJAK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2178",
+              "label": "KRŠAN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2194",
+              "label": "KULA NORINSKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2208",
+              "label": "KUTINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2216",
+              "label": "KUTJEVO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2224",
+              "label": "LABIN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2232",
+              "label": "LANIŠĆE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2259",
+              "label": "LASINJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2267",
+              "label": "LASTOVO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2275",
+              "label": "LEGRAD",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2283",
+              "label": "LEKENIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2291",
+              "label": "LEPOGLAVA",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "2305",
+              "label": "LEVANJSKA VAROŠ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2313",
+              "label": "LIPIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2321",
+              "label": "LIPOVLJANI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2348",
+              "label": "LIŠANE OSTROVIČKE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2356",
+              "label": "LIŽNJAN - LISIGNANO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2364",
+              "label": "LOBOR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2372",
+              "label": "LOKVE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2399",
+              "label": "LOVAS",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2402",
+              "label": "LOVINAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2429",
+              "label": "LOVRAN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2437",
+              "label": "LOVREĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2445",
+              "label": "LUDBREG",
+              "values": ["0.2", "0.31"]
+            },
+            {
+              "key": "2453",
+              "label": "LUKAČ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2461",
+              "label": "LUPOGLAV",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2470",
+              "label": "LJUBEŠĆICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2488",
+              "label": "MAČE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2496",
+              "label": "MAKARSKA",
+              "values": ["0.18", "0.31"]
+            },
+            {
+              "key": "2500",
+              "label": "MALA SUBOTICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2518",
+              "label": "MALI BUKOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2526",
+              "label": "MALI LOŠINJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2534",
+              "label": "MALINSKA-DUBAŠNICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2542",
+              "label": "MARČANA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2569",
+              "label": "MARIJA BISTRICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2577",
+              "label": "MARIJANCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2585",
+              "label": "MARINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2593",
+              "label": "MARTINSKA VES",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2607",
+              "label": "MARUŠEVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2615",
+              "label": "MATULJI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2631",
+              "label": "MEDULIN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2640",
+              "label": "METKOVIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2658",
+              "label": "MIHOVLJAN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2666",
+              "label": "MIKLEUŠ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2674",
+              "label": "MILNA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2682",
+              "label": "MLJET",
+              "values": ["0.2", "0.27"]
+            },
+            {
+              "key": "2704",
+              "label": "MOLVE",
+              "values": ["0.15", "0.25"]
+            },
+            {
+              "key": "2712",
+              "label": "PODRAVSKA MOSLAVINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2739",
+              "label": "MOŠĆENIČKA DRAGA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2747",
+              "label": "MOTOVUN - MONTONA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2755",
+              "label": "MRKOPALJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2763",
+              "label": "MURSKO SREDIŠĆE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2780",
+              "label": "NAŠICE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2798",
+              "label": "NEDELIŠĆE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2801",
+              "label": "NEREŽIŠĆA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2810",
+              "label": "NETRETIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2828",
+              "label": "NIN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2836",
+              "label": "NOVA BUKOVICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2844",
+              "label": "NOVA GRADIŠKA",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "2852",
+              "label": "NOVA KAPELA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2879",
+              "label": "NOVA RAČA",
+              "values": ["0.17", "0.27"]
+            },
+            {
+              "key": "2887",
+              "label": "NOVALJA",
+              "values": ["0.15", "0.25"]
+            },
+            {
+              "key": "2895",
+              "label": "NOVI MAROF",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2909",
+              "label": "NOVI VINODOLSKI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2917",
+              "label": "NOVIGRAD - CITTANOVA",
+              "values": ["0.2", "0.31"]
+            },
+            {
+              "key": "2925",
+              "label": "NOVIGRAD PODRAVSKI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2933",
+              "label": "NOVSKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2941",
+              "label": "NUŠTAR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2950",
+              "label": "NIJEMCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2968",
+              "label": "OBROVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2976",
+              "label": "OGULIN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2984",
+              "label": "PROMINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "2992",
+              "label": "OKUČANI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3000",
+              "label": "OMIŠ",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "3018",
+              "label": "OMIŠALJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3026",
+              "label": "OPATIJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3034",
+              "label": "OPRISAVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3042",
+              "label": "OPRTALJ - PORTOLE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3069",
+              "label": "OPUZEN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3077",
+              "label": "ORAHOVICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3085",
+              "label": "OREBIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3093",
+              "label": "ORIOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3107",
+              "label": "BISKUPIJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3115",
+              "label": "OROSLAVJE*",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3123",
+              "label": "OSIJEK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3131",
+              "label": "OTOČAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3140",
+              "label": "OTOK",
+              "values": ["0.17", "0.27"]
+            },
+            {
+              "key": "3158",
+              "label": "OZALJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3166",
+              "label": "PAG",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3174",
+              "label": "PAKOŠTANE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3182",
+              "label": "PAKRAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3204",
+              "label": "PAŠMAN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3212",
+              "label": "PAZIN",
+              "values": ["0.22", "0.3"]
+            },
+            {
+              "key": "3239",
+              "label": "PERUŠIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3247",
+              "label": "PETERANEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3255",
+              "label": "PETLOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3263",
+              "label": "PETRIJANEC",
+              "values": ["0.2", "0.27"]
+            },
+            {
+              "key": "3271",
+              "label": "PETRIJEVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3280",
+              "label": "PETRINJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3298",
+              "label": "PETROVSKO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3301",
+              "label": "PIĆAN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3310",
+              "label": "PISAROVINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3328",
+              "label": "PITOMAČA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3336",
+              "label": "PLAŠKI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3344",
+              "label": "PLETERNICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3352",
+              "label": "PLOČE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3379",
+              "label": "PODBABLJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3387",
+              "label": "PODCRKAVLJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3395",
+              "label": "PODGORA",
+              "values": ["0.18", "0.3"]
+            },
+            {
+              "key": "3409",
+              "label": "PODGORAČ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3417",
+              "label": "PODSTRANA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3425",
+              "label": "PODTUREN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3433",
+              "label": "POJEZERJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3441",
+              "label": "POLAČA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3450",
+              "label": "POLIČNIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3468",
+              "label": "POPOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3476",
+              "label": "POPOVAČA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3484",
+              "label": "POREČ - PARENZO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3492",
+              "label": "POSEDARJE",
+              "values": ["0.18", "0.3"]
+            },
+            {
+              "key": "3506",
+              "label": "POSTIRA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3514",
+              "label": "POŽEGA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3522",
+              "label": "PREGRADA",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "3549",
+              "label": "PREKO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3557",
+              "label": "PRELOG",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3565",
+              "label": "PRESEKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3573",
+              "label": "PRIMOŠTEN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3581",
+              "label": "PUČIŠĆA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3590",
+              "label": "PULA - POLA",
+              "values": ["0.22", "0.32"]
+            },
+            {
+              "key": "3603",
+              "label": "PUNAT",
+              "values": ["0.15", "0.3"]
+            },
+            {
+              "key": "3611",
+              "label": "PUNITOVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3620",
+              "label": "PUŠĆA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3638",
+              "label": "RAB",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3646",
+              "label": "RADOBOJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3654",
+              "label": "RAKOVICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3662",
+              "label": "RASINJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3689",
+              "label": "RAŠA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3697",
+              "label": "RAVNA GORA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3719",
+              "label": "RAŽANAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3727",
+              "label": "REŠETARI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3735",
+              "label": "RIJEKA",
+              "values": ["0.2", "0.25"]
+            },
+            {
+              "key": "3743",
+              "label": "ROVINJ - ROVIGNO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3751",
+              "label": "ROVIŠĆE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3760",
+              "label": "RUGVICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3778",
+              "label": "RUŽIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3786",
+              "label": "SABORSKO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3794",
+              "label": "SALI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3808",
+              "label": "SAMOBOR",
+              "values": ["0.18", "0.27"]
+            },
+            {
+              "key": "3816",
+              "label": "SATNICA ĐAKOVAČKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3824",
+              "label": "SEGET",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3832",
+              "label": "SELCA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3859",
+              "label": "SELNICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3867",
+              "label": "SEMELJCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3875",
+              "label": "SENJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3883",
+              "label": "SIBINJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3891",
+              "label": "SINJ",
+              "values": ["0.18", "0.3"]
+            },
+            {
+              "key": "3905",
+              "label": "SIRAČ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3913",
+              "label": "SISAK",
+              "values": ["0.216", "0.316"]
+            },
+            {
+              "key": "3930",
+              "label": "SKRAD",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3948",
+              "label": "SKRADIN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3956",
+              "label": "SLATINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3964",
+              "label": "SLAVONSKI BROD",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3972",
+              "label": "SLAVONSKI ŠAMAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "3999",
+              "label": "SLIVNO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4006",
+              "label": "SLUNJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4022",
+              "label": "SMOKVICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4057",
+              "label": "SOKOLOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4065",
+              "label": "SOLIN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4073",
+              "label": "SOPJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4090",
+              "label": "SPLIT",
+              "values": ["0.215", "0.32"]
+            },
+            {
+              "key": "4103",
+              "label": "SRAČINEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4111",
+              "label": "STANKOVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4120",
+              "label": "STARA GRADIŠKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4138",
+              "label": "STARI GRAD",
+              "values": ["0.2", "0.31"]
+            },
+            {
+              "key": "4146",
+              "label": "STARI JANKOVCI",
+              "values": ["0.15", "0.25"]
+            },
+            {
+              "key": "4154",
+              "label": "STARI MIKANOVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4162",
+              "label": "STARIGRAD",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4189",
+              "label": "STARO PETROVO SELO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4197",
+              "label": "STON",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4219",
+              "label": "STRIZIVOJNA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4227",
+              "label": "STUBIČKE TOPLICE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4235",
+              "label": "SUĆURAJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4243",
+              "label": "SUHOPOLJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4251",
+              "label": "SUKOŠAN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4260",
+              "label": "SUNJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4278",
+              "label": "SUPETAR",
+              "values": ["0.205", "0.31"]
+            },
+            {
+              "key": "4286",
+              "label": "SVETI FILIP I JAKOV",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4294",
+              "label": "SVETI IVAN ZELINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4308",
+              "label": "SVETI KRIŽ ZAČRETJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4316",
+              "label": "SVETI LOVREČ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4324",
+              "label": "SVETA NEDELJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4332",
+              "label": "SVETI PETAR U ŠUMI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4359",
+              "label": "SVETVINČENAT",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4367",
+              "label": "SVETA NEDELJA",
+              "values": ["0.18", "0.28"]
+            },
+            {
+              "key": "4375",
+              "label": "SVETI ĐURĐ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4383",
+              "label": "SVETI ILIJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4391",
+              "label": "SVETI IVAN ŽABNO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4405",
+              "label": "SVETI JURAJ NA BREGU",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4413",
+              "label": "SVETI MARTIN NA MURI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4421",
+              "label": "SVETI PETAR OREHOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4430",
+              "label": "ŠESTANOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4448",
+              "label": "ŠIBENIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4456",
+              "label": "ŠKABRNJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4472",
+              "label": "ŠOLTA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4499",
+              "label": "ŠPIŠIĆ BUKOVICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4502",
+              "label": "ŠTEFANJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4529",
+              "label": "ŠTRIGOVA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4537",
+              "label": "TINJAN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4545",
+              "label": "TISNO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4553",
+              "label": "PLITVIČKA JEZERA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4561",
+              "label": "TOMPOJEVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4570",
+              "label": "TOPUSKO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4588",
+              "label": "TORDINCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4596",
+              "label": "TOVARNIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4600",
+              "label": "TRILJ",
+              "values": ["0.15", "0.3"]
+            },
+            {
+              "key": "4618",
+              "label": "TRNAVA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4626",
+              "label": "TRNOVEC BARTOLOVEČKI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4634",
+              "label": "TROGIR",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "4642",
+              "label": "TRPINJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4669",
+              "label": "TUHELJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4677",
+              "label": "UDBINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4685",
+              "label": "UMAG - UMAGO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4693",
+              "label": "UNEŠIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4715",
+              "label": "VALPOVO",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "4723",
+              "label": "VARAŽDIN",
+              "values": ["0.21", "0.32"]
+            },
+            {
+              "key": "4731",
+              "label": "VARAŽDINSKE TOPLICE",
+              "values": ["0.21", "0.3"]
+            },
+            {
+              "key": "4740",
+              "label": "VELA LUKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4758",
+              "label": "VELIKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4766",
+              "label": "VELIKA KOPANICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4774",
+              "label": "VELIKA LUDINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4782",
+              "label": "VELIKA PISANICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4804",
+              "label": "VELIKI GRĐEVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4812",
+              "label": "VELIKO TRGOVIŠĆE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4839",
+              "label": "VELIKO TROJSTVO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4847",
+              "label": "VIDOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4855",
+              "label": "VILJEVO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4863",
+              "label": "VINICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4871",
+              "label": "VINKOVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4880",
+              "label": "VINODOLSKA OPĆINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4898",
+              "label": "VIR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4901",
+              "label": "VIRJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4910",
+              "label": "VIROVITICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4928",
+              "label": "VIS",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4936",
+              "label": "VISOKO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4944",
+              "label": "VIŠKOVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4952",
+              "label": "VIŠKOVO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4979",
+              "label": "VIŠNJAN - VISIGNANO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4987",
+              "label": "VIŽINADA - VISINADA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "4995",
+              "label": "VOĆIN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5002",
+              "label": "VODICE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5029",
+              "label": "VODNJAN - DIGNANO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5037",
+              "label": "VOJNIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5045",
+              "label": "VRATIŠINEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5053",
+              "label": "VRBANJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5061",
+              "label": "VRBJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5070",
+              "label": "VRBNIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5088",
+              "label": "VRBOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5096",
+              "label": "VRBOVSKO",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "5100",
+              "label": "GVOZD",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5118",
+              "label": "VRGORAC",
+              "values": ["0.21", "0.25"]
+            },
+            {
+              "key": "5126",
+              "label": "VRHOVINE",
+              "values": ["0.18", "0.3"]
+            },
+            {
+              "key": "5134",
+              "label": "VRLIKA",
+              "values": ["0.18", "0.28"]
+            },
+            {
+              "key": "5142",
+              "label": "VRPOLJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5169",
+              "label": "VRSAR - ORSERA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5177",
+              "label": "VUKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5185",
+              "label": "VUKOVAR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5193",
+              "label": "ZABOK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5207",
+              "label": "ZADAR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5215",
+              "label": "ZAGORSKA SELA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5223",
+              "label": "ZAGVOZD",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5231",
+              "label": "ZAŽABLJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5240",
+              "label": "ZDENCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5258",
+              "label": "ZEMUNIK DONJI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5266",
+              "label": "ZLATAR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5274",
+              "label": "ZLATAR BISTRICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5282",
+              "label": "ZMIJAVCI",
+              "values": ["0.2", "0.25"]
+            },
+            {
+              "key": "5304",
+              "label": "ŽAKANJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5312",
+              "label": "ŽMINJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5339",
+              "label": "KRAŠIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5347",
+              "label": "ŽUPANJA",
+              "values": ["0.21", "0.31"]
+            },
+            {
+              "key": "5355",
+              "label": "OTOK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5363",
+              "label": "RAKOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5371",
+              "label": "NOVIGRAD",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5380",
+              "label": "KOSTRENA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5398",
+              "label": "MARIJA GORICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5401",
+              "label": "ŽUMBERAK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5410",
+              "label": "VELIKA GORICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5428",
+              "label": "ORLE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5436",
+              "label": "ZAPREŠIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5444",
+              "label": "POKUPSKO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5452",
+              "label": "KRAVARSKO",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5479",
+              "label": "BISTRA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5487",
+              "label": "LUKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5495",
+              "label": "DUBRAVICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5509",
+              "label": "BEDENICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5517",
+              "label": "STUPNIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5525",
+              "label": "JESENJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5533",
+              "label": "KUMROVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5541",
+              "label": "NOVI GOLUBOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5550",
+              "label": "MAJUR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5568",
+              "label": "RIBNIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5576",
+              "label": "TOUNJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5584",
+              "label": "VELIKI BUKOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5592",
+              "label": "KALINOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5606",
+              "label": "KALNIK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5614",
+              "label": "NOVO VIRJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5622",
+              "label": "SEVERIN",
+              "values": ["0.18", "0.28"]
+            },
+            {
+              "key": "5649",
+              "label": "ŠANDROVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5657",
+              "label": "VELIKA TRNOVITICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5665",
+              "label": "ZRINSKI TOPOLOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5673",
+              "label": "BUKOVLJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5681",
+              "label": "DRAGALIĆ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5690",
+              "label": "GORNJA VRBA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5703",
+              "label": "SIKIREVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5711",
+              "label": "GALOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5720",
+              "label": "KUKLJICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5738",
+              "label": "POVLJANA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5746",
+              "label": "PRIVLAKA",
+              "values": ["0.17", "0.3"]
+            },
+            {
+              "key": "5754",
+              "label": "TKON",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5762",
+              "label": "DONJA MOTIČINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5789",
+              "label": "MAGADENOVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5797",
+              "label": "VLADISLAVCI",
+              "values": ["0.2", "0.25"]
+            },
+            {
+              "key": "5819",
+              "label": "PIROVAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5827",
+              "label": "ROGOZNICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5835",
+              "label": "PRIVLAKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5843",
+              "label": "VOĐINCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5851",
+              "label": "DUGOPOLJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5860",
+              "label": "LEĆEVICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5878",
+              "label": "LOKVIČIĆI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5886",
+              "label": "OKRUG",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5894",
+              "label": "PRGOMET",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5908",
+              "label": "PRIMORSKI DOLAC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5916",
+              "label": "RUNOVIĆI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5924",
+              "label": "SUTIVAN",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5932",
+              "label": "TUČEPI",
+              "values": ["0.17", "0.3"]
+            },
+            {
+              "key": "5959",
+              "label": "ZADVARJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5967",
+              "label": "KAROJBA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5975",
+              "label": "KAŠTELIR-LABINCI - CASTELLIERE-S. DOMENICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5983",
+              "label": "DUBROVAČKO PRIMORJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "5991",
+              "label": "JANJINA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6009",
+              "label": "LUMBARDA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6017",
+              "label": "TRPANJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6025",
+              "label": "ŽUPA DUBROVAČKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6033",
+              "label": "DEKANOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6041",
+              "label": "GORNJI MIHALJEVEC",
+              "values": ["0.17", "0.27"]
+            },
+            {
+              "key": "6050",
+              "label": "OREHOVICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6068",
+              "label": "STRAHONINEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6076",
+              "label": "SVETA MARIJA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6084",
+              "label": "ŠENKOVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6092",
+              "label": "JAGODNJAK",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6106",
+              "label": "MARKUŠICA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6122",
+              "label": "NEGOSLAVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6149",
+              "label": "ŠODOLOVCI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6165",
+              "label": "PODRAVSKE SESVETE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6173",
+              "label": "MURTER - KORNATI",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6181",
+              "label": "GORNJA RIJEKA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6190",
+              "label": "FAŽANA - FASANA",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6203",
+              "label": "PRIBISLAVEC",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6211",
+              "label": "BILICE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6220",
+              "label": "KOLAN",
+              "values": ["0.15", "0.25"]
+            },
+            {
+              "key": "6238",
+              "label": "KAMANJE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6246",
+              "label": "LOPAR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6254",
+              "label": "VRSI",
+              "values": ["0.15", "0.3"]
+            },
+            {
+              "key": "6262",
+              "label": "TRIBUNJ",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6289",
+              "label": "ŠTITAR",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6297",
+              "label": "FUNTANA - FONTANE",
+              "values": ["0.2", "0.3"]
+            },
+            {
+              "key": "6319",
+              "label": "TAR-VABRIGA - TORRE-ABREGA",
+              "values": ["0.2", "0.3"]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "id": "calendarMonth",
+      "type": "REQUIRE",
+      "condition": "#isCalendarMonth",
+      "message": "Croatian salary is calculated per calendar month: the pay period must be a whole calendar month"
+    },
+    {
+      "id": "noPreTaxDeductions",
+      "type": "REQUIRE",
+      "condition": "#preTaxDeductions == 0",
+      "message": "Pre-tax deductions are not supported by this template"
+    },
+    {
+      "id": "remuneration",
+      "type": "VALUE",
+      "expr": "#pos(#socialEarnings - #reductions)"
+    },
+    {
+      "id": "minimumBase",
+      "type": "VALUE",
+      "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : #round(#table.lookup('contributionBases', #periodStart.getYear(), 'minimum') * #fte, 2, 'HALF_UP')",
+      "source": "naredba-2026"
+    },
+    {
+      "id": "partialMonthMinimum",
+      "type": "REQUIRE",
+      "when": "#remuneration > 0 and #employee['minimumContributionBase'] == null",
+      "condition": "#fullPeriod or #remuneration >= #minimumBase",
+      "message": "Pay is below the minimum contribution base in a partial month; the base is prorated by insured days (ZOD čl. 202), so set the employee's minimumContributionBase"
+    },
+    {
+      "id": "contributionBase",
+      "type": "VALUE",
+      "expr": "#remuneration == 0 ? 0 : #max(#remuneration, #minimumBase)",
+      "source": "zod"
+    },
+    {
+      "id": "pensionBase",
+      "type": "VALUE",
+      "expr": "#min(#contributionBase, #table.lookup('contributionBases', #periodStart.getYear(), 'maximum'))",
+      "source": "naredba-2026"
+    },
+    {
+      "id": "sharedReduction",
+      "type": "REQUIRE",
+      "when": "#employee['otherEmployment'] and #remuneration > 0 and #remuneration <= #p['reductionTaperLimit']",
+      "condition": "#employee['pensionBaseReduction'] != null",
+      "message": "The employee has another employer: the MO I base reduction is shared by the employee's declaration or the Tax Administration's data (ZOD čl. 21.a st. 5); set pensionBaseReduction"
+    },
+    {
+      "id": "baseReduction",
+      "type": "VALUE",
+      "when": "#remuneration > 0",
+      "expr": "#employee['pensionBaseReduction'] != null ? #employee['pensionBaseReduction'] : (#remuneration <= #p['reductionFlatLimit'] ? #min(#p['reductionFlatAmount'], #remuneration) : (#remuneration <= #p['reductionTaperLimit'] ? #round((#p['reductionTaperLimit'] - #remuneration) * #p['reductionTaperRate'], 2, 'HALF_UP') : 0))",
+      "source": "zod"
+    },
+    {
+      "id": "pensionFirstPillar",
+      "type": "CONTRIBUTION",
+      "label": "Pension insurance, 1st pillar (MO I)",
+      "ledger": "PENSION_CONTRIBUTION",
+      "source": "zod",
+      "base": "#pos(#pensionBase - #baseReduction)",
+      "employee": {
+        "rate": "#employee['secondPillarMember'] ? #p['pensionFirstPillarWithSecond'] : #p['pensionFirstPillarOnly']"
+      }
+    },
+    {
+      "id": "pensionSecondPillar",
+      "type": "CONTRIBUTION",
+      "label": "Pension insurance, 2nd pillar (MO II)",
+      "ledger": "PENSION_CONTRIBUTION",
+      "source": "zod",
+      "when": "#employee['secondPillarMember']",
+      "base": "#pensionBase",
+      "employee": {
+        "rate": "#p['pensionSecondPillar']"
+      }
+    },
+    {
+      "id": "healthInsurance",
+      "type": "CONTRIBUTION",
+      "label": "Health insurance (ZO)",
+      "ledger": "MEDICARE",
+      "source": "zod",
+      "when": "!#employee['firstPermanentEmployment']",
+      "base": "#contributionBase",
+      "employer": {
+        "rate": "#p['healthEmployer']"
+      }
+    },
+    {
+      "id": "income",
+      "type": "VALUE",
+      "expr": "#pos(#taxableEarnings - #reductions)"
+    },
+    {
+      "id": "personalAllowance",
+      "type": "VALUE",
+      "expr": "#p['basicPersonalAllowance'] * #employee['personalAllowanceCoefficient']",
+      "source": "zpd"
+    },
+    {
+      "id": "lowerRate",
+      "type": "VALUE",
+      "expr": "#table.lookup('municipalTaxRates', #employee['municipalityCode'], 'lower')",
+      "source": "pu-stope-2026"
+    },
+    {
+      "id": "higherRate",
+      "type": "VALUE",
+      "expr": "#table.lookup('municipalTaxRates', #employee['municipalityCode'], 'higher')",
+      "source": "pu-stope-2026"
+    },
+    {
+      "id": "incomeTax",
+      "type": "TAX",
+      "label": "Income tax advance (predujam poreza na dohodak)",
+      "ledger": "INCOME_TAX",
+      "source": "zpd",
+      "base": "#pos(#income - #employeeContributions - #personalAllowance)",
+      "amount": "(#min(#incomeTax_base, #p['lowerRateMonthlyLimit']) * #lowerRate + #pos(#incomeTax_base - #p['lowerRateMonthlyLimit']) * #higherRate) * (#employee['assistedAreaResident'] ? #p['assistedAreaTaxShare'] : 1)"
+    }
+  ],
+  "limitations": [
+    "Monthly salary for whole calendar months, paid in EUR in 2026. Income tax uses the rules in force on the payment date (ZPD čl. 24 st. 1); contributions use the bases of the year the salary month belongs to (2025 and 2026 held). A salary paid in 2027 needs the 2027 version.",
+    "The youth reduction (100 % up to age 25, 50 % from 26 to 30) is granted only in the annual tax calculation (ZPD čl. 46 st. 2), not in the monthly advance, so it is not applied here.",
+    "The employee's local unit, allowance coefficient and pension-fund membership come from the tax card and HZMO data and are entered per employee; development group I residence (50 % advance reduction) is entered per employee, not derived from the unit.",
+    "The minimum contribution base is prorated by FTE for part-time work; partial months below the minimum, and management-board members (0.65 x average wage), need an explicit minimumContributionBase.",
+    "The MO I base reduction for several employers, or for a salary paid in several instalments, must be entered as pensionBaseReduction; the computed reduction assumes one employer and one payment, and is rounded to 0.01 EUR.",
+    "The annual pension ceiling (143,496.00 EUR) applied by the Tax Administration in the annual calculation, other contribution exemptions (e.g. employment of persons with disabilities) and increased-length insurance contributions (staž s povećanim trajanjem) are not modelled.",
+    "Non-taxable payments (e.g. bonuses within the non-taxable limits) must be excluded from taxable and social earnings by the tenant's pay components; pre-tax deductions are refused.",
+    "Amounts are rounded to 0.01 EUR, half up, per line.",
+    "Status LAW_DERIVED: values are cited from the acts and the Tax Administration's rate table; the cases are derived from them, not from official worked examples."
+  ],
+  "testCases": [
+    {
+      "name": "Zagreb 2,000 with the second pillar",
+      "evidence": "MO 15% + 5% of 2,000 = 400; 2,000 - 400 - 600 = 1,000 x 23% (Zagreb). ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "300.00"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "100.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "330.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "230.00"
+        }
+      ]
+    },
+    {
+      "name": "minimum wage 1,050 in Split",
+      "evidence": "MO I base 1,050 - 0.5 x (1,300 - 1,050) = 925; Split 21.5%. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "paymentDate": "2026-04-15",
+      "grossEarnings": "1050.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "4090",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "138.75"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "52.50"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "173.25"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "55.63"
+        }
+      ]
+    },
+    {
+      "name": "first pillar only, 20%",
+      "evidence": "Not a second-pillar member: MO I 20%, no MO II. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1800.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "3123",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "false"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "360.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "297.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "168.00"
+        }
+      ]
+    },
+    {
+      "name": "tapered reduction at 1,200",
+      "evidence": "MO I base 1,200 - 0.5 x (1,300 - 1,200) = 1,150. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1200.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "172.50"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "60.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "198.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "84.53"
+        }
+      ]
+    },
+    {
+      "name": "reduction ends above 1,300",
+      "evidence": "1,300.01: no reduction. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1300.01",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "195.00"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "65.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "214.50"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "101.20"
+        }
+      ]
+    },
+    {
+      "name": "flat reduction at 700",
+      "evidence": "700 or less: MO I base reduced by 300 (part-time). ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "700.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "3735",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true",
+        "minimumContributionBase": "378.67"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "60.00"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "35.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "115.50"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "1.00"
+        }
+      ]
+    },
+    {
+      "name": "reduction capped at gross pay",
+      "evidence": "Pravilnik NN 143/23: under 300 the reduction is the gross pay, so MO I is 0. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "250.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "3735",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true",
+        "minimumContributionBase": "189.34"
+      },
+      "expectLines": [
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "12.50"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "41.25"
+        }
+      ]
+    },
+    {
+      "name": "children raise the allowance",
+      "evidence": "Coefficient 1 + 0.5 + 0.7 (two children) = 2.2 x 600 = 1,320. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2500.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "2.2",
+        "secondPillarMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "375.00"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "125.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "412.50"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "156.40"
+        }
+      ]
+    },
+    {
+      "name": "higher rate above 5,000 of monthly base",
+      "evidence": "Base 9,200 - 1,840 - 600 = 6,760: 5,000 x 23% + 1,760 x 33%. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "9200.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "1380.00"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "460.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "1518.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "1730.80"
+        }
+      ]
+    },
+    {
+      "name": "pension ceiling 11,958",
+      "evidence": "MO I/II on 11,958; health 16.5% on the full 15,000. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "15000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "1793.70"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "597.90"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "2475.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "3462.77"
+        }
+      ]
+    },
+    {
+      "name": "second employer without the tax card",
+      "evidence": "Coefficient 0: no personal allowance at this employer. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "800.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "3123",
+        "personalAllowanceCoefficient": "0",
+        "secondPillarMember": "true",
+        "otherEmployment": "true",
+        "pensionBaseReduction": "100.00",
+        "minimumContributionBase": "378.67"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "105.00"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "40.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "132.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "131.00"
+        }
+      ]
+    },
+    {
+      "name": "Vukovar resident: advance halved",
+      "evidence": "ZPD čl. 24 st. 5: 50% for Grad Vukovar. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1600.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "5185",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true",
+        "assistedAreaResident": "true"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "240.00"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "80.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "264.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "68.00"
+        }
+      ]
+    },
+    {
+      "name": "first permanent employment",
+      "evidence": "ZOD čl. 20 st. 2-3: no employer health contribution for up to a year. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1400.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true",
+        "firstPermanentEmployment": "true"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "210.00"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "70.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "119.60"
+        }
+      ]
+    },
+    {
+      "name": "full-time pay below the minimum base",
+      "evidence": "ZOD čl. 200 st. 1: contributions on 757.34; reduction on the 600 paid. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "600.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "3123",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "68.60"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "37.87"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "124.96"
+        }
+      ]
+    },
+    {
+      "name": "December 2025 salary paid in January 2026",
+      "evidence": "Contributions on the 2025 minimum base 683.24 (Naredba NN 137/24, ZOD čl. 200); tax on the 2026 rules in force on the payment date (ZPD čl. 24 st. 1). ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2025-12-01",
+      "periodEnd": "2025-12-31",
+      "frequency": "MONTHLY",
+      "paymentDate": "2026-01-15",
+      "grossEarnings": "650.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "57.49"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "34.16"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "112.73"
+        }
+      ]
+    },
+    {
+      "name": "no earnings, no lines",
+      "evidence": "nothing is insured or taxed",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "0",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectLines": []
+    },
+    {
+      "name": "unknown municipality code",
+      "evidence": "every employee needs the code of the local unit of residence from the tax card",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "9999",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectError": "No value for 9999"
+    },
+    {
+      "name": "missing allowance coefficient",
+      "evidence": "the coefficient comes from the porezna kartica",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "secondPillarMember": "true"
+      },
+      "expectError": "personalAllowanceCoefficient"
+    },
+    {
+      "name": "partial month below the minimum base refuses",
+      "evidence": "ZOD čl. 200, 202: the floor is prorated by insured days",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "500.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectError": "minimumContributionBase"
+    },
+    {
+      "name": "second job at 1,300 or less needs the reduction share",
+      "evidence": "ZOD čl. 21.a st. 5: the reduction is shared by declaration",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "900.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true",
+        "otherEmployment": "true"
+      },
+      "expectError": "pensionBaseReduction"
+    },
+    {
+      "name": "pre-tax deductions refuse",
+      "evidence": "voluntary pension and similar deductions are not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "preTaxDeductions": "50.00",
+      "expectError": "Pre-tax deductions are not supported"
+    },
+    {
+      "name": "December pay in January 2027 needs the 2027 version",
+      "evidence": "ZPD čl. 24 st. 1: the advance follows the rules on the payment date",
+      "periodStart": "2026-12-01",
+      "periodEnd": "2026-12-31",
+      "frequency": "MONTHLY",
+      "paymentDate": "2027-01-15",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectError": "a newer template version is needed"
+    },
+    {
+      "name": "2027 is not covered",
+      "evidence": "2027 values not yet published",
+      "periodStart": "2027-01-01",
+      "periodEnd": "2027-01-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "expectError": "a newer template version is needed"
+    }
+  ]
+}

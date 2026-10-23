@@ -113,6 +113,43 @@ class ShippedPayrollTemplatesTest {
     }
 
     @Test
+    void croatiaFiguresMatchTheActsAndTheRateTable() {
+        PayrollTemplate croatia = catalog.find("hr-employment").orElseThrow();
+        Map<String, String> values = croatia
+            .parameters()
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get(0).value().toPlainString()));
+
+        // Zakon o doprinosima čl. 13, 17, 14: MO I 20% (15% with MO II), MO II 5%, health 16.5%.
+        assertThat(values)
+            .containsEntry("pensionFirstPillarOnly", "0.20")
+            .containsEntry("pensionFirstPillarWithSecond", "0.15")
+            .containsEntry("pensionSecondPillar", "0.05")
+            .containsEntry("healthEmployer", "0.165");
+        // Zakon o porezu na dohodak čl. 14 st. 1 and čl. 24 st. 3 (NN 152/24): 600 EUR allowance, lower rate up to 5,000 a month.
+        assertThat(values).containsEntry("basicPersonalAllowance", "600.00").containsEntry("lowerRateMonthlyLimit", "5000.00");
+        // Naredba NN 137/24 and NN 150/25 čl. 3-4: minimum / maximum monthly base of 2025 and 2026.
+        assertThat(croatia.tables().get("contributionBases").versions().get(0).rows())
+            .extracting(r -> r.key() + "=" + r.values().get(0).toPlainString() + "/" + r.values().get(1).toPlainString())
+            .containsExactly("2025=683.24/10788.00", "2026=757.34/11958.00");
+        // Porezna uprava 2026 table: 556 local units; Zagreb 23% / 33%, Split 21.5% / 32%, Rijeka 20% / 25% (from 1.1.2026).
+        Map<String, String> rates = croatia
+            .tables()
+            .get("municipalTaxRates")
+            .versions()
+            .get(0)
+            .rows()
+            .stream()
+            .collect(Collectors.toMap(Table.Row::key, r -> r.values().get(0).toPlainString() + "/" + r.values().get(1).toPlainString()));
+        assertThat(rates)
+            .hasSize(556)
+            .containsEntry("1333", "0.23/0.33")
+            .containsEntry("4090", "0.215/0.32")
+            .containsEntry("3735", "0.2/0.25");
+    }
+
+    @Test
     void ukFiguresMatchHmrcPublications() {
         PayrollTemplate uk = catalog.find("gb-paye-nic").orElseThrow();
         Map<String, String> values = uk
