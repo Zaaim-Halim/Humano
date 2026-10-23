@@ -182,6 +182,41 @@ class ShippedPayrollTemplatesTest {
     }
 
     @Test
+    void polandFiguresMatchTheActsAndTheAnnouncements() {
+        PayrollTemplate poland = catalog.find("pl-employment").orElseThrow();
+        Map<String, String> values = poland
+            .parameters()
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get(0).value().toPlainString()));
+
+        // Dz.U. 2025 poz. 1242: minimum wage 4,806 zł; M.P. 2025 poz. 1206: pension/disability limit 282,600 zł.
+        assertThat(values).containsEntry("minimumWage", "4806").containsEntry("annualPensionBaseLimit", "282600");
+        // Ustawa o systemie ubezpieczeń społecznych art. 16, 22: 19.52% split equally, disability 1.5% / 6.5%, sickness 2.45%.
+        assertThat(values)
+            .containsEntry("pensionRate", "0.0976")
+            .containsEntry("disabilityEmployee", "0.015")
+            .containsEntry("disabilityEmployer", "0.065")
+            .containsEntry("sicknessEmployee", "0.0245");
+        // Budget act 2026 art. 25-27: Labour Fund 1.0% + Solidarity Fund 1.45%, FGŚP 0.10%; health 9% (art. 79).
+        assertThat(values)
+            .containsEntry("labourAndSolidarityFund", "0.0245")
+            .containsEntry("fgspRate", "0.001")
+            .containsEntry("healthRate", "0.09");
+        // PIT act art. 27, 31b, 22 ust. 2, 21 ust. 44: 12% / 32% above 120,000 zł, 300 zł monthly reduction, costs 250 / 300 zł, 85,528 zł limit.
+        assertThat(values)
+            .containsEntry("lowerRate", "0.12")
+            .containsEntry("higherRate", "0.32")
+            .containsEntry("higherRateThreshold", "120000")
+            .containsEntry("monthlyReductionOneTwelfth", "300")
+            .containsEntry("workCostsBasic", "250")
+            .containsEntry("workCostsCommuter", "300")
+            .containsEntry("exemptRevenueLimit", "85528");
+        // PIT act as at 31.12.2021 (health cap, art. 83 ust. 2b): 17%, 43.76 zł monthly reduction.
+        assertThat(values).containsEntry("rate2021", "0.17").containsEntry("monthlyReduction2021", "43.76");
+    }
+
+    @Test
     void ukFiguresMatchHmrcPublications() {
         PayrollTemplate uk = catalog.find("gb-paye-nic").orElseThrow();
         Map<String, String> values = uk
