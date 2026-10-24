@@ -341,6 +341,11 @@ class ShippedPayrollTemplatesTest {
             .containsEntry("equityEmployeeRate", "0.0015")
             .containsEntry("unemploymentIndefiniteEmployeeRate", "0.0155")
             .containsEntry("unemploymentFixedTermEmployerRate", "0.067");
+        // Orden art. 5: overtime 28.30% (23.60 / 4.70), force majeure 14% (12 / 2).
+        assertThat(values)
+            .containsEntry("overtimeEmployerRate", "0.236")
+            .containsEntry("forceMajeureOvertimeEmployeeRate", "0.02")
+            .containsEntry("forceMajeureOvertimeEmployerRate", "0.12");
         // AEAT algorithm 2026, TABLA 2 example: the scale on 24 000 is 4 225.50 + 3 800 x 30% = 5 365.50.
         Table.Row row = spain
             .tables()

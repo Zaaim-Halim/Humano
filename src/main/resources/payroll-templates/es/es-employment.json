@@ -23,7 +23,7 @@
     {
       "version": "2026.1.0",
       "date": "2026-10-24",
-      "summary": "2026: IRPF withholding rate per the AEAT algorithm (RIRPF arts. 81-86) with a year-to-date check that asks for the regularized rate; social security per Orden PJC/297/2026: common contingencies 28.30%, MEI 0.90%, unemployment 7.05% / 8.30%, FOGASA 0.20%, vocational training 0.70%, AT/EP from the tariff, solidarity contribution above 5,101.20."
+      "summary": "2026: IRPF withholding rate per the AEAT algorithm (RIRPF arts. 81-86) with a year-to-date check that asks for the regularized rate; social security per Orden PJC/297/2026: common contingencies 28.30%, MEI 0.90%, unemployment 7.05% / 8.30%, FOGASA 0.20%, vocational training 0.70%, AT/EP from the tariff, solidarity contribution above 5,101.20, overtime in the AT/EP base with its 28.30% / 14% additional contribution. Withholding rates checked against the AEAT calculation service."
     }
   ],
   "sources": {
@@ -53,8 +53,13 @@
       "retrieved": "2026-10-24"
     },
     "lgss": {
-      "title": "Texto refundido de la Ley General de la Seguridad Social, Real Decreto Legislativo 8/2015, consolidated text (última actualización publicada el 21/10/2026) — art. 19 bis (cotización adicional de solidaridad), art. 127 bis (mecanismo de equidad intergeneracional), art. 147 (base de cotización: las percepciones de vencimiento superior al mensual se prorratean a lo largo de los doce meses), disposición adicional sexagésima primera (tarifa de primas AT/EP)",
+      "title": "Texto refundido de la Ley General de la Seguridad Social, Real Decreto Legislativo 8/2015, consolidated text (última actualización publicada el 21/10/2026) — art. 19 bis (cotización adicional de solidaridad), art. 127 bis (mecanismo de equidad intergeneracional), art. 147 (base de cotización: las percepciones de vencimiento superior al mensual se prorratean a lo largo de los doce meses; 147.2.e: las horas extraordinarias solo computan en la base de AT/EP), disposición adicional sexagésima primera (tarifa de primas AT/EP)",
       "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2015-11724",
+      "retrieved": "2026-10-24"
+    },
+    "aeat-servicio-calculo": {
+      "title": "Agencia Tributaria, Servicio de Módulo de Cálculo de Retenciones (espeSWRET_2026, SHA-256 59fc137bcaa6e7a3…), https://www2.agenciatributaria.gob.es/wlpl/PRET-R200/mc with EJER=2026 and PER=1 (from 10 September 2026), input schema AEATRetenciones2026.xsd (SHA-256 f4acd6c9072c0d18…) — the official calculator; the computed withholding rate of every case was compared with its TipoRetencion on 2026-10-24",
+      "url": "https://sede.agenciatributaria.gob.es/static_files/Sede/Programas_ayuda/Retenciones/2026/espeSWRET_2026.pdf",
       "retrieved": "2026-10-24"
     },
     "concierto-pv": {
@@ -123,7 +128,7 @@
         "defaultValue": "0",
         "min": 0,
         "max": 16,
-        "description": "Children and other descendants giving right to the minimum (LIRPF art. 58): under 25 at the end of 2026 (born 2002 or later), living with the employee, earning no more than 8,000 EUR"
+        "description": "Children and other descendants giving right to the minimum (LIRPF art. 58): under 25 at the end of 2026 (born 2002 or later), living with the employee, earning no more than 8,000 EUR and not filing a return with more than 1,800 EUR (LIRPF art. 61.2.ª)"
       },
       {
         "key": "descendantsUnder3",
@@ -135,11 +140,11 @@
         "description": "Of those descendants, the ones born in 2024 or later, or adopted or fostered in 2024 or later (+2,800 each, LIRPF art. 58.2)"
       },
       {
-        "key": "descendantsHalf",
-        "type": "BOOLEAN",
+        "key": "descendantsComputation",
+        "type": "ENUM",
         "required": false,
-        "defaultValue": "false",
-        "description": "The descendants are shared with another person entitled to the minimum (usually the other parent) and count by half (LIRPF art. 61.1.ª); all of them are taken the same way"
+        "values": ["WHOLE", "HALF"],
+        "description": "How the descendants count, from modelo 145 (required with descendants): HALF unless the employee alone is entitled to their whole minimum (RIRPF art. 84.2; LIRPF art. 61.1.ª); all of them are taken the same way"
       },
       {
         "key": "ascendants65",
@@ -148,7 +153,7 @@
         "defaultValue": "0",
         "min": 0,
         "max": 6,
-        "description": "Parents or other ascendants aged 65 to 74 in 2026 (born 1952 to 1961) living with the employee at least half the year and earning no more than 8,000 EUR (LIRPF art. 59)"
+        "description": "Parents or other ascendants aged 65 to 74 in 2026 (born 1952 to 1961) living with the employee at least half the year, earning no more than 8,000 EUR and not filing a return with more than 1,800 EUR (LIRPF arts. 59, 61.2.ª)"
       },
       {
         "key": "ascendants75",
@@ -166,7 +171,7 @@
         "defaultValue": "1",
         "min": 1,
         "max": 10,
-        "description": "Number of descendants (the employee included) the ascendants live with, who share their minimum (LIRPF art. 61.2.ª); the same for all of them"
+        "description": "Number of descendants (the employee included) the ascendants live with, who share their minimum (LIRPF art. 61.1.ª); the same for all of them"
       },
       {
         "key": "disability",
@@ -235,6 +240,13 @@
         "min": 0,
         "max": 300,
         "description": "Part-time contract: hours actually worked this month; the minimum bases are hours x the hourly minimum of the group, and x 8.58 for AT/EP (Orden arts. 38-39)"
+      },
+      {
+        "key": "overtimeForceMajeure",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The overtime (OT) paid is for preventing or repairing extraordinary and urgent damage (ET art. 35.3): additional contribution 14% instead of 28.30% (Orden art. 5)"
       },
       {
         "key": "accidentRate",
@@ -641,6 +653,38 @@
         "value": "0.006",
         "source": "orden-pjc-297-2026"
       }
+    ],
+    "overtimeEmployeeRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.047",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "overtimeEmployerRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.236",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "forceMajeureOvertimeEmployeeRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.02",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "forceMajeureOvertimeEmployerRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.12",
+        "source": "orden-pjc-297-2026"
+      }
     ]
   },
   "tables": {
@@ -913,11 +957,11 @@
       "message": "Contribution groups 8 to 11 contribute on daily bases (Orden PJC/297/2026 art. 3), which this template does not do"
     },
     {
-      "id": "noOvertime",
+      "id": "overtimeWithPay",
       "type": "REQUIRE",
-      "source": "orden-pjc-297-2026",
-      "condition": "#earningsByComponent['OT'] == 0",
-      "message": "Overtime carries an additional contribution and enters only the AT/EP base (Orden PJC/297/2026 art. 5), which this template does not do"
+      "source": "lgss",
+      "condition": "#earningsByComponent['OT'] == 0 or #socialEarnings - #earningsByComponent['BONUS'] - #earningsByComponent['OT'] > 0",
+      "message": "Overtime paid without ordinary pay in the same run is not supported: the contribution bases start from the month's ordinary pay"
     },
     {
       "id": "partTimeHoursGiven",
@@ -954,6 +998,13 @@
       "source": "lirpf",
       "condition": "#employee['descendantsUnder3'] <= #employee['descendants']",
       "message": "descendantsUnder3 counts descendants already included in descendants, so it cannot be larger"
+    },
+    {
+      "id": "descendantsComputationGiven",
+      "type": "REQUIRE",
+      "source": "rirpf",
+      "condition": "#employee['descendants'] == 0 or #employee['descendantsComputation'] != null",
+      "message": "Set the employee's descendantsComputation: descendants count by half unless the employee alone is entitled to their whole minimum (RIRPF art. 84.2)"
     },
     {
       "id": "housingLoanLimit",
@@ -1038,7 +1089,7 @@
       "id": "personalFamilyMinimum",
       "type": "VALUE",
       "source": "lirpf",
-      "expr": "#p['personalMinimum'] + (#taxpayerAge > 64 ? #p['age65Minimum'] : 0) + (#taxpayerAge > 74 ? #p['age75Minimum'] : 0) + (#employee['descendantsHalf'] ? #divide(#descendantsWhole, 2, 2, 'HALF_UP') : #descendantsWhole) + #divide((#employee['ascendants65'] + #employee['ascendants75']) * #p['ascendantMinimum'], #employee['ascendantsSharedBy'], 2, 'HALF_UP') + #divide(#employee['ascendants75'] * #p['ascendant75Minimum'], #employee['ascendantsSharedBy'], 2, 'HALF_UP') + (#employee['disability'] == 'FROM_65' ? #p['disabilityMinimumHigh'] + #p['assistanceMinimum'] : (#employee['disability'] == 'FROM_33_REDUCED_MOBILITY' ? #p['disabilityMinimum'] + #p['assistanceMinimum'] : (#employee['disability'] == 'FROM_33' ? #p['disabilityMinimum'] : 0)))"
+      "expr": "#p['personalMinimum'] + (#taxpayerAge > 64 ? #p['age65Minimum'] : 0) + (#taxpayerAge > 74 ? #p['age75Minimum'] : 0) + (#employee['descendantsComputation'] == 'HALF' ? #divide(#descendantsWhole, 2, 2, 'HALF_UP') : #descendantsWhole) + #divide((#employee['ascendants65'] + #employee['ascendants75']) * #p['ascendantMinimum'], #employee['ascendantsSharedBy'], 2, 'HALF_UP') + #divide(#employee['ascendants75'] * #p['ascendant75Minimum'], #employee['ascendantsSharedBy'], 2, 'HALF_UP') + (#employee['disability'] == 'FROM_65' ? #p['disabilityMinimumHigh'] + #p['assistanceMinimum'] : (#employee['disability'] == 'FROM_33_REDUCED_MOBILITY' ? #p['disabilityMinimum'] + #p['assistanceMinimum'] : (#employee['disability'] == 'FROM_33' ? #p['disabilityMinimum'] : 0)))"
     },
     {
       "id": "exemptLimit",
@@ -1093,7 +1144,8 @@
     {
       "id": "monthlyPay",
       "type": "VALUE",
-      "expr": "#pos(#socialEarnings - #earningsByComponent['BONUS'])"
+      "source": "lgss",
+      "expr": "#pos(#socialEarnings - #earningsByComponent['BONUS'] - #earningsByComponent['OT'])"
     },
     {
       "id": "contributionPay",
@@ -1123,7 +1175,7 @@
       "id": "accidentBase",
       "type": "VALUE",
       "source": "orden-pjc-297-2026",
-      "expr": "#clamp(#contributionPay, #accidentMinimumBase, #p['maximumBase'])"
+      "expr": "#clamp(#contributionPay + #earningsByComponent['OT'], #accidentMinimumBase, #p['maximumBase'])"
     },
     {
       "id": "commonContingencies",
@@ -1225,6 +1277,21 @@
       }
     },
     {
+      "id": "overtime",
+      "type": "CONTRIBUTION",
+      "label": "Overtime additional contribution (horas extraordinarias)",
+      "ledger": "SOCIAL_SECURITY",
+      "source": "orden-pjc-297-2026",
+      "when": "#contributionPay > 0 and #earningsByComponent['OT'] > 0",
+      "base": "#earningsByComponent['OT']",
+      "employee": {
+        "rate": "#employee['overtimeForceMajeure'] ? #p['forceMajeureOvertimeEmployeeRate'] : #p['overtimeEmployeeRate']"
+      },
+      "employer": {
+        "rate": "#employee['overtimeForceMajeure'] ? #p['forceMajeureOvertimeEmployerRate'] : #p['overtimeEmployerRate']"
+      }
+    },
+    {
       "id": "incomeTax",
       "type": "TAX",
       "label": "Income tax withholding (retención IRPF)",
@@ -1237,18 +1304,18 @@
     }
   ],
   "limitations": [
-    "Common tax territory, Régimen General employees paid monthly in EUR in 2026, for whole months with the payment in the same year. Work performed in the Basque Country or Navarre, residents of Ceuta, Melilla and La Palma, contribution groups 8 to 11, training contracts, multiple employment, part months, unpaid leave and overtime are refused.",
+    "Common tax territory, Régimen General employees paid monthly in EUR in 2026, for whole months with the payment in the same year. Work performed in the Basque Country or Navarre, residents of Ceuta, Melilla and La Palma, contribution groups 8 to 11, training contracts, multiple employment, part months and unpaid leave are refused. Overtime (OT) enters only the AT/EP base and carries the additional contribution of Orden art. 5 (28.30%, or 14% for force majeure); it must be paid with ordinary pay in the same run.",
     "The withholding rate is recomputed each run from the annual figures entered (annual pay, contributions, family data from modelo 145) and applied to the whole payment. RIRPF art. 87 regularization is not automated: once the data change during the year the run refuses until the employer enters the regularized rate (withholdingRateOverride, REGULARIZED). A higher rate requested under art. 88.5 can be entered as REQUESTED_HIGHER.",
     "Without annualSocialContributions the expected employee contributions are estimated as 12 months on annualPay / 12 at full-time bases.",
     "Not modelled: dependants with a disability, court-ordered payments (arts. 83.3.f, 85.2), irregular income (art. 83.3.a), pensioners and the unemployed, pay in kind and its ingreso a cuenta, arrears of earlier years (15% fixed rate), fixed rates (directors, courses, authors), the special regime for workers posted to Spain, sick leave and birth leave months (their own bases), contribution reductions and incentives, and the 33.62 EUR charge at the end of fixed-term contracts under 30 days (Orden art. 28).",
     "Extra payments (BONUS) are prorated over the year in the contribution base from annualExtraPay (Orden art. 1, monthly-paid employees); a run holding only BONUS pays withholding but no contributions.",
     "Contributions are rounded to the cent, half up, per line; part-time minimum bases (hours x hourly base) and the extra-pay proration to the cent, half up.",
-    "Status LAW_DERIVED: values are cited from the BOE consolidated texts, the Orden PJC/297/2026 and the AEAT 2026 algorithm and help; the cases are derived from them (one reproduces the AEAT help's 15.96% example)."
+    "Status LAW_DERIVED: values are cited from the BOE consolidated texts, the Orden PJC/297/2026 and the AEAT 2026 algorithm and help; the cases are derived from them (one reproduces the AEAT help's 15.96% example) and every case's withholding rate matches the AEAT calculation service."
   ],
   "testCases": [
     {
       "name": "AEAT example: 28,500 EUR with 1,700 EUR contributions gives 15.96%",
-      "evidence": "AEAT Retenciones 2026 help, p. 56: 28,500 gross, about 1,700 contributions, rate 15.96%; the example gives no family data, so no dependants, under 65 and situation 3 are assumed (situation 2 gives the same rate). 2,375 x 15.96% = 379.05. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "AEAT Retenciones 2026 help, p. 56: 28,500 gross, about 1,700 contributions, rate 15.96%; the example gives no family data, so no dependants, under 65 and situation 3 are assumed (situation 2 gives the same rate). 2,375 x 15.96% = 379.05. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -1327,7 +1394,7 @@
     },
     {
       "name": "14 payments with the extra pays prorated for social security",
-      "evidence": "Orden art. 1 and LGSS art. 147: 2,000 + 4,000 / 12 = 2,333.33 is the base; situation 2 with two children, one born in 2025; contributions estimated from 28,000 / 12. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "Orden art. 1 and LGSS art. 147: 2,000 + 4,000 / 12 = 2,333.33 is the base; situation 2 with two children, one born in 2025; contributions estimated from 28,000 / 12. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -1346,7 +1413,8 @@
         "taxTerritory": "COMMON",
         "annualExtraPay": "4000.00",
         "descendants": "2",
-        "descendantsUnder3": "1"
+        "descendantsUnder3": "1",
+        "descendantsComputation": "WHOLE"
       },
       "expectLines": [
         {
@@ -1408,7 +1476,7 @@
     },
     {
       "name": "extra pay paid with June salary: base unchanged, tax on both",
-      "evidence": "The extra pay is already in the monthly base (LGSS art. 147); withholding applies to the whole payment (RIRPF art. 82). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "The extra pay is already in the monthly base (LGSS art. 147); withholding applies to the whole payment (RIRPF art. 82). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-06-01",
       "periodEnd": "2026-06-30",
       "frequency": "MONTHLY",
@@ -1431,7 +1499,8 @@
         "taxTerritory": "COMMON",
         "annualExtraPay": "4000.00",
         "descendants": "2",
-        "descendantsUnder3": "1"
+        "descendantsUnder3": "1",
+        "descendantsComputation": "WHOLE"
       },
       "expectLines": [
         {
@@ -1493,7 +1562,7 @@
     },
     {
       "name": "extra pay paid on its own: withholding only",
-      "evidence": "No contributions on a run holding only the extra pay, which the monthly bases already prorate. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "No contributions on a run holding only the extra pay, which the monthly bases already prorate. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-12-01",
       "periodEnd": "2026-12-31",
       "frequency": "MONTHLY",
@@ -1515,7 +1584,8 @@
         "taxTerritory": "COMMON",
         "annualExtraPay": "4000.00",
         "descendants": "2",
-        "descendantsUnder3": "1"
+        "descendantsUnder3": "1",
+        "descendantsComputation": "WHOLE"
       },
       "expectLines": [
         {
@@ -1527,7 +1597,7 @@
     },
     {
       "name": "pay under the exemption limit: 0% recorded",
-      "evidence": "RIRPF art. 81.1: 15,000 is not above 15,876 (situation 3, no descendants). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "RIRPF art. 81.1: 15,000 is not above 15,876 (situation 3, no descendants). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -1605,7 +1675,7 @@
     },
     {
       "name": "exempt pay on a contract under a year: the 2% minimum still applies",
-      "evidence": "AEAT help p. 12: the exemption does not apply where a minimum rate applies; RIRPF art. 86.2: 2%. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "AEAT help p. 12: the exemption does not apply where a minimum rate applies; RIRPF art. 86.2: 2%. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -1683,7 +1753,7 @@
     },
     {
       "name": "special employment relationship: 15% minimum",
-      "evidence": "RIRPF art. 86.2. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "RIRPF art. 86.2. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -1761,7 +1831,7 @@
     },
     {
       "name": "43% cap just above the exemption limit",
-      "evidence": "RIRPF art. 85.3: (16,500 - 15,876) x 43% = 268.32 caps the quota. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "RIRPF art. 85.3: (16,500 - 15,876) x 43% = 268.32 caps the quota. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -1839,7 +1909,7 @@
     },
     {
       "name": "work income reduction in its second stretch",
-      "evidence": "LIRPF art. 20: 7,302 - 1.75 x (net - 14,852). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "LIRPF art. 20: 7,302 - 1.75 x (net - 14,852). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -1917,7 +1987,7 @@
     },
     {
       "name": "work income reduction in its third stretch",
-      "evidence": "LIRPF art. 20: 2,364.34 - 1.14 x (net - 17,673.52). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "LIRPF art. 20: 2,364.34 - 1.14 x (net - 17,673.52). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -1995,7 +2065,7 @@
     },
     {
       "name": "group 1 minimum base top-up",
-      "evidence": "Orden art. 3: group 1 minimum 1,989.30 above the 1,800 paid. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "Orden art. 3: group 1 minimum 1,989.30 above the 1,800 paid. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2073,7 +2143,7 @@
     },
     {
       "name": "fixed-term contract: unemployment 8.30%",
-      "evidence": "Orden art. 33.2.a) 2.º: 6.70% employer, 1.60% employee. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "Orden art. 33.2.a) 2.º: 6.70% employer, 1.60% employee. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2151,7 +2221,7 @@
     },
     {
       "name": "7,500 EUR a month: maximum base and two solidarity tiers",
-      "evidence": "Orden arts. 2, 17: base 5,101.20; 1.15% on 5,101.20-5,611.32 and 1.25% on 5,611.32-7,500. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "Orden arts. 2, 17: base 5,101.20; 1.15% on 5,101.20-5,611.32 and 1.25% on 5,611.32-7,500. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2239,7 +2309,7 @@
     },
     {
       "name": "10,000 EUR a month: all three solidarity tiers",
-      "evidence": "Orden art. 17: 1.46% above 7,651.80. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "Orden art. 17: 1.46% above 7,651.80. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2327,7 +2397,7 @@
     },
     {
       "name": "housing loan: rate less two points",
-      "evidence": "RIRPF art. 86.1; algorithm MINOPAGO = TRUNCAR(2% x RETRIB) for pay under 33,007.20. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "RIRPF art. 86.1; algorithm MINOPAGO = TRUNCAR(2% x RETRIB) for pay under 33,007.20. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2406,7 +2476,7 @@
     },
     {
       "name": "ascendant over 75 shared by three: 1,150 / 3 and 1,400 / 3",
-      "evidence": "LIRPF arts. 59, 61: the minimum is shared among descendants living with the ascendant; REDONDEAR1(383.333...) = 383.33. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "LIRPF arts. 59, 61: the minimum is shared among descendants living with the ascendant; REDONDEAR1(383.333...) = 383.33. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2486,7 +2556,7 @@
     },
     {
       "name": "ascendant aged 65 to 74, whole",
-      "evidence": "LIRPF art. 59. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "LIRPF art. 59. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2565,7 +2635,7 @@
     },
     {
       "name": "worker with a disability of 65% or more",
-      "evidence": "RIRPF art. 83.2.b) 7,750 expenses; LIRPF art. 60: 9,000 + 3,000 assistance. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "RIRPF art. 83.2.b) 7,750 expenses; LIRPF art. 60: 9,000 + 3,000 assistance. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2644,7 +2714,7 @@
     },
     {
       "name": "worker with a 33% disability and reduced mobility",
-      "evidence": "Same rules, 3,000 minimum + 3,000 assistance, 7,750 expenses. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "Same rules, 3,000 minimum + 3,000 assistance, 7,750 expenses. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2723,7 +2793,7 @@
     },
     {
       "name": "worker with a 33% disability",
-      "evidence": "3,500 expenses, 3,000 minimum. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "3,500 expenses, 3,000 minimum. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2802,7 +2872,7 @@
     },
     {
       "name": "aged 65 or more in 2026",
-      "evidence": "LIRPF art. 57: +1,150 (2026 - 1961 = 65 > 64). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "LIRPF art. 57: +1,150 (2026 - 1961 = 65 > 64). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2880,7 +2950,7 @@
     },
     {
       "name": "aged 75 or more in 2026",
-      "evidence": "LIRPF art. 57: +1,150 +1,400. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "LIRPF art. 57: +1,150 +1,400. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2958,7 +3028,7 @@
     },
     {
       "name": "three children shared with the other parent: half minimum, 600 reduction",
-      "evidence": "LIRPF art. 58: each descendant by half; RIRPF art. 83.3.e): 600 with more than two descendants. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "LIRPF art. 58: each descendant by half; RIRPF art. 83.3.e): 600 with more than two descendants. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -2976,7 +3046,7 @@
         "unemploymentRate": "INDEFINITE",
         "taxTerritory": "COMMON",
         "descendants": "3",
-        "descendantsHalf": "true"
+        "descendantsComputation": "HALF"
       },
       "expectLines": [
         {
@@ -3038,7 +3108,7 @@
     },
     {
       "name": "five descendants, single parent",
-      "evidence": "LIRPF art. 58: 2,400 + 2,700 + 4,000 + 4,500 x 2; situation 1 with two or more: limit 18,694. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "LIRPF art. 58: 2,400 + 2,700 + 4,000 + 4,500 x 2; situation 1 with two or more: limit 18,694. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -3056,7 +3126,8 @@
         "unemploymentRate": "INDEFINITE",
         "taxTerritory": "COMMON",
         "descendants": "5",
-        "descendantsUnder3": "2"
+        "descendantsUnder3": "2",
+        "descendantsComputation": "WHOLE"
       },
       "expectLines": [
         {
@@ -3118,7 +3189,7 @@
     },
     {
       "name": "geographic mobility: +2,000 expenses",
-      "evidence": "RIRPF art. 83.2.b) 2.º. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "RIRPF art. 83.2.b) 2.º. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -3197,7 +3268,7 @@
     },
     {
       "name": "part-time 86 hours, pay above the hourly minimum",
-      "evidence": "Orden arts. 38-39: 86 x 8.58 = 737.88 minimum; contributions declared. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "Orden arts. 38-39: 86 x 8.58 = 737.88 minimum; contributions declared. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -3277,7 +3348,7 @@
     },
     {
       "name": "part-time group 1, pay below the hourly minimum",
-      "evidence": "Orden art. 39: 100 x 11.98 = 1,198.00 for common contingencies; AT/EP 100 x 8.58 = 858.00. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "Orden art. 39: 100 x 11.98 = 1,198.00 for common contingencies; AT/EP 100 x 8.58 = 858.00. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -3357,7 +3428,7 @@
     },
     {
       "name": "accident rate set for this employee",
-      "evidence": "DA 61ª LGSS tariff by occupation: 3.70% instead of the employer's 1.50%. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "DA 61ª LGSS tariff by occupation: 3.70% instead of the employer's 1.50%. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -3436,7 +3507,7 @@
     },
     {
       "name": "regularized rate entered after a pay rise",
-      "evidence": "RIRPF art. 87: the employer regularizes and enters the new rate, 18.40%. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "RIRPF art. 87: the employer regularizes and enters the new rate, 18.40%. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-07-01",
       "periodEnd": "2026-07-31",
       "frequency": "MONTHLY",
@@ -3521,7 +3592,7 @@
     },
     {
       "name": "higher rate requested by the employee",
-      "evidence": "RIRPF art. 88.5: the requested 20% exceeds the computed rate. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "RIRPF art. 88.5: the requested 20% exceeds the computed rate. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -3601,7 +3672,7 @@
     },
     {
       "name": "requested rate below the computed one is ignored",
-      "evidence": "RIRPF art. 88.5 only allows a higher rate. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "RIRPF art. 88.5 only allows a higher rate. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -3680,8 +3751,285 @@
       ]
     },
     {
+      "name": "overtime: AT/EP base and the additional contribution",
+      "evidence": "LGSS art. 147.2.e: overtime stays out of the common base (2,000) but enters the AT/EP, unemployment, FOGASA and training base (2,300); Orden art. 5: 28.30% (23.60 / 4.70) on the 300. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2300.00",
+      "earningsByComponent": {
+        "BASIC": "2000.00",
+        "OT": "300.00"
+      },
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "27600.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "94.00"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "472.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "15.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "35.65"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "126.50"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.60"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.30"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "13.80"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "34.50"
+        },
+        {
+          "step": "overtime",
+          "side": "EMPLOYEE",
+          "amount": "14.10"
+        },
+        {
+          "step": "overtime",
+          "side": "EMPLOYER",
+          "amount": "70.80"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "354.20"
+        }
+      ]
+    },
+    {
+      "name": "force majeure overtime: 14%",
+      "evidence": "Orden art. 5: 12% employer, 2% employee on overtime caused by force majeure (ET art. 35.3). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2300.00",
+      "earningsByComponent": {
+        "BASIC": "2000.00",
+        "OT": "300.00"
+      },
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "27600.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "overtimeForceMajeure": "true"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "94.00"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "472.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "15.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "35.65"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "126.50"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.60"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.30"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "13.80"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "34.50"
+        },
+        {
+          "step": "overtime",
+          "side": "EMPLOYEE",
+          "amount": "6.00"
+        },
+        {
+          "step": "overtime",
+          "side": "EMPLOYER",
+          "amount": "36.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "354.20"
+        }
+      ]
+    },
+    {
+      "name": "overtime above the maximum base",
+      "evidence": "The AT/EP base is capped at 5,101.20 with overtime included; solidarity applies to the remuneration without overtime. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "6000.00",
+      "earningsByComponent": {
+        "BASIC": "5000.00",
+        "OT": "1000.00"
+      },
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "72000.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "1",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "235.00"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "1180.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "7.50"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "37.50"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "79.07"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "280.57"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "10.20"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "5.10"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "30.61"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "76.52"
+        },
+        {
+          "step": "overtime",
+          "side": "EMPLOYEE",
+          "amount": "47.00"
+        },
+        {
+          "step": "overtime",
+          "side": "EMPLOYER",
+          "amount": "236.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "1628.40"
+        }
+      ]
+    },
+    {
       "name": "year to date consistent with the rate, including a second run in a month",
-      "evidence": "Earlier lines at 15.96%: 2,375 x 3 months and a 1,000 extra run: 379.05 x 3 + 159.60 = 1,296.75 on 8,125. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "evidence": "Earlier lines at 15.96%: 2,375 x 3 months and a 1,000 extra run: 379.05 x 3 + 159.60 = 1,296.75 on 8,125. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-04-01",
       "periodEnd": "2026-04-30",
       "frequency": "MONTHLY",
@@ -3895,14 +4243,13 @@
       "expectError": "groups 8 to 11"
     },
     {
-      "name": "overtime refused",
-      "evidence": "Orden art. 5 additional contribution",
+      "name": "overtime without regular pay",
+      "evidence": "the bases start from the month's ordinary pay",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
-      "grossEarnings": "2300.00",
+      "grossEarnings": "300.00",
       "earningsByComponent": {
-        "BASIC": "2000.00",
         "OT": "300.00"
       },
       "fullPeriod": true,
@@ -3919,6 +4266,29 @@
         "taxTerritory": "COMMON"
       },
       "expectError": "Overtime"
+    },
+    {
+      "name": "descendants without how they count",
+      "evidence": "RIRPF art. 84.2: by half unless the employee has the exclusive right",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "descendants": "1"
+      },
+      "expectError": "descendantsComputation"
     },
     {
       "name": "part-time without hours",
@@ -4079,7 +4449,8 @@
         "unemploymentRate": "INDEFINITE",
         "taxTerritory": "COMMON",
         "descendants": "1",
-        "descendantsUnder3": "2"
+        "descendantsUnder3": "2",
+        "descendantsComputation": "WHOLE"
       },
       "expectError": "descendantsUnder3"
     },
@@ -4244,6 +4615,7 @@
         "unemploymentRate": "INDEFINITE",
         "taxTerritory": "COMMON",
         "descendants": "1",
+        "descendantsComputation": "WHOLE",
         "dependantsWithDisability": "true"
       },
       "expectError": "disability"

@@ -8,16 +8,17 @@ monthly in EUR, 2026.
 The acts are the BOE consolidated texts; the Agencia Tributaria's calculation algorithm and help
 document are identified by their SHA-256 (they are served without version numbers).
 
-| Id                    | What it provides                                                                                                                                                                                       |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `lirpf`               | Ley 35/2006 del IRPF (updated 07/10/2026): work income reduction (art. 20), personal and family minimum (arts. 56-61), withholding scale (art. 101.1)                                                  |
-| `rirpf`               | Reglamento del IRPF, RD 439/2007 (updated 07/10/2026): when withholding arises (art. 78), exemption limits (art. 81), base, minimum, quota and rate (arts. 82-86), regularization (art. 87), art. 88.5 |
-| `aeat-algoritmo-2026` | AEAT algorithm for the 2026 withholding rate, version of 10-09-2026 (SHA-256 b1a120d9…): variables, validations, rounding and steps; TABLA 1 and TABLA 2                                               |
-| `aeat-ayuda-2026`     | AEAT help "Las Retenciones e Ingresos a Cuenta del IRPF … 2026" (SHA-256 33f2e86c…): how the rules apply, the 15.96 % worked example                                                                   |
-| `orden-pjc-297-2026`  | Orden PJC/297/2026 (BOE-A-2026-7296): bases, rates, MEI, solidarity, unemployment, FOGASA, vocational training, part-time bases                                                                        |
-| `lgss`                | LGSS, RDLeg 8/2015 (updated 21/10/2026): solidarity (art. 19 bis), MEI (art. 127 bis), base and proration (art. 147), AT/EP tariff (DA 61ª)                                                            |
-| `concierto-pv`        | Concierto Económico with the Basque Country, Ley 12/2002, art. 7.Uno.a)                                                                                                                                |
-| `convenio-navarra`    | Convenio Económico with Navarre, Ley 28/1990, art. 10.1.a)                                                                                                                                             |
+| Id                      | What it provides                                                                                                                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `lirpf`                 | Ley 35/2006 del IRPF (updated 07/10/2026): work income reduction (art. 20), personal and family minimum (arts. 56-61), withholding scale (art. 101.1)                                                  |
+| `rirpf`                 | Reglamento del IRPF, RD 439/2007 (updated 07/10/2026): when withholding arises (art. 78), exemption limits (art. 81), base, minimum, quota and rate (arts. 82-86), regularization (art. 87), art. 88.5 |
+| `aeat-algoritmo-2026`   | AEAT algorithm for the 2026 withholding rate, version of 10-09-2026 (SHA-256 b1a120d9…): variables, validations, rounding and steps; TABLA 1 and TABLA 2                                               |
+| `aeat-ayuda-2026`       | AEAT help "Las Retenciones e Ingresos a Cuenta del IRPF … 2026" (SHA-256 33f2e86c…): how the rules apply, the 15.96 % worked example                                                                   |
+| `orden-pjc-297-2026`    | Orden PJC/297/2026 (BOE-A-2026-7296): bases, rates, MEI, solidarity, unemployment, FOGASA, vocational training, part-time bases                                                                        |
+| `lgss`                  | LGSS, RDLeg 8/2015 (updated 21/10/2026): solidarity (art. 19 bis), MEI (art. 127 bis), base and proration (art. 147), AT/EP tariff (DA 61ª)                                                            |
+| `aeat-servicio-calculo` | AEAT calculation web service (PRET-R200, 2026 period 1) and its input schema: the official calculator the rates were compared with                                                                     |
+| `concierto-pv`          | Concierto Económico with the Basque Country, Ley 12/2002, art. 7.Uno.a)                                                                                                                                |
+| `convenio-navarra`      | Convenio Económico with Navarre, Ley 28/1990, art. 10.1.a)                                                                                                                                             |
 
 Notes found while researching:
 
@@ -39,10 +40,31 @@ Notes found while researching:
   pay has withholding but no contributions.
 - The solidarity contribution (Orden art. 17) applies to the remuneration above the 5,101.20 maximum
   base in three tiers, split between employer and employee.
-- The AEAT's calculation web service (www2.agenciatributaria.gob.es) could not be reached from the
-  build environment, so the only official worked figure used is the help's 15.96 % example (28,500 EUR
-  with 1,700 EUR contributions; it gives no family data, so situation 3 with no dependants is assumed).
-  The other cases are derived from the texts and checked against a separate integer implementation.
+- Descendants count by half for withholding unless the employee alone is entitled to their whole
+  minimum (RIRPF art. 84.2); the AEAT service also takes a descendant as half unless marked "computado
+  por entero". The template asks for it (`descendantsComputation`) whenever there are descendants.
+- Overtime is excluded from the common-contingencies base but included in the AT/EP base, which is also
+  the base for unemployment, FOGASA and vocational training (LGSS art. 147.2.e; Orden art. 33.1), and
+  carries an additional contribution of 28.30 % (23.60 / 4.70), or 14 % (12 / 2) when caused by force
+  majeure (Orden art. 5). The solidarity contribution uses the base without overtime (RGC art. 72 bis).
+- Not supported, for lack of a rule in the texts used: part months (the bases are prorated by days in
+  practice, but the Orden states it only for particular groups) and the daily bases of groups 8 to 11.
+
+## Checked against the AEAT calculation service
+
+The withholding rate was compared on 2026-10-24 with the Agencia Tributaria's own calculator
+(`https://www2.agenciatributaria.gob.es/wlpl/PRET-R200/mc`, EJER=2026, PER=1, input per
+`AEATRetenciones2026.xsd`):
+
+- every test case's profile: 35 of 35 identical, including the help's 15.96 % example;
+- 88 boundary profiles (each exemption limit ±0.01 under the three contract types, the work income
+  reduction breakpoints, the housing loan threshold, both sides of the 35,200 cap): all identical;
+- 4,000 random profiles (family situations, up to six descendants by whole or half, children under 3,
+  ascendants shared by up to four, every disability level, ages over 65 and 75, mobility, housing loan,
+  the 2 % and 15 % minimums, pay up to 400,000 EUR): all identical.
+
+The service covers only the withholding rate; the contributions are checked against a separate integer
+implementation of the Orden.
 
 ## Rebuilding
 

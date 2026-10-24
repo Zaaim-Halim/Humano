@@ -41,8 +41,12 @@ SOURCES = {
         "url": BOE + "BOE-A-2026-7296",
     },
     "lgss": {
-        "title": "Texto refundido de la Ley General de la Seguridad Social, Real Decreto Legislativo 8/2015, consolidated text (última actualización publicada el 21/10/2026) — art. 19 bis (cotización adicional de solidaridad), art. 127 bis (mecanismo de equidad intergeneracional), art. 147 (base de cotización: las percepciones de vencimiento superior al mensual se prorratean a lo largo de los doce meses), disposición adicional sexagésima primera (tarifa de primas AT/EP)",
+        "title": "Texto refundido de la Ley General de la Seguridad Social, Real Decreto Legislativo 8/2015, consolidated text (última actualización publicada el 21/10/2026) — art. 19 bis (cotización adicional de solidaridad), art. 127 bis (mecanismo de equidad intergeneracional), art. 147 (base de cotización: las percepciones de vencimiento superior al mensual se prorratean a lo largo de los doce meses; 147.2.e: las horas extraordinarias solo computan en la base de AT/EP), disposición adicional sexagésima primera (tarifa de primas AT/EP)",
         "url": BOE + "BOE-A-2015-11724",
+    },
+    "aeat-servicio-calculo": {
+        "title": "Agencia Tributaria, Servicio de Módulo de Cálculo de Retenciones (espeSWRET_2026, SHA-256 59fc137bcaa6e7a3…), https://www2.agenciatributaria.gob.es/wlpl/PRET-R200/mc with EJER=2026 and PER=1 (from 10 September 2026), input schema AEATRetenciones2026.xsd (SHA-256 f4acd6c9072c0d18…) — the official calculator; the computed withholding rate of every case was compared with its TipoRetencion on 2026-10-24",
+        "url": AEAT + "Sede/Programas_ayuda/Retenciones/2026/espeSWRET_2026.pdf",
     },
     "concierto-pv": {
         "title": "Concierto Económico con la Comunidad Autónoma del País Vasco, Ley 12/2002, consolidated text (última actualización publicada el 30/04/2025) — art. 7.Uno.a): las retenciones sobre rendimientos del trabajo se exigen por la Diputación Foral cuando el trabajo se preste en el País Vasco",
@@ -104,6 +108,10 @@ PARAMS = {
     "wageGuaranteeRate": ("0.002", "orden-pjc-297-2026"),
     "trainingEmployeeRate": ("0.001", "orden-pjc-297-2026"),
     "trainingEmployerRate": ("0.006", "orden-pjc-297-2026"),
+    "overtimeEmployeeRate": ("0.047", "orden-pjc-297-2026"),
+    "overtimeEmployerRate": ("0.236", "orden-pjc-297-2026"),
+    "forceMajeureOvertimeEmployeeRate": ("0.02", "orden-pjc-297-2026"),
+    "forceMajeureOvertimeEmployerRate": ("0.12", "orden-pjc-297-2026"),
 }
 
 MIN_BASES = {1: ("1989.30", "11.98"), 2: ("1649.70", "9.94"), 3: ("1435.20", "8.65"),
@@ -157,7 +165,7 @@ def withholding_rate(emp, birth_year, year=2026):
     cotizaciones = D(emp["annualSocialContributions"]) if "annualSocialContributions" in emp else estimated_contributions(emp)
     numdes = int(emp.get("descendants", "0"))
     under3 = int(emp.get("descendantsUnder3", "0"))
-    entero = D("0.5") if emp.get("descendantsHalf") == "true" else D(1)
+    entero = D("0.5") if emp.get("descendantsComputation") == "HALF" else D(1)
     disability = emp.get("disability", "NONE")
     # OTROS GASTOS, capped at RETRIB - COTIZACIONES
     otros = D(2000) + (D(2000) if emp.get("geographicMobility") == "true" else D(0))
@@ -243,7 +251,8 @@ def expected_lines(c):
             lines.append({"step": step, "side": side, "amount": str(amount)})
 
     # Social security: monthly pay (without the extra payments) plus 1/12 of the annual extra payments
-    pay = gross - D(by.get("BONUS", "0"))
+    overtime = D(by.get("OT", "0"))
+    pay = gross - D(by.get("BONUS", "0")) - overtime
     if pay > 0:
         rem = pay + cent(D(emp.get("annualExtraPay", "0")) / 12)
         group = int(emp["contributionGroup"])
@@ -253,7 +262,7 @@ def expected_lines(c):
         else:
             cc_min, at_min = D(MIN_BASES[group][0]), D("1424.40")
         cc = min(max(rem, cc_min), D("5101.20"))
-        at = min(max(rem, at_min), D("5101.20"))
+        at = min(max(rem + overtime, at_min), D("5101.20"))  # overtime only in the AT/EP base (LGSS art. 147.2.e)
         add("commonContingencies", "EMPLOYEE", cent(cc * D("0.047")))
         add("commonContingencies", "EMPLOYER", cent(cc * D("0.236")))
         add("intergenerationalEquity", "EMPLOYEE", cent(cc * D("0.0015")))
@@ -268,6 +277,10 @@ def expected_lines(c):
         if rem > D("5101.20"):
             add("solidarity", "EMPLOYEE", cent(solidarity(rem, True)))
             add("solidarity", "EMPLOYER", cent(solidarity(rem, False)))
+        if overtime > 0:  # Orden art. 5: 14% (12 / 2) for force majeure, otherwise 28.30% (23.60 / 4.70)
+            fm = emp.get("overtimeForceMajeure") == "true"
+            add("overtime", "EMPLOYEE", cent(overtime * (D("0.02") if fm else D("0.047"))))
+            add("overtime", "EMPLOYER", cent(overtime * (D("0.12") if fm else D("0.236"))))
     # Withholding: the payment times the rate, to the cent; recorded even at 0%
     if gross > 0:
         rate = applied_rate(emp, int(c["birthDate"][:4]))
@@ -309,8 +322,8 @@ def std(**kw):
 
 
 def test_cases():
-    law = "RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()"
-    fam = dict(annualPay="28000.00", annualExtraPay="4000.00", familySituation="2", descendants="2", descendantsUnder3="1")
+    law = "RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()"
+    fam = dict(annualPay="28000.00", annualExtraPay="4000.00", familySituation="2", descendants="2", descendantsUnder3="1", descendantsComputation="WHOLE")
     computed = [
         case("AEAT example: 28,500 EUR with 1,700 EUR contributions gives 15.96%",
              "AEAT Retenciones 2026 help, p. 56: 28,500 gross, about 1,700 contributions, rate 15.96%; the example gives no family data, so no dependants, under 65 and situation 3 are assumed (situation 2 gives the same rate). 2,375 x 15.96% = 379.05. " + law,
@@ -370,10 +383,10 @@ def test_cases():
              "LIRPF art. 57: +1,150 +1,400. " + law, "2400.00", std(annualPay="28800.00"), birth="1951-01-01"),
         case("three children shared with the other parent: half minimum, 600 reduction",
              "LIRPF art. 58: each descendant by half; RIRPF art. 83.3.e): 600 with more than two descendants. " + law,
-             "3000.00", std(annualPay="36000.00", descendants="3", descendantsHalf="true")),
+             "3000.00", std(annualPay="36000.00", descendants="3", descendantsComputation="HALF")),
         case("five descendants, single parent",
              "LIRPF art. 58: 2,400 + 2,700 + 4,000 + 4,500 x 2; situation 1 with two or more: limit 18,694. " + law,
-             "3500.00", std(annualPay="42000.00", familySituation="1", descendants="5", descendantsUnder3="2")),
+             "3500.00", std(annualPay="42000.00", familySituation="1", descendants="5", descendantsUnder3="2", descendantsComputation="WHOLE")),
         case("geographic mobility: +2,000 expenses",
              "RIRPF art. 83.2.b) 2.º. " + law, "2200.00", std(annualPay="26400.00", geographicMobility="true")),
         case("part-time 86 hours, pay above the hourly minimum",
@@ -396,6 +409,15 @@ def test_cases():
         case("requested rate below the computed one is ignored",
              "RIRPF art. 88.5 only allows a higher rate. " + law,
              "2375.00", std(withholdingRateOverride="10.00", withholdingRateOverrideReason="REQUESTED_HIGHER")),
+        case("overtime: AT/EP base and the additional contribution",
+             "LGSS art. 147.2.e: overtime stays out of the common base (2,000) but enters the AT/EP, unemployment, FOGASA and training base (2,300); Orden art. 5: 28.30% (23.60 / 4.70) on the 300. " + law,
+             "2300.00", std(annualPay="27600.00"), by_component={"BASIC": "2000.00", "OT": "300.00"}),
+        case("force majeure overtime: 14%",
+             "Orden art. 5: 12% employer, 2% employee on overtime caused by force majeure (ET art. 35.3). " + law,
+             "2300.00", std(annualPay="27600.00", overtimeForceMajeure="true"), by_component={"BASIC": "2000.00", "OT": "300.00"}),
+        case("overtime above the maximum base",
+             "The AT/EP base is capped at 5,101.20 with overtime included; solidarity applies to the remuneration without overtime. " + law,
+             "6000.00", std(annualPay="72000.00", contributionGroup="1"), by_component={"BASIC": "5000.00", "OT": "1000.00"}),
         case("year to date consistent with the rate, including a second run in a month",
              "Earlier lines at 15.96%: 2,375 x 3 months and a 1,000 extra run: 379.05 x 3 + 159.60 = 1,296.75 on 8,125. " + law,
              "2375.00", std(annualSocialContributions="1700.00"), birth="1980-02-01", start="2026-04-01", end="2026-04-30",
@@ -412,7 +434,8 @@ def test_cases():
         case("Navarre workplace refused", "Convenio Económico art. 10.1.a)", "2000.00", std(taxTerritory="NAVARRE"), error="Convenio"),
         case("Ceuta, Melilla or La Palma refused", "RIRPF art. 80.2 reduction not modelled", "2000.00", std(taxTerritory="CEUTA_MELILLA_LA_PALMA"), error="Ceuta"),
         case("daily-base group refused", "Orden art. 3: groups 8-11 contribute by day", "2000.00", std(contributionGroup="9"), error="groups 8 to 11"),
-        case("overtime refused", "Orden art. 5 additional contribution", "2300.00", std(), by_component={"BASIC": "2000.00", "OT": "300.00"}, error="Overtime"),
+        case("overtime without regular pay", "the bases start from the month's ordinary pay", "300.00", std(), by_component={"OT": "300.00"}, error="Overtime"),
+        case("descendants without how they count", "RIRPF art. 84.2: by half unless the employee has the exclusive right", "2000.00", std(descendants="1"), error="descendantsComputation"),
         case("part-time without hours", "Orden art. 39: minimum = hours x hourly base", "1000.00", std(), fte="0.5", error="partTimeHours"),
         case("part-time without declared contributions", "the estimate assumes full-time bases", "1000.00", std(partTimeHours="80"), fte="0.5", error="annualSocialContributions"),
         case("partial month refused", "bases are prorated by days", "1000.00", std(), whole=False, error="whole month"),
@@ -420,7 +443,7 @@ def test_cases():
         case("extra pay without the annual amount", "LGSS art. 147 proration needs it", "4000.00", std(),
              by_component={"BASIC": "2000.00", "BONUS": "2000.00"}, error="annualExtraPay"),
         case("situation 1 without descendants", "RIRPF art. 81.1 and algorithm validation 14", "2000.00", std(familySituation="1"), error="situation 1"),
-        case("more children under 3 than descendants", "they are counted among the descendants", "2000.00", std(descendants="1", descendantsUnder3="2"), error="descendantsUnder3"),
+        case("more children under 3 than descendants", "they are counted among the descendants", "2000.00", std(descendants="1", descendantsUnder3="2", descendantsComputation="WHOLE"), error="descendantsUnder3"),
         case("housing loan at 33,007.20 or more", "RIRPF art. 86.1; algorithm validation 21", "2800.00", std(annualPay="33007.20", housingLoan="true"), error="33,007.20"),
         case("rate override without a reason", "the reason decides how it applies", "2000.00", std(withholdingRateOverride="18.00"), error="withholdingRateOverrideReason"),
         case("rate no longer matches the year to date", "RIRPF art. 87: a change in the data requires regularization",
@@ -429,7 +452,7 @@ def test_cases():
         case("daily manual workers refused", "RIRPF art. 83.2: 100 x the daily wage", "2000.00", std(withholdingContract="DAILY_MANUAL"), error="daily"),
         case("training contracts refused", "Orden art. 46 fixed quotas", "1200.00", std(trainingContract="true"), error="Training"),
         case("multiple employment refused", "Orden art. 10", "2000.00", std(multipleEmployment="true"), error="multiple employment"),
-        case("dependants with a disability refused", "not modelled", "2000.00", std(descendants="1", dependantsWithDisability="true"), error="disability"),
+        case("dependants with a disability refused", "not modelled", "2000.00", std(descendants="1", descendantsComputation="WHOLE", dependantsWithDisability="true"), error="disability"),
         case("court-ordered payments refused", "RIRPF arts. 83.3, 85.2 not modelled", "2000.00", std(courtOrderedPayments="true"), error="Court-ordered"),
         case("irregular income refused", "RIRPF art. 83.3.a) not modelled", "2000.00", std(irregularIncome="true"), error="Irregular"),
         case("no birth date", "the minimum depends on the year of birth", "2000.00", std(), birth=None, error="birth date"),
@@ -452,6 +475,9 @@ def emp_key(k):
 GROUP = emp_key("contributionGroup")
 PAY = emp_key("annualPay")
 PART = emp_key("partTimeHours") + " != null"
+E_DESC = emp_key("descendants")
+E_COMP = emp_key("descendantsComputation")
+EMP_FM = emp_key("overtimeForceMajeure")
 
 
 def main():
@@ -470,7 +496,7 @@ def main():
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
             {"version": "2026.1.0", "date": RETRIEVED,
-             "summary": "2026: IRPF withholding rate per the AEAT algorithm (RIRPF arts. 81-86) with a year-to-date check that asks for the regularized rate; social security per Orden PJC/297/2026: common contingencies 28.30%, MEI 0.90%, unemployment 7.05% / 8.30%, FOGASA 0.20%, vocational training 0.70%, AT/EP from the tariff, solidarity contribution above 5,101.20."}
+             "summary": "2026: IRPF withholding rate per the AEAT algorithm (RIRPF arts. 81-86) with a year-to-date check that asks for the regularized rate; social security per Orden PJC/297/2026: common contingencies 28.30%, MEI 0.90%, unemployment 7.05% / 8.30%, FOGASA 0.20%, vocational training 0.70%, AT/EP from the tariff, solidarity contribution above 5,101.20, overtime in the AT/EP base with its 28.30% / 14% additional contribution. Withholding rates checked against the AEAT calculation service."}
         ],
         "sources": SOURCES,
         "inputs": {
@@ -490,17 +516,17 @@ def main():
                 {"key": "familySituation", "type": "ENUM", "required": True, "values": ["1", "2", "3"],
                  "description": "Family situation from the employee's modelo 145 (RIRPF art. 81.1): 1 single, widowed, divorced or separated with descendants and the single-parent joint-filing reduction; 2 married with a spouse earning no more than 1,500 EUR a year; 3 any other (and when not stated)"},
                 {"key": "descendants", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 16,
-                 "description": "Children and other descendants giving right to the minimum (LIRPF art. 58): under 25 at the end of 2026 (born 2002 or later), living with the employee, earning no more than 8,000 EUR"},
+                 "description": "Children and other descendants giving right to the minimum (LIRPF art. 58): under 25 at the end of 2026 (born 2002 or later), living with the employee, earning no more than 8,000 EUR and not filing a return with more than 1,800 EUR (LIRPF art. 61.2.ª)"},
                 {"key": "descendantsUnder3", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 16,
                  "description": "Of those descendants, the ones born in 2024 or later, or adopted or fostered in 2024 or later (+2,800 each, LIRPF art. 58.2)"},
-                {"key": "descendantsHalf", "type": "BOOLEAN", "required": False, "defaultValue": "false",
-                 "description": "The descendants are shared with another person entitled to the minimum (usually the other parent) and count by half (LIRPF art. 61.1.ª); all of them are taken the same way"},
+                {"key": "descendantsComputation", "type": "ENUM", "required": False, "values": ["WHOLE", "HALF"],
+                 "description": "How the descendants count, from modelo 145 (required with descendants): HALF unless the employee alone is entitled to their whole minimum (RIRPF art. 84.2; LIRPF art. 61.1.ª); all of them are taken the same way"},
                 {"key": "ascendants65", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 6,
-                 "description": "Parents or other ascendants aged 65 to 74 in 2026 (born 1952 to 1961) living with the employee at least half the year and earning no more than 8,000 EUR (LIRPF art. 59)"},
+                 "description": "Parents or other ascendants aged 65 to 74 in 2026 (born 1952 to 1961) living with the employee at least half the year, earning no more than 8,000 EUR and not filing a return with more than 1,800 EUR (LIRPF arts. 59, 61.2.ª)"},
                 {"key": "ascendants75", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 6,
                  "description": "Ascendants aged 75 or more in 2026 (born 1951 or earlier), same conditions (+1,400 each, LIRPF art. 59.2)"},
                 {"key": "ascendantsSharedBy", "type": "INTEGER", "required": False, "defaultValue": "1", "min": 1, "max": 10,
-                 "description": "Number of descendants (the employee included) the ascendants live with, who share their minimum (LIRPF art. 61.2.ª); the same for all of them"},
+                 "description": "Number of descendants (the employee included) the ascendants live with, who share their minimum (LIRPF art. 61.1.ª); the same for all of them"},
                 {"key": "disability", "type": "ENUM", "required": False, "defaultValue": "NONE", "values": ["NONE", "FROM_33", "FROM_33_REDUCED_MOBILITY", "FROM_65"],
                  "description": "The employee's own disability: 33% to 65%, the same with reduced mobility or needing help from another person, or 65% or more (LIRPF art. 60; RIRPF art. 83.2.b)"},
                 {"key": "geographicMobility", "type": "BOOLEAN", "required": False, "defaultValue": "false",
@@ -519,6 +545,8 @@ def main():
                  "description": "Unemployment rate (Orden art. 33.2.a): INDEFINITE 7.05% for open-ended contracts (also part-time, fijos discontinuos, training, relief, substitution and interim contracts, and any contract with a worker with a disability of 33% or more); FIXED_TERM 8.30% for other fixed-term contracts"},
                 {"key": "partTimeHours", "type": "DECIMAL", "required": False, "min": 0, "max": 300,
                  "description": "Part-time contract: hours actually worked this month; the minimum bases are hours x the hourly minimum of the group, and x 8.58 for AT/EP (Orden arts. 38-39)"},
+                {"key": "overtimeForceMajeure", "type": "BOOLEAN", "required": False, "defaultValue": "false",
+                 "description": "The overtime (OT) paid is for preventing or repairing extraordinary and urgent damage (ET art. 35.3): additional contribution 14% instead of 28.30% (Orden art. 5)"},
                 {"key": "accidentRate", "type": "DECIMAL", "required": False, "min": 0, "max": "0.2",
                  "description": "This employee's AT/EP rate where the tariff sets it by occupation (DA 61ª LGSS, cuadro II), replacing the employer's rate"},
                 {"key": "trainingContract", "type": "BOOLEAN", "required": False, "defaultValue": "false",
@@ -590,8 +618,9 @@ def main():
              "message": "Irregular income with the 30% reduction is not supported (RIRPF art. 83.3.a)"},
             {"id": "monthlyContributionGroup", "type": "REQUIRE", "source": "orden-pjc-297-2026", "condition": GROUP + " <= 7",
              "message": "Contribution groups 8 to 11 contribute on daily bases (Orden PJC/297/2026 art. 3), which this template does not do"},
-            {"id": "noOvertime", "type": "REQUIRE", "source": "orden-pjc-297-2026", "condition": "#earningsByComponent['OT'] == 0",
-             "message": "Overtime carries an additional contribution and enters only the AT/EP base (Orden PJC/297/2026 art. 5), which this template does not do"},
+            {"id": "overtimeWithPay", "type": "REQUIRE", "source": "lgss",
+             "condition": "#earningsByComponent['OT'] == 0 or #socialEarnings - #earningsByComponent['BONUS'] - #earningsByComponent['OT'] > 0",
+             "message": "Overtime paid without ordinary pay in the same run is not supported: the contribution bases start from the month's ordinary pay"},
             {"id": "partTimeHoursGiven", "type": "REQUIRE", "source": "orden-pjc-297-2026", "condition": "(#fte >= 1 and #fullPeriod) or " + PART,
              "message": "Part-time employee: set the employee's partTimeHours (hours worked this month) for the hourly minimum bases (Orden PJC/297/2026 arts. 38-39)"},
             {"id": "partTimeContributions", "type": "REQUIRE", "source": "rirpf", "when": PART,
@@ -606,6 +635,9 @@ def main():
             {"id": "under3WithinDescendants", "type": "REQUIRE", "source": "lirpf",
              "condition": emp_key("descendantsUnder3") + " <= " + emp_key("descendants"),
              "message": "descendantsUnder3 counts descendants already included in descendants, so it cannot be larger"},
+            {"id": "descendantsComputationGiven", "type": "REQUIRE", "source": "rirpf",
+             "condition": E_DESC + " == 0 or " + E_COMP + " != null",
+             "message": "Set the employee's descendantsComputation: descendants count by half unless the employee alone is entitled to their whole minimum (RIRPF art. 84.2)"},
             {"id": "housingLoanLimit", "type": "REQUIRE", "source": "rirpf",
              "condition": "!" + emp_key("housingLoan") + " or " + PAY + " < #p['housingIncomeLimit']",
              "message": "The housing loan reduction applies only with annual pay under 33,007.20 EUR (RIRPF art. 86.1)"},
@@ -642,7 +674,7 @@ def main():
                      " + " + emp_key("descendantsUnder3") + " * #p['descendantUnder3']"},
             {"id": "personalFamilyMinimum", "type": "VALUE", "source": "lirpf",
              "expr": "#p['personalMinimum'] + (#taxpayerAge > 64 ? #p['age65Minimum'] : 0) + (#taxpayerAge > 74 ? #p['age75Minimum'] : 0)"
-                     " + (" + emp_key("descendantsHalf") + " ? #divide(#descendantsWhole, 2, 2, 'HALF_UP') : #descendantsWhole)"
+                     " + (" + E_COMP + " == 'HALF' ? #divide(#descendantsWhole, 2, 2, 'HALF_UP') : #descendantsWhole)"
                      " + #divide((" + emp_key("ascendants65") + " + " + emp_key("ascendants75") + ") * #p['ascendantMinimum'], " + emp_key("ascendantsSharedBy") + ", 2, 'HALF_UP')"
                      " + #divide(" + emp_key("ascendants75") + " * #p['ascendant75Minimum'], " + emp_key("ascendantsSharedBy") + ", 2, 'HALF_UP')"
                      " + (" + emp_key("disability") + " == 'FROM_65' ? #p['disabilityMinimumHigh'] + #p['assistanceMinimum']"
@@ -670,7 +702,7 @@ def main():
                           " #divide(#ytd.base('incomeTax', 'TAX') * #withholdingRate, 100, 6, 'HALF_UP') - #ytd.amount('incomeTax', 'TAX')) * 200 <= #ytd.periods('incomeTax', 'TAX')",
              "message": "The withholding rate computed from the current data differs from the rate applied earlier this year: regularize it under RIRPF art. 87 and enter the regularized rate as withholdingRateOverride with reason REGULARIZED"},
             # Social security (Orden PJC/297/2026)
-            {"id": "monthlyPay", "type": "VALUE", "expr": "#pos(#socialEarnings - #earningsByComponent['BONUS'])"},
+            {"id": "monthlyPay", "type": "VALUE", "source": "lgss", "expr": "#pos(#socialEarnings - #earningsByComponent['BONUS'] - #earningsByComponent['OT'])"},
             {"id": "contributionPay", "type": "VALUE", "source": "orden-pjc-297-2026",
              "expr": "#monthlyPay > 0 ? #monthlyPay + #divide(" + emp_key("annualExtraPay") + ", 12, 2, 'HALF_UP') : 0"},
             {"id": "commonMinimumBase", "type": "VALUE", "source": "orden-pjc-297-2026",
@@ -678,7 +710,7 @@ def main():
             {"id": "accidentMinimumBase", "type": "VALUE", "source": "orden-pjc-297-2026",
              "expr": PART + " ? #round(" + emp_key("partTimeHours") + " * #p['partTimeAccidentHourlyBase'], 2, 'HALF_UP') : #p['accidentMinimumBase']"},
             {"id": "commonBase", "type": "VALUE", "source": "orden-pjc-297-2026", "expr": "#clamp(#contributionPay, #commonMinimumBase, #p['maximumBase'])"},
-            {"id": "accidentBase", "type": "VALUE", "source": "orden-pjc-297-2026", "expr": "#clamp(#contributionPay, #accidentMinimumBase, #p['maximumBase'])"},
+            {"id": "accidentBase", "type": "VALUE", "source": "orden-pjc-297-2026", "expr": "#clamp(#contributionPay + #earningsByComponent['OT'], #accidentMinimumBase, #p['maximumBase'])"},
             {"id": "commonContingencies", "type": "CONTRIBUTION", "label": "Common contingencies (contingencias comunes)", "ledger": "SOCIAL_SECURITY", "source": "orden-pjc-297-2026",
              "when": "#contributionPay > 0", "base": "#commonBase",
              "employee": {"rate": "#p['commonEmployeeRate']"}, "employer": {"rate": "#p['commonEmployerRate']"}},
@@ -701,17 +733,21 @@ def main():
              "when": "#contributionPay > #p['maximumBase']", "base": "#contributionPay",
              "employee": {"amount": "#table.bracketTax('solidarity', 'EMPLOYEE', #solidarity_base)"},
              "employer": {"amount": "#table.bracketTax('solidarity', 'EMPLOYER', #solidarity_base)"}},
+            {"id": "overtime", "type": "CONTRIBUTION", "label": "Overtime additional contribution (horas extraordinarias)", "ledger": "SOCIAL_SECURITY", "source": "orden-pjc-297-2026",
+             "when": "#contributionPay > 0 and #earningsByComponent['OT'] > 0", "base": "#earningsByComponent['OT']",
+             "employee": {"rate": EMP_FM + " ? #p['forceMajeureOvertimeEmployeeRate'] : #p['overtimeEmployeeRate']"},
+             "employer": {"rate": EMP_FM + " ? #p['forceMajeureOvertimeEmployerRate'] : #p['overtimeEmployerRate']"}},
             {"id": "incomeTax", "type": "TAX", "label": "Income tax withholding (retención IRPF)", "ledger": "INCOME_TAX", "source": "rirpf",
              "when": "#taxableEarnings > 0", "base": "#taxableEarnings", "rate": "#divide(#appliedRate, 100, 4, 'HALF_UP')", "recordZero": True},
         ],
         "limitations": [
-            "Common tax territory, Régimen General employees paid monthly in EUR in 2026, for whole months with the payment in the same year. Work performed in the Basque Country or Navarre, residents of Ceuta, Melilla and La Palma, contribution groups 8 to 11, training contracts, multiple employment, part months, unpaid leave and overtime are refused.",
+            "Common tax territory, Régimen General employees paid monthly in EUR in 2026, for whole months with the payment in the same year. Work performed in the Basque Country or Navarre, residents of Ceuta, Melilla and La Palma, contribution groups 8 to 11, training contracts, multiple employment, part months and unpaid leave are refused. Overtime (OT) enters only the AT/EP base and carries the additional contribution of Orden art. 5 (28.30%, or 14% for force majeure); it must be paid with ordinary pay in the same run.",
             "The withholding rate is recomputed each run from the annual figures entered (annual pay, contributions, family data from modelo 145) and applied to the whole payment. RIRPF art. 87 regularization is not automated: once the data change during the year the run refuses until the employer enters the regularized rate (withholdingRateOverride, REGULARIZED). A higher rate requested under art. 88.5 can be entered as REQUESTED_HIGHER.",
             "Without annualSocialContributions the expected employee contributions are estimated as 12 months on annualPay / 12 at full-time bases.",
             "Not modelled: dependants with a disability, court-ordered payments (arts. 83.3.f, 85.2), irregular income (art. 83.3.a), pensioners and the unemployed, pay in kind and its ingreso a cuenta, arrears of earlier years (15% fixed rate), fixed rates (directors, courses, authors), the special regime for workers posted to Spain, sick leave and birth leave months (their own bases), contribution reductions and incentives, and the 33.62 EUR charge at the end of fixed-term contracts under 30 days (Orden art. 28).",
             "Extra payments (BONUS) are prorated over the year in the contribution base from annualExtraPay (Orden art. 1, monthly-paid employees); a run holding only BONUS pays withholding but no contributions.",
             "Contributions are rounded to the cent, half up, per line; part-time minimum bases (hours x hourly base) and the extra-pay proration to the cent, half up.",
-            "Status LAW_DERIVED: values are cited from the BOE consolidated texts, the Orden PJC/297/2026 and the AEAT 2026 algorithm and help; the cases are derived from them (one reproduces the AEAT help's 15.96% example).",
+            "Status LAW_DERIVED: values are cited from the BOE consolidated texts, the Orden PJC/297/2026 and the AEAT 2026 algorithm and help; the cases are derived from them (one reproduces the AEAT help's 15.96% example) and every case's withholding rate matches the AEAT calculation service.",
         ],
         "testCases": test_cases(),
     }
