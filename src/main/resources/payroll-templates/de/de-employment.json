@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "de-employment",
   "name": "Deutschland — Lohnsteuer, Solidaritätszuschlag, Kirchensteuer und Gesamtsozialversicherungsbeitrag",
-  "version": "2026.1.0",
+  "version": "2026.1.1",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "DE"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.1",
+      "date": "2026-10-24",
+      "summary": "Corrects silent errors: U1 participation without the employee's U1 rate, and care-insurance children under 25 without the parent flag, are now refused instead of giving no U1 levy or the childless surcharge without the child reductions."
+    },
     {
       "version": "2026.1.0",
       "date": "2026-10-21",
@@ -424,6 +429,22 @@
       "when": "#employee['taxAddition'] > 0",
       "condition": "#employee['taxClass'] != '6'",
       "message": "A Hinzurechnungsbetrag is not possible in Steuerklasse VI"
+    },
+    {
+      "id": "u1RateSet",
+      "type": "REQUIRE",
+      "source": "aag",
+      "when": "#employer['u1Participation']",
+      "condition": "#employee['u1Rate'] > 0",
+      "message": "The employer takes part in U1 (§ 1 AAG): set the employee's u1Rate, the U1 Umlagesatz of their Krankenkasse"
+    },
+    {
+      "id": "pvChildrenNeedParent",
+      "type": "REQUIRE",
+      "source": "sgb11",
+      "when": "#employee['pvChildrenUnder25'] > 0",
+      "condition": "#employee['pvParent']",
+      "message": "Children under 25 for the care-insurance reductions (§ 55 Abs. 3 SGB XI) also prove the Elterneigenschaft: set pvParent, otherwise the childless surcharge would apply"
     },
     {
       "id": "alter1",
@@ -2349,6 +2370,49 @@
         "taxAddition": "100.00"
       },
       "expectError": "Hinzurechnungsbetrag"
+    },
+    {
+      "name": "U1 participation without the Krankenkasse's U1 rate is refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "HE",
+        "u1Participation": "true"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24"
+      },
+      "expectError": "u1Rate"
+    },
+    {
+      "name": "children under 25 without the parent flag are refused",
+      "evidence": "Lohnsteuer/SolZ/Maßstabsteuer by lohnsteuer_statute.py (EStG text + the PAP's binding roundings); contributions by the BVV rules in build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "birthDate": "1988-03-15",
+      "employer": {
+        "state": "NW",
+        "u1Participation": "false"
+      },
+      "employee": {
+        "taxClass": "1",
+        "healthFundAdditionalRate": "2.90",
+        "employmentType": "REGULAR",
+        "u2Rate": "0.24",
+        "pvChildrenUnder25": "2"
+      },
+      "expectError": "pvParent"
     },
     {
       "name": "2027 is not covered",

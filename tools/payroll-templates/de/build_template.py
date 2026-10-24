@@ -227,6 +227,9 @@ def test_cases():
         case("a Faktor outside Steuerklasse IV is refused", "4000.00", employee(factor="0.900"), expectError="Faktor"),
         case("a Faktor together with a Freibetrag is refused", "4000.00", employee(taxClass=4, factor="0.900", taxAllowance="100.00"), expectError="Faktor"),
         case("a Hinzurechnungsbetrag in Steuerklasse VI is refused", "4000.00", employee(taxClass=6, taxAddition="100.00"), expectError="Hinzurechnungsbetrag"),
+        case("U1 participation without the Krankenkasse's U1 rate is refused", "4000.00", employee(),
+             employer={"state": "HE", "u1Participation": "true"}, expectError="u1Rate"),
+        case("children under 25 without the parent flag are refused", "4000.00", employee(pvChildrenUnder25=2), expectError="pvParent"),
         case("2027 is not covered", "4000.00", employee(), period=("2027-01-01", "2027-01-31", "2027-01-29"), expectError="a newer template version is needed"),
     ]
     return cases + errors
@@ -244,7 +247,7 @@ def main():
         "schemaVersion": 1,
         "id": "de-employment",
         "name": "Deutschland — Lohnsteuer, Solidaritätszuschlag, Kirchensteuer und Gesamtsozialversicherungsbeitrag",
-        "version": "2026.1.0",
+        "version": "2026.1.1",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "DE"},
         "validity": {"from": FROM, "to": TO},
@@ -253,7 +256,9 @@ def main():
         "taxYearStart": "--01-01",
         "dateBasis": "PERIOD",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
-        "changelog": [{"version": "2026.1.0", "date": RETRIEVED,
+        "changelog": [{"version": "2026.1.1", "date": "2026-10-24",
+                       "summary": "Corrects silent errors: U1 participation without the employee's U1 rate, and care-insurance children under 25 without the parent flag, are now refused instead of giving no U1 levy or the childless surcharge without the child reductions."},
+                      {"version": "2026.1.0", "date": RETRIEVED,
                        "summary": "2026: Lohnsteuer, Solidaritätszuschlag and Maßstabsteuer by the BMF PAP 2026 (generated from the official XML pseudocode); Kirchensteuer; KV, RV, AV, PV contributions and the U1, U2, U3 levies for regular monthly wages."}],
         "sources": SOURCES,
         "inputs": {
@@ -331,6 +336,10 @@ def main():
              "message": "A Faktor (§ 39f EStG) applies only in Steuerklasse IV and not together with a Freibetrag"},
             {"id": "noAdditionClassVI", "type": "REQUIRE", "when": "#employee['taxAddition'] > 0", "condition": "#employee['taxClass'] != '6'",
              "message": "A Hinzurechnungsbetrag is not possible in Steuerklasse VI"},
+            {"id": "u1RateSet", "type": "REQUIRE", "source": "aag", "when": "#employer['u1Participation']", "condition": "#employee['u1Rate'] > 0",
+             "message": "The employer takes part in U1 (§ 1 AAG): set the employee's u1Rate, the U1 Umlagesatz of their Krankenkasse"},
+            {"id": "pvChildrenNeedParent", "type": "REQUIRE", "source": "sgb11", "when": "#employee['pvChildrenUnder25'] > 0", "condition": "#employee['pvParent']",
+             "message": "Children under 25 for the care-insurance reductions (§ 55 Abs. 3 SGB XI) also prove the Elterneigenschaft: set pvParent, otherwise the childless surcharge would apply"},
             # Age-dependent markers; a year of life is completed at the end of the day before the birthday (§§ 187, 188 BGB).
             {"id": "alter1", "type": "VALUE", "expr": "#birthDate.plusYears(64).minusDays(1) < #taxYearStartDate ? 1 : 0"},
             {"id": "ajahr", "type": "VALUE", "expr": "#birthDate.plusYears(64).minusDays(1).getYear() + 1"},
