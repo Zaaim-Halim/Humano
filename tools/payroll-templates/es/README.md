@@ -47,8 +47,16 @@ Notes found while researching:
   the base for unemployment, FOGASA and vocational training (LGSS art. 147.2.e; Orden art. 33.1), and
   carries an additional contribution of 28.30 % (23.60 / 4.70), or 14 % (12 / 2) when caused by force
   majeure (Orden art. 5). The solidarity contribution uses the base without overtime (RGC art. 72 bis).
-- Not supported, for lack of a rule in the texts used: part months (the bases are prorated by days in
-  practice, but the Orden states it only for particular groups) and the daily bases of groups 8 to 11.
+- Employees past the ordinary retirement age (LGSS art. 205.1.a) are exempt from common contingencies
+  except temporary incapacity, and from unemployment, FOGASA and vocational training (LGSS art. 152;
+  not in public administrations); IT is 1.55 % (1.30 / 0.25, Orden art. 32.1.a) and the MEI applies
+  only where retirement is contributed (art. 127 bis). Pay above the maximum base and overtime for them
+  are refused, since the texts don't say how the solidarity and overtime contributions apply. Working
+  pensioners (art. 153) are refused.
+- Not supported, for lack of a rule in the texts used (the Orden, the Reglamento General de Cotización
+  and the Social Security's 2026 bases page): part months (bases prorated by days in practice, stated
+  in the Orden only for particular groups) and the daily bases of groups 8 to 11 (47.48 and 170.04 a day,
+  without a stated day count for monthly-paid employees).
 
 ## Checked against the AEAT calculation service
 
@@ -56,10 +64,10 @@ The withholding rate was compared on 2026-10-24 with the Agencia Tributaria's ow
 (`https://www2.agenciatributaria.gob.es/wlpl/PRET-R200/mc`, EJER=2026, PER=1, input per
 `AEATRetenciones2026.xsd`):
 
-- every test case's profile: 35 of 35 identical, including the help's 15.96 % example;
+- every test case's profile: 36 of 36 identical, including the help's 15.96 % example;
 - 88 boundary profiles (each exemption limit ±0.01 under the three contract types, the work income
   reduction breakpoints, the housing loan threshold, both sides of the 35,200 cap): all identical;
-- 4,000 random profiles (family situations, up to six descendants by whole or half, children under 3,
+- 5,000 random profiles (family situations, up to six descendants by whole or half, children under 3,
   ascendants shared by up to four, every disability level, ages over 65 and 75, mobility, housing loan,
   the 2 % and 15 % minimums, pay up to 400,000 EUR): all identical.
 

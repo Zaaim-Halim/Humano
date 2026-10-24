@@ -346,6 +346,8 @@ class ShippedPayrollTemplatesTest {
             .containsEntry("overtimeEmployerRate", "0.236")
             .containsEntry("forceMajeureOvertimeEmployeeRate", "0.02")
             .containsEntry("forceMajeureOvertimeEmployerRate", "0.12");
+        // Orden art. 32.1.a): IT 1.55% (1.30 / 0.25) for employees past retirement age (LGSS art. 152).
+        assertThat(values).containsEntry("retiredIncapacityEmployerRate", "0.013").containsEntry("retiredIncapacityEmployeeRate", "0.0025");
         // AEAT algorithm 2026, TABLA 2 example: the scale on 24 000 is 4 225.50 + 3 800 x 30% = 5 365.50.
         Table.Row row = spain
             .tables()

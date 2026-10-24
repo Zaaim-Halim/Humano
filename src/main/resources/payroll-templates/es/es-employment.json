@@ -23,7 +23,7 @@
     {
       "version": "2026.1.0",
       "date": "2026-10-24",
-      "summary": "2026: IRPF withholding rate per the AEAT algorithm (RIRPF arts. 81-86) with a year-to-date check that asks for the regularized rate; social security per Orden PJC/297/2026: common contingencies 28.30%, MEI 0.90%, unemployment 7.05% / 8.30%, FOGASA 0.20%, vocational training 0.70%, AT/EP from the tariff, solidarity contribution above 5,101.20, overtime in the AT/EP base with its 28.30% / 14% additional contribution. Withholding rates checked against the AEAT calculation service."
+      "summary": "2026: IRPF withholding rate per the AEAT algorithm (RIRPF arts. 81-86) with a year-to-date check that asks for the regularized rate; social security per Orden PJC/297/2026: common contingencies 28.30%, MEI 0.90%, unemployment 7.05% / 8.30%, FOGASA 0.20%, vocational training 0.70%, AT/EP from the tariff, solidarity contribution above 5,101.20, overtime in the AT/EP base with its 28.30% / 14% additional contribution, the LGSS art. 152 exemption past retirement age (IT 1.55% only). Withholding rates checked against the AEAT calculation service."
     }
   ],
   "sources": {
@@ -48,12 +48,12 @@
       "retrieved": "2026-10-24"
     },
     "orden-pjc-297-2026": {
-      "title": "Orden PJC/297/2026, de 30 de marzo, BOE núm. 79 de 31/03/2026 (BOE-A-2026-7296) — art. 1 (base: remuneración devengada en el mes más la parte proporcional de las pagas de vencimiento superior al mensual, importe anual dividido por 12; entre la base mínima y máxima del grupo), art. 2 (tope máximo 5.101,20; tope mínimo AT/EP 1.424,40), art. 3 (bases mínimas por grupo: 1.989,30 / 1.649,70 / 1.435,20 / 1.424,40; grupos 8-11 por día), art. 4 (contingencias comunes 28,30%: 23,60 empresa, 4,70 trabajador; AT/EP según la tarifa de la DA 61ª LGSS, a cargo de la empresa), art. 5 (horas extraordinarias), art. 7 (alta sin remuneración), art. 10 (pluriempleo), art. 16 (MEI 0,90%: 0,75 / 0,15), art. 17 (solidaridad 1,15% / 1,25% / 1,46% por tramos sobre 5.101,20), art. 28 (33,62 euros al finalizar contratos inferiores a 30 días), art. 33 (desempleo 7,05% indefinidos / 8,30% duración determinada; FOGASA 0,20%; formación profesional 0,70%: 0,60 / 0,10; base la de AT/EP), arts. 38-39 (tiempo parcial: bases mínimas por hora 11,98 / 9,94 / 8,65 / 8,58; AT/EP 8,58 por hora), art. 46 (contratos formativos)",
+      "title": "Orden PJC/297/2026, de 30 de marzo, BOE núm. 79 de 31/03/2026 (BOE-A-2026-7296) — art. 1 (base: remuneración devengada en el mes más la parte proporcional de las pagas de vencimiento superior al mensual, importe anual dividido por 12; entre la base mínima y máxima del grupo), art. 2 (tope máximo 5.101,20; tope mínimo AT/EP 1.424,40), art. 3 (bases mínimas por grupo: 1.989,30 / 1.649,70 / 1.435,20 / 1.424,40; grupos 8-11 por día), art. 4 (contingencias comunes 28,30%: 23,60 empresa, 4,70 trabajador; AT/EP según la tarifa de la DA 61ª LGSS, a cargo de la empresa), art. 5 (horas extraordinarias), art. 7 (alta sin remuneración), art. 10 (pluriempleo), art. 16 (MEI 0,90%: 0,75 / 0,15), art. 17 (solidaridad 1,15% / 1,25% / 1,46% por tramos sobre 5.101,20), art. 28 (33,62 euros al finalizar contratos inferiores a 30 días), art. 32.1.a) (IT por contingencias comunes en los supuestos del art. 152 LGSS: 1,55%, 1,30 empresa y 0,25 trabajador), art. 33 (desempleo 7,05% indefinidos / 8,30% duración determinada; FOGASA 0,20%; formación profesional 0,70%: 0,60 / 0,10; base la de AT/EP), arts. 38-39 (tiempo parcial: bases mínimas por hora 11,98 / 9,94 / 8,65 / 8,58; AT/EP 8,58 por hora), art. 46 (contratos formativos)",
       "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2026-7296",
       "retrieved": "2026-10-24"
     },
     "lgss": {
-      "title": "Texto refundido de la Ley General de la Seguridad Social, Real Decreto Legislativo 8/2015, consolidated text (última actualización publicada el 21/10/2026) — art. 19 bis (cotización adicional de solidaridad), art. 127 bis (mecanismo de equidad intergeneracional), art. 147 (base de cotización: las percepciones de vencimiento superior al mensual se prorratean a lo largo de los doce meses; 147.2.e: las horas extraordinarias solo computan en la base de AT/EP), disposición adicional sexagésima primera (tarifa de primas AT/EP)",
+      "title": "Texto refundido de la Ley General de la Seguridad Social, Real Decreto Legislativo 8/2015, consolidated text (última actualización publicada el 21/10/2026) — art. 19 bis (cotización adicional de solidaridad), art. 127 bis (mecanismo de equidad intergeneracional, en los supuestos en que se cotice por jubilación), art. 152 (exención de contingencias comunes salvo IT, desempleo, FOGASA y formación profesional a partir de la edad de jubilación del art. 205.1.a), salvo en las administraciones públicas), art. 153 (jubilación compatible con el trabajo: IT, AT/EP y solidaridad especial del 9%), art. 147 (base de cotización: las percepciones de vencimiento superior al mensual se prorratean a lo largo de los doce meses; 147.2.e: las horas extraordinarias solo computan en la base de AT/EP), disposición adicional sexagésima primera (tarifa de primas AT/EP)",
       "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2015-11724",
       "retrieved": "2026-10-24"
     },
@@ -255,6 +255,14 @@
         "min": 0,
         "max": "0.2",
         "description": "This employee's AT/EP rate where the tariff sets it by occupation (DA 61ª LGSS, cuadro II), replacing the employer's rate"
+      },
+      {
+        "key": "retirementSituation",
+        "type": "ENUM",
+        "required": false,
+        "defaultValue": "NONE",
+        "values": ["NONE", "PAST_RETIREMENT_AGE", "WORKING_PENSIONER"],
+        "description": "PAST_RETIREMENT_AGE: the employee has reached the ordinary retirement age of LGSS art. 205.1.a) and does not work for a public administration — exempt from common contingencies except IT, unemployment, FOGASA and vocational training (LGSS art. 152); WORKING_PENSIONER: draws a retirement pension compatible with the work (art. 153, 9% solidarity) — not supported"
       },
       {
         "key": "trainingContract",
@@ -654,6 +662,22 @@
         "source": "orden-pjc-297-2026"
       }
     ],
+    "retiredIncapacityEmployeeRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0025",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "retiredIncapacityEmployerRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.013",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
     "overtimeEmployeeRate": [
       {
         "from": "2026-01-01",
@@ -922,6 +946,21 @@
       "message": "Training contracts contribute fixed quotas (Orden PJC/297/2026 art. 46), which this template does not do"
     },
     {
+      "id": "noWorkingPensioner",
+      "type": "REQUIRE",
+      "source": "lgss",
+      "condition": "#employee['retirementSituation'] != 'WORKING_PENSIONER'",
+      "message": "Employees drawing a retirement pension compatible with the work contribute under LGSS art. 153 (IT, AT/EP and a 9% solidarity contribution), which this template does not do"
+    },
+    {
+      "id": "retiredWithinMaximum",
+      "type": "REQUIRE",
+      "source": "lgss",
+      "when": "#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE'",
+      "condition": "#socialEarnings - #earningsByComponent['BONUS'] - #earningsByComponent['OT'] + #divide(#employee['annualExtraPay'], 12, 2, 'HALF_UP') <= #p['maximumBase'] and #earningsByComponent['OT'] == 0",
+      "message": "For an employee past retirement age (LGSS art. 152), pay above the maximum base (solidarity contribution) or overtime is not supported"
+    },
+    {
       "id": "noMultipleEmployment",
       "type": "REQUIRE",
       "source": "orden-pjc-297-2026",
@@ -1041,7 +1080,7 @@
       "id": "estimatedContributions",
       "type": "VALUE",
       "source": "rirpf",
-      "expr": "12 * (#round(#estimateCommonBase * #p['commonEmployeeRate'], 2, 'HALF_UP') + #round(#estimateCommonBase * #p['equityEmployeeRate'], 2, 'HALF_UP') + #round(#estimateAccidentBase * (#employee['unemploymentRate'] == 'FIXED_TERM' ? #p['unemploymentFixedTermEmployeeRate'] : #p['unemploymentIndefiniteEmployeeRate']), 2, 'HALF_UP') + #round(#estimateAccidentBase * #p['trainingEmployeeRate'], 2, 'HALF_UP') + #round(#table.bracketTax('solidarity', 'EMPLOYEE', #estimateMonthly), 2, 'HALF_UP'))"
+      "expr": "#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE' ? 12 * #round(#estimateCommonBase * #p['retiredIncapacityEmployeeRate'], 2, 'HALF_UP') : 12 * (#round(#estimateCommonBase * #p['commonEmployeeRate'], 2, 'HALF_UP') + #round(#estimateCommonBase * #p['equityEmployeeRate'], 2, 'HALF_UP') + #round(#estimateAccidentBase * (#employee['unemploymentRate'] == 'FIXED_TERM' ? #p['unemploymentFixedTermEmployeeRate'] : #p['unemploymentIndefiniteEmployeeRate']), 2, 'HALF_UP') + #round(#estimateAccidentBase * #p['trainingEmployeeRate'], 2, 'HALF_UP') + #round(#table.bracketTax('solidarity', 'EMPLOYEE', #estimateMonthly), 2, 'HALF_UP'))"
     },
     {
       "id": "socialContributions",
@@ -1183,7 +1222,7 @@
       "label": "Common contingencies (contingencias comunes)",
       "ledger": "SOCIAL_SECURITY",
       "source": "orden-pjc-297-2026",
-      "when": "#contributionPay > 0",
+      "when": "#contributionPay > 0 and !(#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE')",
       "base": "#commonBase",
       "employee": {
         "rate": "#p['commonEmployeeRate']"
@@ -1193,12 +1232,27 @@
       }
     },
     {
+      "id": "temporaryIncapacity",
+      "type": "CONTRIBUTION",
+      "label": "Temporary incapacity past retirement age (IT, art. 152 LGSS)",
+      "ledger": "SOCIAL_SECURITY",
+      "source": "orden-pjc-297-2026",
+      "when": "#contributionPay > 0 and #employee['retirementSituation'] == 'PAST_RETIREMENT_AGE'",
+      "base": "#commonBase",
+      "employee": {
+        "rate": "#p['retiredIncapacityEmployeeRate']"
+      },
+      "employer": {
+        "rate": "#p['retiredIncapacityEmployerRate']"
+      }
+    },
+    {
       "id": "intergenerationalEquity",
       "type": "CONTRIBUTION",
       "label": "Intergenerational equity mechanism (MEI)",
       "ledger": "PENSION_CONTRIBUTION",
       "source": "orden-pjc-297-2026",
-      "when": "#contributionPay > 0",
+      "when": "#contributionPay > 0 and !(#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE')",
       "base": "#commonBase",
       "employee": {
         "rate": "#p['equityEmployeeRate']"
@@ -1213,7 +1267,7 @@
       "label": "Unemployment (desempleo)",
       "ledger": "UNEMPLOYMENT",
       "source": "orden-pjc-297-2026",
-      "when": "#contributionPay > 0",
+      "when": "#contributionPay > 0 and !(#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE')",
       "base": "#accidentBase",
       "employee": {
         "rate": "#employee['unemploymentRate'] == 'FIXED_TERM' ? #p['unemploymentFixedTermEmployeeRate'] : #p['unemploymentIndefiniteEmployeeRate']"
@@ -1228,7 +1282,7 @@
       "label": "Wage Guarantee Fund (FOGASA)",
       "ledger": "OTHER",
       "source": "orden-pjc-297-2026",
-      "when": "#contributionPay > 0",
+      "when": "#contributionPay > 0 and !(#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE')",
       "base": "#accidentBase",
       "employer": {
         "rate": "#p['wageGuaranteeRate']"
@@ -1240,7 +1294,7 @@
       "label": "Vocational training (formación profesional)",
       "ledger": "OTHER",
       "source": "orden-pjc-297-2026",
-      "when": "#contributionPay > 0",
+      "when": "#contributionPay > 0 and !(#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE')",
       "base": "#accidentBase",
       "employee": {
         "rate": "#p['trainingEmployeeRate']"
@@ -1304,7 +1358,7 @@
     }
   ],
   "limitations": [
-    "Common tax territory, Régimen General employees paid monthly in EUR in 2026, for whole months with the payment in the same year. Work performed in the Basque Country or Navarre, residents of Ceuta, Melilla and La Palma, contribution groups 8 to 11, training contracts, multiple employment, part months and unpaid leave are refused. Overtime (OT) enters only the AT/EP base and carries the additional contribution of Orden art. 5 (28.30%, or 14% for force majeure); it must be paid with ordinary pay in the same run.",
+    "Common tax territory, Régimen General employees paid monthly in EUR in 2026, for whole months with the payment in the same year. Work performed in the Basque Country or Navarre, residents of Ceuta, Melilla and La Palma, contribution groups 8 to 11, training contracts, multiple employment, part months, unpaid leave and working pensioners (LGSS art. 153) are refused. Employees past the ordinary retirement age contribute only IT (1.30% / 0.25%) and AT/EP (LGSS art. 152; Orden art. 32.1.a), not when paid above the maximum base or overtime. Overtime (OT) enters only the AT/EP base and carries the additional contribution of Orden art. 5 (28.30%, or 14% for force majeure); it must be paid with ordinary pay in the same run.",
     "The withholding rate is recomputed each run from the annual figures entered (annual pay, contributions, family data from modelo 145) and applied to the whole payment. RIRPF art. 87 regularization is not automated: once the data change during the year the run refuses until the employer enters the regularized rate (withholdingRateOverride, REGULARIZED). A higher rate requested under art. 88.5 can be entered as REQUESTED_HIGHER.",
     "Without annualSocialContributions the expected employee contributions are estimated as 12 months on annualPay / 12 at full-time bases.",
     "Not modelled: dependants with a disability, court-ordered payments (arts. 83.3.f, 85.2), irregular income (art. 83.3.a), pensioners and the unemployed, pay in kind and its ingreso a cuenta, arrears of earlier years (15% fixed rate), fixed rates (directors, courses, authors), the special regime for workers posted to Spain, sick leave and birth leave months (their own bases), contribution reductions and incentives, and the 33.62 EUR charge at the end of fixed-term contracts under 30 days (Orden art. 28).",
@@ -4028,6 +4082,50 @@
       ]
     },
     {
+      "name": "past retirement age: only IT and AT/EP",
+      "evidence": "LGSS art. 152: no common contingencies (but IT), unemployment, FOGASA or training; Orden art. 32.1.a): IT 1.30% / 0.25% on 2,000; no MEI (art. 127 bis); AT/EP remains. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1958-04-01",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "24000.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "retirementSituation": "PAST_RETIREMENT_AGE"
+      },
+      "expectLines": [
+        {
+          "step": "temporaryIncapacity",
+          "side": "EMPLOYEE",
+          "amount": "5.00"
+        },
+        {
+          "step": "temporaryIncapacity",
+          "side": "EMPLOYER",
+          "amount": "26.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "30.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "289.40"
+        }
+      ]
+    },
+    {
       "name": "year to date consistent with the rate, including a second run in a month",
       "evidence": "Earlier lines at 15.96%: 2,375 x 3 months and a 1,000 extra run: 379.05 x 3 + 159.60 = 1,296.75 on 8,125. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
       "periodStart": "2026-04-01",
@@ -4571,6 +4669,52 @@
         "trainingContract": "true"
       },
       "expectError": "Training"
+    },
+    {
+      "name": "working pensioner refused",
+      "evidence": "LGSS art. 153",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1958-04-01",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "retirementSituation": "WORKING_PENSIONER"
+      },
+      "expectError": "art. 153"
+    },
+    {
+      "name": "past retirement age above the maximum base refused",
+      "evidence": "solidarity for exempt employees not settled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "6000.00",
+      "fullPeriod": true,
+      "birthDate": "1958-04-01",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "72000.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "1",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "retirementSituation": "PAST_RETIREMENT_AGE"
+      },
+      "expectError": "past retirement age"
     },
     {
       "name": "multiple employment refused",
