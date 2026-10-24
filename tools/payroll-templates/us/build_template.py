@@ -32,13 +32,18 @@ SOURCES = {
         "title": "IRS Publication 15 (2026), (Circular E) Employer's Tax Guide — section 9 (social security and Medicare: 6.2% to $184,500, 1.45%, Additional Medicare 0.9% over $200,000) and section 14 (FUTA 6.0% on $7,000, credit up to 5.4%)",
         "url": "https://www.irs.gov/pub/irs-pdf/p15.pdf",
     },
+    "irs-notice-1392": {
+        "title": "IRS Notice 1392 (Rev. January 2020), Supplemental Form W-4 Instructions for Nonresident Aliens — Step 1(c): 'Check the Single or Married filing separately box regardless of your actual marital status'; 'Do not claim that you are exempt from withholding'; PDF SHA-256 06f5a942f0497be9930d8ffc84d1ba9641cc21a56ffed60c0cccdf59a00ed61f",
+        "url": "https://www.irs.gov/pub/irs-pdf/n1392.pdf",
+        "retrieved": "2026-10-24",
+    },
     "irs-fw4-2026": {
         "title": "IRS Form W-4 (2026), Employee's Withholding Certificate — steps 1(c), 2(c), 3, 4(a)-(c) and exemption from withholding",
         "url": "https://www.irs.gov/pub/irs-pdf/fw4.pdf",
     },
 }
 for s in SOURCES.values():
-    s["retrieved"] = RETRIEVED
+    s.setdefault("retrieved", RETRIEVED)
 
 STATUSES = {"SINGLE": "SINGLE", "MARRIED_FILING_JOINTLY": "MFJ", "HEAD_OF_HOUSEHOLD": "HOH"}
 # Worksheet 1A line 1g (no Step 2 checkbox), line 1k (2019 or earlier Forms W-4, per allowance).
@@ -293,6 +298,10 @@ def test_cases(rows):
         case("Form W-4 steps 2-4 on a 2019 form are refused", "the 2019 or earlier form has no steps 2-4",
              "MONTHLY", "5000.00", {"w4Version": "FORM_2019_OR_EARLIER", "filingStatus": "SINGLE", "dependentsAmount": "2000"},
              expectError="steps 2"),
+        case("nonresident alien married filing jointly is refused", "IRS Notice 1392, Step 1(c): Single or Married filing separately regardless of marital status",
+             "MONTHLY", "5000.00", {"filingStatus": "MARRIED_FILING_JOINTLY", "nonresidentAlien": "true"}, expectError="Notice 1392"),
+        case("nonresident alien claiming exemption is refused", "IRS Notice 1392: do not claim that you are exempt from withholding",
+             "MONTHLY", "5000.00", {"filingStatus": "SINGLE", "nonresidentAlien": "true", "exemptFromWithholding": "true"}, expectError="exemption"),
         case("2027 is not covered", "2027 tables are published in December 2026", "MONTHLY", "5000.00", single,
              period=("2027-01-01", "2027-01-31", "2027-01-29"), expectError="a newer template version is needed"),
     ]
@@ -333,7 +342,7 @@ def main():
         "schemaVersion": 1,
         "id": "us-federal-employment",
         "name": "United States — federal income tax withholding, FICA and FUTA",
-        "version": "2026.1.0",
+        "version": "2026.1.1",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "US"},
         "validity": {"from": FROM, "to": TO},
@@ -342,7 +351,9 @@ def main():
         "taxYearStart": "--01-01",
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
-        "changelog": [{"version": "2026.1.0", "date": RETRIEVED,
+        "changelog": [{"version": "2026.1.1", "date": "2026-10-24",
+                       "summary": "Corrects silent errors: a nonresident alien marked married filing jointly or head of household, or claiming exemption from withholding, is now refused (IRS Notice 1392) instead of being under-withheld."},
+                      {"version": "2026.1.0", "date": RETRIEVED,
                        "summary": "Wages paid in 2026: Pub 15-T percentage method for automated payroll systems (2020 or later and 2019 or earlier Forms W-4, nonresident alien adjustment); social security, Medicare, Additional Medicare and FUTA per Pub 15."}],
         "sources": SOURCES,
         "inputs": {
@@ -422,6 +433,12 @@ def main():
              "message": "Form W-4 steps 2-4(b) only exist on 2020 or later forms; a 2019 or earlier form uses allowances"},
             {"id": "noAllowancesOnNewForm", "type": "REQUIRE", "when": modern, "condition": "#employee['allowances'] == 0",
              "message": "Withholding allowances only exist on 2019 or earlier Forms W-4"},
+            {"id": "nonresidentFilingStatus", "type": "REQUIRE", "source": "irs-notice-1392", "when": "#employee['nonresidentAlien']",
+             "condition": "#employee['filingStatus'] == 'SINGLE'",
+             "message": "A nonresident alien checks Single or Married filing separately on Form W-4 regardless of actual marital status (Notice 1392): use filingStatus SINGLE"},
+            {"id": "nonresidentNotExempt", "type": "REQUIRE", "source": "irs-notice-1392", "when": "#employee['nonresidentAlien']",
+             "condition": "!#employee['exemptFromWithholding']",
+             "message": "A nonresident alien can't claim exemption from withholding on Form W-4 (Notice 1392)"},
             {"id": "broughtForward", "type": "VALUE",
              "expr": "#employee['broughtForwardYear'] != null and #employee['broughtForwardYear'] == #taxYear"},
             {"id": "earlierPayThisYear", "type": "REQUIRE",

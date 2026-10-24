@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "us-federal-employment",
   "name": "United States — federal income tax withholding, FICA and FUTA",
-  "version": "2026.1.0",
+  "version": "2026.1.1",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "US"
@@ -21,6 +21,11 @@
   },
   "changelog": [
     {
+      "version": "2026.1.1",
+      "date": "2026-10-24",
+      "summary": "Corrects silent errors: a nonresident alien marked married filing jointly or head of household, or claiming exemption from withholding, is now refused (IRS Notice 1392) instead of being under-withheld."
+    },
+    {
       "version": "2026.1.0",
       "date": "2026-10-20",
       "summary": "Wages paid in 2026: Pub 15-T percentage method for automated payroll systems (2020 or later and 2019 or earlier Forms W-4, nonresident alien adjustment); social security, Medicare, Additional Medicare and FUTA per Pub 15."
@@ -36,6 +41,11 @@
       "title": "IRS Publication 15 (2026), (Circular E) Employer's Tax Guide — section 9 (social security and Medicare: 6.2% to $184,500, 1.45%, Additional Medicare 0.9% over $200,000) and section 14 (FUTA 6.0% on $7,000, credit up to 5.4%)",
       "url": "https://www.irs.gov/pub/irs-pdf/p15.pdf",
       "retrieved": "2026-10-20"
+    },
+    "irs-notice-1392": {
+      "title": "IRS Notice 1392 (Rev. January 2020), Supplemental Form W-4 Instructions for Nonresident Aliens — Step 1(c): 'Check the Single or Married filing separately box regardless of your actual marital status'; 'Do not claim that you are exempt from withholding'; PDF SHA-256 06f5a942f0497be9930d8ffc84d1ba9641cc21a56ffed60c0cccdf59a00ed61f",
+      "url": "https://www.irs.gov/pub/irs-pdf/n1392.pdf",
+      "retrieved": "2026-10-24"
     },
     "irs-fw4-2026": {
       "title": "IRS Form W-4 (2026), Employee's Withholding Certificate — steps 1(c), 2(c), 3, 4(a)-(c) and exemption from withholding",
@@ -667,6 +677,22 @@
       "when": "#employee['w4Version'] == 'FORM_2020_OR_LATER'",
       "condition": "#employee['allowances'] == 0",
       "message": "Withholding allowances only exist on 2019 or earlier Forms W-4"
+    },
+    {
+      "id": "nonresidentFilingStatus",
+      "type": "REQUIRE",
+      "source": "irs-notice-1392",
+      "when": "#employee['nonresidentAlien']",
+      "condition": "#employee['filingStatus'] == 'SINGLE'",
+      "message": "A nonresident alien checks Single or Married filing separately on Form W-4 regardless of actual marital status (Notice 1392): use filingStatus SINGLE"
+    },
+    {
+      "id": "nonresidentNotExempt",
+      "type": "REQUIRE",
+      "source": "irs-notice-1392",
+      "when": "#employee['nonresidentAlien']",
+      "condition": "!#employee['exemptFromWithholding']",
+      "message": "A nonresident alien can't claim exemption from withholding on Form W-4 (Notice 1392)"
     },
     {
       "id": "broughtForward",
@@ -3004,6 +3030,37 @@
         "dependentsAmount": "2000"
       },
       "expectError": "steps 2"
+    },
+    {
+      "name": "nonresident alien married filing jointly is refused",
+      "evidence": "IRS Notice 1392, Step 1(c): Single or Married filing separately regardless of marital status",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "MARRIED_FILING_JOINTLY",
+        "nonresidentAlien": "true"
+      },
+      "expectError": "Notice 1392"
+    },
+    {
+      "name": "nonresident alien claiming exemption is refused",
+      "evidence": "IRS Notice 1392: do not claim that you are exempt from withholding",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5000.00",
+      "employer": {},
+      "employee": {
+        "filingStatus": "SINGLE",
+        "nonresidentAlien": "true",
+        "exemptFromWithholding": "true"
+      },
+      "expectError": "exemption"
     },
     {
       "name": "2027 is not covered",
