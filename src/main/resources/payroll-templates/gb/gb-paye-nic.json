@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "gb-paye-nic",
   "name": "United Kingdom — PAYE income tax and Class 1 National Insurance",
-  "version": "2026.1.0",
+  "version": "2026.1.1",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "GB"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.1",
+      "date": "2026-10-24",
+      "summary": "Corrects a silent error: NI categories C, S and K (no employee NICs, for employees over State Pension age) are refused for employees under 66."
+    },
     {
       "version": "2026.1.0",
       "date": "2026-10-20",
@@ -518,6 +523,13 @@
       "message": "NI category H is for apprentices under 25"
     },
     {
+      "id": "categoryPensionAge",
+      "type": "REQUIRE",
+      "when": "#employee['niCategory'] == 'C' or #employee['niCategory'] == 'S' or #employee['niCategory'] == 'K'",
+      "condition": "#ageAtPeriodEnd >= 66",
+      "message": "NI categories C, S and K are for employees over State Pension age, which nobody under 66 has reached in 2026/27"
+    },
+    {
       "id": "taxPeriod",
       "type": "VALUE",
       "expr": "#frequency == 'MONTHLY' ? #taxMonth : #taxWeek"
@@ -632,7 +644,7 @@
     "Mid-year starts and adoptions need the pay and tax brought forward for the tax year (P45 and/or previous payroll) on a cumulative code.",
     "Payrolled benefits in kind are not included; the regulatory limit is applied to the whole pay for the period.",
     "Employment Allowance, the Apprenticeship Levy and Small Employers' Relief are employer-level reliefs claimed outside the payslip.",
-    "The NI category letter, including employer reliefs (freeport, investment zone, veterans), is the employer's responsibility; M, Z and H are checked against age.",
+    "The NI category letter, including employer reliefs (freeport, investment zone, veterans), is the employer's responsibility; M, Z and H are checked against age, and C, S and K are refused under 66. An employee past State Pension age left on a category with employee NICs (e.g. A) is not detected, since State Pension age depends on the exact birth date and the template does not require one.",
     "Status LAW_DERIVED: PAYE amounts of eight cases reproduce HMRC Tables B-D examples and NICs of four cases reproduce HMRC NI guidance examples; the others are derived from the same specifications."
   ],
   "testCases": [
@@ -1324,6 +1336,25 @@
         "broughtForwardTax": "2412.00"
       },
       "expectError": "under 21"
+    },
+    {
+      "name": "category C under State Pension age is refused",
+      "evidence": "Categories C, S and K have no employee NICs and are for employees over State Pension age (66 at the earliest in 2026/27)",
+      "periodStart": "2026-10-01",
+      "periodEnd": "2026-10-31",
+      "paymentDate": "2026-10-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "C",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "18000.00",
+        "broughtForwardTax": "2412.00"
+      },
+      "expectError": "State Pension age"
     },
     {
       "name": "tax code that is not a code",
