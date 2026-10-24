@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "ro-employment",
   "name": "Romania — salary income",
-  "version": "2026.1.0",
+  "version": "2026.1.1",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "RO"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.1",
+      "date": "2026-10-24",
+      "summary": "Corrects an error: the partial-month tax-free amount (nonTaxableAmountOverride) is capped at the statutory 300 lei (January-June) / 200 lei (July-December), which OUG 89/2025 art. III(4) only allows to be reduced; before, up to 300 lei was accepted in the second half of the year."
+    },
     {
       "version": "2026.1.0",
       "date": "2026-10-23",
@@ -120,7 +125,7 @@
         "required": false,
         "min": 0,
         "max": 300,
-        "description": "Tax-free amount in lei replacing 300 / 200 for a partial month (OUG 89/2025 art. III(4): prorated by the part of the month at the minimum wage)"
+        "description": "Tax-free amount in lei replacing 300 / 200 for a partial month (OUG 89/2025 art. III(4): prorated by the part of the month at the minimum wage); capped at the month's statutory amount"
       }
     ]
   },
@@ -510,7 +515,7 @@
       "type": "VALUE",
       "when": "#nonTaxableEligible == 1",
       "source": "oug-89-2025",
-      "expr": "#min(#employee['nonTaxableAmountOverride'] != null ? #employee['nonTaxableAmountOverride'] : #p['nonTaxableAmount'], #grossIncome)"
+      "expr": "#min(#employee['nonTaxableAmountOverride'] != null ? #min(#employee['nonTaxableAmountOverride'], #p['nonTaxableAmount']) : #p['nonTaxableAmount'], #grossIncome)"
     },
     {
       "id": "contributionBase",
@@ -1165,6 +1170,44 @@
           "step": "incomeTax",
           "side": "TAX",
           "amount": "520"
+        }
+      ]
+    },
+    {
+      "name": "tax-free override above the July amount is capped at 200",
+      "evidence": "OUG 89 art. III(1), (4): 200 lei from July, which a partial month can only reduce ('se diminuează'); an override of 300 left from June counts as 200. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-08-01",
+      "periodEnd": "2026-08-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4325.00",
+      "fullPeriod": true,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true",
+        "contractBaseSalaryAtMinimum": "true",
+        "nonTaxableAmountOverride": "300"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "1031"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "413"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "93"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "182"
         }
       ]
     },

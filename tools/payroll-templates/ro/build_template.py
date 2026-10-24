@@ -104,7 +104,8 @@ def expected_lines(c):
     # OUG 89/2025 art. III: full-time, main job, contract base salary = minimum wage, gross within the cap.
     eligible = main and emp.get("contractBaseSalaryAtMinimum") == "true" and Decimal(0) < gross <= cap
     if eligible:
-        amount = Decimal(emp["nonTaxableAmountOverride"]) if "nonTaxableAmountOverride" in emp else tax_free
+        # art. III(4): the 300 / 200 lei amount can only be reduced ("se diminuează") for a partial month
+        amount = min(Decimal(emp["nonTaxableAmountOverride"]), tax_free) if "nonTaxableAmountOverride" in emp else tax_free
         non_taxable = min(amount, gross)
     else:
         non_taxable = Decimal(0)
@@ -194,6 +195,8 @@ def test_cases():
              "6000.00", emp(incomeTaxExempt="true"), birth=ADULT),
         case("tax base ending in 50 bani rounds down", "Norme pct. 4: 5,204.50 -> 5,204, so the tax is 520 (not 521). " + law,
              "8007.50", emp(main=False)),
+        case("tax-free override above the July amount is capped at 200", "OUG 89 art. III(1), (4): 200 lei from July, which a partial month can only reduce ('se diminuează'); an override of 300 left from June counts as 200. " + law,
+             "4325.00", emp(**AT_MINIMUM, nonTaxableAmountOverride="300"), month=8, birth=ADULT),
         case("partial month with both overrides", "OUG 89 art. III(4) and art. 146 (5^6): tax-free amount and floor prorated by the tenant. " + law,
              "2025.00", emp(**AT_MINIMUM, nonTaxableAmountOverride="150", minimumContributionBase="1875"), full=False, birth=ADULT),
     ]
@@ -232,7 +235,7 @@ def main():
         "schemaVersion": 1,
         "id": "ro-employment",
         "name": "Romania — salary income",
-        "version": "2026.1.0",
+        "version": "2026.1.1",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "RO"},
         "validity": {"from": FROM, "to": TO},
@@ -242,6 +245,8 @@ def main():
         "dateBasis": "PERIOD",
         "rounding": {"scale": 0, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.1", "date": "2026-10-24",
+             "summary": "Corrects an error: the partial-month tax-free amount (nonTaxableAmountOverride) is capped at the statutory 300 lei (January-June) / 200 lei (July-December), which OUG 89/2025 art. III(4) only allows to be reduced; before, up to 300 lei was accepted in the second half of the year."},
             {"version": "2026.1.0", "date": RETRIEVED,
              "summary": "2026: CAS 25 %, CASS 10 %, CAM 2.25 %, income tax 10 % with the art. 77 deduction; minimum wage 4,050 / 4,325 lei and the OUG 89/2025 tax-free amount 300 / 200 lei, changing on 1 July."}
         ],
@@ -265,7 +270,7 @@ def main():
                 {"key": "minimumContributionBase", "type": "DECIMAL", "required": False, "min": 0,
                  "description": "Minimum CAS/CASS base in lei replacing the minimum wage less the tax-free amount, for months in which the contract was active only some working days (art. 146 alin. (5^6))"},
                 {"key": "nonTaxableAmountOverride", "type": "DECIMAL", "required": False, "min": 0, "max": 300,
-                 "description": "Tax-free amount in lei replacing 300 / 200 for a partial month (OUG 89/2025 art. III(4): prorated by the part of the month at the minimum wage)"},
+                 "description": "Tax-free amount in lei replacing 300 / 200 for a partial month (OUG 89/2025 art. III(4): prorated by the part of the month at the minimum wage); capped at the month's statutory amount"},
             ],
         },
         "parameters": {name: parameter(spec) for name, spec in PARAMS.items()},
@@ -296,7 +301,7 @@ def main():
              "condition": "#fullPeriod and #reductions == 0",
              "message": "Partial month at the minimum wage: the tax-free amount is prorated (OUG 89/2025 art. III(4)), so set the employee's nonTaxableAmountOverride"},
             {"id": "nonTaxable", "type": "VALUE", "when": "#nonTaxableEligible == 1", "source": "oug-89-2025",
-             "expr": "#min(#employee['nonTaxableAmountOverride'] != null ? #employee['nonTaxableAmountOverride'] : #p['nonTaxableAmount'], #grossIncome)"},
+             "expr": "#min(#employee['nonTaxableAmountOverride'] != null ? #min(#employee['nonTaxableAmountOverride'], #p['nonTaxableAmount']) : #p['nonTaxableAmount'], #grossIncome)"},
             {"id": "contributionBase", "type": "VALUE", "expr": "#pos(#socialIncome - #nonTaxable)", "source": "cod-fiscal"},
             {"id": "cas", "type": "CONTRIBUTION", "label": "Pension contribution (CAS)", "ledger": "PENSION_CONTRIBUTION", "source": "cod-fiscal",
              "base": "#contributionBase", "employee": {"rate": "#p['casRate']"}},

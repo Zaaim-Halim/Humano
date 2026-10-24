@@ -23,6 +23,9 @@ Notes found while researching:
   50 bani up reproduces both published minimum-wage net figures (CASS 412.50 → 413).
 - The deduction band uses the whole gross salary, including the tax-free amount (Norme pct. 14 alin. (1)
   defines the gross monthly salary as all salary income of the month).
+- OUG 89/2025 art. III(4) only lets the 300 / 200 lei tax-free amount be reduced ("se diminuează") for a
+  partial month, so `nonTaxableAmountOverride` is capped at the month's statutory amount (corrected in
+  2026.1.1; before, 300 lei was accepted from July).
 
 ## Rebuilding
 
