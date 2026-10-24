@@ -285,6 +285,32 @@ class ShippedPayrollTemplatesTest {
     }
 
     @Test
+    void estoniaFiguresMatchTheActsAndTheBudgetAct() {
+        Map<String, String> values = catalog
+            .find("ee-employment")
+            .orElseThrow()
+            .parameters()
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get(0).value().toPlainString()));
+
+        // TuMS § 4 lg 1: 22%; § 42 lg 1: 1/12 of 8 400 EUR; § 23^5: 1/12 of 9 312 EUR at pension age.
+        assertThat(values)
+            .containsEntry("incomeTaxRate", "0.22")
+            .containsEntry("monthlyTaxFreeAmount", "700")
+            .containsEntry("monthlyTaxFreeAmountPensionAge", "776");
+        // VV määrus nr 78/2025: unemployment insurance 1.6% / 0.8% for 2026-2029.
+        assertThat(values).containsEntry("unemploymentEmployeeRate", "0.016").containsEntry("unemploymentEmployerRate", "0.008");
+        // SMS § 7 lg 1: 33%; 2026 State Budget Act § 2 lg 6: monthly base 886 EUR.
+        assertThat(values).containsEntry("socialTaxRate", "0.33").containsEntry("socialTaxMonthlyBase", "886");
+        // KoPS § 9: 2%, or 4% or 6% by choice.
+        assertThat(values)
+            .containsEntry("fundedPension2", "0.02")
+            .containsEntry("fundedPension4", "0.04")
+            .containsEntry("fundedPension6", "0.06");
+    }
+
+    @Test
     void ukFiguresMatchHmrcPublications() {
         PayrollTemplate uk = catalog.find("gb-paye-nic").orElseThrow();
         Map<String, String> values = uk

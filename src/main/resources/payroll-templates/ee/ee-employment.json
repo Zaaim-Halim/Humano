@@ -1,0 +1,980 @@
+{
+  "schemaVersion": 1,
+  "id": "ee-employment",
+  "name": "Estonia — employment (tööleping)",
+  "version": "2026.1.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": {
+    "country": "EE"
+  },
+  "validity": {
+    "from": "2026-01-01",
+    "to": "2026-12-31"
+  },
+  "currency": "EUR",
+  "payFrequencies": ["MONTHLY"],
+  "taxYearStart": "--01-01",
+  "dateBasis": "PAYMENT_DATE",
+  "rounding": {
+    "scale": 2,
+    "mode": "HALF_UP"
+  },
+  "changelog": [
+    {
+      "version": "2026.1.0",
+      "date": "2026-10-24",
+      "summary": "2026: income tax 22% with the flat 700 EUR monthly tax-free amount (776 EUR at pension age); unemployment insurance 1.6% / 0.8%; funded pension 2%, 4% or 6%; social tax 33% with the 886 EUR monthly minimum."
+    }
+  ],
+  "sources": {
+    "tums": {
+      "title": "Tulumaksuseadus (Income Tax Act), consolidated text RT I, 09.07.2026, 66 — § 4 lg 1 (tulumaksu määr 22%), § 23 lg 1 (maksuvaba tulu 8400 eurot), § 23^5 lg 1 (vanaduspensionieas 9312 eurot alates maksustamisperioodist, kui isik jõuab vanaduspensioniikka), § 42 lg 1 (kirjaliku avalduse alusel igas kalendrikuus mitte rohkem kui 1/12 maksuvabast tulust), lg 1^3 (vanaduspensionieas arvab Sotsiaalkindlustusamet maha pensionist, vahe väljamaksja avalduse alusel), lg 2 (avaldus ainult ühele tulumaksu kinnipidajale), lg 5–6 (kinnipeetud töötuskindlustusmakse ja kohustusliku kogumispensioni makse arvatakse enne tulumaksu arvutamist maha)",
+      "url": "https://www.riigiteataja.ee/akt/TuMS",
+      "retrieved": "2026-10-24"
+    },
+    "sms": {
+      "title": "Sotsiaalmaksuseadus (Social Tax Act), consolidated text RT I, 21.05.2026, 19 — § 2 lg 2 (vähemalt kuumääralt), lg 2^1 (mitme tööandja korral maksab kuumääralt maksuvaba tulu arvestav tööandja), lg 3 (proportsionaalselt töötatud ajaga: tööle asumise või lahkumise kuul, töölepingu seaduse § 19 alusel töö tegemisest keeldumisel, mitte poolte kokkuleppel antud tasustamata puhkusel), lg 4 (kuumäära ei kohaldata: lühendatud tööaeg, alla 3-aastase või kolme alla 19-aastase lapse vanem, RaKS § 5 lg 4 p 5, endine töötu 12 kuud, riikliku pensioni saaja või osalise/puuduva töövõimega isik, volikogu liige), § 6 lg 1 p 5 (riik maksab osalise või puuduva töövõimega töötaja eest), § 7 lg 1 (33%)",
+      "url": "https://www.riigiteataja.ee/akt/SMS",
+      "retrieved": "2026-10-24"
+    },
+    "rea-2026": {
+      "title": "2026. aasta riigieelarve seadus (State Budget Act 2026), RT I, 18.12.2025, 22 — § 2 lg 6: 'Sotsiaalmaksuseaduse § 2^1 alusel kehtestatav sotsiaalmaksu maksmise aluseks olev kuumäär on 886 eurot'",
+      "url": "https://www.riigiteataja.ee/akt/118122025022",
+      "retrieved": "2026-10-24"
+    },
+    "tkindls": {
+      "title": "Töötuskindlustuse seadus (Unemployment Insurance Act), consolidated text RT I, 30.06.2026, 40 — § 40 lg 1 (makse objekt; vanaduspensioniealisele ainult tööandja makse), § 41 (määrad kehtestab Vabariigi Valitsus), § 42 lg 1 p 1 (kindlustatu makse kinnipidamise kohustus lõpeb vanaduspensioniikka jõudmise või ennetähtaegse või paindliku vanaduspensioni määramise kuu viimasel kuupäeval), lg 3 (ümardatakse sendi täpsusega)",
+      "url": "https://www.riigiteataja.ee/akt/TKindlS",
+      "retrieved": "2026-10-24"
+    },
+    "vv-78-2025": {
+      "title": "Vabariigi Valitsuse 25.09.2025 määrus nr 78 'Kindlustatu ja tööandja töötuskindlustusmakse määrad aastatel 2026–2029', RT I, 30.09.2025, 3 — § 1: kindlustatu 1,6%, tööandja 0,8%; jõustub 1. jaanuaril 2026 (määrus nr 59 tunnistatakse kehtetuks)",
+      "url": "https://www.riigiteataja.ee/akt/130092025003",
+      "retrieved": "2026-10-24"
+    },
+    "kops": {
+      "title": "Kogumispensionide seadus (Funded Pensions Act), consolidated text RT I, 03.12.2024, 16 — § 7 (makse objekt ja kohustuse algus/lõpp), § 8 lg 1 (periood kalendrikuu), § 9 (makse määr 2%, valikuna 4% või 6% vähemalt kalendriaastaks), § 11 lg 1 p 1 (tööandja kontrollib isikukoodi järgi ja peab kinni valitud määras)",
+      "url": "https://www.riigiteataja.ee/akt/KoPS",
+      "retrieved": "2026-10-24"
+    },
+    "rm-17-2013": {
+      "title": "Rahandusministri 15.03.2013 määrus nr 17 'Sotsiaalmaksu arvestamise ning sotsiaalmaksu andmete Sotsiaalkindlustusametile ja Tervisekassale väljastamise kord', RT I, 28.04.2023, 3 — § 2 (kuumäär tasu väljamaksmiseks kokku lepitud kuu eest; kuu, milles sisaldub palgapäev), § 3–4 (tasu maksmine kokkulepitust erineval kuul), § 5 (mitme tööandja korral kuumäärast teise tööandja makstud tasu lahutamisel, kuid mitte vähem kui makstud tasult), § 6 lg 2 (töötatud aja proportsioon: kalendripäevade arv jagatud 30-ga), § 7 (lõpparve)",
+      "url": "https://www.riigiteataja.ee/akt/122032013001",
+      "retrieved": "2026-10-24"
+    },
+    "emta-2026": {
+      "title": "EMTA, 'Maksumuudatused 2026. aastal' (27.11.2025) and 'Maksuvaba tulu arvestamine' — 22%; 700 eurot kuus (vanaduspensionieas 776); avaldus ainult ühele tööandjale; maksuvaba tulu kuni töötasu väljamakse ulatuses; kuumäär 886 eurot, miinimum 292,38 eurot; töötuskindlustus 1,6% / 0,8%; kogumispension 2%, 4% või 6%; maksustamine on kassapõhine (detsembri 2025 töötasu jaanuaris 2026 väljamaksmisel 2026. aasta määrad)",
+      "url": "https://www.emta.ee/uudised/maksumuudatused-2026",
+      "retrieved": "2026-10-24"
+    }
+  },
+  "inputs": {
+    "employer": [],
+    "employee": [
+      {
+        "key": "taxFreeAmount",
+        "type": "DECIMAL",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "max": 776,
+        "description": "Monthly tax-free amount from the employee's written application (TuMS § 42 lg 1): up to 700 EUR (0 without an application; one employer only, lg 2). From the year of reaching old-age pension age up to 776 EUR less what the pension already uses (§ 23^5, § 42 lg 1^3)"
+      },
+      {
+        "key": "pensionAge",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The employee reaches or has reached old-age pension age in this tax year (TuMS § 23^5): the tax-free amount may be up to 776 EUR"
+      },
+      {
+        "key": "unemploymentInsuranceEnded",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "No employee unemployment insurance: from the month after reaching old-age pension age or being granted an early or flexible old-age pension (TKindlS § 42 lg 1 p 1); the employer's 0.8% remains"
+      },
+      {
+        "key": "fundedPensionRate",
+        "type": "ENUM",
+        "required": true,
+        "values": ["NONE", "2", "4", "6"],
+        "description": "Mandatory funded pension (II pillar) contribution: 2%, or 4% or 6% if chosen (KoPS § 9); NONE if the employee is not a contributor"
+      },
+      {
+        "key": "otherEmployment",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The employee also works for another employer: the social tax minimum is then paid only by the employer applying the tax-free amount (SMS § 2 lg 2^1)"
+      },
+      {
+        "key": "socialTaxMinimumExempt",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The social tax minimum does not apply (SMS § 2 lg 4): shortened working time under TLS § 43 lg 4 or 6, parent of a child under 3 or of three or more children under 19, RaKS § 5 lg 4 p 5, within 12 months of hiring after at least six months registered unemployed, state pension recipient or partial/no work ability, local council member"
+      },
+      {
+        "key": "socialTaxMinimumBase",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "description": "Social tax minimum base in EUR replacing 886: for a month in which the employee started or left, or refused work under TLS § 19, 886 x calendar days worked / 30 (SMS § 2 lg 3; määrus nr 17 § 6); with another employer's pay certified, 886 less that pay (SMS § 2 lg 2^2; määrus nr 17 § 5)"
+      },
+      {
+        "key": "stateSocialTaxRelief",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The state pays social tax for this employee with partial or no work ability on the employer's application (SMS § 6 lg 1 p 5) — not supported"
+      }
+    ]
+  },
+  "parameters": {
+    "incomeTaxRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.22",
+        "source": "tums"
+      }
+    ],
+    "monthlyTaxFreeAmount": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "700",
+        "source": "tums"
+      }
+    ],
+    "monthlyTaxFreeAmountPensionAge": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "776",
+        "source": "tums"
+      }
+    ],
+    "unemploymentEmployeeRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.016",
+        "source": "vv-78-2025"
+      }
+    ],
+    "unemploymentEmployerRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.008",
+        "source": "vv-78-2025"
+      }
+    ],
+    "socialTaxRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.33",
+        "source": "sms"
+      }
+    ],
+    "socialTaxMonthlyBase": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "886",
+        "source": "rea-2026"
+      }
+    ],
+    "fundedPension2": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.02",
+        "source": "kops"
+      }
+    ],
+    "fundedPension4": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.04",
+        "source": "kops"
+      }
+    ],
+    "fundedPension6": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.06",
+        "source": "kops"
+      }
+    ]
+  },
+  "tables": {},
+  "steps": [
+    {
+      "id": "calendarMonth",
+      "type": "REQUIRE",
+      "condition": "#isCalendarMonth",
+      "message": "Estonian payroll is monthly: the pay period must be a whole calendar month"
+    },
+    {
+      "id": "noPreTaxDeductions",
+      "type": "REQUIRE",
+      "condition": "#preTaxDeductions == 0",
+      "message": "Pre-tax deductions are not supported by this template"
+    },
+    {
+      "id": "noStateSocialTax",
+      "type": "REQUIRE",
+      "source": "sms",
+      "condition": "!#employee['stateSocialTaxRelief']",
+      "message": "Employees for whom the state pays social tax (SMS § 6 lg 1 p 5) are not supported by this template"
+    },
+    {
+      "id": "taxFreeLimit",
+      "type": "REQUIRE",
+      "source": "tums",
+      "condition": "#employee['taxFreeAmount'] <= (#employee['pensionAge'] ? #p['monthlyTaxFreeAmountPensionAge'] : #p['monthlyTaxFreeAmount'])",
+      "message": "The monthly tax-free amount is at most 700 EUR (TuMS § 42 lg 1), or 776 EUR from the year of reaching old-age pension age (§ 23^5)"
+    },
+    {
+      "id": "wage",
+      "type": "VALUE",
+      "expr": "#pos(#socialEarnings - #reductions)"
+    },
+    {
+      "id": "taxablePay",
+      "type": "VALUE",
+      "expr": "#pos(#taxableEarnings - #reductions)"
+    },
+    {
+      "id": "unemploymentInsurance",
+      "type": "CONTRIBUTION",
+      "label": "Unemployment insurance (töötuskindlustusmakse)",
+      "ledger": "UNEMPLOYMENT",
+      "source": "vv-78-2025",
+      "when": "#wage > 0",
+      "base": "#wage",
+      "employee": {
+        "rate": "#employee['unemploymentInsuranceEnded'] ? 0 : #p['unemploymentEmployeeRate']"
+      },
+      "employer": {
+        "rate": "#p['unemploymentEmployerRate']"
+      }
+    },
+    {
+      "id": "fundedPension",
+      "type": "CONTRIBUTION",
+      "label": "Mandatory funded pension (II pillar)",
+      "ledger": "PENSION_CONTRIBUTION",
+      "source": "kops",
+      "when": "#wage > 0 and #employee['fundedPensionRate'] != 'NONE'",
+      "base": "#wage",
+      "employee": {
+        "rate": "#employee['fundedPensionRate'] == '2' ? #p['fundedPension2'] : (#employee['fundedPensionRate'] == '4' ? #p['fundedPension4'] : #p['fundedPension6'])"
+      }
+    },
+    {
+      "id": "minimumApplies",
+      "type": "VALUE",
+      "source": "sms",
+      "expr": "!#employee['socialTaxMinimumExempt'] and (!#employee['otherEmployment'] or #employee['taxFreeAmount'] > 0) ? 1 : 0"
+    },
+    {
+      "id": "partialMonthMinimum",
+      "type": "REQUIRE",
+      "source": "rm-17-2013",
+      "when": "#minimumApplies == 1 and #employee['socialTaxMinimumBase'] == null and #wage > 0 and #wage < #p['socialTaxMonthlyBase']",
+      "condition": "#employedThroughout",
+      "message": "The employee started or left during the month: the social tax minimum is prorated by calendar days worked / 30 (SMS § 2 lg 3; määrus nr 17 § 6), so set the employee's socialTaxMinimumBase"
+    },
+    {
+      "id": "socialTaxBase",
+      "type": "VALUE",
+      "source": "rea-2026",
+      "expr": "#minimumApplies == 1 ? #max(#wage, #coalesce(#employee['socialTaxMinimumBase'], #p['socialTaxMonthlyBase'])) : #wage"
+    },
+    {
+      "id": "socialTax",
+      "type": "CONTRIBUTION",
+      "label": "Social tax (sotsiaalmaks)",
+      "ledger": "SOCIAL_SECURITY",
+      "source": "sms",
+      "when": "#wage > 0",
+      "base": "#socialTaxBase",
+      "employer": {
+        "rate": "#p['socialTaxRate']"
+      }
+    },
+    {
+      "id": "incomeTax",
+      "type": "TAX",
+      "label": "Income tax (tulumaks)",
+      "ledger": "INCOME_TAX",
+      "source": "tums",
+      "when": "#taxablePay > 0",
+      "base": "#pos(#taxablePay - #unemploymentInsurance_employee - #fundedPension_employee - #employee['taxFreeAmount'])",
+      "rate": "#p['incomeTaxRate']"
+    }
+  ],
+  "limitations": [
+    "Employment contracts paid monthly in EUR in 2026, one payment per employee per month; taxation follows the payment date (EMTA: kassapõhine), and the tax-free amount and the social tax minimum are applied to this payment. A second run in the same month would apply them again.",
+    "The tax-free amount, pension age, the end of employee unemployment insurance, the funded-pension rate, other employment and the social tax minimum exemptions are entered per employee from the employee's application and the registers; they are not checked.",
+    "In a month the employee started or left (or refused work under TLS § 19), the prorated social tax minimum base (886 x calendar days / 30, määrus nr 17 § 6) must be entered; unpaid leave agreed by the parties does not reduce the minimum (SMS § 2 lg 3 p 1). The minimum belongs to the month containing the agreed pay day (määrus nr 17 § 2); pay made earlier or later than agreed (§ 3-4) and the final settlement (§ 7) are not reconciled across months.",
+    "Not modelled: the state-paid social tax for employees with partial or no work ability (SMS § 6 lg 1 p 5, refused), fringe benefits (erisoodustused), III pillar contributions paid by the employer, non-residents, seafarers and board members' fees, and payments exempt from social tax (SMS § 3) such as the employer's sick pay for days 1-8.",
+    "Contributions and the tax are rounded to the cent, half up, per line (TKindlS § 42 lg 3; EMTA examples).",
+    "Status LAW_DERIVED: values are cited from the consolidated acts, the 2026 State Budget Act and Government regulation nr 78/2025; the cases are derived from them."
+  ],
+  "testCases": [
+    {
+      "name": "2,000 EUR with the tax-free amount and 2% pension",
+      "evidence": "UI 32.00, pension 40.00, (2000 - 32 - 40 - 700) x 22% = 270.16; social tax 660.00, employer UI 16.00. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "32.00"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "16.00"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "40.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "660.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "270.16"
+        }
+      ]
+    },
+    {
+      "name": "minimum wage 946 EUR from April",
+      "evidence": "Minimum wage 946 EUR from 1 April 2026 (EMTA); above the 886 EUR base, so no top-up. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-05-01",
+      "periodEnd": "2026-05-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "946.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "15.14"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "7.57"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "18.92"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "312.18"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "46.63"
+        }
+      ]
+    },
+    {
+      "name": "part-time 600 EUR: social tax on the 886 EUR minimum",
+      "evidence": "SMS § 2 lg 2: 886 x 33% = 292.38; the tax-free amount covers the rest of the pay. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "600.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "9.60"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "4.80"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "12.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "292.38"
+        }
+      ]
+    },
+    {
+      "name": "part-time parent of a child under 3: no minimum",
+      "evidence": "SMS § 2 lg 4 p 3: social tax on the pay only, 600 x 33% = 198.00. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "600.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2",
+        "socialTaxMinimumExempt": "true"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "9.60"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "4.80"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "12.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "198.00"
+        }
+      ]
+    },
+    {
+      "name": "second employer without the tax-free application: no minimum",
+      "evidence": "SMS § 2 lg 2^1: the minimum falls on the employer applying the tax-free amount; tax from the first euro (TuMS § 42 lg 2). TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "600.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "fundedPensionRate": "2",
+        "otherEmployment": "true"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "9.60"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "4.80"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "12.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "198.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "127.25"
+        }
+      ]
+    },
+    {
+      "name": "employer applying the tax-free amount pays the minimum despite another job",
+      "evidence": "SMS § 2 lg 2^1. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "600.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2",
+        "otherEmployment": "true"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "9.60"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "4.80"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "12.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "292.38"
+        }
+      ]
+    },
+    {
+      "name": "no application, not in the funded pension",
+      "evidence": "TuMS § 42 lg 1: without a written application no tax-free amount; (1500 - 24) x 22% = 324.72. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1500.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "fundedPensionRate": "NONE"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "24.00"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "12.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "495.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "324.72"
+        }
+      ]
+    },
+    {
+      "name": "6% funded pension chosen",
+      "evidence": "KoPS § 9 lg 2: 3000 x 6% = 180.00 before tax. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "6"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "48.00"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "24.00"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "180.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "990.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "455.84"
+        }
+      ]
+    },
+    {
+      "name": "4% funded pension and a lower tax-free amount",
+      "evidence": "KoPS § 9 lg 2; EMTA: the employee may ask for less than 700 EUR, e.g. 500 EUR. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2500.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "500",
+        "fundedPensionRate": "4"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "40.00"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "20.00"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "100.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "825.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "409.20"
+        }
+      ]
+    },
+    {
+      "name": "pension age: 776 EUR tax-free, no employee UI",
+      "evidence": "TuMS § 23^5, § 42 lg 1^3 (the pension uses none here); TKindlS § 42 lg 1 p 1: only the employer's 0.8%. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1500.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "776",
+        "pensionAge": "true",
+        "unemploymentInsuranceEnded": "true",
+        "fundedPensionRate": "NONE",
+        "socialTaxMinimumExempt": "true"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "12.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "495.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "159.28"
+        }
+      ]
+    },
+    {
+      "name": "pay below the tax-free amount: no tax",
+      "evidence": "EMTA: the tax-free amount is applied only up to the payment. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "500.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2",
+        "socialTaxMinimumExempt": "true"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "8.00"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "4.00"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "10.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "165.00"
+        }
+      ]
+    },
+    {
+      "name": "joined on 10 January: prorated minimum entered",
+      "evidence": "SMS § 2 lg 3 p 3; määrus nr 17 § 6 lg 2: 22 calendar days / 30 x 886 = 649.73; 649.73 x 33% = 214.41. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-01-01",
+      "periodEnd": "2026-01-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "400.00",
+      "fullPeriod": false,
+      "employedThroughout": false,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2",
+        "socialTaxMinimumBase": "649.73"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "6.40"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "3.20"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "8.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "214.41"
+        }
+      ]
+    },
+    {
+      "name": "second job with the other employer's pay certified",
+      "evidence": "SMS § 2 lg 2^2; määrus nr 17 § 5: 886 - 500 paid by the other employer = 386, but not less than this employer's 450, so 450 x 33% = 148.50. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "450.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2",
+        "otherEmployment": "true",
+        "socialTaxMinimumBase": "386.00"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "7.20"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "3.60"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "9.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "148.50"
+        }
+      ]
+    },
+    {
+      "name": "December 2025 salary paid in January 2026",
+      "evidence": "EMTA: taxation follows the payment date, so 2026 rates and the 700 EUR tax-free amount apply. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2025-12-01",
+      "periodEnd": "2025-12-31",
+      "frequency": "MONTHLY",
+      "paymentDate": "2026-01-09",
+      "grossEarnings": "1800.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "28.80"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "14.40"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "36.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "594.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "227.74"
+        }
+      ]
+    },
+    {
+      "name": "no pay, no lines",
+      "evidence": "nothing is paid, so nothing is due",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "0",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2"
+      },
+      "expectLines": []
+    },
+    {
+      "name": "missing funded-pension answer",
+      "evidence": "the employer checks the employee's funded-pension status (KoPS § 11 lg 1 p 1)",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700"
+      },
+      "expectError": "fundedPensionRate"
+    },
+    {
+      "name": "776 EUR tax-free amount before pension age",
+      "evidence": "TuMS § 42 lg 1: at most 1/12 of 8400 = 700 EUR",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "776",
+        "fundedPensionRate": "2"
+      },
+      "expectError": "700"
+    },
+    {
+      "name": "partial month below the minimum without a prorated base",
+      "evidence": "SMS § 2 lg 3: the minimum is prorated by the time worked",
+      "periodStart": "2026-01-01",
+      "periodEnd": "2026-01-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "400.00",
+      "fullPeriod": false,
+      "employedThroughout": false,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2"
+      },
+      "expectError": "socialTaxMinimumBase"
+    },
+    {
+      "name": "state-paid social tax is refused",
+      "evidence": "SMS § 6 lg 1 p 5 relief not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2",
+        "stateSocialTaxRelief": "true"
+      },
+      "expectError": "not supported"
+    },
+    {
+      "name": "pre-tax deductions are refused",
+      "evidence": "III pillar and other deductions not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2"
+      },
+      "preTaxDeductions": "50.00",
+      "expectError": "Pre-tax deductions are not supported"
+    },
+    {
+      "name": "2027 is not covered",
+      "evidence": "2027 values not yet set",
+      "periodStart": "2027-01-01",
+      "periodEnd": "2027-01-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2"
+      },
+      "expectError": "a newer template version is needed"
+    }
+  ]
+}
