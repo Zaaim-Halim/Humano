@@ -32,6 +32,9 @@ Notes found while researching:
   (ZUS example 37), and without deducting the health contribution.
 - The Labour Fund (1.0 %) and Solidarity Fund (1.45 %) are computed together at 2.45 % with the same
   conditions (Solidarity Fund act art. 4–5).
+- The Labour Fund test converts the pay to a full month only when the month is incomplete ("w przeliczeniu
+  na okres miesiąca", art. 259 ust. 1); in a full month the pay itself decides, so `labourFundPartialMonth`
+  is ignored there (corrected in 2026.1.1).
 
 ## Rebuilding
 

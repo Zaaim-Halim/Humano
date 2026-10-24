@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pl-employment",
   "name": "Poland — employment contract (umowa o pracę)",
-  "version": "2026.1.0",
+  "version": "2026.1.1",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "PL"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.1",
+      "date": "2026-10-24",
+      "summary": "Corrects an error: the Labour Fund / Solidarity Fund answer for partial months (labourFundPartialMonth) is now ignored in a full month, where the month's pay alone decides (ustawa o rynku pracy art. 259 ust. 1); before, an answer left on NOT_DUE or DUE overrode it."
+    },
     {
       "version": "2026.1.0",
       "date": "2026-10-23",
@@ -158,7 +163,7 @@
         "required": false,
         "defaultValue": "AUTO",
         "values": ["AUTO", "DUE", "NOT_DUE"],
-        "description": "For a partial month: whether the pay, converted to a full month, reaches the minimum wage so the Labour Fund / Solidarity Fund contribution is due (ustawa o rynku pracy art. 259 ust. 1)"
+        "description": "For a partial month: whether the pay, converted to a full month, reaches the minimum wage so the Labour Fund / Solidarity Fund contribution is due (ustawa o rynku pracy art. 259 ust. 1); ignored in a full month, where the month's pay decides"
       },
       {
         "key": "fgspExempt",
@@ -441,7 +446,7 @@
       "label": "Labour Fund and Solidarity Fund (FP + FS)",
       "ledger": "UNEMPLOYMENT",
       "source": "budzet-2026",
-      "when": "!#employee['labourFundExempt'] and #revenue > 0 and (#employee['labourFundPartialMonth'] == 'DUE' or (#employee['labourFundPartialMonth'] == 'AUTO' and #revenue >= #p['minimumWage']))",
+      "when": "!#employee['labourFundExempt'] and #revenue > 0 and (#fullPeriod and #reductions == 0 ? #revenue >= #p['minimumWage'] : (#employee['labourFundPartialMonth'] == 'DUE' or (#employee['labourFundPartialMonth'] == 'AUTO' and #revenue >= #p['minimumWage'])))",
       "base": "#revenue",
       "employer": {
         "rate": "#p['labourAndSolidarityFund']"
@@ -1729,6 +1734,139 @@
           "step": "health",
           "side": "EMPLOYEE",
           "amount": "271.81"
+        }
+      ]
+    },
+    {
+      "name": "full month: a partial-month answer left on NOT_DUE is ignored",
+      "evidence": "rynek pracy art. 259 ust. 1: in a full month the pay itself (8,000 >= 4,806) decides; the conversion answer is for partial months only. usus art. 16, 19, 22; uswiadczenia art. 79, 81, 83; updof art. 21, 22, 26, 27, 31b, 32; Ordynacja art. 63; budget 2026 art. 25-27; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "8000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-04-12",
+      "employer": {
+        "accidentRate": "0.0167"
+      },
+      "employee": {
+        "pit2Reduction": "ONE_TWELFTH",
+        "labourFundPartialMonth": "NOT_DUE"
+      },
+      "expectLines": [
+        {
+          "step": "pension",
+          "side": "EMPLOYEE",
+          "amount": "780.80"
+        },
+        {
+          "step": "pension",
+          "side": "EMPLOYER",
+          "amount": "780.80"
+        },
+        {
+          "step": "disability",
+          "side": "EMPLOYEE",
+          "amount": "120.00"
+        },
+        {
+          "step": "disability",
+          "side": "EMPLOYER",
+          "amount": "520.00"
+        },
+        {
+          "step": "sickness",
+          "side": "EMPLOYEE",
+          "amount": "196.00"
+        },
+        {
+          "step": "accident",
+          "side": "EMPLOYER",
+          "amount": "133.60"
+        },
+        {
+          "step": "labourFund",
+          "side": "EMPLOYER",
+          "amount": "196.00"
+        },
+        {
+          "step": "fgsp",
+          "side": "EMPLOYER",
+          "amount": "8.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "498"
+        },
+        {
+          "step": "health",
+          "side": "EMPLOYEE",
+          "amount": "621.29"
+        }
+      ]
+    },
+    {
+      "name": "full month part-time below the minimum wage: DUE is ignored",
+      "evidence": "rynek pracy art. 259 ust. 1: 3,000 < 4,806 in a full month, no FP/FS whatever the partial-month answer. usus art. 16, 19, 22; uswiadczenia art. 79, 81, 83; updof art. 21, 22, 26, 27, 31b, 32; Ordynacja art. 63; budget 2026 art. 25-27; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-04-12",
+      "employer": {
+        "accidentRate": "0.0167"
+      },
+      "employee": {
+        "pit2Reduction": "ONE_TWELFTH",
+        "labourFundPartialMonth": "DUE"
+      },
+      "expectLines": [
+        {
+          "step": "pension",
+          "side": "EMPLOYEE",
+          "amount": "292.80"
+        },
+        {
+          "step": "pension",
+          "side": "EMPLOYER",
+          "amount": "292.80"
+        },
+        {
+          "step": "disability",
+          "side": "EMPLOYEE",
+          "amount": "45.00"
+        },
+        {
+          "step": "disability",
+          "side": "EMPLOYER",
+          "amount": "195.00"
+        },
+        {
+          "step": "sickness",
+          "side": "EMPLOYEE",
+          "amount": "73.50"
+        },
+        {
+          "step": "accident",
+          "side": "EMPLOYER",
+          "amount": "50.10"
+        },
+        {
+          "step": "fgsp",
+          "side": "EMPLOYER",
+          "amount": "3.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "0"
+        },
+        {
+          "step": "health",
+          "side": "EMPLOYEE",
+          "amount": "232.98"
         }
       ]
     },

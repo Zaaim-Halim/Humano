@@ -145,7 +145,12 @@ def expected_lines(c):
     se = add("sickness", "EMPLOYEE", gr(revenue * Decimal("0.0245")))
     add("accident", "EMPLOYER", gr(revenue * Decimal(er["accidentRate"])))
     fund = emp.get("labourFundPartialMonth", "AUTO")
-    if emp.get("labourFundExempt") != "true" and revenue > 0 and (fund == "DUE" or (fund == "AUTO" and revenue >= 4806)):
+    # rynek pracy art. 259 ust. 1: the conversion to a full month (the employee's answer) matters only in a partial month
+    if c.get("fullPeriod", True):
+        fund_due = revenue >= 4806
+    else:
+        fund_due = fund == "DUE" or (fund == "AUTO" and revenue >= 4806)
+    if emp.get("labourFundExempt") != "true" and revenue > 0 and fund_due:
         add("labourFund", "EMPLOYER", gr(revenue * Decimal("0.0245")))
     if emp.get("fgspExempt") != "true":
         add("fgsp", "EMPLOYER", gr(revenue * Decimal("0.001")))
@@ -240,6 +245,10 @@ def test_cases():
              "7000.00", {"pit2Reduction": "ONE_TWELFTH", "labourFundExempt": "true", "fgspExempt": "true"}, birth="1964-01-01"),
         case("partial month with Labour Fund due", "rynek pracy art. 259 ust. 1: 'w przeliczeniu na okres miesiąca' at least the minimum wage; entered by the tenant. " + law,
              "3500.00", {"pit2Reduction": "ONE_TWELFTH", "labourFundPartialMonth": "DUE"}, full=False),
+        case("full month: a partial-month answer left on NOT_DUE is ignored", "rynek pracy art. 259 ust. 1: in a full month the pay itself (8,000 >= 4,806) decides; the conversion answer is for partial months only. " + law,
+             "8000.00", {"pit2Reduction": "ONE_TWELFTH", "labourFundPartialMonth": "NOT_DUE"}),
+        case("full month part-time below the minimum wage: DUE is ignored", "rynek pracy art. 259 ust. 1: 3,000 < 4,806 in a full month, no FP/FS whatever the partial-month answer. " + law,
+             "3000.00", {"pit2Reduction": "ONE_TWELFTH", "labourFundPartialMonth": "DUE"}),
         case("December 2025 salary paid in January 2026", "Payment-date basis: 2026 rules and limits apply (updof art. 11, usus art. 18). " + law,
              "8000.00", dict(PIT2), start="2025-12-01", end="2025-12-31", payment="2026-01-09"),
     ]
@@ -276,7 +285,7 @@ def main():
         "schemaVersion": 1,
         "id": "pl-employment",
         "name": "Poland — employment contract (umowa o pracę)",
-        "version": "2026.1.0",
+        "version": "2026.1.1",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "PL"},
         "validity": {"from": FROM, "to": TO},
@@ -286,6 +295,8 @@ def main():
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.1", "date": "2026-10-24",
+             "summary": "Corrects an error: the Labour Fund / Solidarity Fund answer for partial months (labourFundPartialMonth) is now ignored in a full month, where the month's pay alone decides (ustawa o rynku pracy art. 259 ust. 1); before, an answer left on NOT_DUE or DUE overrode it."},
             {"version": "2026.1.0", "date": RETRIEVED,
              "summary": "2026: minimum wage 4,806 zł, pension/disability limit 282,600 zł, FP+FS 2.45 %, FGŚP 0.10 %; PIT 12 % / 32 % above 120,000 zł with the 300 zł monthly reduction; health 9 % capped at the 2021-rules advance."}
         ],
@@ -309,7 +320,7 @@ def main():
                 {"key": "labourFundExempt", "type": "BOOLEAN", "required": False, "defaultValue": "false",
                  "description": "No Labour Fund / Solidarity Fund contribution: woman aged 55+ or man aged 60+, 36 months after maternity/parental/childcare leave, 12 months for a hired 50+ or referred under-30 unemployed person (ustawa o rynku pracy art. 261-264)"},
                 {"key": "labourFundPartialMonth", "type": "ENUM", "required": False, "defaultValue": "AUTO", "values": ["AUTO", "DUE", "NOT_DUE"],
-                 "description": "For a partial month: whether the pay, converted to a full month, reaches the minimum wage so the Labour Fund / Solidarity Fund contribution is due (ustawa o rynku pracy art. 259 ust. 1)"},
+                 "description": "For a partial month: whether the pay, converted to a full month, reaches the minimum wage so the Labour Fund / Solidarity Fund contribution is due (ustawa o rynku pracy art. 259 ust. 1); ignored in a full month, where the month's pay decides"},
                 {"key": "fgspExempt", "type": "BOOLEAN", "required": False, "defaultValue": "false",
                  "description": "No FGŚP contribution: woman aged 55+ or man aged 60+, 36 months after maternity/parental/childcare leave, or 12 months for certain hired unemployed persons (ustawa o ochronie roszczeń pracowniczych art. 9a-9c)"},
             ],
@@ -338,7 +349,7 @@ def main():
              "condition": "#fullPeriod and #reductions == 0",
              "message": "Partial month below the minimum wage: whether the Labour Fund contribution is due depends on the pay converted to a full month (ustawa o rynku pracy art. 259 ust. 1), so set the employee's labourFundPartialMonth"},
             {"id": "labourFund", "type": "CONTRIBUTION", "label": "Labour Fund and Solidarity Fund (FP + FS)", "ledger": "UNEMPLOYMENT", "source": "budzet-2026",
-             "when": "!#employee['labourFundExempt'] and #revenue > 0 and (#employee['labourFundPartialMonth'] == 'DUE' or (#employee['labourFundPartialMonth'] == 'AUTO' and #revenue >= #p['minimumWage']))",
+             "when": "!#employee['labourFundExempt'] and #revenue > 0 and (#fullPeriod and #reductions == 0 ? #revenue >= #p['minimumWage'] : (#employee['labourFundPartialMonth'] == 'DUE' or (#employee['labourFundPartialMonth'] == 'AUTO' and #revenue >= #p['minimumWage'])))",
              "base": "#revenue", "employer": {"rate": "#p['labourAndSolidarityFund']"}},
             {"id": "fgsp", "type": "CONTRIBUTION", "label": "Guaranteed Employee Benefits Fund (FGŚP)", "ledger": "OTHER", "source": "fgsp",
              "when": "!#employee['fgspExempt']", "base": "#revenue", "employer": {"rate": "#p['fgspRate']"}},
