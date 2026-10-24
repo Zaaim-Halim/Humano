@@ -38,6 +38,13 @@ Notes found while researching:
 - The RPN gives previous pay for USC separately from previous pay for income tax; the template takes
   `previousUscPay` and falls back to `previousPay`.
 - PRSI rises on 1 October 2026 and is chosen by the payment date, as are the tax week and month.
+- Week 53 (31 December is a pay day, guide 10.2) uses the week 1 basis for tax and USC (14.3); the
+  guide's pointer to "paragraph 8.8" for USC in week 53 leads nowhere in this edition, so the 14.3 table
+  ("tax credits and the tax and USC cut-off points … As for week 1 basis") is followed.
+- On the emergency basis USC is a flat 8 % "applied to all payments" (9.5.1), so a USC exemption status
+  is ignored there (corrected in 2026.1.1).
+- Guide 10.2 keeps the normal weekly pay day for the tax week when a pay day is moved; the engine takes
+  the tax week from the payment date, so the normal pay day should be entered.
 
 ## Rebuilding
 

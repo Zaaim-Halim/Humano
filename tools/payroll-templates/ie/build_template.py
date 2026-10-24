@@ -146,6 +146,8 @@ def expected_lines(c):
         add("prsi", "EMPLOYER", c2(E * (er + D("0.01"))))
     # income tax (Revenue guide ch. 9)
     basis = emp["taxBasis"]
+    if basis == "CUMULATIVE" and n == 53:
+        basis = "WEEK1"  # guide 14.3: a week-53 payment gets the week 1 basis, for tax and USC
     it_pay = max(gross - pre, D(0))
     cop_p = up2(D(emp.get("annualCutOff", "0")) / P)
     cred_p = up2(D(emp.get("annualTaxCredits", "0")) / P)
@@ -166,7 +168,7 @@ def expected_lines(c):
     add("incomeTax", "TAX", max(gross_tax - cred, D(0)) - paid, record_zero=True)
     # USC
     status = emp.get("uscStatus", "ORDINARY")
-    if status != "EXEMPT":
+    if status != "EXEMPT" or basis.startswith("EMERGENCY"):  # 9.5.1: emergency USC applies to all payments
         if basis.startswith("EMERGENCY"):
             usc = c2(gross * D("0.08"))
         else:
@@ -253,6 +255,11 @@ def test_cases():
              "4000.00", {**RPN, "previousPay": "12000", "previousUscPay": "12600", "previousTax": "1800", "previousUsc": "312"}, start="2026-04-01", end="2026-04-30"),
         case("PRSI-exempt employee (A1 certificate)", "Not insurable in Ireland: no PRSI; tax and USC as per RPN. " + law,
              "3000.00", {**RPN, "prsiExempt": "true"}, start="2026-01-01", end="2026-01-31"),
+        case("week 53 on the cumulative basis: week 1 figures", "Employers' Guide 14.3: where 'Week 53' occurs (31 December is a pay day, 10.2), tax credits and the tax and USC cut-off points are set against the payment 'As for week 1 basis'; the year to date is not used. " + law,
+             "1000.00", dict(RPN), frequency="WEEKLY", start="2026-12-31", end="2027-01-06", payment="2026-12-31",
+             ytd={"incomeTax.TAX.base": "52000", "incomeTax.TAX.amount": "9000", "incomeTax.TAX.periods": "52", "usc.TAX.base": "52000", "usc.TAX.amount": "1300"}),
+        case("emergency basis ignores a USC exemption status", "Employers' Guide 9.5.1: on the emergency basis USC is a flat 8% 'applied to all payments'. " + law,
+             "3000.00", {"taxBasis": "EMERGENCY_NO_PPSN", "uscStatus": "EXEMPT"}),
     ]
     for c in computed:
         c["expectLines"] = expected_lines(c)
@@ -261,8 +268,6 @@ def test_cases():
         case("cumulative basis without cut-off", "the RPN gives the yearly cut-off and credits", "3000.00", {"taxBasis": "CUMULATIVE"}, error="annualCutOff"),
         case("weekly pay under €38", "Class J/M pay under €38 a week is not modelled", "30.00", dict(RPN), frequency="WEEKLY",
              start="2026-03-05", end="2026-03-11", payment="2026-03-06", error="€38"),
-        case("week 53", "week 53 has its own rules (Employers' Guide 14.3)", "600.00", dict(RPN), frequency="WEEKLY",
-             start="2026-12-31", end="2027-01-06", payment="2026-12-31", error="week 53"),
         case("December 2026 pay paid in January 2027", "the payment date places pay in the tax year", "3000.00", dict(RPN),
              start="2026-12-01", end="2026-12-31", payment="2027-01-08", error="a newer template version is needed"),
     ]
@@ -279,7 +284,7 @@ def parameter(spec):
 def main():
     weekly = "#frequency == 'WEEKLY'"
     basis = "#employee['taxBasis']"
-    cum = basis + " == 'CUMULATIVE'"
+    cum = "#cumulative == 1"
 
     def usc_cut(i):
         return "#divide(#coalesce(#employee['uscCutOff" + str(i) + "'], #p['uscCutOff" + str(i) + "']), #periodsPerYear, 2, 'HALF_UP') * #uscPeriods"
@@ -290,7 +295,7 @@ def main():
         "schemaVersion": 1,
         "id": "ie-paye",
         "name": "Ireland — PAYE, USC and PRSI",
-        "version": "2026.1.0",
+        "version": "2026.1.1",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "IE"},
         "validity": {"from": FROM, "to": TO},
@@ -300,6 +305,8 @@ def main():
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.1", "date": "2026-10-24",
+             "summary": "Corrects errors: on the emergency basis USC is now 8 % of all pay even when a USC exemption status is set (Employers' Guide 9.5.1); week 53 (pay day 31 December) is calculated on the week 1 basis (14.3) instead of being refused."},
             {"version": "2026.1.0", "date": RETRIEVED,
              "summary": "2026: PAYE 20 % / 40 % from the RPN on the cumulative, week 1/month 1 or emergency basis; USC 0.5 / 2 / 3 / 8 % (Finance Act 2025); Class A PRSI 4.2 % rising to 4.35 % on 1 October 2026 with the PRSI credit; employer 9 % / 11.25 % rising to 9.15 % / 11.4 % (incl. 1 % NTF levy), threshold €552 a week."}
         ],
@@ -314,7 +321,7 @@ def main():
                 {"key": "annualTaxCredits", "type": "DECIMAL", "required": False, "min": 0,
                  "description": "Yearly tax credits from the RPN (required on the cumulative and week 1/month 1 bases)"},
                 {"key": "uscStatus", "type": "ENUM", "required": False, "defaultValue": "ORDINARY", "values": ["ORDINARY", "REDUCED", "EXEMPT"],
-                 "description": "USC status from the RPN: ordinary rates, reduced rates (full medical card or aged 70+, with income of €60,000 or less: 0.5 % then 2 %), or exempt (income up to the €13,000 exemption threshold)"},
+                 "description": "USC status from the RPN: ordinary rates, reduced rates (full medical card or aged 70+, with income of €60,000 or less: 0.5 % then 2 %), or exempt (income up to the €13,000 exemption threshold); ignored on the emergency basis, where USC is 8 % of all pay"},
                 {"key": "uscCutOff1", "type": "DECIMAL", "required": False, "min": 0, "description": "Yearly USC rate 1 cut-off from the RPN, if not €12,012"},
                 {"key": "uscCutOff2", "type": "DECIMAL", "required": False, "min": 0, "description": "Yearly USC rate 2 cut-off from the RPN, if not €28,700"},
                 {"key": "uscCutOff3", "type": "DECIMAL", "required": False, "min": 0, "description": "Yearly USC rate 3 cut-off from the RPN, if not €70,044"},
@@ -336,8 +343,10 @@ def main():
             {"id": "calendarMonth", "type": "REQUIRE", "condition": weekly + " or #isCalendarMonth",
              "message": "Monthly pay must cover a whole calendar month"},
             {"id": "periodNumber", "type": "VALUE", "expr": weekly + " ? #taxWeek : #taxMonth"},
-            {"id": "noWeek53", "type": "REQUIRE", "condition": "#periodNumber <= 52",
-             "message": "Pay in week 53 has its own rules (Employers' Guide 14.3); not supported by this template"},
+            {"id": "cumulative", "type": "VALUE", "source": "revenue-guide",
+             "expr": basis + " == 'CUMULATIVE' and #periodNumber <= 52 ? 1 : 0"},
+            {"id": "weekOneFigures", "type": "VALUE", "source": "revenue-guide",
+             "expr": basis + " == 'WEEK1' or (" + basis + " == 'CUMULATIVE' and #periodNumber > 52) ? 1 : 0"},
             {"id": "rpnFigures", "type": "REQUIRE", "source": "revenue-guide",
              "when": basis + " == 'CUMULATIVE' or " + basis + " == 'WEEK1'",
              "condition": "#employee['annualCutOff'] != null and #employee['annualTaxCredits'] != null",
@@ -363,9 +372,9 @@ def main():
             {"id": "emergencyFirstPeriods", "type": "VALUE", "source": "revenue-guide", "when": basis + " == 'EMERGENCY'",
              "expr": "#ytd.periods('incomeTax', 'TAX') < (" + weekly + " ? 4 : 1) ? 1 : 0"},
             {"id": "cutOff", "type": "VALUE", "source": "revenue-guide",
-             "expr": cum + " ? #periodCutOff * #periodNumber : (" + basis + " == 'WEEK1' ? #periodCutOff : (#emergencyFirstPeriods == 1 ? #divide(#p['singleCutOff'], #periodsPerYear, 2, 'CEILING') : 0))"},
+             "expr": cum + " ? #periodCutOff * #periodNumber : (#weekOneFigures == 1 ? #periodCutOff : (#emergencyFirstPeriods == 1 ? #divide(#p['singleCutOff'], #periodsPerYear, 2, 'CEILING') : 0))"},
             {"id": "credits", "type": "VALUE", "source": "revenue-guide",
-             "expr": cum + " ? #periodCredits * #periodNumber : (" + basis + " == 'WEEK1' ? #periodCredits : 0)"},
+             "expr": cum + " ? #periodCredits * #periodNumber : (#weekOneFigures == 1 ? #periodCredits : 0)"},
             {"id": "payForTax", "type": "VALUE",
              "expr": cum + " ? #ytd.base('incomeTax', 'TAX') + #employee['previousPay'] + #taxPay : #taxPay"},
             {"id": "taxPaid", "type": "VALUE",
@@ -382,7 +391,7 @@ def main():
             {"id": "uscPaid", "type": "VALUE",
              "expr": cum + " ? #ytd.amount('usc', 'TAX') + #employee['previousUsc'] : 0"},
             {"id": "usc", "type": "TAX", "label": "Universal Social Charge", "ledger": "INCOME_TAX", "source": "revenue-usc",
-             "when": "#employee['uscStatus'] != 'EXEMPT'", "base": "#grossPay", "recordZero": True, "allowNegative": True,
+             "when": "#employee['uscStatus'] != 'EXEMPT' or " + basis + " == 'EMERGENCY' or " + basis + " == 'EMERGENCY_NO_PPSN'", "base": "#grossPay", "recordZero": True, "allowNegative": True,
              "amount": "(" + basis + " == 'EMERGENCY' or " + basis + " == 'EMERGENCY_NO_PPSN') ? #round(#grossPay * #p['uscRate4'], 2, 'HALF_UP') : ("
                        "#employee['uscStatus'] == 'REDUCED' ? "
                        "#round(#min(#payForUsc, #uscCut1) * #p['uscRate1'], 2, 'HALF_UP') + #round(#pos(#payForUsc - #uscCut1) * #p['uscRate2'], 2, 'HALF_UP') : "
@@ -391,7 +400,7 @@ def main():
                        ") - #uscPaid"},
         ],
         "limitations": [
-            "PAYE employment paid weekly or monthly (whole calendar months) in EUR in 2026; the tax year, the tax week or month and the rates are taken from the payment date (Employers' Guide ch. 9). Pay in week 53, and pay dated in 2027, are refused.",
+            "PAYE employment paid weekly or monthly (whole calendar months) in EUR in 2026; the tax year, the tax week or month and the rates are taken from the payment date (Employers' Guide ch. 9). A payment in week 53 (pay day 31 December) uses the week 1 basis figures (Employers' Guide 14.3); pay dated in 2027 is refused. The tax week follows the payment date: where a weekly pay day is moved (e.g. Friday paid on Thursday), the guide (10.2) keeps the normal pay day for the tax week, so enter the normal pay day as the payment date.",
             "Income tax and USC follow the Revenue Payroll Notification entered on the employee: basis, yearly cut-off point and tax credits, USC status and any non-standard USC cut-offs, and pay, tax and USC from previous employments. The template does not fetch or check RPNs; without one, use the emergency basis.",
             "Tax cut-off and credits per period are the yearly figures divided by the periods and rounded up to the cent, multiplied by the tax week or month on the cumulative basis; USC cut-offs per period are rounded to the cent, as in Revenue's examples. The emergency basis gives the first month (or first four weeks of pay) 1/12 (1/52) of the single cut-off and no credits; later periods and the no-PPSN case pay 40 %; USC is 8 % throughout. The first month or four weeks are counted as this employer's pay periods within the tax year (Employers' Guide 14.3); weeks of employment before 1 January are not counted.",
             "Pension and other pre-tax deductions reduce pay for income tax only; USC and PRSI are charged on gross pay.",
