@@ -1,0 +1,55 @@
+# Spain — `es-employment`
+
+Employees in the Régimen General de la Seguridad Social working in the common tax territory, paid
+monthly in EUR, 2026.
+
+## Sources (retrieved 2026-10-24)
+
+The acts are the BOE consolidated texts; the Agencia Tributaria's calculation algorithm and help
+document are identified by their SHA-256 (they are served without version numbers).
+
+| Id                    | What it provides                                                                                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `lirpf`               | Ley 35/2006 del IRPF (updated 07/10/2026): work income reduction (art. 20), personal and family minimum (arts. 56-61), withholding scale (art. 101.1)                                                  |
+| `rirpf`               | Reglamento del IRPF, RD 439/2007 (updated 07/10/2026): when withholding arises (art. 78), exemption limits (art. 81), base, minimum, quota and rate (arts. 82-86), regularization (art. 87), art. 88.5 |
+| `aeat-algoritmo-2026` | AEAT algorithm for the 2026 withholding rate, version of 10-09-2026 (SHA-256 b1a120d9…): variables, validations, rounding and steps; TABLA 1 and TABLA 2                                               |
+| `aeat-ayuda-2026`     | AEAT help "Las Retenciones e Ingresos a Cuenta del IRPF … 2026" (SHA-256 33f2e86c…): how the rules apply, the 15.96 % worked example                                                                   |
+| `orden-pjc-297-2026`  | Orden PJC/297/2026 (BOE-A-2026-7296): bases, rates, MEI, solidarity, unemployment, FOGASA, vocational training, part-time bases                                                                        |
+| `lgss`                | LGSS, RDLeg 8/2015 (updated 21/10/2026): solidarity (art. 19 bis), MEI (art. 127 bis), base and proration (art. 147), AT/EP tariff (DA 61ª)                                                            |
+| `concierto-pv`        | Concierto Económico with the Basque Country, Ley 12/2002, art. 7.Uno.a)                                                                                                                                |
+| `convenio-navarra`    | Convenio Económico with Navarre, Ley 28/1990, art. 10.1.a)                                                                                                                                             |
+
+Notes found while researching:
+
+- The withholding rate is annual: the employer computes it from the expected annual pay and the
+  employee's modelo 145 data, applies it to every payment, and regularizes it (RIRPF art. 87) when the
+  data change. The template recomputes the rate each run and compares it with the year to date; if they
+  disagree it refuses until the regularized rate is entered (`withholdingRateOverride`, `REGULARIZED`),
+  since regularization depends on what was paid and withheld so far.
+- Exempt pay and minimum rates: RIRPF art. 81.1 says no withholding applies below the limits, and art.
+  86.2 sets minimums of 2 % (contracts under a year, artists) and 15 % (other special relationships).
+  The AEAT help (p. 12) settles which wins: the exemption applies "siempre que no se trate de
+  rendimientos que tengan reglamentariamente asignado un tipo especial de retención, ya sea éste un
+  tipo fijo o un tipo mínimo", and the algorithm's exempt branch jumps to the step that applies the
+  minimums. So exempt pay on a short contract is withheld at 2 %.
+- Withholding follows the payment (RIRPF art. 78) and contributions the month of accrual (Orden art.
+  1). The template works on the pay period and refuses a payment made in another calendar year.
+- Extra payments (pagas extraordinarias) are prorated into the monthly contribution base (LGSS art.
+  147; Orden art. 1, annual amount / 12 for monthly-paid employees), so a run holding only the extra
+  pay has withholding but no contributions.
+- The solidarity contribution (Orden art. 17) applies to the remuneration above the 5,101.20 maximum
+  base in three tiers, split between employer and employee.
+- The AEAT's calculation web service (www2.agenciatributaria.gob.es) could not be reached from the
+  build environment, so the only official worked figure used is the help's 15.96 % example (28,500 EUR
+  with 1,700 EUR contributions; it gives no family data, so situation 3 with no dependants is assumed).
+  The other cases are derived from the texts and checked against a separate integer implementation.
+
+## Rebuilding
+
+```sh
+python3 -I build_template.py ../../../src/main/resources/payroll-templates/es/es-employment.json
+npx prettier --write ../../../src/main/resources/payroll-templates/es/es-employment.json
+```
+
+All values are written out in `build_template.py` with the text they come from; its
+`expected_lines()` computes the test cases' amounts independently of the Java engine.

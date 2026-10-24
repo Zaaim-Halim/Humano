@@ -1,0 +1,4387 @@
+{
+  "schemaVersion": 1,
+  "id": "es-employment",
+  "name": "Spain — employment (Régimen General, territorio común)",
+  "version": "2026.1.0",
+  "status": "LAW_DERIVED",
+  "jurisdiction": {
+    "country": "ES"
+  },
+  "validity": {
+    "from": "2026-01-01",
+    "to": "2026-12-31"
+  },
+  "currency": "EUR",
+  "payFrequencies": ["MONTHLY"],
+  "taxYearStart": "--01-01",
+  "dateBasis": "PERIOD",
+  "rounding": {
+    "scale": 2,
+    "mode": "HALF_UP"
+  },
+  "changelog": [
+    {
+      "version": "2026.1.0",
+      "date": "2026-10-24",
+      "summary": "2026: IRPF withholding rate per the AEAT algorithm (RIRPF arts. 81-86) with a year-to-date check that asks for the regularized rate; social security per Orden PJC/297/2026: common contingencies 28.30%, MEI 0.90%, unemployment 7.05% / 8.30%, FOGASA 0.20%, vocational training 0.70%, AT/EP from the tariff, solidarity contribution above 5,101.20."
+    }
+  ],
+  "sources": {
+    "lirpf": {
+      "title": "Ley 35/2006 del IRPF, consolidated text (última actualización publicada el 07/10/2026) — art. 20 (reducción por obtención de rendimientos del trabajo), arts. 56-61 (mínimo del contribuyente 5.550, +1.150 a partir de 65 años, +1.400 a partir de 75; descendientes 2.400 / 2.700 / 4.000 / 4.500, +2.800 menor de tres años; ascendientes 1.150, +1.400 mayor de 75, prorrateo entre descendientes con quienes conviva; discapacidad 3.000 / 9.000 y gastos de asistencia 3.000), art. 101.1 (escala de retención)",
+      "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764",
+      "retrieved": "2026-10-24"
+    },
+    "rirpf": {
+      "title": "Reglamento del IRPF, Real Decreto 439/2007, consolidated text (última actualización publicada el 07/10/2026) — art. 78 (nace la obligación de retener cuando se satisfacen o abonan las rentas), art. 81 (límite excluyente de la obligación de retener: cuadro por situación y número de descendientes, según RD 142/2024), art. 82 (cálculo de la retención), art. 83 (cuantía total de las retribuciones y base: cotizaciones, otros gastos 2.000 / +2.000 movilidad / +3.500 o 7.750 discapacidad, reducción del art. 20 LIRPF, 600 euros con más de dos descendientes), art. 84 (mínimo personal y familiar), art. 85 (cuota: escala sobre la base menos escala sobre el mínimo; límite del 43% para retribuciones no superiores a 35.200), art. 86 (tipo con dos decimales; menos dos enteros por préstamos de vivienda habitual si las retribuciones son inferiores a 33.007,2; mínimos del 2% para contratos de duración inferior al año y del 15% para relaciones laborales especiales), art. 87 (regularización), art. 88.5 (tipo superior a solicitud del perceptor)",
+      "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2007-6820",
+      "retrieved": "2026-10-24"
+    },
+    "aeat-algoritmo-2026": {
+      "title": "Agencia Tributaria, Departamento de Informática Tributaria, 'Algoritmo de cálculo del tipo de retención a cuenta del IRPF para los rendimientos del trabajo personal, ejercicio 2026 (a partir de 10 de septiembre)', 10-09-2026 (SHA-256 b1a120d93bf541de…) — the variables, validations, rounding (REDONDEAR1, TRUNCAR) and steps the template follows; TABLA 1 (límites excluyentes) and TABLA 2 (escala de retención). The only change from the 26-12-2025 version is the La Palma extension (Real Decreto-ley 23/2026)",
+      "url": "https://sede.agenciatributaria.gob.es/static_files/Sede/Programas_ayuda/Retenciones/2026/Algoritmo%20Retenciones-2026_10sept.pdf",
+      "retrieved": "2026-10-24"
+    },
+    "aeat-ayuda-2026": {
+      "title": "Agencia Tributaria, 'Las Retenciones e Ingresos a Cuenta del IRPF sobre los Rendimientos del Trabajo en el ejercicio 2026 (Desde 1 de Enero a 9 de Septiembre)' (SHA-256 33f2e86c8245a896…) — p. 12: no hay obligación de retener por debajo del art. 81.1 'siempre que no se trate de rendimientos que tengan reglamentariamente asignado un tipo especial de retención, ya sea éste un tipo fijo o un tipo mínimo'; p. 14: retribuciones sin los atrasos de ejercicios anteriores; CUADRO 1, CUADRO 5, CUADRO 6; p. 56: ejemplo 28.500 euros con cotizaciones de 1.700, tipo 15,96%",
+      "url": "https://sede.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/modelos/rw/retenciones2026.pdf",
+      "retrieved": "2026-10-24"
+    },
+    "orden-pjc-297-2026": {
+      "title": "Orden PJC/297/2026, de 30 de marzo, BOE núm. 79 de 31/03/2026 (BOE-A-2026-7296) — art. 1 (base: remuneración devengada en el mes más la parte proporcional de las pagas de vencimiento superior al mensual, importe anual dividido por 12; entre la base mínima y máxima del grupo), art. 2 (tope máximo 5.101,20; tope mínimo AT/EP 1.424,40), art. 3 (bases mínimas por grupo: 1.989,30 / 1.649,70 / 1.435,20 / 1.424,40; grupos 8-11 por día), art. 4 (contingencias comunes 28,30%: 23,60 empresa, 4,70 trabajador; AT/EP según la tarifa de la DA 61ª LGSS, a cargo de la empresa), art. 5 (horas extraordinarias), art. 7 (alta sin remuneración), art. 10 (pluriempleo), art. 16 (MEI 0,90%: 0,75 / 0,15), art. 17 (solidaridad 1,15% / 1,25% / 1,46% por tramos sobre 5.101,20), art. 28 (33,62 euros al finalizar contratos inferiores a 30 días), art. 33 (desempleo 7,05% indefinidos / 8,30% duración determinada; FOGASA 0,20%; formación profesional 0,70%: 0,60 / 0,10; base la de AT/EP), arts. 38-39 (tiempo parcial: bases mínimas por hora 11,98 / 9,94 / 8,65 / 8,58; AT/EP 8,58 por hora), art. 46 (contratos formativos)",
+      "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2026-7296",
+      "retrieved": "2026-10-24"
+    },
+    "lgss": {
+      "title": "Texto refundido de la Ley General de la Seguridad Social, Real Decreto Legislativo 8/2015, consolidated text (última actualización publicada el 21/10/2026) — art. 19 bis (cotización adicional de solidaridad), art. 127 bis (mecanismo de equidad intergeneracional), art. 147 (base de cotización: las percepciones de vencimiento superior al mensual se prorratean a lo largo de los doce meses), disposición adicional sexagésima primera (tarifa de primas AT/EP)",
+      "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2015-11724",
+      "retrieved": "2026-10-24"
+    },
+    "concierto-pv": {
+      "title": "Concierto Económico con la Comunidad Autónoma del País Vasco, Ley 12/2002, consolidated text (última actualización publicada el 30/04/2025) — art. 7.Uno.a): las retenciones sobre rendimientos del trabajo se exigen por la Diputación Foral cuando el trabajo se preste en el País Vasco",
+      "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2002-9969",
+      "retrieved": "2026-10-24"
+    },
+    "convenio-navarra": {
+      "title": "Convenio Económico entre el Estado y la Comunidad Foral de Navarra, Ley 28/1990, consolidated text (última actualización publicada el 25/07/2025) — art. 10.1.a): las retenciones sobre rendimientos del trabajo corresponden a Navarra cuando el trabajo se preste en Navarra",
+      "url": "https://www.boe.es/buscar/act.php?id=BOE-A-1990-31117",
+      "retrieved": "2026-10-24"
+    }
+  },
+  "inputs": {
+    "employer": [
+      {
+        "key": "accidentRate",
+        "type": "DECIMAL",
+        "required": true,
+        "min": 0,
+        "max": "0.2",
+        "description": "AT/EP contribution rate (IT + IMS, as a fraction, e.g. 0.015 for 1.50%) from the tariff of the LGSS disposición adicional sexagésima primera for the company's activity (Orden PJC/297/2026 art. 4.b); an employee's own rate overrides it"
+      }
+    ],
+    "employee": [
+      {
+        "key": "taxTerritory",
+        "type": "ENUM",
+        "required": true,
+        "values": ["COMMON", "BASQUE_COUNTRY", "NAVARRE", "CEUTA_MELILLA_LA_PALMA"],
+        "description": "Where the withholding belongs: COMMON for work performed in the common territory. Work performed in the Basque Country or Navarre is withheld under the foral rules (Concierto art. 7.Uno.a; Convenio art. 10.1.a) and income of residents of Ceuta, Melilla or La Palma earned there has a 60% reduction (RIRPF art. 80.2) — those are refused"
+      },
+      {
+        "key": "annualPay",
+        "type": "DECIMAL",
+        "required": true,
+        "min": "0.01",
+        "description": "Expected gross pay from this employer in 2026 (RETRIB, RIRPF art. 83.2): fixed and foreseeable variable pay, in cash and in kind, without arrears belonging to earlier years. For a contract renewed in the year, include what was paid earlier in the year"
+      },
+      {
+        "key": "annualExtraPay",
+        "type": "DECIMAL",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "description": "Annual amount of the extra payments and other pay accruing over periods longer than a month (pagas extraordinarias), prorated over 12 months in the social security base (LGSS art. 147; Orden art. 1). Pay them as BONUS"
+      },
+      {
+        "key": "annualSocialContributions",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "description": "Expected employee social security contributions for the year (COTIZACIONES, RIRPF art. 83.2.a). Without it the template estimates 12 months of contributions on annualPay / 12; required for part-time employees"
+      },
+      {
+        "key": "familySituation",
+        "type": "ENUM",
+        "required": true,
+        "values": ["1", "2", "3"],
+        "description": "Family situation from the employee's modelo 145 (RIRPF art. 81.1): 1 single, widowed, divorced or separated with descendants and the single-parent joint-filing reduction; 2 married with a spouse earning no more than 1,500 EUR a year; 3 any other (and when not stated)"
+      },
+      {
+        "key": "descendants",
+        "type": "INTEGER",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "max": 16,
+        "description": "Children and other descendants giving right to the minimum (LIRPF art. 58): under 25 at the end of 2026 (born 2002 or later), living with the employee, earning no more than 8,000 EUR"
+      },
+      {
+        "key": "descendantsUnder3",
+        "type": "INTEGER",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "max": 16,
+        "description": "Of those descendants, the ones born in 2024 or later, or adopted or fostered in 2024 or later (+2,800 each, LIRPF art. 58.2)"
+      },
+      {
+        "key": "descendantsHalf",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The descendants are shared with another person entitled to the minimum (usually the other parent) and count by half (LIRPF art. 61.1.ª); all of them are taken the same way"
+      },
+      {
+        "key": "ascendants65",
+        "type": "INTEGER",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "max": 6,
+        "description": "Parents or other ascendants aged 65 to 74 in 2026 (born 1952 to 1961) living with the employee at least half the year and earning no more than 8,000 EUR (LIRPF art. 59)"
+      },
+      {
+        "key": "ascendants75",
+        "type": "INTEGER",
+        "required": false,
+        "defaultValue": "0",
+        "min": 0,
+        "max": 6,
+        "description": "Ascendants aged 75 or more in 2026 (born 1951 or earlier), same conditions (+1,400 each, LIRPF art. 59.2)"
+      },
+      {
+        "key": "ascendantsSharedBy",
+        "type": "INTEGER",
+        "required": false,
+        "defaultValue": "1",
+        "min": 1,
+        "max": 10,
+        "description": "Number of descendants (the employee included) the ascendants live with, who share their minimum (LIRPF art. 61.2.ª); the same for all of them"
+      },
+      {
+        "key": "disability",
+        "type": "ENUM",
+        "required": false,
+        "defaultValue": "NONE",
+        "values": ["NONE", "FROM_33", "FROM_33_REDUCED_MOBILITY", "FROM_65"],
+        "description": "The employee's own disability: 33% to 65%, the same with reduced mobility or needing help from another person, or 65% or more (LIRPF art. 60; RIRPF art. 83.2.b)"
+      },
+      {
+        "key": "geographicMobility",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The employee, registered unemployed, accepted a job requiring a change of residence (+2,000 EUR expenses this year and next, RIRPF art. 83.2.b)"
+      },
+      {
+        "key": "housingLoan",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The employee stated in modelo 145 loan payments for a main home bought before 2013 giving right to the transitional deduction; only with annual pay under 33,007.20 (RIRPF art. 86.1)"
+      },
+      {
+        "key": "withholdingContract",
+        "type": "ENUM",
+        "required": true,
+        "values": ["GENERAL", "UNDER_ONE_YEAR", "SPECIAL_RELATIONSHIP", "DAILY_MANUAL"],
+        "description": "For the minimum rate (RIRPF art. 86.2): GENERAL (also special relationships of people with disabilities in special employment centres and of inmates), UNDER_ONE_YEAR (contracts under a year and artists, minimum 2%), SPECIAL_RELATIONSHIP (other special dependent relationships, minimum 15%), DAILY_MANUAL (sporadic manual work paid by the day — refused)"
+      },
+      {
+        "key": "withholdingRateOverride",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "max": 47,
+        "description": "Withholding rate in percent with two decimals replacing the computed one, with its reason"
+      },
+      {
+        "key": "withholdingRateOverrideReason",
+        "type": "ENUM",
+        "required": false,
+        "defaultValue": "NONE",
+        "values": ["NONE", "REGULARIZED", "REQUESTED_HIGHER"],
+        "description": "REGULARIZED: the rate the employer regularized under RIRPF art. 87 after a change in the data (used as entered); REQUESTED_HIGHER: a higher rate the employee asked for in writing (RIRPF art. 88.5; used when above the computed one)"
+      },
+      {
+        "key": "contributionGroup",
+        "type": "INTEGER",
+        "required": true,
+        "min": 1,
+        "max": 11,
+        "description": "Social security contribution group (grupo de cotización) of the employee's professional category, 1 to 7 (Orden art. 3); groups 8 to 11 contribute by day and are refused"
+      },
+      {
+        "key": "unemploymentRate",
+        "type": "ENUM",
+        "required": true,
+        "values": ["INDEFINITE", "FIXED_TERM"],
+        "description": "Unemployment rate (Orden art. 33.2.a): INDEFINITE 7.05% for open-ended contracts (also part-time, fijos discontinuos, training, relief, substitution and interim contracts, and any contract with a worker with a disability of 33% or more); FIXED_TERM 8.30% for other fixed-term contracts"
+      },
+      {
+        "key": "partTimeHours",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "max": 300,
+        "description": "Part-time contract: hours actually worked this month; the minimum bases are hours x the hourly minimum of the group, and x 8.58 for AT/EP (Orden arts. 38-39)"
+      },
+      {
+        "key": "accidentRate",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "max": "0.2",
+        "description": "This employee's AT/EP rate where the tariff sets it by occupation (DA 61ª LGSS, cuadro II), replacing the employer's rate"
+      },
+      {
+        "key": "trainingContract",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "Training contract (formación en alternancia or the earlier training contracts) with the fixed quotas of Orden art. 46 — not supported"
+      },
+      {
+        "key": "multipleEmployment",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The employee also works for another company (pluriempleo), sharing the maximum base (Orden art. 10) — not supported"
+      },
+      {
+        "key": "dependantsWithDisability",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "A descendant or ascendant has a disability, or a descendant of 25 or more counts for that reason (LIRPF art. 60.2) — not supported"
+      },
+      {
+        "key": "courtOrderedPayments",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The employee pays a court-ordered compensatory pension to a spouse or maintenance to children (RIRPF arts. 83.3.f, 85.2) — not supported"
+      },
+      {
+        "key": "irregularIncome",
+        "type": "BOOLEAN",
+        "required": false,
+        "defaultValue": "false",
+        "description": "The annual pay includes income generated over more than two years or obtained irregularly with the 30% reduction (RIRPF art. 83.3.a) — not supported"
+      }
+    ]
+  },
+  "parameters": {
+    "generalExpenses": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "2000",
+        "source": "rirpf"
+      }
+    ],
+    "mobilityExpenses": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "2000",
+        "source": "rirpf"
+      }
+    ],
+    "disabledWorkerExpenses": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "3500",
+        "source": "rirpf"
+      }
+    ],
+    "disabledWorkerExpensesHigh": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "7750",
+        "source": "rirpf"
+      }
+    ],
+    "red20Lower": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "14852",
+        "source": "lirpf"
+      }
+    ],
+    "red20Middle": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "17673.52",
+        "source": "lirpf"
+      }
+    ],
+    "red20Upper": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "19747.50",
+        "source": "lirpf"
+      }
+    ],
+    "red20Max": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "7302",
+        "source": "lirpf"
+      }
+    ],
+    "red20Slope1": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "1.75",
+        "source": "lirpf"
+      }
+    ],
+    "red20MiddleAmount": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "2364.34",
+        "source": "lirpf"
+      }
+    ],
+    "red20Slope2": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "1.14",
+        "source": "lirpf"
+      }
+    ],
+    "largeFamilyReduction": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "600",
+        "source": "rirpf"
+      }
+    ],
+    "personalMinimum": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "5550",
+        "source": "lirpf"
+      }
+    ],
+    "age65Minimum": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "1150",
+        "source": "lirpf"
+      }
+    ],
+    "age75Minimum": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "1400",
+        "source": "lirpf"
+      }
+    ],
+    "descendant1": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "2400",
+        "source": "lirpf"
+      }
+    ],
+    "descendant2": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "2700",
+        "source": "lirpf"
+      }
+    ],
+    "descendant3": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "4000",
+        "source": "lirpf"
+      }
+    ],
+    "descendant4": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "4500",
+        "source": "lirpf"
+      }
+    ],
+    "descendantUnder3": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "2800",
+        "source": "lirpf"
+      }
+    ],
+    "ascendantMinimum": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "1150",
+        "source": "lirpf"
+      }
+    ],
+    "ascendant75Minimum": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "1400",
+        "source": "lirpf"
+      }
+    ],
+    "disabilityMinimum": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "3000",
+        "source": "lirpf"
+      }
+    ],
+    "disabilityMinimumHigh": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "9000",
+        "source": "lirpf"
+      }
+    ],
+    "assistanceMinimum": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "3000",
+        "source": "lirpf"
+      }
+    ],
+    "capIncomeLimit": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "35200",
+        "source": "rirpf"
+      }
+    ],
+    "capRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.43",
+        "source": "rirpf"
+      }
+    ],
+    "housingIncomeLimit": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "33007.20",
+        "source": "rirpf"
+      }
+    ],
+    "housingReductionRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.02",
+        "source": "aeat-algoritmo-2026"
+      }
+    ],
+    "minimumRateShortContract": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "2.00",
+        "source": "rirpf"
+      }
+    ],
+    "minimumRateSpecial": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "15.00",
+        "source": "rirpf"
+      }
+    ],
+    "maximumBase": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "5101.20",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "accidentMinimumBase": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "1424.40",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "partTimeAccidentHourlyBase": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "8.58",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "commonEmployeeRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.047",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "commonEmployerRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.236",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "equityEmployeeRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0015",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "equityEmployerRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0075",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "unemploymentIndefiniteEmployeeRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.0155",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "unemploymentIndefiniteEmployerRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.055",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "unemploymentFixedTermEmployeeRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.016",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "unemploymentFixedTermEmployerRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.067",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "wageGuaranteeRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.002",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "trainingEmployeeRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.001",
+        "source": "orden-pjc-297-2026"
+      }
+    ],
+    "trainingEmployerRate": [
+      {
+        "from": "2026-01-01",
+        "to": "2026-12-31",
+        "value": "0.006",
+        "source": "orden-pjc-297-2026"
+      }
+    ]
+  },
+  "tables": {
+    "minimumBases": {
+      "kind": "EXACT",
+      "description": "Minimum common-contingencies bases by contribution group: monthly (Orden PJC/297/2026 art. 3) and per hour for part-time contracts (art. 39)",
+      "columns": ["monthly", "hourly"],
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "orden-pjc-297-2026",
+          "rows": [
+            {
+              "key": "1",
+              "values": ["1989.30", "11.98"]
+            },
+            {
+              "key": "2",
+              "values": ["1649.70", "9.94"]
+            },
+            {
+              "key": "3",
+              "values": ["1435.20", "8.65"]
+            },
+            {
+              "key": "4",
+              "values": ["1424.40", "8.58"]
+            },
+            {
+              "key": "5",
+              "values": ["1424.40", "8.58"]
+            },
+            {
+              "key": "6",
+              "values": ["1424.40", "8.58"]
+            },
+            {
+              "key": "7",
+              "values": ["1424.40", "8.58"]
+            }
+          ]
+        }
+      ]
+    },
+    "exemptLimits": {
+      "kind": "EXACT",
+      "description": "Annual pay up to which no withholding applies, by family situation and number of descendants (RIRPF art. 81.1, RD 142/2024; algorithm TABLA 1); situation 1 needs a descendant",
+      "columns": ["d0", "d1", "d2"],
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "rirpf",
+          "rows": [
+            {
+              "key": "1",
+              "values": [null, "17644", "18694"]
+            },
+            {
+              "key": "2",
+              "values": ["17197", "18130", "19262"]
+            },
+            {
+              "key": "3",
+              "values": ["15876", "16342", "16867"]
+            }
+          ]
+        }
+      ]
+    },
+    "withholdingScale": {
+      "kind": "BRACKETS",
+      "description": "Withholding scale (LIRPF art. 101.1; algorithm TABLA 2) with the published cumulative quotas",
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "aeat-algoritmo-2026",
+          "rows": [
+            {
+              "lower": "0",
+              "upper": "12450",
+              "rate": "0.19",
+              "base": "0"
+            },
+            {
+              "lower": "12450",
+              "upper": "20200",
+              "rate": "0.24",
+              "base": "2365.50"
+            },
+            {
+              "lower": "20200",
+              "upper": "35200",
+              "rate": "0.30",
+              "base": "4225.50"
+            },
+            {
+              "lower": "35200",
+              "upper": "60000",
+              "rate": "0.37",
+              "base": "8725.50"
+            },
+            {
+              "lower": "60000",
+              "upper": "300000",
+              "rate": "0.45",
+              "base": "17901.50"
+            },
+            {
+              "lower": "300000",
+              "upper": "999999999999",
+              "rate": "0.47",
+              "base": "125901.50"
+            }
+          ]
+        }
+      ]
+    },
+    "solidarity": {
+      "kind": "BRACKETS",
+      "description": "Solidarity contribution on monthly remuneration above the maximum base, employee and employer shares (Orden PJC/297/2026 art. 17; LGSS art. 19 bis)",
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "orden-pjc-297-2026",
+          "rows": [
+            {
+              "key": "EMPLOYEE",
+              "lower": "0",
+              "upper": "5101.20",
+              "rate": "0"
+            },
+            {
+              "key": "EMPLOYEE",
+              "lower": "5101.20",
+              "upper": "5611.32",
+              "rate": "0.0019"
+            },
+            {
+              "key": "EMPLOYEE",
+              "lower": "5611.32",
+              "upper": "7651.80",
+              "rate": "0.0021"
+            },
+            {
+              "key": "EMPLOYEE",
+              "lower": "7651.80",
+              "upper": "999999999999",
+              "rate": "0.0024"
+            },
+            {
+              "key": "EMPLOYER",
+              "lower": "0",
+              "upper": "5101.20",
+              "rate": "0"
+            },
+            {
+              "key": "EMPLOYER",
+              "lower": "5101.20",
+              "upper": "5611.32",
+              "rate": "0.0096"
+            },
+            {
+              "key": "EMPLOYER",
+              "lower": "5611.32",
+              "upper": "7651.80",
+              "rate": "0.0104"
+            },
+            {
+              "key": "EMPLOYER",
+              "lower": "7651.80",
+              "upper": "999999999999",
+              "rate": "0.0122"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "steps": [
+    {
+      "id": "calendarMonth",
+      "type": "REQUIRE",
+      "condition": "#isCalendarMonth",
+      "message": "Spanish payroll is monthly: the pay period must be a whole calendar month"
+    },
+    {
+      "id": "paidInSameYear",
+      "type": "REQUIRE",
+      "source": "rirpf",
+      "condition": "#paymentDate.getYear() == #periodEnd.getYear()",
+      "message": "The payment must fall in the same year as the pay period: withholding follows the payment (RIRPF art. 78) and contributions the month of accrual, so pay made in another year is not supported"
+    },
+    {
+      "id": "noPreTaxDeductions",
+      "type": "REQUIRE",
+      "condition": "#preTaxDeductions == 0",
+      "message": "Pre-tax deductions are not supported by this template"
+    },
+    {
+      "id": "noUnpaidLeave",
+      "type": "REQUIRE",
+      "source": "orden-pjc-297-2026",
+      "condition": "#reductions == 0",
+      "message": "Unpaid leave is not supported: days registered without pay contribute on the minimum base (Orden PJC/297/2026 art. 7)"
+    },
+    {
+      "id": "wholeMonth",
+      "type": "REQUIRE",
+      "source": "orden-pjc-297-2026",
+      "condition": "#employedThroughout",
+      "message": "The employee must be employed for the whole month: bases for a month started or ended part-way are prorated by days, which this template does not do"
+    },
+    {
+      "id": "commonTerritory",
+      "type": "REQUIRE",
+      "condition": "#employee['taxTerritory'] == 'COMMON'",
+      "message": "Only the common tax territory is supported: withholding on work performed in the Basque Country or Navarre follows the foral rules (Concierto Económico art. 7.Uno.a; Convenio Económico art. 10.1.a), and income earned in Ceuta, Melilla or La Palma by their residents has the 60% reduction of RIRPF art. 80.2"
+    },
+    {
+      "id": "noDailyManual",
+      "type": "REQUIRE",
+      "source": "rirpf",
+      "condition": "#employee['withholdingContract'] != 'DAILY_MANUAL'",
+      "message": "Manual workers paid by the daily wage (peonadas) are not supported: their annual pay is 100 x the daily wage (RIRPF art. 83.2)"
+    },
+    {
+      "id": "noTrainingContract",
+      "type": "REQUIRE",
+      "source": "orden-pjc-297-2026",
+      "condition": "!#employee['trainingContract']",
+      "message": "Training contracts contribute fixed quotas (Orden PJC/297/2026 art. 46), which this template does not do"
+    },
+    {
+      "id": "noMultipleEmployment",
+      "type": "REQUIRE",
+      "source": "orden-pjc-297-2026",
+      "condition": "!#employee['multipleEmployment']",
+      "message": "Employees in multiple employment (pluriempleo) share the maximum base between companies (Orden PJC/297/2026 art. 10), which this template does not do"
+    },
+    {
+      "id": "noDisabledDependants",
+      "type": "REQUIRE",
+      "source": "lirpf",
+      "condition": "!#employee['dependantsWithDisability']",
+      "message": "Descendants or ascendants with a disability are not supported by this template (LIRPF art. 60.2)"
+    },
+    {
+      "id": "noCourtOrderedPayments",
+      "type": "REQUIRE",
+      "source": "rirpf",
+      "condition": "!#employee['courtOrderedPayments']",
+      "message": "Court-ordered compensatory pensions or child maintenance are not supported (RIRPF arts. 83.3.f, 85.2)"
+    },
+    {
+      "id": "noIrregularIncome",
+      "type": "REQUIRE",
+      "source": "rirpf",
+      "condition": "!#employee['irregularIncome']",
+      "message": "Irregular income with the 30% reduction is not supported (RIRPF art. 83.3.a)"
+    },
+    {
+      "id": "monthlyContributionGroup",
+      "type": "REQUIRE",
+      "source": "orden-pjc-297-2026",
+      "condition": "#employee['contributionGroup'] <= 7",
+      "message": "Contribution groups 8 to 11 contribute on daily bases (Orden PJC/297/2026 art. 3), which this template does not do"
+    },
+    {
+      "id": "noOvertime",
+      "type": "REQUIRE",
+      "source": "orden-pjc-297-2026",
+      "condition": "#earningsByComponent['OT'] == 0",
+      "message": "Overtime carries an additional contribution and enters only the AT/EP base (Orden PJC/297/2026 art. 5), which this template does not do"
+    },
+    {
+      "id": "partTimeHoursGiven",
+      "type": "REQUIRE",
+      "source": "orden-pjc-297-2026",
+      "condition": "(#fte >= 1 and #fullPeriod) or #employee['partTimeHours'] != null",
+      "message": "Part-time employee: set the employee's partTimeHours (hours worked this month) for the hourly minimum bases (Orden PJC/297/2026 arts. 38-39)"
+    },
+    {
+      "id": "partTimeContributions",
+      "type": "REQUIRE",
+      "source": "rirpf",
+      "when": "#employee['partTimeHours'] != null",
+      "condition": "#employee['annualSocialContributions'] != null",
+      "message": "Part-time employee: set the employee's annualSocialContributions; the template's estimate assumes full-time bases"
+    },
+    {
+      "id": "extraPayDeclared",
+      "type": "REQUIRE",
+      "source": "lgss",
+      "condition": "#earningsByComponent['BONUS'] == 0 or #employee['annualExtraPay'] > 0",
+      "message": "Extra payments (BONUS) are prorated over the year in the contribution base (LGSS art. 147): set the employee's annualExtraPay"
+    },
+    {
+      "id": "singleParentHasDescendants",
+      "type": "REQUIRE",
+      "source": "rirpf",
+      "condition": "#employee['familySituation'] != '1' or #employee['descendants'] >= 1",
+      "message": "Family situation 1 requires at least one descendant (RIRPF art. 81.1)"
+    },
+    {
+      "id": "under3WithinDescendants",
+      "type": "REQUIRE",
+      "source": "lirpf",
+      "condition": "#employee['descendantsUnder3'] <= #employee['descendants']",
+      "message": "descendantsUnder3 counts descendants already included in descendants, so it cannot be larger"
+    },
+    {
+      "id": "housingLoanLimit",
+      "type": "REQUIRE",
+      "source": "rirpf",
+      "condition": "!#employee['housingLoan'] or #employee['annualPay'] < #p['housingIncomeLimit']",
+      "message": "The housing loan reduction applies only with annual pay under 33,007.20 EUR (RIRPF art. 86.1)"
+    },
+    {
+      "id": "overrideReason",
+      "type": "REQUIRE",
+      "source": "rirpf",
+      "condition": "(#employee['withholdingRateOverride'] == null) == (#employee['withholdingRateOverrideReason'] == 'NONE')",
+      "message": "Set withholdingRateOverride together with withholdingRateOverrideReason (REGULARIZED or REQUESTED_HIGHER), or neither"
+    },
+    {
+      "id": "estimateMonthly",
+      "type": "VALUE",
+      "expr": "#divide(#employee['annualPay'], 12, 2, 'HALF_UP')"
+    },
+    {
+      "id": "estimateCommonBase",
+      "type": "VALUE",
+      "source": "orden-pjc-297-2026",
+      "expr": "#clamp(#estimateMonthly, #table.lookup('minimumBases', #employee['contributionGroup'], 'monthly'), #p['maximumBase'])"
+    },
+    {
+      "id": "estimateAccidentBase",
+      "type": "VALUE",
+      "source": "orden-pjc-297-2026",
+      "expr": "#clamp(#estimateMonthly, #p['accidentMinimumBase'], #p['maximumBase'])"
+    },
+    {
+      "id": "estimatedContributions",
+      "type": "VALUE",
+      "source": "rirpf",
+      "expr": "12 * (#round(#estimateCommonBase * #p['commonEmployeeRate'], 2, 'HALF_UP') + #round(#estimateCommonBase * #p['equityEmployeeRate'], 2, 'HALF_UP') + #round(#estimateAccidentBase * (#employee['unemploymentRate'] == 'FIXED_TERM' ? #p['unemploymentFixedTermEmployeeRate'] : #p['unemploymentIndefiniteEmployeeRate']), 2, 'HALF_UP') + #round(#estimateAccidentBase * #p['trainingEmployeeRate'], 2, 'HALF_UP') + #round(#table.bracketTax('solidarity', 'EMPLOYEE', #estimateMonthly), 2, 'HALF_UP'))"
+    },
+    {
+      "id": "socialContributions",
+      "type": "VALUE",
+      "source": "rirpf",
+      "expr": "#coalesce(#employee['annualSocialContributions'], #estimatedContributions)"
+    },
+    {
+      "id": "netWorkIncome",
+      "type": "VALUE",
+      "source": "rirpf",
+      "expr": "#pos(#employee['annualPay'] - #socialContributions)"
+    },
+    {
+      "id": "otherExpenses",
+      "type": "VALUE",
+      "source": "rirpf",
+      "expr": "#min(#p['generalExpenses'] + (#employee['geographicMobility'] ? #p['mobilityExpenses'] : 0) + (#employee['disability'] == 'FROM_65' or #employee['disability'] == 'FROM_33_REDUCED_MOBILITY' ? #p['disabledWorkerExpensesHigh'] : (#employee['disability'] == 'FROM_33' ? #p['disabledWorkerExpenses'] : 0)), #netWorkIncome)"
+    },
+    {
+      "id": "workIncomeReduction",
+      "type": "VALUE",
+      "source": "lirpf",
+      "expr": "#netWorkIncome <= #p['red20Lower'] ? #p['red20Max'] : (#netWorkIncome <= #p['red20Middle'] ? #round(#p['red20Max'] - #p['red20Slope1'] * (#netWorkIncome - #p['red20Lower']), 2, 'HALF_UP') : (#netWorkIncome < #p['red20Upper'] ? #round(#p['red20MiddleAmount'] - #p['red20Slope2'] * (#netWorkIncome - #p['red20Middle']), 2, 'HALF_UP') : 0))"
+    },
+    {
+      "id": "withholdingBase",
+      "type": "VALUE",
+      "source": "rirpf",
+      "expr": "#pos(#pos(#netWorkIncome - #otherExpenses - #workIncomeReduction) - (#employee['descendants'] > 2 ? #p['largeFamilyReduction'] : 0))"
+    },
+    {
+      "id": "taxpayerAge",
+      "type": "VALUE",
+      "source": "aeat-algoritmo-2026",
+      "expr": "#periodEnd.getYear() - #birthYear"
+    },
+    {
+      "id": "descendantsWhole",
+      "type": "VALUE",
+      "source": "lirpf",
+      "expr": "(#employee['descendants'] >= 1 ? #p['descendant1'] : 0) + (#employee['descendants'] >= 2 ? #p['descendant2'] : 0) + (#employee['descendants'] >= 3 ? #p['descendant3'] : 0) + (#employee['descendants'] > 3 ? (#employee['descendants'] - 3) * #p['descendant4'] : 0) + #employee['descendantsUnder3'] * #p['descendantUnder3']"
+    },
+    {
+      "id": "personalFamilyMinimum",
+      "type": "VALUE",
+      "source": "lirpf",
+      "expr": "#p['personalMinimum'] + (#taxpayerAge > 64 ? #p['age65Minimum'] : 0) + (#taxpayerAge > 74 ? #p['age75Minimum'] : 0) + (#employee['descendantsHalf'] ? #divide(#descendantsWhole, 2, 2, 'HALF_UP') : #descendantsWhole) + #divide((#employee['ascendants65'] + #employee['ascendants75']) * #p['ascendantMinimum'], #employee['ascendantsSharedBy'], 2, 'HALF_UP') + #divide(#employee['ascendants75'] * #p['ascendant75Minimum'], #employee['ascendantsSharedBy'], 2, 'HALF_UP') + (#employee['disability'] == 'FROM_65' ? #p['disabilityMinimumHigh'] + #p['assistanceMinimum'] : (#employee['disability'] == 'FROM_33_REDUCED_MOBILITY' ? #p['disabilityMinimum'] + #p['assistanceMinimum'] : (#employee['disability'] == 'FROM_33' ? #p['disabilityMinimum'] : 0)))"
+    },
+    {
+      "id": "exemptLimit",
+      "type": "VALUE",
+      "source": "rirpf",
+      "expr": "#table.lookup('exemptLimits', #employee['familySituation'], #employee['descendants'] >= 2 ? 'd2' : (#employee['descendants'] == 1 ? 'd1' : 'd0'))"
+    },
+    {
+      "id": "withholdingQuota",
+      "type": "VALUE",
+      "source": "rirpf",
+      "expr": "#pos(#table.bracketTax('withholdingScale', #withholdingBase) - #table.bracketTax('withholdingScale', #personalFamilyMinimum))"
+    },
+    {
+      "id": "cappedQuota",
+      "type": "VALUE",
+      "source": "rirpf",
+      "expr": "#employee['annualPay'] <= #p['capIncomeLimit'] ? #pos(#min(#withholdingQuota, (#employee['annualPay'] - #exemptLimit) * #p['capRate'])) : #withholdingQuota"
+    },
+    {
+      "id": "housingReduction",
+      "type": "VALUE",
+      "source": "aeat-algoritmo-2026",
+      "expr": "#employee['housingLoan'] ? #round(#employee['annualPay'] * #p['housingReductionRate'], 2, 'DOWN') : 0"
+    },
+    {
+      "id": "computedRate",
+      "type": "VALUE",
+      "source": "rirpf",
+      "expr": "#employee['annualPay'] <= #exemptLimit ? 0 : #divide(#pos(#cappedQuota - #housingReduction) * 100, #employee['annualPay'], 2, 'DOWN')"
+    },
+    {
+      "id": "withholdingRate",
+      "type": "VALUE",
+      "source": "rirpf",
+      "expr": "#employee['withholdingContract'] == 'UNDER_ONE_YEAR' ? #max(#computedRate, #p['minimumRateShortContract']) : (#employee['withholdingContract'] == 'SPECIAL_RELATIONSHIP' ? #max(#computedRate, #p['minimumRateSpecial']) : #computedRate)"
+    },
+    {
+      "id": "appliedRate",
+      "type": "VALUE",
+      "source": "rirpf",
+      "expr": "#employee['withholdingRateOverrideReason'] == 'REGULARIZED' ? #employee['withholdingRateOverride'] : (#employee['withholdingRateOverrideReason'] == 'REQUESTED_HIGHER' ? #max(#withholdingRate, #employee['withholdingRateOverride']) : #withholdingRate)"
+    },
+    {
+      "id": "rateMatchesYearToDate",
+      "type": "REQUIRE",
+      "source": "rirpf",
+      "when": "#ytd.periods('incomeTax', 'TAX') > 0 and #employee['withholdingRateOverrideReason'] == 'NONE'",
+      "condition": "#max(#ytd.amount('incomeTax', 'TAX') - #divide(#ytd.base('incomeTax', 'TAX') * #withholdingRate, 100, 6, 'HALF_UP'), #divide(#ytd.base('incomeTax', 'TAX') * #withholdingRate, 100, 6, 'HALF_UP') - #ytd.amount('incomeTax', 'TAX')) * 200 <= #ytd.periods('incomeTax', 'TAX')",
+      "message": "The withholding rate computed from the current data differs from the rate applied earlier this year: regularize it under RIRPF art. 87 and enter the regularized rate as withholdingRateOverride with reason REGULARIZED"
+    },
+    {
+      "id": "monthlyPay",
+      "type": "VALUE",
+      "expr": "#pos(#socialEarnings - #earningsByComponent['BONUS'])"
+    },
+    {
+      "id": "contributionPay",
+      "type": "VALUE",
+      "source": "orden-pjc-297-2026",
+      "expr": "#monthlyPay > 0 ? #monthlyPay + #divide(#employee['annualExtraPay'], 12, 2, 'HALF_UP') : 0"
+    },
+    {
+      "id": "commonMinimumBase",
+      "type": "VALUE",
+      "source": "orden-pjc-297-2026",
+      "expr": "#employee['partTimeHours'] != null ? #round(#employee['partTimeHours'] * #table.lookup('minimumBases', #employee['contributionGroup'], 'hourly'), 2, 'HALF_UP') : #table.lookup('minimumBases', #employee['contributionGroup'], 'monthly')"
+    },
+    {
+      "id": "accidentMinimumBase",
+      "type": "VALUE",
+      "source": "orden-pjc-297-2026",
+      "expr": "#employee['partTimeHours'] != null ? #round(#employee['partTimeHours'] * #p['partTimeAccidentHourlyBase'], 2, 'HALF_UP') : #p['accidentMinimumBase']"
+    },
+    {
+      "id": "commonBase",
+      "type": "VALUE",
+      "source": "orden-pjc-297-2026",
+      "expr": "#clamp(#contributionPay, #commonMinimumBase, #p['maximumBase'])"
+    },
+    {
+      "id": "accidentBase",
+      "type": "VALUE",
+      "source": "orden-pjc-297-2026",
+      "expr": "#clamp(#contributionPay, #accidentMinimumBase, #p['maximumBase'])"
+    },
+    {
+      "id": "commonContingencies",
+      "type": "CONTRIBUTION",
+      "label": "Common contingencies (contingencias comunes)",
+      "ledger": "SOCIAL_SECURITY",
+      "source": "orden-pjc-297-2026",
+      "when": "#contributionPay > 0",
+      "base": "#commonBase",
+      "employee": {
+        "rate": "#p['commonEmployeeRate']"
+      },
+      "employer": {
+        "rate": "#p['commonEmployerRate']"
+      }
+    },
+    {
+      "id": "intergenerationalEquity",
+      "type": "CONTRIBUTION",
+      "label": "Intergenerational equity mechanism (MEI)",
+      "ledger": "PENSION_CONTRIBUTION",
+      "source": "orden-pjc-297-2026",
+      "when": "#contributionPay > 0",
+      "base": "#commonBase",
+      "employee": {
+        "rate": "#p['equityEmployeeRate']"
+      },
+      "employer": {
+        "rate": "#p['equityEmployerRate']"
+      }
+    },
+    {
+      "id": "unemployment",
+      "type": "CONTRIBUTION",
+      "label": "Unemployment (desempleo)",
+      "ledger": "UNEMPLOYMENT",
+      "source": "orden-pjc-297-2026",
+      "when": "#contributionPay > 0",
+      "base": "#accidentBase",
+      "employee": {
+        "rate": "#employee['unemploymentRate'] == 'FIXED_TERM' ? #p['unemploymentFixedTermEmployeeRate'] : #p['unemploymentIndefiniteEmployeeRate']"
+      },
+      "employer": {
+        "rate": "#employee['unemploymentRate'] == 'FIXED_TERM' ? #p['unemploymentFixedTermEmployerRate'] : #p['unemploymentIndefiniteEmployerRate']"
+      }
+    },
+    {
+      "id": "wageGuaranteeFund",
+      "type": "CONTRIBUTION",
+      "label": "Wage Guarantee Fund (FOGASA)",
+      "ledger": "OTHER",
+      "source": "orden-pjc-297-2026",
+      "when": "#contributionPay > 0",
+      "base": "#accidentBase",
+      "employer": {
+        "rate": "#p['wageGuaranteeRate']"
+      }
+    },
+    {
+      "id": "vocationalTraining",
+      "type": "CONTRIBUTION",
+      "label": "Vocational training (formación profesional)",
+      "ledger": "OTHER",
+      "source": "orden-pjc-297-2026",
+      "when": "#contributionPay > 0",
+      "base": "#accidentBase",
+      "employee": {
+        "rate": "#p['trainingEmployeeRate']"
+      },
+      "employer": {
+        "rate": "#p['trainingEmployerRate']"
+      }
+    },
+    {
+      "id": "workAccident",
+      "type": "CONTRIBUTION",
+      "label": "Work accidents and occupational diseases (AT/EP)",
+      "ledger": "WORK_INJURY",
+      "source": "lgss",
+      "when": "#contributionPay > 0",
+      "base": "#accidentBase",
+      "employer": {
+        "rate": "#coalesce(#employee['accidentRate'], #employer['accidentRate'])"
+      }
+    },
+    {
+      "id": "solidarity",
+      "type": "CONTRIBUTION",
+      "label": "Solidarity contribution (cotización adicional de solidaridad)",
+      "ledger": "SOCIAL_SECURITY",
+      "source": "orden-pjc-297-2026",
+      "when": "#contributionPay > #p['maximumBase']",
+      "base": "#contributionPay",
+      "employee": {
+        "amount": "#table.bracketTax('solidarity', 'EMPLOYEE', #solidarity_base)"
+      },
+      "employer": {
+        "amount": "#table.bracketTax('solidarity', 'EMPLOYER', #solidarity_base)"
+      }
+    },
+    {
+      "id": "incomeTax",
+      "type": "TAX",
+      "label": "Income tax withholding (retención IRPF)",
+      "ledger": "INCOME_TAX",
+      "source": "rirpf",
+      "when": "#taxableEarnings > 0",
+      "base": "#taxableEarnings",
+      "rate": "#divide(#appliedRate, 100, 4, 'HALF_UP')",
+      "recordZero": true
+    }
+  ],
+  "limitations": [
+    "Common tax territory, Régimen General employees paid monthly in EUR in 2026, for whole months with the payment in the same year. Work performed in the Basque Country or Navarre, residents of Ceuta, Melilla and La Palma, contribution groups 8 to 11, training contracts, multiple employment, part months, unpaid leave and overtime are refused.",
+    "The withholding rate is recomputed each run from the annual figures entered (annual pay, contributions, family data from modelo 145) and applied to the whole payment. RIRPF art. 87 regularization is not automated: once the data change during the year the run refuses until the employer enters the regularized rate (withholdingRateOverride, REGULARIZED). A higher rate requested under art. 88.5 can be entered as REQUESTED_HIGHER.",
+    "Without annualSocialContributions the expected employee contributions are estimated as 12 months on annualPay / 12 at full-time bases.",
+    "Not modelled: dependants with a disability, court-ordered payments (arts. 83.3.f, 85.2), irregular income (art. 83.3.a), pensioners and the unemployed, pay in kind and its ingreso a cuenta, arrears of earlier years (15% fixed rate), fixed rates (directors, courses, authors), the special regime for workers posted to Spain, sick leave and birth leave months (their own bases), contribution reductions and incentives, and the 33.62 EUR charge at the end of fixed-term contracts under 30 days (Orden art. 28).",
+    "Extra payments (BONUS) are prorated over the year in the contribution base from annualExtraPay (Orden art. 1, monthly-paid employees); a run holding only BONUS pays withholding but no contributions.",
+    "Contributions are rounded to the cent, half up, per line; part-time minimum bases (hours x hourly base) and the extra-pay proration to the cent, half up.",
+    "Status LAW_DERIVED: values are cited from the BOE consolidated texts, the Orden PJC/297/2026 and the AEAT 2026 algorithm and help; the cases are derived from them (one reproduces the AEAT help's 15.96% example)."
+  ],
+  "testCases": [
+    {
+      "name": "AEAT example: 28,500 EUR with 1,700 EUR contributions gives 15.96%",
+      "evidence": "AEAT Retenciones 2026 help, p. 56: 28,500 gross, about 1,700 contributions, rate 15.96%; the example gives no family data, so no dependants, under 65 and situation 3 are assumed (situation 2 gives the same rate). 2,375 x 15.96% = 379.05. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2375.00",
+      "fullPeriod": true,
+      "birthDate": "1980-02-01",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "annualSocialContributions": "1700.00"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "111.63"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "560.50"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.56"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "17.81"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "36.81"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "130.63"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.75"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.38"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.25"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "35.63"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "379.05"
+        }
+      ]
+    },
+    {
+      "name": "14 payments with the extra pays prorated for social security",
+      "evidence": "Orden art. 1 and LGSS art. 147: 2,000 + 4,000 / 12 = 2,333.33 is the base; situation 2 with two children, one born in 2025; contributions estimated from 28,000 / 12. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28000.00",
+        "familySituation": "2",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "annualExtraPay": "4000.00",
+        "descendants": "2",
+        "descendantsUnder3": "1"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "109.67"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "550.67"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.50"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "17.50"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "36.17"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "128.33"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.67"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.33"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "35.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "200.80"
+        }
+      ]
+    },
+    {
+      "name": "extra pay paid with June salary: base unchanged, tax on both",
+      "evidence": "The extra pay is already in the monthly base (LGSS art. 147); withholding applies to the whole payment (RIRPF art. 82). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "earningsByComponent": {
+        "BASIC": "2000.00",
+        "BONUS": "2000.00"
+      },
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28000.00",
+        "familySituation": "2",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "annualExtraPay": "4000.00",
+        "descendants": "2",
+        "descendantsUnder3": "1"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "109.67"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "550.67"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.50"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "17.50"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "36.17"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "128.33"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.67"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.33"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "35.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "401.60"
+        }
+      ]
+    },
+    {
+      "name": "extra pay paid on its own: withholding only",
+      "evidence": "No contributions on a run holding only the extra pay, which the monthly bases already prorate. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-12-01",
+      "periodEnd": "2026-12-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "earningsByComponent": {
+        "BONUS": "2000.00"
+      },
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28000.00",
+        "familySituation": "2",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "annualExtraPay": "4000.00",
+        "descendants": "2",
+        "descendantsUnder3": "1"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "200.80"
+        }
+      ]
+    },
+    {
+      "name": "pay under the exemption limit: 0% recorded",
+      "evidence": "RIRPF art. 81.1: 15,000 is not above 15,876 (situation 3, no descendants). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1250.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "15000.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "66.95"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "336.16"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "2.14"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "10.68"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "22.08"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "78.34"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "2.85"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "1.42"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "8.55"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "21.37"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "0.00"
+        }
+      ]
+    },
+    {
+      "name": "exempt pay on a contract under a year: the 2% minimum still applies",
+      "evidence": "AEAT help p. 12: the exemption does not apply where a minimum rate applies; RIRPF art. 86.2: 2%. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1250.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "15000.00",
+        "familySituation": "3",
+        "withholdingContract": "UNDER_ONE_YEAR",
+        "contributionGroup": "5",
+        "unemploymentRate": "FIXED_TERM",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "66.95"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "336.16"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "2.14"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "10.68"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "22.79"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "95.43"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "2.85"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "1.42"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "8.55"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "21.37"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "25.00"
+        }
+      ]
+    },
+    {
+      "name": "special employment relationship: 15% minimum",
+      "evidence": "RIRPF art. 86.2. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1800.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "21600.00",
+        "familySituation": "3",
+        "withholdingContract": "SPECIAL_RELATIONSHIP",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "84.60"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "424.80"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "2.70"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "13.50"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "27.90"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "99.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "3.60"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "1.80"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "10.80"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "27.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "270.00"
+        }
+      ]
+    },
+    {
+      "name": "43% cap just above the exemption limit",
+      "evidence": "RIRPF art. 85.3: (16,500 - 15,876) x 43% = 268.32 caps the quota. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1375.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "16500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "66.95"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "336.16"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "2.14"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "10.68"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "22.08"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "78.34"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "2.85"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "1.42"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "8.55"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "21.37"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "22.28"
+        }
+      ]
+    },
+    {
+      "name": "work income reduction in its second stretch",
+      "evidence": "LIRPF art. 20: 7,302 - 1.75 x (net - 14,852). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1500.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "18000.00",
+        "familySituation": "2",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "70.50"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "354.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "2.25"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "11.25"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "23.25"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "82.50"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "3.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "1.50"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "9.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "22.50"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "28.65"
+        }
+      ]
+    },
+    {
+      "name": "work income reduction in its third stretch",
+      "evidence": "LIRPF art. 20: 2,364.34 - 1.14 x (net - 17,673.52). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1650.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "19800.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "77.55"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "389.40"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "2.48"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "12.38"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "25.58"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "90.75"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "3.30"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "1.65"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "9.90"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "24.75"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "140.58"
+        }
+      ]
+    },
+    {
+      "name": "group 1 minimum base top-up",
+      "evidence": "Orden art. 3: group 1 minimum 1,989.30 above the 1,800 paid. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1800.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "21600.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "1",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "93.50"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "469.47"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "2.98"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "14.92"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "27.90"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "99.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "3.60"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "1.80"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "10.80"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "27.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "205.02"
+        }
+      ]
+    },
+    {
+      "name": "fixed-term contract: unemployment 8.30%",
+      "evidence": "Orden art. 33.2.a) 2.º: 6.70% employer, 1.60% employee. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2200.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "26400.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "FIXED_TERM",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "103.40"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "519.20"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.30"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "16.50"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "35.20"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "147.40"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.40"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.20"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "13.20"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "33.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "325.82"
+        }
+      ]
+    },
+    {
+      "name": "7,500 EUR a month: maximum base and two solidarity tiers",
+      "evidence": "Orden arts. 2, 17: base 5,101.20; 1.15% on 5,101.20-5,611.32 and 1.25% on 5,611.32-7,500. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "7500.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "90000.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "1",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "239.76"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "1203.88"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "7.65"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "38.26"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "79.07"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "280.57"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "10.20"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "5.10"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "30.61"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "76.52"
+        },
+        {
+          "step": "solidarity",
+          "side": "EMPLOYEE",
+          "amount": "4.94"
+        },
+        {
+          "step": "solidarity",
+          "side": "EMPLOYER",
+          "amount": "24.54"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "2301.75"
+        }
+      ]
+    },
+    {
+      "name": "10,000 EUR a month: all three solidarity tiers",
+      "evidence": "Orden art. 17: 1.46% above 7,651.80. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "10000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "120000.00",
+        "familySituation": "2",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "1",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "239.76"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "1203.88"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "7.65"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "38.26"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "79.07"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "280.57"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "10.20"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "5.10"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "30.61"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "76.52"
+        },
+        {
+          "step": "solidarity",
+          "side": "EMPLOYEE",
+          "amount": "10.89"
+        },
+        {
+          "step": "solidarity",
+          "side": "EMPLOYER",
+          "amount": "54.77"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "3424.00"
+        }
+      ]
+    },
+    {
+      "name": "housing loan: rate less two points",
+      "evidence": "RIRPF art. 86.1; algorithm MINOPAGO = TRUNCAR(2% x RETRIB) for pay under 33,007.20. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2500.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "30000.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "housingLoan": "true"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "117.50"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "590.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.75"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "18.75"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "38.75"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "137.50"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "5.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.50"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "15.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "37.50"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "360.50"
+        }
+      ]
+    },
+    {
+      "name": "ascendant over 75 shared by three: 1,150 / 3 and 1,400 / 3",
+      "evidence": "LIRPF arts. 59, 61: the minimum is shared among descendants living with the ascendant; REDONDEAR1(383.333...) = 383.33. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "24000.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "ascendants75": "1",
+        "ascendantsSharedBy": "3"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "94.00"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "472.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "15.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "31.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "110.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "12.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "30.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "256.60"
+        }
+      ]
+    },
+    {
+      "name": "ascendant aged 65 to 74, whole",
+      "evidence": "LIRPF art. 59. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "24000.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "ascendants65": "1"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "94.00"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "472.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "15.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "31.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "110.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "12.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "30.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "252.00"
+        }
+      ]
+    },
+    {
+      "name": "worker with a disability of 65% or more",
+      "evidence": "RIRPF art. 83.2.b) 7,750 expenses; LIRPF art. 60: 9,000 + 3,000 assistance. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2400.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28800.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "disability": "FROM_65"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "112.80"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "566.40"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.60"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "18.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "37.20"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "132.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.80"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.40"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.40"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "36.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "0.00"
+        }
+      ]
+    },
+    {
+      "name": "worker with a 33% disability and reduced mobility",
+      "evidence": "Same rules, 3,000 minimum + 3,000 assistance, 7,750 expenses. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2400.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28800.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "disability": "FROM_33_REDUCED_MOBILITY"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "112.80"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "566.40"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.60"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "18.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "37.20"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "132.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.80"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.40"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.40"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "36.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "108.72"
+        }
+      ]
+    },
+    {
+      "name": "worker with a 33% disability",
+      "evidence": "3,500 expenses, 3,000 minimum. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2400.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28800.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "disability": "FROM_33"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "112.80"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "566.40"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.60"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "18.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "37.20"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "132.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.80"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.40"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.40"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "36.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "247.44"
+        }
+      ]
+    },
+    {
+      "name": "aged 65 or more in 2026",
+      "evidence": "LIRPF art. 57: +1,150 (2026 - 1961 = 65 > 64). RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2400.00",
+      "fullPeriod": true,
+      "birthDate": "1961-12-31",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28800.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "112.80"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "566.40"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.60"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "18.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "37.20"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "132.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.80"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.40"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.40"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "36.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "364.08"
+        }
+      ]
+    },
+    {
+      "name": "aged 75 or more in 2026",
+      "evidence": "LIRPF art. 57: +1,150 +1,400. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2400.00",
+      "fullPeriod": true,
+      "birthDate": "1951-01-01",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28800.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "112.80"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "566.40"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.60"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "18.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "37.20"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "132.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.80"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.40"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.40"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "36.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "342.00"
+        }
+      ]
+    },
+    {
+      "name": "three children shared with the other parent: half minimum, 600 reduction",
+      "evidence": "LIRPF art. 58: each descendant by half; RIRPF art. 83.3.e): 600 with more than two descendants. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "36000.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "descendants": "3",
+        "descendantsHalf": "true"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "141.00"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "708.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "4.50"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "22.50"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "46.50"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "165.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "6.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "3.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "18.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "45.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "463.50"
+        }
+      ]
+    },
+    {
+      "name": "five descendants, single parent",
+      "evidence": "LIRPF art. 58: 2,400 + 2,700 + 4,000 + 4,500 x 2; situation 1 with two or more: limit 18,694. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3500.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "42000.00",
+        "familySituation": "1",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "descendants": "5",
+        "descendantsUnder3": "2"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "164.50"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "826.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "5.25"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "26.25"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "54.25"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "192.50"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "7.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "3.50"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "21.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "52.50"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "193.90"
+        }
+      ]
+    },
+    {
+      "name": "geographic mobility: +2,000 expenses",
+      "evidence": "RIRPF art. 83.2.b) 2.º. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2200.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "26400.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "geographicMobility": "true"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "103.40"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "519.20"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.30"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "16.50"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "34.10"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "121.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.40"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.20"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "13.20"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "33.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "276.32"
+        }
+      ]
+    },
+    {
+      "name": "part-time 86 hours, pay above the hourly minimum",
+      "evidence": "Orden arts. 38-39: 86 x 8.58 = 737.88 minimum; contributions declared. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "900.00",
+      "fullPeriod": false,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "10800.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "partTimeHours": "86",
+        "annualSocialContributions": "770.00"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "42.30"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "212.40"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "1.35"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "6.75"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "13.95"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "49.50"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "1.80"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "0.90"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "5.40"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "13.50"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "0.00"
+        }
+      ]
+    },
+    {
+      "name": "part-time group 1, pay below the hourly minimum",
+      "evidence": "Orden art. 39: 100 x 11.98 = 1,198.00 for common contingencies; AT/EP 100 x 8.58 = 858.00. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "fullPeriod": false,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "12000.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "1",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "partTimeHours": "100",
+        "annualSocialContributions": "850.00"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "56.31"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "282.73"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "1.80"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "8.99"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "15.50"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "55.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "2.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "1.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "6.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "15.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "0.00"
+        }
+      ]
+    },
+    {
+      "name": "accident rate set for this employee",
+      "evidence": "DA 61ª LGSS tariff by occupation: 3.70% instead of the employer's 1.50%. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2375.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "accidentRate": "0.037"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "111.63"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "560.50"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.56"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "17.81"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "36.81"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "130.63"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.75"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.38"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.25"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "87.88"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "375.25"
+        }
+      ]
+    },
+    {
+      "name": "regularized rate entered after a pay rise",
+      "evidence": "RIRPF art. 87: the employer regularizes and enters the new rate, 18.40%. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-07-01",
+      "periodEnd": "2026-07-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "3000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "34000.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "withholdingRateOverride": "18.40",
+        "withholdingRateOverrideReason": "REGULARIZED"
+      },
+      "ytd": {
+        "incomeTax.TAX.base": "14250.00",
+        "incomeTax.TAX.amount": "2274.30",
+        "incomeTax.TAX.periods": "6"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "141.00"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "708.00"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "4.50"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "22.50"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "46.50"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "165.00"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "6.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "3.00"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "18.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "45.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "552.00"
+        }
+      ]
+    },
+    {
+      "name": "higher rate requested by the employee",
+      "evidence": "RIRPF art. 88.5: the requested 20% exceeds the computed rate. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2375.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "withholdingRateOverride": "20.00",
+        "withholdingRateOverrideReason": "REQUESTED_HIGHER"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "111.63"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "560.50"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.56"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "17.81"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "36.81"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "130.63"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.75"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.38"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.25"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "35.63"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "475.00"
+        }
+      ]
+    },
+    {
+      "name": "requested rate below the computed one is ignored",
+      "evidence": "RIRPF art. 88.5 only allows a higher rate. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2375.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "withholdingRateOverride": "10.00",
+        "withholdingRateOverrideReason": "REQUESTED_HIGHER"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "111.63"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "560.50"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.56"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "17.81"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "36.81"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "130.63"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.75"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.38"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.25"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "35.63"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "375.25"
+        }
+      ]
+    },
+    {
+      "name": "year to date consistent with the rate, including a second run in a month",
+      "evidence": "Earlier lines at 15.96%: 2,375 x 3 months and a 1,000 extra run: 379.05 x 3 + 159.60 = 1,296.75 on 8,125. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them; Orden PJC/297/2026 arts. 1-4, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-04-01",
+      "periodEnd": "2026-04-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2375.00",
+      "fullPeriod": true,
+      "birthDate": "1980-02-01",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "annualSocialContributions": "1700.00"
+      },
+      "ytd": {
+        "incomeTax.TAX.base": "8125.00",
+        "incomeTax.TAX.amount": "1296.75",
+        "incomeTax.TAX.periods": "4"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "111.63"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "560.50"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.56"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "17.81"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "36.81"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "130.63"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.75"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.38"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.25"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "35.63"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "379.05"
+        }
+      ]
+    },
+    {
+      "name": "no pay, no lines",
+      "evidence": "nothing is paid, so nothing is due",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "0",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectLines": []
+    },
+    {
+      "name": "annual pay is required",
+      "evidence": "RIRPF art. 83.2: the rate needs the expected annual pay",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "annualPay"
+    },
+    {
+      "name": "Basque Country workplace refused",
+      "evidence": "Concierto Económico art. 7.Uno.a)",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "BASQUE_COUNTRY"
+      },
+      "expectError": "Concierto"
+    },
+    {
+      "name": "Navarre workplace refused",
+      "evidence": "Convenio Económico art. 10.1.a)",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "NAVARRE"
+      },
+      "expectError": "Convenio"
+    },
+    {
+      "name": "Ceuta, Melilla or La Palma refused",
+      "evidence": "RIRPF art. 80.2 reduction not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "CEUTA_MELILLA_LA_PALMA"
+      },
+      "expectError": "Ceuta"
+    },
+    {
+      "name": "daily-base group refused",
+      "evidence": "Orden art. 3: groups 8-11 contribute by day",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "9",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "groups 8 to 11"
+    },
+    {
+      "name": "overtime refused",
+      "evidence": "Orden art. 5 additional contribution",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2300.00",
+      "earningsByComponent": {
+        "BASIC": "2000.00",
+        "OT": "300.00"
+      },
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "Overtime"
+    },
+    {
+      "name": "part-time without hours",
+      "evidence": "Orden art. 39: minimum = hours x hourly base",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "fullPeriod": false,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "partTimeHours"
+    },
+    {
+      "name": "part-time without declared contributions",
+      "evidence": "the estimate assumes full-time bases",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "fullPeriod": false,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "partTimeHours": "80"
+      },
+      "expectError": "annualSocialContributions"
+    },
+    {
+      "name": "partial month refused",
+      "evidence": "bases are prorated by days",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1000.00",
+      "fullPeriod": false,
+      "employedThroughout": false,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "whole month"
+    },
+    {
+      "name": "unpaid leave refused",
+      "evidence": "Orden art. 7",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1500.00",
+      "reductions": "500.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "Unpaid leave"
+    },
+    {
+      "name": "extra pay without the annual amount",
+      "evidence": "LGSS art. 147 proration needs it",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "earningsByComponent": {
+        "BASIC": "2000.00",
+        "BONUS": "2000.00"
+      },
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "annualExtraPay"
+    },
+    {
+      "name": "situation 1 without descendants",
+      "evidence": "RIRPF art. 81.1 and algorithm validation 14",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "1",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "situation 1"
+    },
+    {
+      "name": "more children under 3 than descendants",
+      "evidence": "they are counted among the descendants",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "descendants": "1",
+        "descendantsUnder3": "2"
+      },
+      "expectError": "descendantsUnder3"
+    },
+    {
+      "name": "housing loan at 33,007.20 or more",
+      "evidence": "RIRPF art. 86.1; algorithm validation 21",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2800.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "33007.20",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "housingLoan": "true"
+      },
+      "expectError": "33,007.20"
+    },
+    {
+      "name": "rate override without a reason",
+      "evidence": "the reason decides how it applies",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "withholdingRateOverride": "18.00"
+      },
+      "expectError": "withholdingRateOverrideReason"
+    },
+    {
+      "name": "rate no longer matches the year to date",
+      "evidence": "RIRPF art. 87: a change in the data requires regularization",
+      "periodStart": "2026-04-01",
+      "periodEnd": "2026-04-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2500.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "30000.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "ytd": {
+        "incomeTax.TAX.base": "7125.00",
+        "incomeTax.TAX.amount": "1137.15",
+        "incomeTax.TAX.periods": "3"
+      },
+      "expectError": "regulariz"
+    },
+    {
+      "name": "daily manual workers refused",
+      "evidence": "RIRPF art. 83.2: 100 x the daily wage",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "DAILY_MANUAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "daily"
+    },
+    {
+      "name": "training contracts refused",
+      "evidence": "Orden art. 46 fixed quotas",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1200.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "trainingContract": "true"
+      },
+      "expectError": "Training"
+    },
+    {
+      "name": "multiple employment refused",
+      "evidence": "Orden art. 10",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "multipleEmployment": "true"
+      },
+      "expectError": "multiple employment"
+    },
+    {
+      "name": "dependants with a disability refused",
+      "evidence": "not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "descendants": "1",
+        "dependantsWithDisability": "true"
+      },
+      "expectError": "disability"
+    },
+    {
+      "name": "court-ordered payments refused",
+      "evidence": "RIRPF arts. 83.3, 85.2 not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "courtOrderedPayments": "true"
+      },
+      "expectError": "Court-ordered"
+    },
+    {
+      "name": "irregular income refused",
+      "evidence": "RIRPF art. 83.3.a) not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "irregularIncome": "true"
+      },
+      "expectError": "Irregular"
+    },
+    {
+      "name": "no birth date",
+      "evidence": "the minimum depends on the year of birth",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "birth date"
+    },
+    {
+      "name": "paid in the next year",
+      "evidence": "RIRPF art. 78: withholding follows the payment, 2027 rules",
+      "periodStart": "2026-12-01",
+      "periodEnd": "2026-12-31",
+      "frequency": "MONTHLY",
+      "paymentDate": "2027-01-05",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "same year"
+    },
+    {
+      "name": "pre-tax deductions are refused",
+      "evidence": "not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "preTaxDeductions": "50.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "Pre-tax deductions are not supported"
+    },
+    {
+      "name": "2027 is not covered",
+      "evidence": "2027 values not yet set",
+      "periodStart": "2027-01-01",
+      "periodEnd": "2027-01-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28500.00",
+        "familySituation": "3",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON"
+      },
+      "expectError": "a newer template version is needed"
+    }
+  ]
+}

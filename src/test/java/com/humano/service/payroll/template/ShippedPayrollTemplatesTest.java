@@ -311,6 +311,63 @@ class ShippedPayrollTemplatesTest {
     }
 
     @Test
+    void spainFiguresMatchTheRegulationTheOrdenAndTheAeatAlgorithm() {
+        PayrollTemplate spain = catalog.find("es-employment").orElseThrow();
+        Map<String, String> values = spain
+            .parameters()
+            .entrySet()
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get(0).value().toPlainString()));
+
+        // LIRPF arts. 57-58: 5 550 personal minimum; descendants 2 400 / 2 700 / 4 000 / 4 500, +2 800 under 3.
+        assertThat(values)
+            .containsEntry("personalMinimum", "5550")
+            .containsEntry("descendant1", "2400")
+            .containsEntry("descendant4", "4500")
+            .containsEntry("descendantUnder3", "2800");
+        // LIRPF art. 20 (RDL 4/2024): 7 302 up to 14 852, tapering to 0 at 19 747.50.
+        assertThat(values).containsEntry("red20Max", "7302").containsEntry("red20Lower", "14852").containsEntry("red20Upper", "19747.50");
+        // RIRPF arts. 85.3, 86: 43% cap up to 35 200; minimum rates 2% and 15%.
+        assertThat(values)
+            .containsEntry("capRate", "0.43")
+            .containsEntry("capIncomeLimit", "35200")
+            .containsEntry("minimumRateShortContract", "2.00")
+            .containsEntry("minimumRateSpecial", "15.00");
+        // Orden PJC/297/2026 arts. 2, 4, 16, 33: maximum base 5 101.20; 28.30%, MEI 0.90%, unemployment 7.05% / 8.30%.
+        assertThat(values)
+            .containsEntry("maximumBase", "5101.20")
+            .containsEntry("commonEmployeeRate", "0.047")
+            .containsEntry("commonEmployerRate", "0.236")
+            .containsEntry("equityEmployeeRate", "0.0015")
+            .containsEntry("unemploymentIndefiniteEmployeeRate", "0.0155")
+            .containsEntry("unemploymentFixedTermEmployerRate", "0.067");
+        // AEAT algorithm 2026, TABLA 2 example: the scale on 24 000 is 4 225.50 + 3 800 x 30% = 5 365.50.
+        Table.Row row = spain
+            .tables()
+            .get("withholdingScale")
+            .versions()
+            .get(0)
+            .rows()
+            .stream()
+            .filter(r -> new BigDecimal("24000").compareTo(r.upper()) < 0)
+            .findFirst()
+            .orElseThrow();
+        assertThat(row.base().add(new BigDecimal("24000").subtract(row.lower()).multiply(row.rate()))).isEqualByComparingTo("5365.50");
+        // RIRPF art. 81.1 (RD 142/2024): situation 2 with two or more descendants, 19 262.
+        Table.Row situation2 = spain
+            .tables()
+            .get("exemptLimits")
+            .versions()
+            .get(0)
+            .rows()
+            .stream()
+            .filter(r -> r.key().equals("2"))
+            .findFirst()
+            .orElseThrow();
+        assertThat(situation2.values().get(2)).isEqualByComparingTo("19262");
+    }
+
+    @Test
     void ukFiguresMatchHmrcPublications() {
         PayrollTemplate uk = catalog.find("gb-paye-nic").orElseThrow();
         Map<String, String> values = uk
