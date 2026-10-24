@@ -169,8 +169,21 @@ def expected_lines(c):
     interval = 2 if freq == "BIWEEKLY" else 1
     pay = D(c["grossEarnings"])
     bf = emp.get("broughtForwardTaxYear") == "2026"
-    tax = paye(emp["taxCode"], c["_taxPeriod"], per_year, interval, pay,
-               D(emp["broughtForwardPay"]) if bf else D(0), D(emp["broughtForwardTax"]) if bf else D(0))
+    pay_to_date = D(emp["broughtForwardPay"]) if bf else D(0)
+    code = emp["taxCode"]
+    raw = code.upper().replace(" ", "")
+    if freq != "MONTHLY" and c["_taxPeriod"] > 52 and not raw.endswith(("W1", "M1", "X")):
+        # CWG2 1.13 / spec para 14: week 53 (54 two-weekly) on a cumulative code is worked out with the week 1
+        # (week 2) table on a non-cumulative basis; for a suffix code no PAYE is due when the free pay to date
+        # at week 52 is at least the year's total pay (CWG2 1.13.1).
+        bare = raw[1:] if raw[0] in "SC" and raw != "NT" else raw
+        if bare[-1] in "LMNT" and bare[:-1].isdigit() and week1(int(bare[:-1]), 52) * 52 >= pay_to_date + pay:
+            tax = D("0.00")
+        else:
+            tax = paye(code + " W1", c["_taxPeriod"], per_year, interval, pay, D(0), D(0))
+    else:
+        tax = paye(code, c["_taxPeriod"], per_year, interval, pay,
+                   pay_to_date, D(emp["broughtForwardTax"]) if bf else D(0))
     lines = [{"step": "incomeTax", "side": "TAX", "amount": str(tax)}]
     employee, employer = nics(emp["niCategory"], freq, pay)
     if employee:
@@ -252,14 +265,22 @@ def test_cases():
              {"taxCode": "1257L", "niCategory": "A", **bf("10000.00", "1100.00")}, "1980-01-01"),
         case("freeport employer, category F", derived, "MONTHLY", *MONTH7, "3000.00",
              {"taxCode": "1257L", "niCategory": "F", **bf("18000.00", "2412.00")}, "1980-01-01"),
+        case("week 53, cumulative code: week 1 table, non-cumulative", "CWG2 1.13.1: free pay to date at week 52 is less than the year's pay, so PAYE on the week 53 pay less the week 1 free pay; " + derived,
+             "WEEKLY", "2027-03-30", "2027-04-05", "2027-04-05", 53, "600.00", {"taxCode": "1257L", "niCategory": "A", **bf("31200.00", "3741.60")}, "1980-01-01"),
+        case("week 53, low year's pay: no PAYE", "CWG2 1.13.1: free pay to date at week 52 (£12,579.84 for 1257L) covers the year's pay (£5,000 + £2,000), so no PAYE although the week 1 table alone would tax £2,000; " + derived,
+             "WEEKLY", "2027-03-30", "2027-04-05", "2027-04-05", 53, "2000.00", {"taxCode": "1257L", "niCategory": "A", **bf("5000.00", "0")}, "1980-01-01"),
+        case("week 53, K code", "CWG2 1.13.2: pay plus the week 1 additional pay, subject to the regulatory limit; " + derived,
+             "WEEKLY", "2027-03-30", "2027-04-05", "2027-04-05", 53, "600.00", {"taxCode": "K500", "niCategory": "A", **bf("31200.00", "7000.00")}, "1980-01-01"),
+        case("week 53 on a Week 1 code", "CWG2 1.13.1: an employee on a week 1 coding is simply paid another week 1 payment; " + derived,
+             "WEEKLY", "2027-03-30", "2027-04-05", "2027-04-05", 53, "600.00", {"taxCode": "1257L W1", "niCategory": "A"}, "1980-01-01"),
+        case("two-weekly payday in week 53 ('week 54')", "CWG2 1.13: the 27th fortnightly payday is week 54, worked out with the week 2 table on a non-cumulative basis; " + derived,
+             "BIWEEKLY", "2027-03-23", "2027-04-05", "2027-04-05", 53, "2000.00", {"taxCode": "1257L", "niCategory": "A", **bf("52000.00", "8000.00")}, "1980-01-01"),
     ]
     for c in cases:
         c["expectLines"] = expected_lines(c)
     errors = [
         case("mid-year start without brought-forward figures", "cumulative code past period 1 with no earlier period recorded",
              "MONTHLY", *MONTH7, "3000.00", {"taxCode": "1257L", "niCategory": "A"}, "1980-01-01", error="brought forward"),
-        case("week 53 is refused", "CWG2 week 53 rules not modelled", "WEEKLY", "2027-03-30", "2027-04-05", "2027-04-05", 53, "500.00",
-             {"taxCode": "1257L", "niCategory": "A", **bf("26000.00", "2700.00")}, "1980-01-01", error="week 53"),
         case("directors are refused", "annual earnings period not modelled", "MONTHLY", *MONTH7, "3000.00",
              {"taxCode": "1257L", "niCategory": "A", "director": "true", **bf("18000.00", "2412.00")}, "1980-01-01", error="Directors"),
         case("student loans are refused", "student loan deductions not modelled", "MONTHLY", *MONTH7, "3000.00",
@@ -315,7 +336,7 @@ def main():
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [{"version": "2026.1.1", "date": "2026-10-24",
-                       "summary": "Corrects a silent error: NI categories C, S and K (no employee NICs, for employees over State Pension age) are refused for employees under 66."},
+                       "summary": "Corrects a silent error: NI categories C, S and K (no employee NICs, for employees over State Pension age) are refused for employees under 66. Payments in week 53 (54 for two-weekly pay) are now calculated per CWG2 1.13 instead of being refused."},
                       {"version": "2026.1.0", "date": RETRIEVED,
                        "summary": "2026/27: PAYE per HMRC's Specification for PAYE Tax Table Routines v24.0 (England & NI, Scottish and Welsh rates); Class 1 NICs, all category letters, by the exact percentage method."}],
         "sources": SOURCES,
@@ -370,8 +391,6 @@ def main():
              "message": "Student and postgraduate loan deductions are not supported by this template"},
             {"id": "noPreTaxDeductions", "type": "REQUIRE", "condition": "#preTaxDeductions == 0",
              "message": "Pre-tax deductions (net pay pension schemes, salary sacrifice) are not supported by this template"},
-            {"id": "notWeek53", "type": "REQUIRE", "condition": "#frequency == 'MONTHLY' or #taxWeek <= 52",
-             "message": "Payments in week 53, 54 or 56 (CWG2) are not supported by this template"},
             {"id": "categoryAge", "type": "REQUIRE",
              "when": "#employee['niCategory'] == 'M' or #employee['niCategory'] == 'Z'",
              "condition": "#ageAtPeriodEnd < 21", "message": "NI categories M and Z are for employees under 21"},
@@ -386,14 +405,19 @@ def main():
             {"id": "broughtForward", "type": "VALUE",
              "expr": "#employee['broughtForwardTaxYear'] != null and #employee['broughtForwardTaxYear'] == #taxYear"},
             {"id": "payePay", "type": "VALUE", "expr": "#taxableEarnings - #reductions"},
+            {"id": "week53", "type": "VALUE", "source": "hmrc-cwg2-2026", "expr": "#frequency != 'MONTHLY' and #taxWeek > 52 ? 1 : 0"},
+            {"id": "codeNonCumulative", "type": "VALUE",
+             "expr": "#employee['taxCode'].replace(' ', '').toUpperCase().matches('.+(W1|M1|X)') ? 1 : 0"},
+            {"id": "payeToDate", "type": "VALUE",
+             "expr": "#ytd.base('incomeTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardPay'], 0) : 0)"},
             {"id": "paye", "type": "EXTENSION", "extension": "uk.paye-routines-v24", "source": "hmrc-paye-spec-v24",
              "inputs": {
-                 "taxCode": "#employee['taxCode']",
+                 "taxCode": "#week53 == 1 and #codeNonCumulative == 0 ? #employee['taxCode'] + ' W1' : #employee['taxCode']",
                  "period": "#taxPeriod",
                  "periodsPerYear": "#frequency == 'MONTHLY' ? 12 : 52",
                  "intervalPeriods": "#intervalPeriods",
                  "pay": "#payePay",
-                 "payToDate": "#ytd.base('incomeTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardPay'], 0) : 0)",
+                 "payToDate": "#payeToDate",
                  "taxToDate": "#ytd.amount('incomeTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardTax'], 0) : 0)",
                  "rates": plist("rukRate", 4), "bands": plist("rukBand", 3), "basicRateIndex": "2",
                  "scottishRates": plist("scotRate", 6), "scottishBands": plist("scotBand", 5), "scottishBasicRateIndex": "2",
@@ -401,11 +425,12 @@ def main():
                  "maxRate": "#p['maxRate']",
              }},
             {"id": "midYearStart", "type": "REQUIRE",
-             "when": "#paye['cumulative'] == 1 and #taxPeriod > #intervalPeriods and #ytd.periods('incomeTax', 'TAX') == 0",
+             "when": "(#paye['cumulative'] == 1 or (#week53 == 1 and #codeNonCumulative == 0)) and #taxPeriod > #intervalPeriods and #ytd.periods('incomeTax', 'TAX') == 0",
              "condition": "#broughtForward",
              "message": "No earlier payroll this tax year is recorded for this employee: set the pay and tax brought forward (P45 / previous payroll, 0 if none) and broughtForwardTaxYear before running a cumulative tax code"},
             {"id": "incomeTax", "type": "TAX", "label": "Income tax (PAYE)", "ledger": "INCOME_TAX", "source": "hmrc-paye-spec-v24",
-             "base": "#payePay", "amount": "#paye['tax']", "recordZero": True, "allowNegative": True},
+             "base": "#payePay", "recordZero": True, "allowNegative": True,
+             "amount": "#week53 == 1 and #codeNonCumulative == 0 and #paye['freePay'] > 0 and #paye['freePay'] * (#intervalPeriods == 2 ? 26 : 52) >= #payeToDate + #payePay ? 0 : #paye['tax']"},
             {"id": "niPay", "type": "VALUE", "expr": "#socialEarnings - #reductions"},
             {"id": "niBand2", "type": "VALUE", "expr": f"#pos(#min(#niPay, {ni('LEL')}) - {ni('ST')})"},
             {"id": "niBand3", "type": "VALUE", "expr": f"#pos(#min(#niPay, {ni('PT')}) - {ni('LEL')})"},
@@ -423,7 +448,7 @@ def main():
                           " + #round(#round(#niBand6 * #table.lookup('niEmployerRates', #employee['niCategory'], 'F'), 3, 'DOWN'), 2, 'HALF_DOWN')"}},
         ],
         "limitations": [
-            "Weekly, two-weekly and monthly pay; payments in week 53, 54 or 56 are refused.",
+            "Weekly, two-weekly and monthly pay. A payday in tax week 53 (week 54 for two-weekly pay) is worked out with the week 1 (week 2) table on a non-cumulative basis, and a suffix code pays no PAYE there when the free pay to date at week 52 covers the year's pay (CWG2 1.13, specification para 14); NICs follow the normal earnings period.",
             "Directors (annual NIC earnings period), student and postgraduate loans, and pre-tax deductions (net pay pensions, salary sacrifice) are refused.",
             "Mid-year starts and adoptions need the pay and tax brought forward for the tax year (P45 and/or previous payroll) on a cumulative code.",
             "Payrolled benefits in kind are not included; the regulatory limit is applied to the whole pay for the period.",

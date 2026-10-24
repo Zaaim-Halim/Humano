@@ -23,7 +23,7 @@
     {
       "version": "2026.1.1",
       "date": "2026-10-24",
-      "summary": "Corrects a silent error: NI categories C, S and K (no employee NICs, for employees over State Pension age) are refused for employees under 66."
+      "summary": "Corrects a silent error: NI categories C, S and K (no employee NICs, for employees over State Pension age) are refused for employees under 66. Payments in week 53 (54 for two-weekly pay) are now calculated per CWG2 1.13 instead of being refused."
     },
     {
       "version": "2026.1.0",
@@ -503,12 +503,6 @@
       "message": "Pre-tax deductions (net pay pension schemes, salary sacrifice) are not supported by this template"
     },
     {
-      "id": "notWeek53",
-      "type": "REQUIRE",
-      "condition": "#frequency == 'MONTHLY' or #taxWeek <= 52",
-      "message": "Payments in week 53, 54 or 56 (CWG2) are not supported by this template"
-    },
-    {
       "id": "categoryAge",
       "type": "REQUIRE",
       "when": "#employee['niCategory'] == 'M' or #employee['niCategory'] == 'Z'",
@@ -550,17 +544,33 @@
       "expr": "#taxableEarnings - #reductions"
     },
     {
+      "id": "week53",
+      "type": "VALUE",
+      "source": "hmrc-cwg2-2026",
+      "expr": "#frequency != 'MONTHLY' and #taxWeek > 52 ? 1 : 0"
+    },
+    {
+      "id": "codeNonCumulative",
+      "type": "VALUE",
+      "expr": "#employee['taxCode'].replace(' ', '').toUpperCase().matches('.+(W1|M1|X)') ? 1 : 0"
+    },
+    {
+      "id": "payeToDate",
+      "type": "VALUE",
+      "expr": "#ytd.base('incomeTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardPay'], 0) : 0)"
+    },
+    {
       "id": "paye",
       "type": "EXTENSION",
       "extension": "uk.paye-routines-v24",
       "source": "hmrc-paye-spec-v24",
       "inputs": {
-        "taxCode": "#employee['taxCode']",
+        "taxCode": "#week53 == 1 and #codeNonCumulative == 0 ? #employee['taxCode'] + ' W1' : #employee['taxCode']",
         "period": "#taxPeriod",
         "periodsPerYear": "#frequency == 'MONTHLY' ? 12 : 52",
         "intervalPeriods": "#intervalPeriods",
         "pay": "#payePay",
-        "payToDate": "#ytd.base('incomeTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardPay'], 0) : 0)",
+        "payToDate": "#payeToDate",
         "taxToDate": "#ytd.amount('incomeTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardTax'], 0) : 0)",
         "rates": "{#p['rukRate1'], #p['rukRate2'], #p['rukRate3'], #p['rukRate4']}",
         "bands": "{#p['rukBand1'], #p['rukBand2'], #p['rukBand3']}",
@@ -577,7 +587,7 @@
     {
       "id": "midYearStart",
       "type": "REQUIRE",
-      "when": "#paye['cumulative'] == 1 and #taxPeriod > #intervalPeriods and #ytd.periods('incomeTax', 'TAX') == 0",
+      "when": "(#paye['cumulative'] == 1 or (#week53 == 1 and #codeNonCumulative == 0)) and #taxPeriod > #intervalPeriods and #ytd.periods('incomeTax', 'TAX') == 0",
       "condition": "#broughtForward",
       "message": "No earlier payroll this tax year is recorded for this employee: set the pay and tax brought forward (P45 / previous payroll, 0 if none) and broughtForwardTaxYear before running a cumulative tax code"
     },
@@ -588,9 +598,9 @@
       "ledger": "INCOME_TAX",
       "source": "hmrc-paye-spec-v24",
       "base": "#payePay",
-      "amount": "#paye['tax']",
       "recordZero": true,
-      "allowNegative": true
+      "allowNegative": true,
+      "amount": "#week53 == 1 and #codeNonCumulative == 0 and #paye['freePay'] > 0 and #paye['freePay'] * (#intervalPeriods == 2 ? 26 : 52) >= #payeToDate + #payePay ? 0 : #paye['tax']"
     },
     {
       "id": "niPay",
@@ -639,7 +649,7 @@
     }
   ],
   "limitations": [
-    "Weekly, two-weekly and monthly pay; payments in week 53, 54 or 56 are refused.",
+    "Weekly, two-weekly and monthly pay. A payday in tax week 53 (week 54 for two-weekly pay) is worked out with the week 1 (week 2) table on a non-cumulative basis, and a suffix code pays no PAYE there when the free pay to date at week 52 covers the year's pay (CWG2 1.13, specification para 14); NICs follow the normal earnings period.",
     "Directors (annual NIC earnings period), student and postgraduate loans, and pre-tax deductions (net pay pensions, salary sacrifice) are refused.",
     "Mid-year starts and adoptions need the pay and tax brought forward for the tax year (P45 and/or previous payroll) on a cumulative code.",
     "Payrolled benefits in kind are not included; the regulatory limit is applied to the whole pay for the period.",
@@ -1244,6 +1254,178 @@
       ]
     },
     {
+      "name": "week 53, cumulative code: week 1 table, non-cumulative",
+      "evidence": "CWG2 1.13.1: free pay to date at week 52 is less than the year's pay, so PAYE on the week 53 pay less the week 1 free pay; Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines()",
+      "periodStart": "2027-03-30",
+      "periodEnd": "2027-04-05",
+      "paymentDate": "2027-04-05",
+      "frequency": "WEEKLY",
+      "grossEarnings": "600.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "A",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "31200.00",
+        "broughtForwardTax": "3741.60"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "71.60"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "28.64"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "75.60"
+        }
+      ]
+    },
+    {
+      "name": "week 53, low year's pay: no PAYE",
+      "evidence": "CWG2 1.13.1: free pay to date at week 52 (£12,579.84 for 1257L) covers the year's pay (£5,000 + £2,000), so no PAYE although the week 1 table alone would tax £2,000; Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines()",
+      "periodStart": "2027-03-30",
+      "periodEnd": "2027-04-05",
+      "paymentDate": "2027-04-05",
+      "frequency": "WEEKLY",
+      "grossEarnings": "2000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "A",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "5000.00",
+        "broughtForwardTax": "0"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "0.00"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "78.66"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "285.60"
+        }
+      ]
+    },
+    {
+      "name": "week 53, K code",
+      "evidence": "CWG2 1.13.2: pay plus the week 1 additional pay, subject to the regulatory limit; Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines()",
+      "periodStart": "2027-03-30",
+      "periodEnd": "2027-04-05",
+      "paymentDate": "2027-04-05",
+      "frequency": "WEEKLY",
+      "grossEarnings": "600.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "K500",
+        "niCategory": "A",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "31200.00",
+        "broughtForwardTax": "7000.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "139.20"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "28.64"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "75.60"
+        }
+      ]
+    },
+    {
+      "name": "week 53 on a Week 1 code",
+      "evidence": "CWG2 1.13.1: an employee on a week 1 coding is simply paid another week 1 payment; Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines()",
+      "periodStart": "2027-03-30",
+      "periodEnd": "2027-04-05",
+      "paymentDate": "2027-04-05",
+      "frequency": "WEEKLY",
+      "grossEarnings": "600.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L W1",
+        "niCategory": "A"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "71.60"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "28.64"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "75.60"
+        }
+      ]
+    },
+    {
+      "name": "two-weekly payday in week 53 ('week 54')",
+      "evidence": "CWG2 1.13: the 27th fortnightly payday is week 54, worked out with the week 2 table on a non-cumulative basis; Derived from the PAYE specification v24.0 and NI guidance 2026/27 by build_template.py expected_lines()",
+      "periodStart": "2027-03-23",
+      "periodEnd": "2027-04-05",
+      "paymentDate": "2027-04-05",
+      "frequency": "BIWEEKLY",
+      "grossEarnings": "2000.00",
+      "birthDate": "1980-01-01",
+      "employer": {},
+      "employee": {
+        "taxCode": "1257L",
+        "niCategory": "A",
+        "broughtForwardTaxYear": "2026",
+        "broughtForwardPay": "52000.00",
+        "broughtForwardTax": "8000.00"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "316.40"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYEE",
+          "amount": "117.32"
+        },
+        {
+          "step": "nationalInsurance",
+          "side": "EMPLOYER",
+          "amount": "271.05"
+        }
+      ]
+    },
+    {
       "name": "mid-year start without brought-forward figures",
       "evidence": "cumulative code past period 1 with no earlier period recorded",
       "periodStart": "2026-10-01",
@@ -1258,25 +1440,6 @@
         "niCategory": "A"
       },
       "expectError": "brought forward"
-    },
-    {
-      "name": "week 53 is refused",
-      "evidence": "CWG2 week 53 rules not modelled",
-      "periodStart": "2027-03-30",
-      "periodEnd": "2027-04-05",
-      "paymentDate": "2027-04-05",
-      "frequency": "WEEKLY",
-      "grossEarnings": "500.00",
-      "birthDate": "1980-01-01",
-      "employer": {},
-      "employee": {
-        "taxCode": "1257L",
-        "niCategory": "A",
-        "broughtForwardTaxYear": "2026",
-        "broughtForwardPay": "26000.00",
-        "broughtForwardTax": "2700.00"
-      },
-      "expectError": "week 53"
     },
     {
       "name": "directors are refused",
