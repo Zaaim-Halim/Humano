@@ -1,16 +1,22 @@
 package com.humano.service.payroll;
 
 import com.humano.domain.enumeration.hr.LeaveType;
+import com.humano.domain.enumeration.payroll.Kind;
+import com.humano.domain.enumeration.payroll.Measurement;
+import com.humano.domain.enumeration.payroll.PayComponentCode;
+import com.humano.domain.payroll.LeavePayBand;
 import com.humano.domain.payroll.LeaveTypeRule;
+import com.humano.domain.payroll.PayComponent;
 import com.humano.domain.shared.Country;
 import com.humano.dto.payroll.request.CreateLeaveTypeRuleRequest;
+import com.humano.dto.payroll.request.UpdateLeaveTypeRuleRequest;
 import com.humano.dto.payroll.response.LeaveTypeRuleResponse;
 import com.humano.repository.payroll.CountryRepository;
 import com.humano.repository.payroll.LeaveTypeRuleRepository;
+import com.humano.repository.payroll.PayComponentRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Service for managing leave type rules that define how different types of leave
  * affect payroll calculations.
+ * <p>
+ * Payroll deducts approved leave by these rules (see {@code PayrollProcessingService} step 3); without
+ * a rule, leave of that type is paid in full.
  */
 @Service
 @Transactional("tenantTransactionManager")
@@ -28,12 +37,20 @@ public class LeaveTypeRuleService {
 
     private static final Logger log = LoggerFactory.getLogger(LeaveTypeRuleService.class);
 
+    private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
+
     private final LeaveTypeRuleRepository ruleRepository;
     private final CountryRepository countryRepository;
+    private final PayComponentRepository payComponentRepository;
 
-    public LeaveTypeRuleService(LeaveTypeRuleRepository ruleRepository, CountryRepository countryRepository) {
+    public LeaveTypeRuleService(
+        LeaveTypeRuleRepository ruleRepository,
+        CountryRepository countryRepository,
+        PayComponentRepository payComponentRepository
+    ) {
         this.ruleRepository = ruleRepository;
         this.countryRepository = countryRepository;
+        this.payComponentRepository = payComponentRepository;
     }
 
     /**
@@ -60,9 +77,12 @@ public class LeaveTypeRuleService {
         LeaveTypeRule rule = new LeaveTypeRule();
         rule.setCountry(country);
         rule.setLeaveType(request.leaveType());
-        rule.setDeductionPercentage(request.deductionPercentage());
-        rule.setAffectsTaxableSalary(request.affectsTaxableSalary());
+        rule.setDeductionPercentage(checkedPercentage(request.deductionPercentage()));
+        rule.setPayBands(checkedBands(request.payBands()));
+        // Pay not earned is normally neither taxed nor contributed on; deducting it from net pay is the exception.
+        rule.setAffectsTaxableSalary(request.affectsTaxableSalary() == null || request.affectsTaxableSalary());
 
+        ensureDeductionComponent();
         rule = ruleRepository.save(rule);
         log.info("Created leave type rule for {} in {}", request.leaveType(), country.getName());
 
@@ -70,22 +90,24 @@ public class LeaveTypeRuleService {
     }
 
     /**
-     * Updates a leave type rule.
+     * Updates a leave type rule; null fields keep their value.
      */
-    public LeaveTypeRuleResponse updateRule(UUID ruleId, BigDecimal deductionPercentage, Boolean affectsTaxableSalary) {
+    public LeaveTypeRuleResponse updateRule(UUID ruleId, UpdateLeaveTypeRuleRequest request) {
         LeaveTypeRule rule = ruleRepository.findById(ruleId).orElseThrow(() -> new EntityNotFoundException("LeaveTypeRule", ruleId));
 
-        if (deductionPercentage != null) {
-            if (deductionPercentage.compareTo(BigDecimal.ZERO) < 0 || deductionPercentage.compareTo(BigDecimal.valueOf(100)) > 0) {
-                throw new BusinessRuleViolationException("Deduction percentage must be between 0 and 100");
-            }
-            rule.setDeductionPercentage(deductionPercentage);
+        if (request.deductionPercentage() != null) {
+            rule.setDeductionPercentage(checkedPercentage(request.deductionPercentage()));
         }
 
-        if (affectsTaxableSalary != null) {
-            rule.setAffectsTaxableSalary(affectsTaxableSalary);
+        if (request.payBands() != null) {
+            rule.setPayBands(checkedBands(request.payBands()));
         }
 
+        if (request.affectsTaxableSalary() != null) {
+            rule.setAffectsTaxableSalary(request.affectsTaxableSalary());
+        }
+
+        ensureDeductionComponent();
         rule = ruleRepository.save(rule);
         log.info("Updated leave type rule {}", ruleId);
 
@@ -135,66 +157,101 @@ public class LeaveTypeRuleService {
     }
 
     /**
-     * Calculates leave deduction for payroll.
-     */
-    @Transactional(value = "tenantTransactionManager", readOnly = true)
-    public Map<String, Object> calculateLeaveDeduction(UUID countryId, LeaveType leaveType, BigDecimal dailySalary, int leaveDays) {
-        LeaveTypeRule rule = ruleRepository
-            .findAll(
-                (Specification<LeaveTypeRule>) (root, query, cb) ->
-                    cb.and(cb.equal(root.get("country").get("id"), countryId), cb.equal(root.get("leaveType"), leaveType))
-            )
-            .stream()
-            .findFirst()
-            .orElseThrow(() -> new BusinessRuleViolationException("No leave type rule found for " + leaveType + " in country " + countryId)
-            );
-
-        BigDecimal totalDailySalary = dailySalary.multiply(BigDecimal.valueOf(leaveDays));
-        BigDecimal deductionAmount = totalDailySalary
-            .multiply(rule.getDeductionPercentage())
-            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("leaveType", leaveType.name());
-        result.put("leaveDays", leaveDays);
-        result.put("dailySalary", dailySalary);
-        result.put("totalDailySalary", totalDailySalary);
-        result.put("deductionPercentage", rule.getDeductionPercentage());
-        result.put("deductionAmount", deductionAmount);
-        result.put("paidAmount", totalDailySalary.subtract(deductionAmount));
-        result.put("affectsTaxableSalary", rule.getAffectsTaxableSalary());
-
-        return result;
-    }
-
-    /**
      * Gets all leave type rules across all countries.
      */
     @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<LeaveTypeRuleResponse> getAllRules() {
-        return ruleRepository.findAll().stream().map(this::toResponse).toList();
+        return ruleRepository
+            .findAll()
+            .stream()
+            .sorted(
+                Comparator.comparing((LeaveTypeRule r) -> r.getCountry().getName())
+                    .thenComparing(LeaveTypeRule::getLeaveType)
+                    .thenComparing(LeaveTypeRule::getId)
+            )
+            .map(this::toResponse)
+            .toList();
+    }
+
+    private static BigDecimal checkedPercentage(BigDecimal percentage) {
+        if (percentage == null || percentage.signum() < 0 || percentage.compareTo(HUNDRED) > 0) {
+            throw new BusinessRuleViolationException("Deduction percentage must be between 0 and 100");
+        }
+        return percentage;
+    }
+
+    /** Bands in day order, each with a valid percentage, not overlapping; only the last may be open-ended. */
+    private static List<LeavePayBand> checkedBands(List<LeavePayBand> bands) {
+        if (bands == null || bands.isEmpty()) {
+            return List.of();
+        }
+        List<LeavePayBand> sorted = bands.stream().sorted(Comparator.comparingInt(LeavePayBand::fromDay)).toList();
+        int nextFree = 1;
+        for (int i = 0; i < sorted.size(); i++) {
+            LeavePayBand band = sorted.get(i);
+            if (band.fromDay() < 1) {
+                throw new BusinessRuleViolationException("A pay band starts on day 1 of the absence or later");
+            }
+            if (band.toDay() != null && band.toDay() < band.fromDay()) {
+                throw new BusinessRuleViolationException("A pay band can't end before day " + band.fromDay() + ", where it starts");
+            }
+            if (band.toDay() == null && i < sorted.size() - 1) {
+                throw new BusinessRuleViolationException("Only the last pay band can run to the end of the absence");
+            }
+            if (band.fromDay() < nextFree) {
+                throw new BusinessRuleViolationException("Pay bands overlap on day " + band.fromDay() + " of the absence");
+            }
+            checkedPercentage(band.deductionPercentage());
+            nextFree = band.toDay() == null ? Integer.MAX_VALUE : band.toDay() + 1;
+        }
+        return sorted;
+    }
+
+    /** Payroll puts leave deductions on the DEDUCTION pay component; a workspace may not have it yet. */
+    private void ensureDeductionComponent() {
+        boolean exists = payComponentRepository.findAll().stream().anyMatch(c -> c.getCode() == PayComponentCode.DEDUCTION);
+        if (!exists) {
+            PayComponent component = new PayComponent();
+            component.setCode(PayComponentCode.DEDUCTION);
+            component.setName("Deductions");
+            component.setKind(Kind.DEDUCTION);
+            component.setMeasure(Measurement.AMOUNT);
+            component.setTaxable(false);
+            component.setContributesToSocial(false);
+            payComponentRepository.save(component);
+            log.info("Created pay component {} for leave deductions", PayComponentCode.DEDUCTION);
+        }
     }
 
     private LeaveTypeRuleResponse toResponse(LeaveTypeRule rule) {
         Country country = rule.getCountry();
-        String description =
-            rule.getLeaveType().name().replace("_", " ") +
-            " - " +
-            (rule.getDeductionPercentage().compareTo(BigDecimal.ZERO) == 0
-                    ? "Fully paid"
-                    : rule.getDeductionPercentage().compareTo(BigDecimal.valueOf(100)) == 0
-                        ? "Unpaid"
-                        : rule.getDeductionPercentage() + "% deduction");
+        List<LeavePayBand> bands = rule.getPayBands();
+        Integer lastBandedDay = bands.isEmpty() ? null : bands.get(bands.size() - 1).toDay();
+        String description = rule.getLeaveType().name().replace("_", " ") + " - ";
+        if (!bands.isEmpty() && lastBandedDay == null) {
+            description += "by pay band";
+        } else {
+            description +=
+                (bands.isEmpty() ? "" : "by pay band to day " + lastBandedDay + ", then ") + describe(rule.getDeductionPercentage());
+        }
 
         return new LeaveTypeRuleResponse(
             rule.getId(),
             country.getId(),
+            country.getCode() != null ? country.getCode().name() : null,
             country.getName(),
             rule.getLeaveType(),
             rule.getLeaveType().name().replace("_", " "),
             rule.getDeductionPercentage(),
-            rule.getAffectsTaxableSalary(),
+            bands,
+            Boolean.TRUE.equals(rule.getAffectsTaxableSalary()),
             description
         );
+    }
+
+    private static String describe(BigDecimal deductionPercentage) {
+        return deductionPercentage.signum() == 0
+            ? "Fully paid"
+            : deductionPercentage.compareTo(HUNDRED) == 0 ? "Unpaid" : deductionPercentage + "% deduction";
     }
 }

@@ -327,6 +327,13 @@ const routes: Routes = [
         data: { permissions: [Permission.MANAGE_PAY_COMPONENTS] },
       },
       {
+        path: 'payroll/leave-pay',
+        title: 'humano.nav.leavePay',
+        loadComponent: () => import('./features/admin/leave-pay/leave-pay-rules.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.MANAGE_PAY_COMPONENTS] },
+      },
+      {
         path: 'payroll/templates',
         title: 'humano.payrollTemplates.title',
         loadComponent: () => import('./features/admin/payroll-templates/payroll-templates.component'),

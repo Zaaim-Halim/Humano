@@ -1,0 +1,230 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.leavePay.title' | translate" [subtitle]="'humano.leavePay.subtitle' | translate" hasActions>
+    <ng-container hum-page-actions>
+      <hum-button variant="primary" icon="plus" [disabled]="!rules()" (click)="openNew()">{{
+        'humano.leavePay.newRule' | translate
+      }}</hum-button>
+    </ng-container>
+  </hum-page-header>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (!rules()) {
+    <div style="display: grid; gap: var(--space-3)"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+  } @else {
+    <hum-alert tone="info" [title]="'humano.leavePay.howTitle' | translate">
+      {{ 'humano.leavePay.howBody' | translate }}
+      <a routerLink="/payroll/templates">{{ 'humano.leavePay.howTemplates' | translate }}</a>
+    </hum-alert>
+
+    @if (!rules()!.length) {
+      <hum-empty-state
+        icon="thermometer"
+        [title]="'humano.leavePay.emptyTitle' | translate"
+        [description]="'humano.leavePay.emptyBody' | translate"
+        hasAction
+      >
+        <hum-button hum-empty-action variant="secondary" icon="plus" (click)="openNew()">{{
+          'humano.leavePay.newRule' | translate
+        }}</hum-button>
+      </hum-empty-state>
+    } @else {
+      <div class="hum-table-wrap" style="margin-top: var(--space-4)">
+        <table class="hum-table hum-lp-table">
+          <thead>
+            <tr>
+              <th>{{ 'humano.leavePay.col.country' | translate }}</th>
+              <th>{{ 'humano.leavePay.col.leaveType' | translate }}</th>
+              <th>{{ 'humano.leavePay.col.pay' | translate }}</th>
+              <th>{{ 'humano.leavePay.col.tax' | translate }}</th>
+              <th>
+                <span class="sr-only">{{ 'humano.leavePay.col.actions' | translate }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of rules(); track r.id) {
+              <tr>
+                <td>{{ r.countryName }}</td>
+                <td>
+                  <span class="hum-lp-type">
+                    <lucide-icon [name]="typeIcon[r.leaveType]" [size]="16" />
+                    {{ 'humano.leave.type.' + r.leaveType | translate }}
+                  </span>
+                </td>
+                <td>
+                  <span class="hum-lp-pay tabular-nums">
+                    @for (line of summary(r); track $index) {
+                      <span>{{ line }}</span>
+                    }
+                  </span>
+                </td>
+                <td>
+                  @if (r.affectsTaxableSalary) {
+                    <hum-badge tone="neutral" [label]="'humano.leavePay.preTax' | translate" />
+                  } @else {
+                    <hum-badge tone="warning" [label]="'humano.leavePay.postTax' | translate" />
+                  }
+                </td>
+                <td>
+                  <span class="hum-lp-actions">
+                    <hum-icon-button icon="pencil" size="sm" [label]="'humano.leavePay.edit' | translate" (click)="openEdit(r)" />
+                    <hum-icon-button icon="trash-2" size="sm" [label]="'humano.leavePay.delete' | translate" (click)="deleting.set(r)" />
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<hum-drawer
+  [open]="draft() !== null"
+  [title]="(draft()?.id ? 'humano.leavePay.form.editTitle' : 'humano.leavePay.form.newTitle') | translate"
+  width="560px"
+  hasFooter
+  (closed)="draft.set(null)"
+>
+  @if (draft(); as d) {
+    <div class="hum-lp-form">
+      <div class="hum-set-grid hum-set-grid--2">
+        <hum-form-field [label]="'humano.leavePay.form.country' | translate" controlId="lp-country" required>
+          <hum-select
+            [options]="countryOptions()"
+            [ngModel]="d.countryId"
+            [disabled]="d.id !== null"
+            [ariaLabel]="'humano.leavePay.form.country' | translate"
+            (ngModelChange)="patch({ countryId: $event })"
+          />
+        </hum-form-field>
+        <hum-form-field [label]="'humano.leavePay.form.leaveType' | translate" controlId="lp-type" required>
+          <hum-select
+            [options]="typeOptions"
+            [ngModel]="d.leaveType"
+            [disabled]="d.id !== null"
+            [ariaLabel]="'humano.leavePay.form.leaveType' | translate"
+            (ngModelChange)="patch({ leaveType: $event })"
+          />
+        </hum-form-field>
+      </div>
+      @if (duplicate()) {
+        <p class="hum-lp-error">{{ 'humano.leavePay.form.duplicate' | translate }}</p>
+      }
+
+      <section class="hum-lp-bands">
+        <div>
+          <strong>{{ 'humano.leavePay.form.bands' | translate }}</strong>
+          <p class="hum-lp-muted">{{ 'humano.leavePay.form.bandsHint' | translate }}</p>
+        </div>
+        @for (b of d.bands; track b.key; let i = $index) {
+          <div class="hum-lp-band">
+            <div>
+              <label class="hum-lp-band__label" [for]="'lp-from-' + b.key">{{ 'humano.leavePay.form.fromDay' | translate }}</label>
+              <hum-input
+                type="number"
+                [inputId]="'lp-from-' + b.key"
+                [ngModel]="b.fromDay"
+                [invalid]="bandErrors()[i].fromDay || bandErrors()[i].overlap"
+                (ngModelChange)="patchBand(b.key, { fromDay: num($event) })"
+              />
+            </div>
+            <div>
+              <label class="hum-lp-band__label" [for]="'lp-to-' + b.key">{{ 'humano.leavePay.form.toDay' | translate }}</label>
+              <hum-input
+                type="number"
+                [inputId]="'lp-to-' + b.key"
+                [placeholder]="'humano.leavePay.form.toEnd' | translate"
+                [ngModel]="b.toDay"
+                [invalid]="bandErrors()[i].toDay"
+                (ngModelChange)="patchBand(b.key, { toDay: num($event) })"
+              />
+            </div>
+            <div>
+              <label class="hum-lp-band__label" [for]="'lp-paid-' + b.key">{{ 'humano.leavePay.form.paid' | translate }}</label>
+              <hum-input
+                type="number"
+                suffix="%"
+                [inputId]="'lp-paid-' + b.key"
+                [ngModel]="b.paid"
+                [invalid]="bandErrors()[i].paid"
+                (ngModelChange)="patchBand(b.key, { paid: num($event) })"
+              />
+            </div>
+            <hum-icon-button icon="trash-2" size="sm" [label]="'humano.leavePay.form.removeBand' | translate" (click)="removeBand(b.key)" />
+          </div>
+          @if (bandErrors()[i].overlap) {
+            <p class="hum-lp-error">{{ 'humano.leavePay.form.overlap' | translate }}</p>
+          } @else if (bandErrors()[i].fromDay || bandErrors()[i].toDay || bandErrors()[i].paid) {
+            <p class="hum-lp-error">{{ 'humano.leavePay.form.bandInvalid' | translate }}</p>
+          }
+        }
+        <div>
+          <hum-button variant="secondary" size="sm" icon="plus" [disabled]="openEnded()" (click)="addBand()">{{
+            'humano.leavePay.form.addBand' | translate
+          }}</hum-button>
+        </div>
+      </section>
+
+      <hum-form-field
+        [label]="(d.bands.length ? 'humano.leavePay.form.otherwisePaid' : 'humano.leavePay.form.everyDayPaid') | translate"
+        controlId="lp-otherwise"
+        required
+        [hint]="(openEnded() ? 'humano.leavePay.form.otherwiseUnused' : 'humano.leavePay.form.otherwiseHint') | translate"
+        [error]="
+          d.otherwisePaid === null || d.otherwisePaid < 0 || d.otherwisePaid > 100
+            ? ('humano.leavePay.form.percentInvalid' | translate)
+            : undefined
+        "
+      >
+        <hum-input
+          inputId="lp-otherwise"
+          type="number"
+          suffix="%"
+          [ngModel]="d.otherwisePaid"
+          (ngModelChange)="patch({ otherwisePaid: num($event) })"
+        />
+      </hum-form-field>
+
+      <div class="hum-demo-switch">
+        <hum-switch
+          [ngModel]="d.preTax"
+          (ngModelChange)="patch({ preTax: $event })"
+          [ariaLabel]="'humano.leavePay.form.preTax' | translate"
+        />
+        <span>
+          <strong>{{ 'humano.leavePay.form.preTax' | translate }}</strong>
+          <span class="hum-kpi__hint">{{
+            (d.preTax ? 'humano.leavePay.form.preTaxOn' : 'humano.leavePay.form.preTaxOff') | translate
+          }}</span>
+        </span>
+      </div>
+
+      <p class="hum-lp-muted">{{ 'humano.leavePay.form.recalculate' | translate }}</p>
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" icon="x" (click)="draft.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="save" [loading]="saving()" [disabled]="!valid()" (click)="save()">{{
+      'humano.action.save' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<hum-dialog
+  [open]="deleting() !== null"
+  [title]="'humano.leavePay.deleteTitle' | translate"
+  [description]="'humano.leavePay.deleteBody' | translate"
+  [hasBody]="false"
+  hasFooter
+  (closed)="deleting.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" (click)="deleting.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" icon="trash-2" (click)="confirmDelete()">{{ 'humano.leavePay.delete' | translate }}</hum-button>
+  </div>
+</hum-dialog>

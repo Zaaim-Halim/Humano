@@ -56,6 +56,8 @@
         "noCalendar": "Not set",
         "payRules": "Pay rules",
         "payRulesHint": "Formulas for earnings, deductions and employer charges.",
+        "leavePay": "Leave pay",
+        "leavePayHint": "How sick, parental and unpaid leave are paid.",
         "templates": "Payroll templates",
         "templatesHint": "Statutory taxes and contributions for your country, kept up to date by Humano.",
         "calendars": "Payroll calendars",

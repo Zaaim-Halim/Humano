@@ -8,9 +8,13 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 /**
  * LeaveTypeRule defines how different types of leave affect payroll calculations.
@@ -22,6 +26,8 @@ import org.hibernate.annotations.UuidGenerator;
  *   <li><b>country</b>: The country these leave rules apply to.</li>
  *   <li><b>leaveType</b>: The type of leave (e.g., ANNUAL, SICK, MATERNITY).</li>
  *   <li><b>deductionPercentage</b>: Percentage of salary to deduct for this leave type.</li>
+ *   <li><b>payBands</b>: Stretches of the absence deducted at another percentage (e.g. sick pay
+ *   for the first six weeks); every other day uses deductionPercentage.</li>
  *   <li><b>affectsTaxableSalary</b>: Whether this leave type affects gross taxable salary.</li>
  * </ul>
  * <p>
@@ -68,6 +74,15 @@ public class LeaveTypeRule extends AbstractAuditingEntity<UUID> {
     @DecimalMin(value = "0.0", inclusive = true, message = "Deduction percentage cannot be negative")
     @DecimalMax(value = "100.0", inclusive = true, message = "Deduction percentage cannot exceed 100%")
     private BigDecimal deductionPercentage;
+
+    /**
+     * Stretches of the absence deducted at their own percentage, in order and not overlapping.
+     * <p>
+     * Empty means every day of the absence uses {@link #deductionPercentage}.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "pay_bands")
+    private List<LeavePayBand> payBands = new ArrayList<>();
 
     /**
      * Whether this leave type affects gross taxable salary.
@@ -127,6 +142,29 @@ public class LeaveTypeRule extends AbstractAuditingEntity<UUID> {
         this.deductionPercentage = deductionPercentage;
     }
 
+    public List<LeavePayBand> getPayBands() {
+        return payBands == null ? List.of() : payBands;
+    }
+
+    public LeaveTypeRule payBands(List<LeavePayBand> payBands) {
+        setPayBands(payBands);
+        return this;
+    }
+
+    public void setPayBands(List<LeavePayBand> payBands) {
+        this.payBands = payBands == null ? new ArrayList<>() : new ArrayList<>(payBands);
+    }
+
+    /** The deduction percentage for the absence's {@code day} (1 = its first day): its band's, or the rule's own. */
+    public BigDecimal deductionPercentageOnDay(int day) {
+        return getPayBands()
+            .stream()
+            .filter(b -> b.covers(day))
+            .map(LeavePayBand::deductionPercentage)
+            .findFirst()
+            .orElse(deductionPercentage);
+    }
+
     public Boolean getAffectsTaxableSalary() {
         return affectsTaxableSalary;
     }
@@ -165,6 +203,8 @@ public class LeaveTypeRule extends AbstractAuditingEntity<UUID> {
             leaveType +
             ", deductionPercentage=" +
             deductionPercentage +
+            ", payBands=" +
+            payBands +
             ", affectsTaxableSalary=" +
             affectsTaxableSalary +
             '}'

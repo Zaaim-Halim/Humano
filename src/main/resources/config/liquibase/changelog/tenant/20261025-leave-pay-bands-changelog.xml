@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Stretches of an absence a leave pay rule deducts at their own percentage, such as sick pay for
+         the first six weeks before the health insurer takes over: [{fromDay, toDay, deductionPercentage}].
+         Null or empty: every day uses the rule's deduction_percentage, as before. -->
+    <changeSet id="20261025-leave-pay-bands" author="halimzaaim">
+        <addColumn tableName="leave_type_rule">
+            <column name="pay_bands" type="${jsonType}"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

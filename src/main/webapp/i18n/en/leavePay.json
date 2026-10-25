@@ -1,0 +1,68 @@
+{
+  "humano": {
+    "nav": {
+      "leavePay": "Leave pay"
+    },
+    "leavePay": {
+      "title": "Leave pay",
+      "subtitle": "How payroll pays approved sick, parental and unpaid leave in each country.",
+      "newRule": "New rule",
+      "howTitle": "How leave is paid",
+      "howBody": "Each working day (Monday to Friday) of approved leave is paid at the rule's rate, as a share of the salary for the period's working days, so a whole month away unpaid takes off the whole salary. Pay bands count from the first day of the absence, also when it began in an earlier pay period, and a leave request that starts on the next working day continues the same absence. Leave without a rule is paid in full. Public holidays count as working days, and statutory payments made by an insurer or the state (such as UK Statutory Sick Pay) are not added. Some statutory templates can't calculate a period with reduced pay yet and will list the employee as an issue; see",
+      "howTemplates": "Payroll templates",
+      "emptyTitle": "No leave pay rules yet",
+      "emptyBody": "All approved leave is paid in full until you add a rule, for example for unpaid leave, or sick pay that ends after six weeks.",
+      "col": {
+        "country": "Country",
+        "leaveType": "Leave",
+        "pay": "Pay",
+        "tax": "Deduction",
+        "actions": "Actions"
+      },
+      "summary": {
+        "band": "Days {{ from }}–{{ to }}: {{ paid }}",
+        "bandOpen": "From day {{ from }}: {{ paid }}",
+        "after": "After that: {{ paid }}",
+        "everyDay": "Every day: {{ paid }}",
+        "paid": "{{ paid }}% paid",
+        "unpaid": "unpaid"
+      },
+      "preTax": "Before tax",
+      "postTax": "From net pay",
+      "edit": "Edit rule",
+      "delete": "Delete rule",
+      "deleteTitle": "Delete this leave pay rule?",
+      "deleteBody": "Leave of this type is then paid in full. Runs already calculated keep their amounts until they are recalculated.",
+      "saved": "Leave pay rule saved",
+      "deleted": "Leave pay rule deleted",
+      "form": {
+        "newTitle": "New leave pay rule",
+        "editTitle": "Edit leave pay rule",
+        "country": "Country",
+        "chooseCountry": "Choose a country",
+        "leaveType": "Leave type",
+        "chooseType": "Choose a leave type",
+        "duplicate": "There is already a rule for this leave type in this country; edit that one instead.",
+        "bands": "Pay bands",
+        "bandsHint": "Optional. Days count in calendar days from the first day of the absence: for German sick pay, days 1 to 42 at 100%, then unpaid.",
+        "fromDay": "From day",
+        "toDay": "To day",
+        "toEnd": "End of absence",
+        "paid": "Paid",
+        "addBand": "Add band",
+        "removeBand": "Remove band",
+        "overlap": "This band starts before the previous one ends.",
+        "bandInvalid": "Use whole days from day 1, an end day on or after the start, and a percentage from 0 to 100.",
+        "otherwisePaid": "Paid on other days",
+        "everyDayPaid": "Paid on each day of leave",
+        "otherwiseHint": "Share of the daily salary paid; 0% is unpaid.",
+        "otherwiseUnused": "Not used: the last band runs to the end of the absence.",
+        "percentInvalid": "Enter a percentage from 0 to 100.",
+        "preTax": "Deduct before tax",
+        "preTaxOn": "The pay not paid also lowers taxable pay and contribution bases, as for pay not earned.",
+        "preTaxOff": "Taken from net pay: tax and contributions are still charged on the full salary.",
+        "recalculate": "Applies to runs calculated from now on; recalculate a draft or calculated run to update it."
+      }
+    }
+  }
+}

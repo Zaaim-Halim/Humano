@@ -108,6 +108,9 @@
     <!-- Payroll results: values templates keep for the next period -->
     <include file="config/liquibase/changelog/tenant/20261025-payroll-result-template-memo-changelog.xml" relativeToChangelogFile="false"/>
 
+    <!-- Leave pay rules: stretches of an absence paid at their own rate (sick pay, maternity pay) -->
+    <include file="config/liquibase/changelog/tenant/20261025-leave-pay-bands-changelog.xml" relativeToChangelogFile="false"/>
+
     <!--  will add tenant liquibase changelogs here -->
 
 </databaseChangeLog>
