@@ -157,6 +157,7 @@ class DutchHandbookExamplesTest {
             w,
             Map.of("BASIC", w),
             w,
+            null,
             w,
             BigDecimal.ZERO,
             BigDecimal.ZERO,

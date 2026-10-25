@@ -51,6 +51,11 @@ export class PayRuleService {
     return this.http.post<PayComponent>(this.rulesUrl, body);
   }
 
+  /** `PUT /api/payroll/pay-components/{id}` — whether an earning is taxable and counts toward social security. */
+  updateComponentFlags(id: string, flags: { taxable?: boolean; contributesToSocial?: boolean }): Observable<PayComponent> {
+    return this.http.put<PayComponent>(`${this.componentsUrl}/${id}`, flags);
+  }
+
   /** `POST /api/payroll/pay-rules/{ruleId}/active?active=` — activate/deactivate. */
   setActive(ruleId: string, active: boolean): Observable<PayComponent> {
     return this.http.post<PayComponent>(`${this.rulesUrl}/${ruleId}/active`, null, { params: { active } });

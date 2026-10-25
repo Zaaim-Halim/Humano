@@ -51,13 +51,31 @@
                 <div class="hum-rule-card__name">{{ item.component.name }}</div>
                 <div class="hum-rule-card__meta">
                   <code>{{ item.component.code }}</code>
-                  @if (item.component.taxable) {
-                    <span class="hum-rule-tag">{{ 'humano.payRules.taxable' | translate }}</span>
-                  }
-                  @if (item.component.contributesToSocial) {
-                    <span class="hum-rule-tag">{{ 'humano.payRules.social' | translate }}</span>
+                  @if (item.component.kind !== 'EARNING') {
+                    @if (item.component.taxable) {
+                      <span class="hum-rule-tag">{{ 'humano.payRules.taxable' | translate }}</span>
+                    }
+                    @if (item.component.contributesToSocial) {
+                      <span class="hum-rule-tag">{{ 'humano.payRules.social' | translate }}</span>
+                    }
                   }
                 </div>
+                @if (item.component.kind === 'EARNING') {
+                  <div class="hum-rule-card__flags">
+                    <hum-switch
+                      [checked]="item.component.taxable"
+                      [disabled]="updatingComponentId() !== null"
+                      [label]="'humano.payRules.taxableSwitch' | translate"
+                      (checkedChange)="setComponentFlag(item.component, 'taxable', $event)"
+                    />
+                    <hum-switch
+                      [checked]="item.component.contributesToSocial"
+                      [disabled]="updatingComponentId() !== null"
+                      [label]="'humano.payRules.socialSwitch' | translate"
+                      (checkedChange)="setComponentFlag(item.component, 'contributesToSocial', $event)"
+                    />
+                  </div>
+                }
               </div>
               <div class="hum-rule-row__rules">
                 @if (takenOverByTemplate(item.component.code)) {

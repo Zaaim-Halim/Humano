@@ -8,7 +8,9 @@ import java.util.Map;
  * before it as {@code #<id>} variables.
  * <ul>
  *   <li>{@link Type#REQUIRE} — {@code condition} must hold, otherwise the calculation stops with
- *   {@code message}. Used for regimes the template doesn't support and conditional inputs.</li>
+ *   {@code message}. Used for regimes the template doesn't support and conditional inputs; with
+ *   {@code detail}, the employee input it asks for, the failure counts as missing details for the
+ *   template (so the run can link to them).</li>
  *   <li>{@link Type#VALUE} — binds {@code #<id>} to {@code expr} (an intermediate amount such as
  *   insurable income).</li>
  *   <li>{@link Type#CONTRIBUTION} — applies the {@code employee} and/or {@code employer} side to
@@ -30,6 +32,7 @@ import java.util.Map;
  * @param when      optional condition; the step is skipped when it is false
  * @param condition REQUIRE: what must hold
  * @param message   REQUIRE: the error when it doesn't
+ * @param detail    REQUIRE: the employee input key whose absence the condition reports, if that is what it checks
  * @param expr      VALUE: the value
  * @param base      CONTRIBUTION, TAX: the amount rates apply to
  * @param employee  CONTRIBUTION: the employee's share
@@ -62,7 +65,8 @@ public record Step(
     PayrollTemplate.Rounding rounding,
     String source,
     boolean recordZero,
-    boolean allowNegative
+    boolean allowNegative,
+    String detail
 ) {
     public enum Type {
         REQUIRE,

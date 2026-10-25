@@ -63,6 +63,9 @@
       },
       "taxable": "taxable",
       "social": "counts toward social security",
+      "taxableSwitch": "Taxable",
+      "socialSwitch": "Subject to social contributions",
+      "componentSaved": "{{ name }} saved",
       "addRule": "Add rule",
       "noEnd": "no end date",
       "byTemplate": {

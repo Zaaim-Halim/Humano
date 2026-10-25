@@ -8,10 +8,15 @@ Nederland: maand, week, vier weken, kwartaal); 'Handboek Loonheffingen 2026' (ve
 chapter 6 (voortschrijdend cumulatief rekenen), 7.4-7.6 (AWf, Aof, Wko, Whk), 8.2 (werkgeversheffing
 Zvw), 18.21 (AOW age), Bijlage 1 tables 9, 11 and 12.
 
-Before writing, loonheffing.py must reproduce every amount of the four official white tables.
-Test cases sample those rows (official) and add derived cases for the premiums.
+Bijzondere beloningen (BONUS earnings: vakantiebijslag, 13e maand, gratificaties, ...) use the official
+2026 white tabel bijzondere beloningen (wit_bb_nl_std_20260101.xlsx) per Handboek §9.3.6; its percentages
+are checked against the Rekenvoorschriften parameters (tariff rates and the credit build-up and phase-out
+factors) before it is written into the template.
 
-Usage: python3 -I build_template.py <folder with wit_mnd/wk/4wk/kw_nl_std.xlsx> ../../../src/main/resources/payroll-templates/nl/nl-employment.json
+Before writing, loonheffing.py must reproduce every amount of the four official white tables.
+Test cases sample those rows and the special-payments table (official) and add derived cases for the premiums.
+
+Usage: python3 -I build_template.py <folder with wit_mnd/wk/4wk/kw_nl_std.xlsx, wit_bb_nl_std.xlsx> ../../../src/main/resources/payroll-templates/nl/nl-employment.json
 """
 import json
 import os
@@ -32,6 +37,10 @@ SOURCES = {
     "bd-witte-tabellen-2026": {
         "title": "Belastingdienst, loonbelastingtabellen 2026 — witte tijdvaktabellen, standaardsituatie, wonen in Nederland (maand, week, vier weken, kwartaal; v01, 1 januari 2026)",
         "url": "https://download.belastingdienst.nl/belastingdienst/dl/rekenhulpen/loonheffing/2026/v01/excel/wit_mnd_nl_std_20260101.xlsx",
+    },
+    "bd-tabel-bijzondere-beloningen-2026": {
+        "title": "Belastingdienst, witte tabel bijzondere beloningen 2026, standaardsituatie, wonen in Nederland (v01, 1 januari 2026); toepassing per Handboek Loonheffingen 2026 §9.3.6",
+        "url": "https://download.belastingdienst.nl/belastingdienst/dl/rekenhulpen/loonheffing/2026/v01/excel/wit_bb_nl_std_20260101.xlsx",
     },
     "bd-handboek-2026": {
         "title": "Belastingdienst, Handboek Loonheffingen 2026, versie maart 2026 — hoofdstuk 6 (VCR), 7.4-7.6 (AWf, Aof, Wko, Whk), 8.2 (werkgeversheffing Zvw), 18.21 (AOW-leeftijd), Bijlage 1 tabellen 9, 11, 12",
@@ -78,6 +87,65 @@ def check_rules(text):
         assert needle in flat, needle
 
 
+# ------------------------------------------------------------------ tabel bijzondere beloningen
+
+# The table's 13 value columns, in the order of the official xlsx (Rekenvoorschriften tabel 10 lay-out).
+BB_COLUMNS = ["g1None", "g1Std", "g1Ver", "g2None", "g2Std", "g2Ver", "g2AokStd", "g2AokVer",
+              "g3None", "g3Std", "g3Ver", "g3AokStd", "g3AokVer"]
+
+
+def read_bb_table(path):
+    """[(jaarloon, {column: rate})] from the official xlsx, after checking its lay-out."""
+    import openpyxl
+    import warnings
+    warnings.filterwarnings("ignore")
+    rows = list(openpyxl.load_workbook(path, data_only=True).active.iter_rows(values_only=True))
+    head = " ".join(str(v) for r in rows[:4] for v in r if v)
+    for needle in ("Jaarloon", "Jonger dan AOW-leeftijd", "Geboren in 1945 of eerder", "Geboren in 1946 of later", "standaard", "verrekenings"):
+        assert needle in head, needle
+    bands = []
+    for r in rows:
+        if isinstance(r[0], (int, float)) and all(isinstance(v, (int, float)) for v in r[1:14]):
+            bands.append((D(str(int(r[0]))), {c: D(str(v)).quantize(D("0.0001")) for c, v in zip(BB_COLUMNS, r[1:14])}))
+    assert len(bands) == 14 and bands[0][0] == 0, len(bands)
+    assert all(a[0] < b[0] for a, b in zip(bands, bands[1:]))
+    return bands
+
+
+def check_bb_table(bands):
+    """Every standard rate is the tariff rate of the band's jaarloon, and every verrekeningspercentage is one
+    of the credit build-up / phase-out factors of the Rekenvoorschriften (as percentages to 2 decimals)."""
+    pct = lambda x: x.quantize(D("0.0001"), rounding=ROUND_HALF_UP)
+    for jaarloon, rates in bands:
+        for g in (1, 2, 3):
+            t = lh.TARIFF[g]
+            rate = t["b1"] if jaarloon <= t["a2"] else (t["b2"] if jaarloon <= t["a3"] else t["b3"])
+            cols = [f"g{g}None", f"g{g}Std"] + ([f"g{g}AokStd"] if g != 1 else [])
+            for c in cols:
+                # Columns with the tax credit are left at 0 where the credits cover all the tax (low jaarloon, AOW age).
+                assert rates[c] == pct(rate) or (c != f"g{g}None" and rates[c] == 0), (jaarloon, c, rates[c], rate)
+        young, aow = lh.ARK["young"], lh.ARK["aow"]
+        ahk_y, ahk_a = lh.AHK["young"][1], lh.AHK["aow"][1]
+        factors = {
+            "g1Ver": {D(0), -young["o1"], -young["o2"], -young["o3"], ahk_y - young["o3"], ahk_y + young["a1"], young["a1"]},
+            "g2Ver": {D(0), ahk_a - aow["o3"], ahk_a + aow["a1"], ahk_a + aow["a1"] + lh.OUK[3], aow["a1"]},
+        }
+        factors["g2AokVer"] = factors["g3Ver"] = factors["g3AokVer"] = factors["g2Ver"]
+        for c, allowed in factors.items():
+            assert rates[c] in {pct(f) for f in allowed}, (jaarloon, c, rates[c])
+
+
+def bb_tax(bands, amount, annual_wage, group, lhk, aok, override=None):
+    """Loonbelasting/premie volksverzekeringen on a bijzondere beloning, rounded to cents in the employee's favour."""
+    if override is not None:
+        rate = D(override)
+    else:
+        rates = [r for k, r in bands if k <= D(annual_wage)][-1]
+        g = f"g{group}"
+        rate = rates[g + "None"] if not lhk else rates[g + ("AokStd" if aok else "Std")] + rates[g + ("AokVer" if aok else "Ver")]
+    return (D(amount) * rate).quantize(D("0.01"), rounding=ROUND_FLOOR)
+
+
 # ------------------------------------------------------------------ independent premium calculation (VCR)
 
 def cents(x):
@@ -91,24 +159,30 @@ def group_of(birth, paid):
     return (2 if y <= 1945 else 3) if aow else 1
 
 
-def expected_lines(c):
+def expected_lines(c, bands):
     emp, er = c["employee"], c["employer"]
     freq = c["frequency"]
     f = FREQ[freq][1]
     group = group_of(c["birthDate"], c["paymentDate"])
     pension = D(c.get("preTaxDeductionsByType", {}).get("RETIREMENT", "0"))
-    wage = D(c["grossEarnings"]) - pension
+    special = D(c.get("earningsByComponent", {}).get("BONUS", "0"))
+    wage = D(c["grossEarnings"]) - special - pension
     lines = []
     if wage == 0:
         return lines
-    tax, _ = lh.period_tax(wage, f, group, emp["applyLoonheffingskorting"] == "true", emp.get("alleenstaandeOuderenkorting") == "true")
+    lhk, aok = emp["applyLoonheffingskorting"] == "true", emp.get("alleenstaandeOuderenkorting") == "true"
+    tax, _ = lh.period_tax(wage, f, group, lhk, aok)
     lines.append({"step": "wageTax", "side": "TAX", "amount": str(tax)})
+    if special != 0:
+        lines.append({"step": "specialPaymentTax", "side": "TAX", "amount": str(
+            bb_tax(bands, special, emp.get("specialPaymentAnnualWage", "0"), group, lhk, aok, emp.get("specialPaymentRate")))})
     ytd = {k: D(v) for k, v in c.get("ytd", {}).items()}
     bf = emp.get("broughtForwardYear") == "2026"
     g = lambda key: D(emp.get(key, "0")) if bf else D(0)
     periods = ytd.get("wageTax.TAX.periods", D(0)) + g("broughtForwardPeriods") + 1
     cum_max = min(periods * MAX_PERIOD[freq], MAX_YEAR)
-    cum_wage = ytd.get("wageTax.TAX.base", D(0)) + g("broughtForwardWage") + wage
+    cum_wage = (ytd.get("wageTax.TAX.base", D(0)) + ytd.get("specialPaymentTax.TAX.base", D(0)) + g("broughtForwardWage")
+                + wage + special)
     if group == 1:
         base = min(cum_wage, cum_max) - (ytd.get("awf.EMPLOYER.base", D(0)) + g("broughtForwardPremiumBase"))
         if base != 0:
@@ -162,10 +236,48 @@ def official_cases(tables):
     return out
 
 
-def test_cases(tables):
+def special_payment_cases(bands):
+    """Salary plus a bijzondere beloning, one per column family of the official table, and the band edges."""
+    bb = "Belastingdienst witte tabel bijzondere beloningen 2026 (standaard, Nederland), jaarloon band {}: {}; Handboek §9.3.6; regular wage, premiums and Zvw by build_template.py"
+    picks = [  # (name, jaarloon, group, lhk, aok, salary, bonus)
+        ("vakantiebijslag, younger than AOW age, met loonheffingskorting", "50000", 1, True, False, "4000.00", "3200.00"),
+        ("vakantiebijslag, younger than AOW age, zonder loonheffingskorting", "30000", 1, False, False, "2500.00", "2000.00"),
+        ("13e maand on a low jaarloon: negative verrekeningspercentage", "12500", 1, True, False, "1050.00", "1050.00"),
+        ("bonus exactly on a band's jaarloon", "78427", 1, True, False, "6500.00", "5000.00"),
+        ("bonus above the highest band", "200000", 1, True, False, "15000.00", "20000.00"),
+        ("AOW age, born 1945 or earlier, incl. alleenstaande-ouderenkorting", "40000", 2, True, True, "3300.00", "2600.00"),
+        ("AOW age, born 1946 or later, met loonheffingskorting", "100000", 3, True, False, "8000.00", "6400.00"),
+        ("AOW age, born 1946 or later, zonder loonheffingskorting", "47000", 3, False, False, "3900.00", "3100.00"),
+    ]
+    out = []
+    for name, jaarloon, group, lhk, aok, salary, bonus in picks:
+        rates = [r for k, r in bands if k <= D(jaarloon)][-1]
+        key = [k for k, _ in bands if k <= D(jaarloon)][-1]
+        employee = {"applyLoonheffingskorting": str(lhk).lower(), "alleenstaandeOuderenkorting": str(aok).lower(),
+                    "specialPaymentAnnualWage": jaarloon}
+        g = f"g{group}"
+        cols = [g + "None"] if not lhk else [g + ("AokStd" if aok else "Std"), g + ("AokVer" if aok else "Ver")]
+        out.append(case(f"bijzondere beloning: {name}", bb.format(key, " + ".join(str(rates[c]) for c in cols)), "MONTHLY",
+                        str(D(salary) + D(bonus)), employee, BIRTH[group], earningsByComponent={"BASIC": salary, "BONUS": bonus}))
+    return out
+
+
+def test_cases(tables, bands):
     derived = "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py"
     young = {"applyLoonheffingskorting": "true"}
-    cases = official_cases(tables) + [
+    with_bb = {"applyLoonheffingskorting": "true", "specialPaymentAnnualWage": "52000"}
+    cases = official_cases(tables) + special_payment_cases(bands) + [
+        case("bijzondere beloning at a machtiging lager percentage", "Handboek §9.3.6 'Machtiging lager percentage': the authorised 30% replaces the table",
+             "MONTHLY", "9000.00", {"applyLoonheffingskorting": "true", "specialPaymentRate": "0.30"}, BIRTH[1],
+             earningsByComponent={"BASIC": "4500.00", "BONUS": "4500.00"}),
+        case("vakantiebijslag in May: premiums on salary and bonus, capped at the cumulative maximum", derived + "; Handboek §6.3 (VCR) and §9.3.6",
+             "MONTHLY", "9000.00", with_bb, BIRTH[1], period=("2026-05-01", "2026-05-31", "2026-05-22"),
+             earningsByComponent={"BASIC": "4300.00", "BONUS": "4700.00"},
+             ytd={"wageTax.TAX.base": "17200.00", "wageTax.TAX.periods": "4", "awf.EMPLOYER.base": "17200.00", "zvw.EMPLOYER.base": "17200.00"}),
+        case("the month after the vakantiebijslag counts it in the cumulative wage", derived + "; Handboek §6.3 (VCR): the bonus month's wage stays in the cumulative wage",
+             "MONTHLY", "4300.00", young, BIRTH[1], period=("2026-06-01", "2026-06-30", "2026-06-25"),
+             ytd={"wageTax.TAX.base": "21500.00", "wageTax.TAX.periods": "5", "specialPaymentTax.TAX.base": "4700.00",
+                  "awf.EMPLOYER.base": "26200.00", "zvw.EMPLOYER.base": "26200.00"}),
         case("Handboek Zvw example: € 2.400 with € 100 pension premium", "Handboek Loonheffingen 2026 §8.2 'Voorbeeldberekening werkgeversheffing Zvw': "
              "€ 2.300 loon voor de Zvw, werkgeversheffing 6,10% = € 140,30; wage tax and premiums by build_template.py",
              "MONTHLY", "2400.00", young, BIRTH[1], preTaxDeductionsByType={"RETIREMENT": "100.00"}),
@@ -196,10 +308,12 @@ def test_cases(tables):
              period=("2026-07-01", "2026-07-31", "2026-07-24"), employmentStartDate="2018-02-01"),
     ]
     for c in cases:
-        c["expectLines"] = expected_lines(c)
+        c["expectLines"] = expected_lines(c, bands)
     errors = [
-        case("bonus in the period is refused", "bijzondere beloningen use the special-rewards table (not modelled)", "MONTHLY", "6000.00", young, BIRTH[1],
-             earningsByComponent={"BASIC": "4000.00", "BONUS": "2000.00"}, expectError="bijzondere beloning"),
+        case("bonus without the jaarloon for the table", "Handboek §9.3.6: the table needs the jaarloon", "MONTHLY", "6000.00", young, BIRTH[1],
+             earningsByComponent={"BASIC": "4000.00", "BONUS": "2000.00"}, expectError="jaarloon"),
+        case("bonus paid without the period's regular wage", "a bijzondere beloning on its own is not supported", "MONTHLY", "2000.00", with_bb, BIRTH[1],
+             earningsByComponent={"BONUS": "2000.00"}, expectError="regular wage"),
         case("employee paid earlier this year without brought-forward figures", "VCR needs this year's earlier wages", "MONTHLY", "5000.00", young, BIRTH[1],
              period=("2026-10-01", "2026-10-31", "2026-10-23"), employmentStartDate="2018-02-01", expectError="No earlier payroll this year"),
         case("alleenstaande-ouderenkorting below AOW age is refused", "Rekenvoorschriften 2.2.3.3", "MONTHLY", "3000.00",
@@ -236,8 +350,11 @@ def main():
     check_rules(open(os.path.join(folder, "rekenvoorschriften.txt"), encoding="utf-8").read())
     check_handbook(open(os.path.join(folder, "handboek.txt"), encoding="utf-8").read())
     tables = {k: lh.read_table(v) for k, v in paths.items()}
+    bands = read_bb_table(os.path.join(folder, "wit_bb_nl_std.xlsx"))
+    check_bb_table(bands)
+    print("bijzondere-beloningen bands checked:", len(bands))
 
-    R, H = "bd-rekenvoorschriften-2026", "bd-handboek-2026"
+    R, H, BB = "bd-rekenvoorschriften-2026", "bd-handboek-2026", "bd-tabel-bijzondere-beloningen-2026"
     params = {
         "lv": p(lh.LV, R), "lmax": p(lh.LMAX, R), "ahkg1": p(lh.AHKG1, R), "ahkg2": p(lh.AHKG2, R),
         "oukg1": p(lh.OUK[1], R), "oukg2": p(lh.OUK[2], R),
@@ -262,7 +379,7 @@ def main():
         "schemaVersion": 1,
         "id": "nl-employment",
         "name": "Nederland — loonheffingen (witte tabel), premies werknemersverzekeringen en werkgeversheffing Zvw",
-        "version": "2026.1.0",
+        "version": "2026.1.1",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "NL"},
         "validity": {"from": FROM, "to": TO},
@@ -271,7 +388,9 @@ def main():
         "taxYearStart": "--01-01",
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
-        "changelog": [{"version": "2026.1.0", "date": RETRIEVED,
+        "changelog": [{"version": "2026.1.1", "date": "2026-10-25",
+                       "summary": "Bijzondere beloningen (BONUS: vakantiebijslag, 13e maand, gratificaties) are taxed with the 2026 witte tabel bijzondere beloningen on the employee's jaarloon (Handboek §9.3.6), or a percentage from a machtiging; they count in the cumulative wage for the premiums and the Zvw. Before, a period with a BONUS was refused."},
+                      {"version": "2026.1.0", "date": RETRIEVED,
                        "summary": "2026: loonbelasting/premie volksverzekeringen per de Rekenvoorschriften 2026 (witte tabel, standaardsituatie, wonen in Nederland); AWf, Aof, opslag Wko, Whk en werkgeversheffing Zvw met voortschrijdend cumulatief rekenen."}],
         "sources": SOURCES,
         "inputs": {
@@ -296,6 +415,10 @@ def main():
                  "description": "Lives in the Netherlands (other countries use other tables — not supported)"},
                 {"key": "zvwWithheldFromEmployee", "type": "BOOLEAN", "required": False, "defaultValue": "false",
                  "description": "Bijdrage Zvw is withheld from the employee (e.g. a dga) instead of the werkgeversheffing (not supported)"},
+                {"key": "specialPaymentAnnualWage", "type": "DECIMAL", "required": False, "min": 0,
+                 "description": "Jaarloon voor de tabel bijzondere beloningen (Handboek §9.3.6), needed when a bonus, vakantiebijslag or 13e maand is paid: last year's loon voor de loonbelasting/premie volksverzekeringen from you (loonstaat kolom 14); annualised if the employee was paid for part of last year (e.g. € 3.000 over 1,5 months = € 24.000); the expected wage for the whole year if they joined this year"},
+                {"key": "specialPaymentRate", "type": "DECIMAL", "required": False, "min": 0, "max": 1,
+                 "description": "Percentage for bijzondere beloningen instead of the table, as a fraction: from a machtiging lager percentage of the Belastingdienst for this year, or a higher percentage the employee asked for in writing (Handboek §9.3.6, §9.3.10)"},
                 {"key": "broughtForwardYear", "type": "INTEGER", "required": False, "min": 2000, "max": 2100,
                  "description": "Year the brought-forward figures belong to; other years' figures are ignored"},
                 {"key": "broughtForwardPeriods", "type": "INTEGER", "required": False, "min": 0, "max": 53,
@@ -316,15 +439,17 @@ def main():
             "credits": {"kind": "EXACT", "description": "Rekenvoorschriften tabellen 3-6 per age group: AHK, OUK, AOK and ARK amounts and factors",
                         "columns": ["ahkm", "ahka", "oukm", "ouka", "aok", "arko1", "arko2", "arko3", "arka", "arkm1", "arkm2", "arkm3"],
                         "versions": [{"from": FROM, "to": TO, "source": R, "rows": credit_rows}]},
+            "specialPayments": {"kind": "EXACT", "description": "Witte tabel bijzondere beloningen: per jaarloon band (the row of the highest jaarloon not above the employee's), the standaardtarief and verrekeningspercentage loonheffingskorting per age group",
+                                "columns": BB_COLUMNS,
+                                "versions": [{"from": FROM, "to": TO, "source": BB,
+                                              "rows": [{"key": str(k), "values": [str(r[c]) for c in BB_COLUMNS]} for k, r in bands]}]},
             "maxPremiumWage": {"kind": "EXACT", "description": "Handboek Bijlage 1 tabel 11: loontijdvakbedrag maximumpremieloon/-bijdrageloon",
                                "versions": [{"from": FROM, "to": TO, "source": H,
                                              "rows": [{"key": k, "values": [str(v)]} for k, v in MAX_PERIOD.items()]}]},
         },
         "steps": [
-            {"id": "noBonus", "type": "REQUIRE", "condition": "#earningsByComponent['BONUS'] == 0",
-             "message": "A bijzondere beloning (bonus, vakantiebijslag, 13e maand) is taxed with the tabel bijzondere beloningen, which this template does not support"},
             {"id": "sameWage", "type": "REQUIRE", "condition": "#socialEarnings == #taxableEarnings",
-             "message": "Every earning must count for both the wage tax and the werknemersverzekeringen in this template (check the pay components' taxable and social flags)"},
+             "message": "Every earning must count for both the wage tax and the werknemersverzekeringen in this template: check the earnings' Taxable and Subject to social contributions switches under Payroll → Pay rules"},
             {"id": "onlyPension", "type": "REQUIRE", "condition": "#preTaxDeductions == #preTaxDeductionsByType['RETIREMENT']",
              "message": "Only the employee's pensioenpremie (pre-tax RETIREMENT deduction) is supported as a deduction for the loonheffingen"},
             {"id": "resident", "type": "REQUIRE", "condition": "#employee['residentOfNetherlands']",
@@ -346,8 +471,16 @@ def main():
              "when": "#ytd.periods('wageTax', 'TAX') == 0 and #employmentStartDate < #periodStart and #periodStart > #taxYearStartDate",
              "condition": "#broughtForward",
              "message": "No earlier payroll this year is recorded for this employee, who was employed before this period: set broughtForwardYear and this year's cumulative figures (loontijdvakken, SV-loon, premieloon, bijdrageloon Zvw; 0 if none) so the maximum premium wage applies correctly"},
+            # Bijzondere beloningen (Handboek §9.3.6): the BONUS earnings, taxed apart from the period wage.
+            {"id": "specialPayment", "type": "VALUE", "expr": "#earningsByComponent['BONUS']"},
             # Loonbelasting/premie volksverzekeringen: Rekenvoorschriften chapter 2.
-            {"id": "wage", "type": "VALUE", "expr": "#taxableEarnings - #reductions - #preTaxDeductions"},
+            {"id": "wage", "type": "VALUE", "expr": "#taxableEarnings - #specialPayment - #reductions - #preTaxDeductions"},
+            {"id": "specialPaymentWithWage", "type": "REQUIRE", "when": "#specialPayment != 0", "condition": "#wage != 0",
+             "message": "A bijzondere beloning (bonus, vakantiebijslag, 13e maand) must be paid in a run with the period's regular wage; a payment of only bijzondere beloningen is not supported"},
+            {"id": "specialPaymentJaarloon", "type": "REQUIRE",
+             "when": "#specialPayment != 0 and #employee['specialPaymentRate'] == null",
+             "condition": "#employee['specialPaymentAnnualWage'] != null", "detail": "specialPaymentAnnualWage",
+             "message": "A bijzondere beloning is taxed with the tabel bijzondere beloningen, which needs the employee's jaarloon (last year's wage from you, annualised, or this year's expected wage for a new employee): enter specialPaymentAnnualWage in their details for this template"},
             {"id": "annualWage", "type": "VALUE", "expr": "#wage * #periodsPerYear"},
             {"id": "tableWage", "type": "VALUE",
              "expr": "#annualWage <= 0 ? 0 : (#annualWage > #p['lmax'] ? #p['lmax'] : #divide(#annualWage, #p['lv'], 0, 'FLOOR') * #p['lv'])"},
@@ -372,13 +505,19 @@ def main():
             {"id": "wageTax", "type": "TAX", "label": "Loonbelasting/premie volksverzekeringen", "ledger": "INCOME_TAX", "source": R,
              "when": "#wage != 0", "base": "#wage", "recordZero": True,
              "amount": "#divide(#annualTax, #periodsPerYear, 2, 'HALF_UP') + #aboveTable"},
+            {"id": "specialPaymentRate", "type": "VALUE", "when": "#specialPayment != 0",
+             "expr": "#employee['specialPaymentRate'] != null ? #employee['specialPaymentRate'] : "
+                     "(!#employee['applyLoonheffingskorting'] ? #table.band('specialPayments', #employee['specialPaymentAnnualWage'], 'g' + #group + 'None') : (#employee['alleenstaandeOuderenkorting'] ? #table.band('specialPayments', #employee['specialPaymentAnnualWage'], 'g' + #group + 'AokStd') + #table.band('specialPayments', #employee['specialPaymentAnnualWage'], 'g' + #group + 'AokVer') : #table.band('specialPayments', #employee['specialPaymentAnnualWage'], 'g' + #group + 'Std') + #table.band('specialPayments', #employee['specialPaymentAnnualWage'], 'g' + #group + 'Ver')))"},
+            {"id": "specialPaymentTax", "type": "TAX", "label": "Loonbelasting/premie volksverzekeringen bijzondere beloning", "ledger": "INCOME_TAX",
+             "source": BB, "when": "#specialPayment != 0", "base": "#specialPayment", "recordZero": True, "allowNegative": True,
+             "amount": "#round(#specialPayment * #specialPaymentRate, 2, 'FLOOR')"},
             # Premies werknemersverzekeringen and werkgeversheffing Zvw: voortschrijdend cumulatief rekenen (Handboek chapter 6).
             {"id": "periods", "type": "VALUE",
              "expr": "#ytd.periods('wageTax', 'TAX') + " + bf.format("broughtForwardPeriods") + " + (#wage != 0 ? 1 : 0)"},
             {"id": "cumulativeMaximum", "type": "VALUE",
              "expr": "#min(#periods * #table.lookup('maxPremiumWage', #frequency), #p['maxPremiumWageYear'])"},
             {"id": "cumulativeWage", "type": "VALUE",
-             "expr": "#ytd.base('wageTax', 'TAX') + " + bf.format("broughtForwardWage") + " + #wage"},
+             "expr": "#ytd.base('wageTax', 'TAX') + #ytd.base('specialPaymentTax', 'TAX') + " + bf.format("broughtForwardWage") + " + #wage + #specialPayment"},
             {"id": "premiumBase", "type": "VALUE", "when": "!#aow and #wage != 0",
              "expr": "#min(#cumulativeWage, #cumulativeMaximum) - (#ytd.base('awf', 'EMPLOYER') + " + bf.format("broughtForwardPremiumBase") + ")"},
             {"id": "awf", "type": "CONTRIBUTION", "label": "Premie AWf", "ledger": "UNEMPLOYMENT", "source": H,
@@ -400,15 +539,15 @@ def main():
         "limitations": [
             "Monthly and weekly pay (Dutch loontijdvakken); four-weekly, quarterly and daily tables are not used by Humano's pay frequencies.",
             "White table, standard situation, employee living in the Netherlands; herleidingssituaties, non-residents and the green table are refused or out of scope.",
-            "Bijzondere beloningen (bonus, vakantiebijslag, 13e maand) need the tabel bijzondere beloningen: a period with BONUS earnings is refused, and holiday allowance must not be paid through another earning component.",
+            "Bijzondere beloningen are the BONUS earnings (vakantiebijslag, 13e maand, eindejaarsuitkering, gratificaties, uitbetaalde vakantiedagen): taxed with the witte tabel bijzondere beloningen on the jaarloon entered per employee (specialPaymentAnnualWage; Handboek §9.3.6), or a percentage from a machtiging or the employee's written request (specialPaymentRate). Holiday allowance paid monthly with the wage through another component is period wage (§9.3.6 Let op 1). They must be paid in a run with the period's regular wage. The voordeligheidsregel and the herberekeningsmethode for back pay are not offered; the jaarloon is not derived from earlier payrolls.",
             "Above the highest table wage the 'tabelsystematiek' (systematiek 1) is used; the Rekenvoorschriften allow a small difference with the rekenregel.",
             "The verrekende arbeidskorting is not recorded on the payslip (needed for the loonaangifte).",
             "Not supported: jonggehandicaptenkorting, overheidswerkgevers (Ufo), inhouding bijdrage Zvw (dga's), eigenrisicodragers, the premiekorting/LIV and other reliefs, deductions other than the employee's pensioenpremie.",
             "The AWf premium (LOW/HIGH) and the Aof size class and Whk rate are the employer's responsibility; the AWf correction for flexible hours is not applied, and one AWf rate applies per employee per period (no pro-rata split for concurrent contracts, Handboek §6.7.2).",
             "A negative period wage gives no wage tax (no refund through the period table); premiums and the Zvw follow VCR, including negative premiums.",
-            "Status LAW_DERIVED: the wage tax reproduces all 108,460 amounts of the 2026 white tables (maand, week, vier weken, kwartaal; checked by build_template.py; 14 of them are test cases); premiums are derived from the Handboek.",
+            "Status LAW_DERIVED: the wage tax reproduces all 108,460 amounts of the 2026 white tables (maand, week, vier weken, kwartaal; checked by build_template.py; 14 of them are test cases); the tabel bijzondere beloningen is the official 2026 file, its percentages checked against the Rekenvoorschriften parameters (8 sampled rows are test cases); premiums are derived from the Handboek.",
         ],
-        "testCases": test_cases(tables),
+        "testCases": test_cases(tables, bands),
     }
     with open(out, "w", encoding="utf-8") as fh:
         json.dump(template, fh, ensure_ascii=False, indent=2)

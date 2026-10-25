@@ -82,6 +82,50 @@ public final class TableAccess {
         return applicable.get(0).values().get(index);
     }
 
+    /**
+     * The value in {@code column} of an EXACT table whose keys are ascending numbers, from the row with
+     * the highest key not above {@code value}: a published table of bands, where the row a value falls
+     * into applies (e.g. the Dutch tabel bijzondere beloningen by jaarloon). A value below the first key
+     * has no band.
+     */
+    public BigDecimal band(String tableName, BigDecimal value, Object column) {
+        Table table = table(tableName);
+        if (table.kind() != Table.Kind.EXACT) {
+            throw new TemplateCalculationException("#table.band needs an EXACT table; " + tableName + " is " + table.kind());
+        }
+        if (value == null) {
+            throw new TemplateCalculationException("#table.band on " + tableName + " received a missing value");
+        }
+        int index = columnIndex(table, tableName, column);
+        Table.Row band = null;
+        BigDecimal previous = null;
+        for (Table.Row row : version(table, tableName).rows()) {
+            BigDecimal key = bandKey(tableName, row);
+            if (previous != null && key.compareTo(previous) <= 0) {
+                throw new TemplateCalculationException("Table " + tableName + " keys must be ascending for #table.band");
+            }
+            previous = key;
+            if (key.compareTo(value) <= 0) band = row;
+        }
+        if (band == null) {
+            throw new TemplateCalculationException(value.toPlainString() + " is below the first band of " + tableName);
+        }
+        BigDecimal result = band.values().get(index);
+        if (result == null) {
+            throw new TemplateCalculationException("No value for band " + band.key() + " / " + text(column) + " in " + tableName);
+        }
+        return result;
+    }
+
+    /** A band table's row key as a number. */
+    static BigDecimal bandKey(String tableName, Table.Row row) {
+        try {
+            return new BigDecimal(row.key());
+        } catch (NumberFormatException | NullPointerException e) {
+            throw new TemplateCalculationException("Table " + tableName + " key " + row.key() + " is not a number, as #table.band needs");
+        }
+    }
+
     /** Progressive tax on {@code amount} over a BRACKETS table: each slice taxed at its bracket's rate (unrounded). */
     public BigDecimal bracketTax(String tableName, BigDecimal amount) {
         return bracketTax(tableName, null, amount);

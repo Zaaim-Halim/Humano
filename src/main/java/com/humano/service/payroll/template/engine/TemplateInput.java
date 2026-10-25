@@ -17,6 +17,7 @@ import java.util.Map;
  * @param earningsByComponent the same by pay-component code (e.g. BASIC, BONUS), for laws that tax some
  *                        kinds of pay differently
  * @param socialEarnings  earnings whose pay component is subject to social contributions
+ * @param socialEarningsByComponent the same by pay-component code; null means every earning is social
  * @param taxableEarnings earnings whose pay component is taxable
  * @param reductions      remuneration not earned in the period (unpaid-leave deductions)
  * @param preTaxDeductions other deductions the tenant marked pre-tax (e.g. pension or 401(k) plans);
@@ -41,6 +42,7 @@ public record TemplateInput(
     BigDecimal grossEarnings,
     Map<String, BigDecimal> earningsByComponent,
     BigDecimal socialEarnings,
+    Map<String, BigDecimal> socialEarningsByComponent,
     BigDecimal taxableEarnings,
     BigDecimal reductions,
     BigDecimal preTaxDeductions,

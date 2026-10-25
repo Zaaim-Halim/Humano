@@ -2,14 +2,13 @@ package com.humano.service.mapper;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Service for mapping between different object types using Jackson ObjectMapper.
@@ -45,10 +44,12 @@ public class ObjectMapperService {
         try {
             return objectMapper.convertValue(source, targetClass);
         } catch (Exception e) {
-            log.error("Error mapping object of type {} to {}: {}",
+            log.error(
+                "Error mapping object of type {} to {}: {}",
                 source.getClass().getSimpleName(),
                 targetClass.getSimpleName(),
-                e.getMessage());
+                e.getMessage()
+            );
             throw new RuntimeException("Error mapping object", e);
         }
     }
@@ -66,9 +67,7 @@ public class ObjectMapperService {
         if (sourceCollection == null) {
             return List.of();
         }
-        return sourceCollection.stream()
-            .map(entity -> map(entity, targetClass))
-            .collect(Collectors.toList());
+        return sourceCollection.stream().map(entity -> map(entity, targetClass)).collect(Collectors.toList());
     }
 
     /**

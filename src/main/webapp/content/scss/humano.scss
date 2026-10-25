@@ -7743,6 +7743,15 @@ button.hum-records__empty:hover {
   color: var(--text-muted);
 }
 
+/* An earning component's taxable / social switches on the pay rules page. */
+.hum-rule-card__flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+
 /* A payroll run's payment date, with its change control. */
 .hum-run-paydate {
   display: flex;

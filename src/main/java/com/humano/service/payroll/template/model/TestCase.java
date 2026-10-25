@@ -19,6 +19,7 @@ import java.util.Map;
  * @param grossEarnings   gross earnings in the period
  * @param earningsByComponent the same by pay-component code (defaults to all BASIC)
  * @param socialEarnings  earnings subject to social contributions (defaults to gross)
+ * @param socialEarningsByComponent their part per pay-component code (defaults to earningsByComponent)
  * @param taxableEarnings taxable earnings (defaults to gross)
  * @param reductions      unpaid-leave reductions (defaults to 0)
  * @param preTaxDeductions tenant pre-tax deductions (defaults to the sum by type, else 0)
@@ -43,6 +44,7 @@ public record TestCase(
     BigDecimal grossEarnings,
     Map<String, BigDecimal> earningsByComponent,
     BigDecimal socialEarnings,
+    Map<String, BigDecimal> socialEarningsByComponent,
     BigDecimal taxableEarnings,
     BigDecimal reductions,
     BigDecimal preTaxDeductions,

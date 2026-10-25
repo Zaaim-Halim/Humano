@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "nl-employment",
   "name": "Nederland — loonheffingen (witte tabel), premies werknemersverzekeringen en werkgeversheffing Zvw",
-  "version": "2026.1.0",
+  "version": "2026.1.1",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "NL"
@@ -21,6 +21,11 @@
   },
   "changelog": [
     {
+      "version": "2026.1.1",
+      "date": "2026-10-25",
+      "summary": "Bijzondere beloningen (BONUS: vakantiebijslag, 13e maand, gratificaties) are taxed with the 2026 witte tabel bijzondere beloningen on the employee's jaarloon (Handboek §9.3.6), or a percentage from a machtiging; they count in the cumulative wage for the premiums and the Zvw. Before, a period with a BONUS was refused."
+    },
+    {
       "version": "2026.1.0",
       "date": "2026-10-21",
       "summary": "2026: loonbelasting/premie volksverzekeringen per de Rekenvoorschriften 2026 (witte tabel, standaardsituatie, wonen in Nederland); AWf, Aof, opslag Wko, Whk en werkgeversheffing Zvw met voortschrijdend cumulatief rekenen."
@@ -35,6 +40,11 @@
     "bd-witte-tabellen-2026": {
       "title": "Belastingdienst, loonbelastingtabellen 2026 — witte tijdvaktabellen, standaardsituatie, wonen in Nederland (maand, week, vier weken, kwartaal; v01, 1 januari 2026)",
       "url": "https://download.belastingdienst.nl/belastingdienst/dl/rekenhulpen/loonheffing/2026/v01/excel/wit_mnd_nl_std_20260101.xlsx",
+      "retrieved": "2026-10-21"
+    },
+    "bd-tabel-bijzondere-beloningen-2026": {
+      "title": "Belastingdienst, witte tabel bijzondere beloningen 2026, standaardsituatie, wonen in Nederland (v01, 1 januari 2026); toepassing per Handboek Loonheffingen 2026 §9.3.6",
+      "url": "https://download.belastingdienst.nl/belastingdienst/dl/rekenhulpen/loonheffing/2026/v01/excel/wit_bb_nl_std_20260101.xlsx",
       "retrieved": "2026-10-21"
     },
     "bd-handboek-2026": {
@@ -109,6 +119,21 @@
         "required": false,
         "defaultValue": "false",
         "description": "Bijdrage Zvw is withheld from the employee (e.g. a dga) instead of the werkgeversheffing (not supported)"
+      },
+      {
+        "key": "specialPaymentAnnualWage",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "description": "Jaarloon voor de tabel bijzondere beloningen (Handboek §9.3.6), needed when a bonus, vakantiebijslag or 13e maand is paid: last year's loon voor de loonbelasting/premie volksverzekeringen from you (loonstaat kolom 14); annualised if the employee was paid for part of last year (e.g. € 3.000 over 1,5 months = € 24.000); the expected wage for the whole year if they joined this year"
+      },
+      {
+        "key": "specialPaymentRate",
+        "type": "DECIMAL",
+        "required": false,
+        "min": 0,
+        "max": 1,
+        "description": "Percentage for bijzondere beloningen instead of the table, as a fraction: from a machtiging lager percentage of the Belastingdienst for this year, or a higher percentage the employee asked for in writing (Handboek §9.3.6, §9.3.10)"
       },
       {
         "key": "broughtForwardYear",
@@ -346,6 +371,286 @@
         }
       ]
     },
+    "specialPayments": {
+      "kind": "EXACT",
+      "description": "Witte tabel bijzondere beloningen: per jaarloon band (the row of the highest jaarloon not above the employee's), the standaardtarief and verrekeningspercentage loonheffingskorting per age group",
+      "columns": [
+        "g1None",
+        "g1Std",
+        "g1Ver",
+        "g2None",
+        "g2Std",
+        "g2Ver",
+        "g2AokStd",
+        "g2AokVer",
+        "g3None",
+        "g3Std",
+        "g3Ver",
+        "g3AokStd",
+        "g3AokVer"
+      ],
+      "versions": [
+        {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "source": "bd-tabel-bijzondere-beloningen-2026",
+          "rows": [
+            {
+              "key": "0",
+              "values": [
+                "0.3575",
+                "0.0000",
+                "0.0000",
+                "0.1785",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.1785",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.0000"
+              ]
+            },
+            {
+              "key": "11358",
+              "values": [
+                "0.3575",
+                "0.3575",
+                "-0.0832",
+                "0.1785",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.1785",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.0000"
+              ]
+            },
+            {
+              "key": "12923",
+              "values": [
+                "0.3575",
+                "0.3575",
+                "-0.3101",
+                "0.1785",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.1785",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.0000"
+              ]
+            },
+            {
+              "key": "23931",
+              "values": [
+                "0.3575",
+                "0.3575",
+                "-0.0195",
+                "0.1785",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.1785",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.0000"
+              ]
+            },
+            {
+              "key": "29737",
+              "values": [
+                "0.3575",
+                "0.3575",
+                "0.0445",
+                "0.1785",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.1785",
+                "0.0000",
+                "0.0000",
+                "0.0000",
+                "0.0000"
+              ]
+            },
+            {
+              "key": "34719",
+              "values": [
+                "0.3575",
+                "0.3575",
+                "0.0445",
+                "0.1785",
+                "0.1785",
+                "0.0222",
+                "0.0000",
+                "0.0000",
+                "0.1785",
+                "0.1785",
+                "0.0222",
+                "0.0000",
+                "0.0000"
+              ]
+            },
+            {
+              "key": "37409",
+              "values": [
+                "0.3575",
+                "0.3575",
+                "0.0445",
+                "0.1785",
+                "0.1785",
+                "0.0222",
+                "0.1785",
+                "0.0222",
+                "0.1785",
+                "0.1785",
+                "0.0222",
+                "0.1785",
+                "0.0222"
+              ]
+            },
+            {
+              "key": "38884",
+              "values": [
+                "0.3756",
+                "0.3756",
+                "0.0445",
+                "0.1785",
+                "0.1785",
+                "0.0222",
+                "0.1785",
+                "0.0222",
+                "0.3756",
+                "0.3756",
+                "0.0222",
+                "0.3756",
+                "0.0222"
+              ]
+            },
+            {
+              "key": "41124",
+              "values": [
+                "0.3756",
+                "0.3756",
+                "0.0445",
+                "0.3756",
+                "0.3756",
+                "0.0222",
+                "0.3756",
+                "0.0222",
+                "0.3756",
+                "0.3756",
+                "0.0222",
+                "0.3756",
+                "0.0222"
+              ]
+            },
+            {
+              "key": "45593",
+              "values": [
+                "0.3756",
+                "0.3756",
+                "0.1291",
+                "0.3756",
+                "0.3756",
+                "0.0645",
+                "0.3756",
+                "0.0645",
+                "0.3756",
+                "0.3756",
+                "0.0645",
+                "0.3756",
+                "0.0645"
+              ]
+            },
+            {
+              "key": "46003",
+              "values": [
+                "0.3756",
+                "0.3756",
+                "0.1291",
+                "0.3756",
+                "0.3756",
+                "0.2145",
+                "0.3756",
+                "0.2145",
+                "0.3756",
+                "0.3756",
+                "0.2145",
+                "0.3756",
+                "0.2145"
+              ]
+            },
+            {
+              "key": "59783",
+              "values": [
+                "0.3756",
+                "0.3756",
+                "0.1291",
+                "0.3756",
+                "0.3756",
+                "0.0645",
+                "0.3756",
+                "0.0645",
+                "0.3756",
+                "0.3756",
+                "0.0645",
+                "0.3756",
+                "0.0645"
+              ]
+            },
+            {
+              "key": "78427",
+              "values": [
+                "0.4950",
+                "0.4950",
+                "0.0651",
+                "0.4950",
+                "0.4950",
+                "0.0325",
+                "0.4950",
+                "0.0325",
+                "0.4950",
+                "0.4950",
+                "0.0325",
+                "0.4950",
+                "0.0325"
+              ]
+            },
+            {
+              "key": "143555",
+              "values": [
+                "0.4950",
+                "0.4950",
+                "0.0000",
+                "0.4950",
+                "0.4950",
+                "0.0000",
+                "0.4950",
+                "0.0000",
+                "0.4950",
+                "0.4950",
+                "0.0000",
+                "0.4950",
+                "0.0000"
+              ]
+            }
+          ]
+        }
+      ]
+    },
     "maxPremiumWage": {
       "kind": "EXACT",
       "description": "Handboek Bijlage 1 tabel 11: loontijdvakbedrag maximumpremieloon/-bijdrageloon",
@@ -370,16 +675,10 @@
   },
   "steps": [
     {
-      "id": "noBonus",
-      "type": "REQUIRE",
-      "condition": "#earningsByComponent['BONUS'] == 0",
-      "message": "A bijzondere beloning (bonus, vakantiebijslag, 13e maand) is taxed with the tabel bijzondere beloningen, which this template does not support"
-    },
-    {
       "id": "sameWage",
       "type": "REQUIRE",
       "condition": "#socialEarnings == #taxableEarnings",
-      "message": "Every earning must count for both the wage tax and the werknemersverzekeringen in this template (check the pay components' taxable and social flags)"
+      "message": "Every earning must count for both the wage tax and the werknemersverzekeringen in this template: check the earnings' Taxable and Subject to social contributions switches under Payroll → Pay rules"
     },
     {
       "id": "onlyPension",
@@ -441,9 +740,29 @@
       "message": "No earlier payroll this year is recorded for this employee, who was employed before this period: set broughtForwardYear and this year's cumulative figures (loontijdvakken, SV-loon, premieloon, bijdrageloon Zvw; 0 if none) so the maximum premium wage applies correctly"
     },
     {
+      "id": "specialPayment",
+      "type": "VALUE",
+      "expr": "#earningsByComponent['BONUS']"
+    },
+    {
       "id": "wage",
       "type": "VALUE",
-      "expr": "#taxableEarnings - #reductions - #preTaxDeductions"
+      "expr": "#taxableEarnings - #specialPayment - #reductions - #preTaxDeductions"
+    },
+    {
+      "id": "specialPaymentWithWage",
+      "type": "REQUIRE",
+      "when": "#specialPayment != 0",
+      "condition": "#wage != 0",
+      "message": "A bijzondere beloning (bonus, vakantiebijslag, 13e maand) must be paid in a run with the period's regular wage; a payment of only bijzondere beloningen is not supported"
+    },
+    {
+      "id": "specialPaymentJaarloon",
+      "type": "REQUIRE",
+      "when": "#specialPayment != 0 and #employee['specialPaymentRate'] == null",
+      "condition": "#employee['specialPaymentAnnualWage'] != null",
+      "detail": "specialPaymentAnnualWage",
+      "message": "A bijzondere beloning is taxed with the tabel bijzondere beloningen, which needs the employee's jaarloon (last year's wage from you, annualised, or this year's expected wage for a new employee): enter specialPaymentAnnualWage in their details for this template"
     },
     {
       "id": "annualWage",
@@ -524,6 +843,24 @@
       "amount": "#divide(#annualTax, #periodsPerYear, 2, 'HALF_UP') + #aboveTable"
     },
     {
+      "id": "specialPaymentRate",
+      "type": "VALUE",
+      "when": "#specialPayment != 0",
+      "expr": "#employee['specialPaymentRate'] != null ? #employee['specialPaymentRate'] : (!#employee['applyLoonheffingskorting'] ? #table.band('specialPayments', #employee['specialPaymentAnnualWage'], 'g' + #group + 'None') : (#employee['alleenstaandeOuderenkorting'] ? #table.band('specialPayments', #employee['specialPaymentAnnualWage'], 'g' + #group + 'AokStd') + #table.band('specialPayments', #employee['specialPaymentAnnualWage'], 'g' + #group + 'AokVer') : #table.band('specialPayments', #employee['specialPaymentAnnualWage'], 'g' + #group + 'Std') + #table.band('specialPayments', #employee['specialPaymentAnnualWage'], 'g' + #group + 'Ver')))"
+    },
+    {
+      "id": "specialPaymentTax",
+      "type": "TAX",
+      "label": "Loonbelasting/premie volksverzekeringen bijzondere beloning",
+      "ledger": "INCOME_TAX",
+      "source": "bd-tabel-bijzondere-beloningen-2026",
+      "when": "#specialPayment != 0",
+      "base": "#specialPayment",
+      "recordZero": true,
+      "allowNegative": true,
+      "amount": "#round(#specialPayment * #specialPaymentRate, 2, 'FLOOR')"
+    },
+    {
       "id": "periods",
       "type": "VALUE",
       "expr": "#ytd.periods('wageTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardPeriods'], 0) : 0) + (#wage != 0 ? 1 : 0)"
@@ -536,7 +873,7 @@
     {
       "id": "cumulativeWage",
       "type": "VALUE",
-      "expr": "#ytd.base('wageTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardWage'], 0) : 0) + #wage"
+      "expr": "#ytd.base('wageTax', 'TAX') + #ytd.base('specialPaymentTax', 'TAX') + (#broughtForward ? #coalesce(#employee['broughtForwardWage'], 0) : 0) + #wage + #specialPayment"
     },
     {
       "id": "premiumBase",
@@ -621,13 +958,13 @@
   "limitations": [
     "Monthly and weekly pay (Dutch loontijdvakken); four-weekly, quarterly and daily tables are not used by Humano's pay frequencies.",
     "White table, standard situation, employee living in the Netherlands; herleidingssituaties, non-residents and the green table are refused or out of scope.",
-    "Bijzondere beloningen (bonus, vakantiebijslag, 13e maand) need the tabel bijzondere beloningen: a period with BONUS earnings is refused, and holiday allowance must not be paid through another earning component.",
+    "Bijzondere beloningen are the BONUS earnings (vakantiebijslag, 13e maand, eindejaarsuitkering, gratificaties, uitbetaalde vakantiedagen): taxed with the witte tabel bijzondere beloningen on the jaarloon entered per employee (specialPaymentAnnualWage; Handboek §9.3.6), or a percentage from a machtiging or the employee's written request (specialPaymentRate). Holiday allowance paid monthly with the wage through another component is period wage (§9.3.6 Let op 1). They must be paid in a run with the period's regular wage. The voordeligheidsregel and the herberekeningsmethode for back pay are not offered; the jaarloon is not derived from earlier payrolls.",
     "Above the highest table wage the 'tabelsystematiek' (systematiek 1) is used; the Rekenvoorschriften allow a small difference with the rekenregel.",
     "The verrekende arbeidskorting is not recorded on the payslip (needed for the loonaangifte).",
     "Not supported: jonggehandicaptenkorting, overheidswerkgevers (Ufo), inhouding bijdrage Zvw (dga's), eigenrisicodragers, the premiekorting/LIV and other reliefs, deductions other than the employee's pensioenpremie.",
     "The AWf premium (LOW/HIGH) and the Aof size class and Whk rate are the employer's responsibility; the AWf correction for flexible hours is not applied, and one AWf rate applies per employee per period (no pro-rata split for concurrent contracts, Handboek §6.7.2).",
     "A negative period wage gives no wage tax (no refund through the period table); premiums and the Zvw follow VCR, including negative premiums.",
-    "Status LAW_DERIVED: the wage tax reproduces all 108,460 amounts of the 2026 white tables (maand, week, vier weken, kwartaal; checked by build_template.py; 14 of them are test cases); premiums are derived from the Handboek."
+    "Status LAW_DERIVED: the wage tax reproduces all 108,460 amounts of the 2026 white tables (maand, week, vier weken, kwartaal; checked by build_template.py; 14 of them are test cases); the tabel bijzondere beloningen is the official 2026 file, its percentages checked against the Rekenvoorschriften parameters (8 sampled rows are test cases); premiums are derived from the Handboek."
   ],
   "testCases": [
     {
@@ -1145,6 +1482,617 @@
       ]
     },
     {
+      "name": "bijzondere beloning: vakantiebijslag, younger than AOW age, met loonheffingskorting",
+      "evidence": "Belastingdienst witte tabel bijzondere beloningen 2026 (standaard, Nederland), jaarloon band 46003: 0.3756 + 0.1291; Handboek §9.3.6; regular wage, premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "7200.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "false",
+        "specialPaymentAnnualWage": "50000"
+      },
+      "earningsByComponent": {
+        "BASIC": "4000.00",
+        "BONUS": "3200.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "818.67"
+        },
+        {
+          "step": "specialPaymentTax",
+          "side": "TAX",
+          "amount": "1615.04"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "181.32"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "414.91"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "33.09"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "100.58"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "403.66"
+        }
+      ]
+    },
+    {
+      "name": "bijzondere beloning: vakantiebijslag, younger than AOW age, zonder loonheffingskorting",
+      "evidence": "Belastingdienst witte tabel bijzondere beloningen 2026 (standaard, Nederland), jaarloon band 29737: 0.3575; Handboek §9.3.6; regular wage, premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4500.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "false",
+        "alleenstaandeOuderenkorting": "false",
+        "specialPaymentAnnualWage": "30000"
+      },
+      "earningsByComponent": {
+        "BASIC": "2500.00",
+        "BONUS": "2000.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "892.83"
+        },
+        {
+          "step": "specialPaymentTax",
+          "side": "TAX",
+          "amount": "715.00"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "123.30"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "282.15"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "22.50"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "68.40"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "274.50"
+        }
+      ]
+    },
+    {
+      "name": "bijzondere beloning: 13e maand on a low jaarloon: negative verrekeningspercentage",
+      "evidence": "Belastingdienst witte tabel bijzondere beloningen 2026 (standaard, Nederland), jaarloon band 11358: 0.3575 + -0.0832; Handboek §9.3.6; regular wage, premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2100.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "false",
+        "specialPaymentAnnualWage": "12500"
+      },
+      "earningsByComponent": {
+        "BASIC": "1050.00",
+        "BONUS": "1050.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "16.25"
+        },
+        {
+          "step": "specialPaymentTax",
+          "side": "TAX",
+          "amount": "288.01"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "57.54"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "131.67"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "10.50"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "31.92"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "128.10"
+        }
+      ]
+    },
+    {
+      "name": "bijzondere beloning: bonus exactly on a band's jaarloon",
+      "evidence": "Belastingdienst witte tabel bijzondere beloningen 2026 (standaard, Nederland), jaarloon band 78427: 0.4950 + 0.0651; Handboek §9.3.6; regular wage, premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "11500.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "false",
+        "specialPaymentAnnualWage": "78427"
+      },
+      "earningsByComponent": {
+        "BASIC": "6500.00",
+        "BONUS": "5000.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "2081.42"
+        },
+        {
+          "step": "specialPaymentTax",
+          "side": "TAX",
+          "amount": "2800.50"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "181.32"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "414.91"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "33.09"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "100.58"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "403.66"
+        }
+      ]
+    },
+    {
+      "name": "bijzondere beloning: bonus above the highest band",
+      "evidence": "Belastingdienst witte tabel bijzondere beloningen 2026 (standaard, Nederland), jaarloon band 143555: 0.4950 + 0.0000; Handboek §9.3.6; regular wage, premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "35000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "false",
+        "specialPaymentAnnualWage": "200000"
+      },
+      "earningsByComponent": {
+        "BASIC": "15000.00",
+        "BONUS": "20000.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "6585.88"
+        },
+        {
+          "step": "specialPaymentTax",
+          "side": "TAX",
+          "amount": "9900.00"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "181.32"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "414.91"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "33.09"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "100.58"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "403.66"
+        }
+      ]
+    },
+    {
+      "name": "bijzondere beloning: AOW age, born 1945 or earlier, incl. alleenstaande-ouderenkorting",
+      "evidence": "Belastingdienst witte tabel bijzondere beloningen 2026 (standaard, Nederland), jaarloon band 38884: 0.1785 + 0.0222; Handboek §9.3.6; regular wage, premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "5900.00",
+      "birthDate": "1944-02-10",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "true",
+        "specialPaymentAnnualWage": "40000"
+      },
+      "earningsByComponent": {
+        "BASIC": "3300.00",
+        "BONUS": "2600.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "36.25"
+        },
+        {
+          "step": "specialPaymentTax",
+          "side": "TAX",
+          "amount": "521.82"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "359.90"
+        }
+      ]
+    },
+    {
+      "name": "bijzondere beloning: AOW age, born 1946 or later, met loonheffingskorting",
+      "evidence": "Belastingdienst witte tabel bijzondere beloningen 2026 (standaard, Nederland), jaarloon band 78427: 0.4950 + 0.0325; Handboek §9.3.6; regular wage, premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "14400.00",
+      "birthDate": "1955-09-30",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "alleenstaandeOuderenkorting": "false",
+        "specialPaymentAnnualWage": "100000"
+      },
+      "earningsByComponent": {
+        "BASIC": "8000.00",
+        "BONUS": "6400.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "2438.83"
+        },
+        {
+          "step": "specialPaymentTax",
+          "side": "TAX",
+          "amount": "3376.00"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "403.66"
+        }
+      ]
+    },
+    {
+      "name": "bijzondere beloning: AOW age, born 1946 or later, zonder loonheffingskorting",
+      "evidence": "Belastingdienst witte tabel bijzondere beloningen 2026 (standaard, Nederland), jaarloon band 46003: 0.3756; Handboek §9.3.6; regular wage, premiums and Zvw by build_template.py",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "7000.00",
+      "birthDate": "1955-09-30",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "false",
+        "alleenstaandeOuderenkorting": "false",
+        "specialPaymentAnnualWage": "47000"
+      },
+      "earningsByComponent": {
+        "BASIC": "3900.00",
+        "BONUS": "3100.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "825.00"
+        },
+        {
+          "step": "specialPaymentTax",
+          "side": "TAX",
+          "amount": "1164.36"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "403.66"
+        }
+      ]
+    },
+    {
+      "name": "bijzondere beloning at a machtiging lager percentage",
+      "evidence": "Handboek §9.3.6 'Machtiging lager percentage': the authorised 30% replaces the table",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "9000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "specialPaymentRate": "0.30"
+      },
+      "earningsByComponent": {
+        "BASIC": "4500.00",
+        "BONUS": "4500.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "1073.00"
+        },
+        {
+          "step": "specialPaymentTax",
+          "side": "TAX",
+          "amount": "1350.00"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "181.32"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "414.91"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "33.09"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "100.58"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "403.66"
+        }
+      ]
+    },
+    {
+      "name": "vakantiebijslag in May: premiums on salary and bonus, capped at the cumulative maximum",
+      "evidence": "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py; Handboek §6.3 (VCR) and §9.3.6",
+      "periodStart": "2026-05-01",
+      "periodEnd": "2026-05-31",
+      "paymentDate": "2026-05-22",
+      "frequency": "MONTHLY",
+      "grossEarnings": "9000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "specialPaymentAnnualWage": "52000"
+      },
+      "earningsByComponent": {
+        "BASIC": "4300.00",
+        "BONUS": "4700.00"
+      },
+      "ytd": {
+        "wageTax.TAX.base": "17200.00",
+        "wageTax.TAX.periods": "4",
+        "awf.EMPLOYER.base": "17200.00",
+        "zvw.EMPLOYER.base": "17200.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "970.83"
+        },
+        {
+          "step": "specialPaymentTax",
+          "side": "TAX",
+          "amount": "2372.09"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "246.60"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "564.30"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "45.00"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "136.80"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "549.00"
+        }
+      ]
+    },
+    {
+      "name": "the month after the vakantiebijslag counts it in the cumulative wage",
+      "evidence": "Derived from the Rekenvoorschriften 2026 and Handboek Loonheffingen 2026 by build_template.py; Handboek §6.3 (VCR): the bonus month's wage stays in the cumulative wage",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4300.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true"
+      },
+      "ytd": {
+        "wageTax.TAX.base": "21500.00",
+        "wageTax.TAX.periods": "5",
+        "specialPaymentTax.TAX.base": "4700.00",
+        "awf.EMPLOYER.base": "26200.00",
+        "zvw.EMPLOYER.base": "26200.00"
+      },
+      "expectLines": [
+        {
+          "step": "wageTax",
+          "side": "TAX",
+          "amount": "970.83"
+        },
+        {
+          "step": "awf",
+          "side": "EMPLOYER",
+          "amount": "117.82"
+        },
+        {
+          "step": "aof",
+          "side": "EMPLOYER",
+          "amount": "269.61"
+        },
+        {
+          "step": "wko",
+          "side": "EMPLOYER",
+          "amount": "21.50"
+        },
+        {
+          "step": "whk",
+          "side": "EMPLOYER",
+          "amount": "65.36"
+        },
+        {
+          "step": "zvw",
+          "side": "EMPLOYER",
+          "amount": "262.30"
+        }
+      ]
+    },
+    {
       "name": "Handboek Zvw example: € 2.400 with € 100 pension premium",
       "evidence": "Handboek Loonheffingen 2026 §8.2 'Voorbeeldberekening werkgeversheffing Zvw': € 2.300 loon voor de Zvw, werkgeversheffing 6,10% = € 140,30; wage tax and premiums by build_template.py",
       "periodStart": "2026-06-01",
@@ -1648,8 +2596,8 @@
       "expectLines": []
     },
     {
-      "name": "bonus in the period is refused",
-      "evidence": "bijzondere beloningen use the special-rewards table (not modelled)",
+      "name": "bonus without the jaarloon for the table",
+      "evidence": "Handboek §9.3.6: the table needs the jaarloon",
       "periodStart": "2026-06-01",
       "periodEnd": "2026-06-30",
       "paymentDate": "2026-06-25",
@@ -1668,7 +2616,30 @@
         "BASIC": "4000.00",
         "BONUS": "2000.00"
       },
-      "expectError": "bijzondere beloning"
+      "expectError": "jaarloon"
+    },
+    {
+      "name": "bonus paid without the period's regular wage",
+      "evidence": "a bijzondere beloning on its own is not supported",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "paymentDate": "2026-06-25",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "birthDate": "1985-04-12",
+      "employer": {
+        "aofPremium": "LOW",
+        "whkRate": "0.0152"
+      },
+      "employee": {
+        "awfPremium": "LOW",
+        "applyLoonheffingskorting": "true",
+        "specialPaymentAnnualWage": "52000"
+      },
+      "earningsByComponent": {
+        "BONUS": "2000.00"
+      },
+      "expectError": "regular wage"
     },
     {
       "name": "employee paid earlier this year without brought-forward figures",

@@ -60,6 +60,7 @@ public final class TemplateTestCaseRunner {
             c.grossEarnings(),
             c.earningsByComponent() != null ? c.earningsByComponent() : Map.of("BASIC", c.grossEarnings()),
             c.socialEarnings() != null ? c.socialEarnings() : c.grossEarnings(),
+            c.socialEarningsByComponent(),
             c.taxableEarnings() != null ? c.taxableEarnings() : c.grossEarnings(),
             c.reductions() != null ? c.reductions() : BigDecimal.ZERO,
             c.preTaxDeductions() != null

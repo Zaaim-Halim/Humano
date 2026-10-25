@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- The Bonus pay component was seeded as not subject to social contributions, so payroll templates
+         left bonuses, holiday allowances and 13th months out of the contribution base (and the Spanish
+         template could lose a month's contributions). Bonuses are contributory wage in every template's
+         country. Only rows still at the seeded value, never changed by a person, are corrected. -->
+    <changeSet id="20261025-bonus-social-default" author="halimzaaim">
+        <update tableName="pay_component">
+            <column name="contributes_to_social" valueBoolean="true"/>
+            <where>code = 'BONUS' AND (last_modified_by IS NULL OR last_modified_by = 'system')</where>
+        </update>
+    </changeSet>
+</databaseChangeLog>

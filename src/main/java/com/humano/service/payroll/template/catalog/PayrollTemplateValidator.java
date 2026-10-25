@@ -49,10 +49,10 @@ public class PayrollTemplateValidator {
     private static final Pattern EMPLOYER_KEY = Pattern.compile("#employer\\['([^']+)'\\]");
     private static final Pattern PARAMETER = Pattern.compile("#p\\['([^']+)'\\]");
     private static final Pattern PRE_TAX_TYPE = Pattern.compile("#preTaxDeductionsByType\\['([^']+)'\\]");
-    private static final Pattern COMPONENT = Pattern.compile("#earningsByComponent\\['([^']+)'\\]");
+    private static final Pattern COMPONENT = Pattern.compile("#(?:earningsByComponent|socialEarningsByComponent)\\['([^']+)'\\]");
     private static final Pattern TABLE_CALL = Pattern.compile("#table\\.(\\w+)\\(\\s*('([^']*)')?");
     private static final Pattern YTD_CALL = Pattern.compile("#ytd\\.(\\w+)\\(\\s*'([^']*)'\\s*,\\s*'([^']*)'\\s*\\)");
-    private static final Set<String> TABLE_METHODS = Set.of("lookup", "bracketTax");
+    private static final Set<String> TABLE_METHODS = Set.of("lookup", "bracketTax", "band");
     private static final Set<String> YTD_METHODS = Set.of("base", "amount", "periods");
 
     private final PayrollTemplateExtensionRegistry extensions;
@@ -237,6 +237,29 @@ public class PayrollTemplateValidator {
             });
     }
 
+    /** A table read with {@code #table.band}: every version's keys are numbers in ascending order. */
+    private static void checkBandKeys(String name, Table table, String at, List<String> problems) {
+        for (Table.Version v : table.versions()) {
+            BigDecimal previous = null;
+            for (Table.Row r : v.rows() == null ? List.<Table.Row>of() : v.rows()) {
+                BigDecimal key;
+                try {
+                    key = new BigDecimal(r.key());
+                } catch (NumberFormatException | NullPointerException e) {
+                    problems.add(at + ": #table.band needs numeric keys in table '" + name + "' (found " + r.key() + ")");
+                    return;
+                }
+                if (previous != null && key.compareTo(previous) <= 0) {
+                    problems.add(
+                        at + ": #table.band needs ascending keys in table '" + name + "' (" + r.key() + " after " + previous + ")"
+                    );
+                    return;
+                }
+                previous = key;
+            }
+        }
+    }
+
     /** One entry per column; null entries (columns the published table leaves empty) are allowed, an all-empty row is not. */
     private static void checkValues(Table.Row r, int width, String at, List<String> problems) {
         if (r.values() == null || r.values().size() != width || r.values().stream().allMatch(java.util.Objects::isNull)) {
@@ -325,6 +348,12 @@ public class PayrollTemplateValidator {
                 case REQUIRE -> {
                     require(s.condition(), at + ".condition", problems, before);
                     if (blank(s.message())) problems.add(at + ".message is required");
+                    if (
+                        s.detail() != null &&
+                        (t.inputs() == null ||
+                            t.inputs().employee() == null ||
+                            t.inputs().employee().stream().noneMatch(f -> f.key().equals(s.detail())))
+                    ) problems.add(at + ".detail '" + s.detail() + "' is not a declared employee input");
                 }
                 case VALUE -> require(s.expr(), at + ".expr", problems, before);
                 case CONTRIBUTION -> {
@@ -431,7 +460,16 @@ public class PayrollTemplateValidator {
                 at + ": #table." + table.group(1) + " needs the table name as a literal first argument"
             );
             else if (!tables.containsKey(table.group(3))) problems.add(at + ": table '" + table.group(3) + "' does not exist");
-            else if (table.group(1).equals("bracketTax") != (tables.get(table.group(3)).kind() == Table.Kind.BRACKETS)) {
+            else if (table.group(1).equals("band") && tables.get(table.group(3)).kind() == Table.Kind.EXACT) checkBandKeys(
+                table.group(3),
+                tables.get(table.group(3)),
+                at,
+                problems
+            );
+            else if (
+                table.group(1).equals("band") ||
+                table.group(1).equals("bracketTax") != (tables.get(table.group(3)).kind() == Table.Kind.BRACKETS)
+            ) {
                 problems.add(
                     at +
                     ": #table." +

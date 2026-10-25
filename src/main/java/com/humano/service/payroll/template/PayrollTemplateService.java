@@ -548,7 +548,7 @@ public class PayrollTemplateService {
                     component.getCode() +
                     " (" +
                     component.getName() +
-                    ") is not marked as subject to social contributions, so it is excluded from the template's contribution base."
+                    ") is not marked as subject to social contributions, so it is excluded from the template's contribution base. Change it under Payroll → Pay rules."
                 );
             }
             if (component.getKind() == Kind.EARNING && !Boolean.TRUE.equals(component.getTaxable())) {
@@ -557,7 +557,7 @@ public class PayrollTemplateService {
                     component.getCode() +
                     " (" +
                     component.getName() +
-                    ") is not taxable, so it is excluded from the template's tax base."
+                    ") is not taxable, so it is excluded from the template's tax base. Change it under Payroll → Pay rules."
                 );
             }
             if (hasRules && (component.getCode() == PayComponentCode.TAX_PIT || component.getCode() == PayComponentCode.EMPLOYER_CHARGE)) {

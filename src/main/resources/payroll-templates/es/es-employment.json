@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "es-employment",
   "name": "Spain — employment (Régimen General, territorio común)",
-  "version": "2026.1.0",
+  "version": "2026.1.1",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "ES"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.1",
+      "date": "2026-10-25",
+      "summary": "The month's ordinary pay for the contribution bases is the social earnings less the part of the extra payments and overtime that is itself in them. Before, a Bonus component not marked subject to social contributions was subtracted twice, which could leave a month with an extra pay without common-contingency contributions."
+    },
     {
       "version": "2026.1.0",
       "date": "2026-10-24",
@@ -957,7 +962,7 @@
       "type": "REQUIRE",
       "source": "lgss",
       "when": "#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE'",
-      "condition": "#socialEarnings - #earningsByComponent['BONUS'] - #earningsByComponent['OT'] + #divide(#employee['annualExtraPay'], 12, 2, 'HALF_UP') <= #p['maximumBase'] and #earningsByComponent['OT'] == 0",
+      "condition": "#socialEarnings - #socialEarningsByComponent['BONUS'] - #socialEarningsByComponent['OT'] + #divide(#employee['annualExtraPay'], 12, 2, 'HALF_UP') <= #p['maximumBase'] and #earningsByComponent['OT'] == 0",
       "message": "For an employee past retirement age (LGSS art. 152), pay above the maximum base (solidarity contribution) or overtime is not supported"
     },
     {
@@ -999,7 +1004,7 @@
       "id": "overtimeWithPay",
       "type": "REQUIRE",
       "source": "lgss",
-      "condition": "#earningsByComponent['OT'] == 0 or #socialEarnings - #earningsByComponent['BONUS'] - #earningsByComponent['OT'] > 0",
+      "condition": "#earningsByComponent['OT'] == 0 or #socialEarnings - #socialEarningsByComponent['BONUS'] - #socialEarningsByComponent['OT'] > 0",
       "message": "Overtime paid without ordinary pay in the same run is not supported: the contribution bases start from the month's ordinary pay"
     },
     {
@@ -1184,7 +1189,7 @@
       "id": "monthlyPay",
       "type": "VALUE",
       "source": "lgss",
-      "expr": "#pos(#socialEarnings - #earningsByComponent['BONUS'] - #earningsByComponent['OT'])"
+      "expr": "#pos(#socialEarnings - #socialEarningsByComponent['BONUS'] - #socialEarningsByComponent['OT'])"
     },
     {
       "id": "contributionPay",
@@ -1538,6 +1543,96 @@
       "earningsByComponent": {
         "BASIC": "2000.00",
         "BONUS": "2000.00"
+      },
+      "fullPeriod": true,
+      "birthDate": "1985-06-15",
+      "employer": {
+        "accidentRate": "0.015"
+      },
+      "employee": {
+        "annualPay": "28000.00",
+        "familySituation": "2",
+        "withholdingContract": "GENERAL",
+        "contributionGroup": "5",
+        "unemploymentRate": "INDEFINITE",
+        "taxTerritory": "COMMON",
+        "annualExtraPay": "4000.00",
+        "descendants": "2",
+        "descendantsUnder3": "1",
+        "descendantsComputation": "WHOLE"
+      },
+      "expectLines": [
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYEE",
+          "amount": "109.67"
+        },
+        {
+          "step": "commonContingencies",
+          "side": "EMPLOYER",
+          "amount": "550.67"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYEE",
+          "amount": "3.50"
+        },
+        {
+          "step": "intergenerationalEquity",
+          "side": "EMPLOYER",
+          "amount": "17.50"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "36.17"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "128.33"
+        },
+        {
+          "step": "wageGuaranteeFund",
+          "side": "EMPLOYER",
+          "amount": "4.67"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYEE",
+          "amount": "2.33"
+        },
+        {
+          "step": "vocationalTraining",
+          "side": "EMPLOYER",
+          "amount": "14.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "35.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "401.60"
+        }
+      ]
+    },
+    {
+      "name": "extra pay on a Bonus component not marked subject to contributions: base unchanged",
+      "evidence": "The extra pay is in the monthly base through annualExtraPay / 12 whatever the tenant's component flag (LGSS art. 147); the month's ordinary pay is the social earnings without the extra payments. RIRPF arts. 81-86 as the AEAT 2026 algorithm implements them, computed rate matching the AEAT calculation service (aeat-servicio-calculo); Orden PJC/297/2026 arts. 1-5, 16, 17, 33; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "earningsByComponent": {
+        "BASIC": "2000.00",
+        "BONUS": "2000.00"
+      },
+      "socialEarnings": "2000.00",
+      "socialEarningsByComponent": {
+        "BASIC": "2000.00"
       },
       "fullPeriod": true,
       "birthDate": "1985-06-15",

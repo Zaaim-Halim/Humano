@@ -1,18 +1,16 @@
 package com.humano.service.storage;
 
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Optional;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Interface for file storage operations.
  * Provides abstraction for different storage implementations (filesystem, S3, database, etc.).
  */
 public interface FileStorageService {
-
     /**
      * Store a file in the storage system.
      *

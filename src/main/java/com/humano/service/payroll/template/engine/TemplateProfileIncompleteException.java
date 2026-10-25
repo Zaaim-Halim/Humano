@@ -15,7 +15,12 @@ public class TemplateProfileIncompleteException extends TemplateCalculationExcep
     private final List<String> missing;
 
     public TemplateProfileIncompleteException(String templateId, List<String> missing) {
-        super("Missing required employee attribute" + (missing.size() > 1 ? "s " : " ") + missing);
+        this(templateId, missing, "Missing required employee attribute" + (missing.size() > 1 ? "s " : " ") + missing);
+    }
+
+    /** With the template's own explanation, e.g. a detail needed only in some periods. */
+    public TemplateProfileIncompleteException(String templateId, List<String> missing, String message) {
+        super(message);
         this.templateId = templateId;
         this.missing = List.copyOf(missing);
     }

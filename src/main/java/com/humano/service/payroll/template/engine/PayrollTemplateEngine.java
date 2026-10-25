@@ -30,7 +30,8 @@ import org.springframework.stereotype.Component;
  *   <li>Period: {@code #periodStart}, {@code #periodEnd}, {@code #frequency}, {@code #periodsPerYear},
  *   {@code #isCalendarMonth}.</li>
  *   <li>Earnings: {@code #grossEarnings}, {@code #earningsByComponent['BONUS']} (by pay-component code; 0 for a
- *   code with none), {@code #socialEarnings}, {@code #taxableEarnings},
+ *   code with none), {@code #socialEarnings}, {@code #socialEarningsByComponent['BONUS']} (the part of a
+ *   component's earnings subject to social contributions), {@code #taxableEarnings},
  *   {@code #reductions} (unpaid leave), {@code #preTaxDeductions} (tenant pre-tax deductions; a template
  *   that doesn't model them should REQUIRE them to be zero), {@code #preTaxDeductionsByType['RETIREMENT']}
  *   (the same by deduction type; 0 for a type with none).</li>
@@ -62,6 +63,7 @@ public class PayrollTemplateEngine {
         "isCalendarMonth",
         "grossEarnings",
         "earningsByComponent",
+        "socialEarningsByComponent",
         "socialEarnings",
         "taxableEarnings",
         "reductions",
@@ -124,6 +126,14 @@ public class PayrollTemplateEngine {
             byComponent.put(code.name(), nz(amount));
         }
         vars.put("earningsByComponent", new StrictMap("pay component", byComponent));
+        Map<String, BigDecimal> socialByComponent = new HashMap<>();
+        for (PayComponentCode code : PayComponentCode.values()) {
+            Map<String, BigDecimal> source = in.socialEarningsByComponent() != null
+                ? in.socialEarningsByComponent()
+                : in.earningsByComponent();
+            socialByComponent.put(code.name(), nz(source == null ? null : source.get(code.name())));
+        }
+        vars.put("socialEarningsByComponent", new StrictMap("pay component", socialByComponent));
         vars.put("socialEarnings", nz(in.socialEarnings()));
         vars.put("taxableEarnings", nz(in.taxableEarnings()));
         vars.put("reductions", nz(in.reductions()));
@@ -181,7 +191,9 @@ public class PayrollTemplateEngine {
         switch (step.type()) {
             case REQUIRE -> {
                 if (active && !bool(step.condition(), vars, "condition of " + step.id())) {
-                    throw new TemplateCalculationException(step.message());
+                    throw step.detail() != null
+                        ? new TemplateProfileIncompleteException(template.id(), List.of(step.detail()), step.message())
+                        : new TemplateCalculationException(step.message());
                 }
             }
             case VALUE -> vars.put(step.id(), active ? value(step.expr(), vars, step.id()) : BigDecimal.ZERO);

@@ -256,7 +256,10 @@ def expected_lines(c):
 
     # Social security: monthly pay (without the extra payments) plus 1/12 of the annual extra payments
     overtime = D(by.get("OT", "0"))
-    pay = gross - D(by.get("BONUS", "0")) - overtime
+    # The month's pay from the earnings subject to social contributions, without the extra payments and overtime
+    # (their own rules apply); a component not marked social contributes nothing here.
+    social_by = c.get("socialEarningsByComponent", by)
+    pay = D(c.get("socialEarnings", gross)) - D(social_by.get("BONUS", "0")) - D(social_by.get("OT", "0"))
     if pay > 0:
         rem = pay + cent(D(emp.get("annualExtraPay", "0")) / 12)
         group = int(emp["contributionGroup"])
@@ -300,13 +303,16 @@ def expected_lines(c):
 
 def case(name, evidence, gross, employee, start="2026-03-01", end="2026-03-31", payment=None, whole=True,
          error=None, by_component=None, birth="1985-06-15", employer=None, ytd=None, pre_tax=None,
-         reductions=None, fte=None):
+         reductions=None, fte=None, social=None, social_by=None):
     c = {"name": name, "evidence": evidence, "periodStart": start, "periodEnd": end, "frequency": "MONTHLY"}
     if payment:
         c["paymentDate"] = payment
     c["grossEarnings"] = gross
     if by_component:
         c["earningsByComponent"] = by_component
+    if social is not None:
+        c["socialEarnings"] = social
+        c["socialEarningsByComponent"] = social_by
     if reductions:
         c["reductions"] = reductions
     if pre_tax:
@@ -344,6 +350,11 @@ def test_cases():
         case("extra pay paid with June salary: base unchanged, tax on both",
              "The extra pay is already in the monthly base (LGSS art. 147); withholding applies to the whole payment (RIRPF art. 82). " + law,
              "4000.00", std(**fam), start="2026-06-01", end="2026-06-30", by_component={"BASIC": "2000.00", "BONUS": "2000.00"}),
+        case("extra pay on a Bonus component not marked subject to contributions: base unchanged",
+             "The extra pay is in the monthly base through annualExtraPay / 12 whatever the tenant's component flag (LGSS art. 147); "
+             "the month's ordinary pay is the social earnings without the extra payments. " + law,
+             "4000.00", std(**fam), start="2026-06-01", end="2026-06-30", by_component={"BASIC": "2000.00", "BONUS": "2000.00"},
+             social="2000.00", social_by={"BASIC": "2000.00"}),
         case("extra pay paid on its own: withholding only",
              "No contributions on a run holding only the extra pay, which the monthly bases already prorate. " + law,
              "2000.00", std(**fam), start="2026-12-01", end="2026-12-31", by_component={"BONUS": "2000.00"}),
@@ -501,7 +512,7 @@ def main():
         "schemaVersion": 1,
         "id": "es-employment",
         "name": "Spain — employment (Régimen General, territorio común)",
-        "version": "2026.1.0",
+        "version": "2026.1.1",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "ES"},
         "validity": {"from": FROM, "to": TO},
@@ -511,6 +522,8 @@ def main():
         "dateBasis": "PERIOD",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.1", "date": "2026-10-25",
+             "summary": "The month's ordinary pay for the contribution bases is the social earnings less the part of the extra payments and overtime that is itself in them. Before, a Bonus component not marked subject to social contributions was subtracted twice, which could leave a month with an extra pay without common-contingency contributions."},
             {"version": "2026.1.0", "date": RETRIEVED,
              "summary": "2026: IRPF withholding rate per the AEAT algorithm (RIRPF arts. 81-86) with a year-to-date check that asks for the regularized rate; social security per Orden PJC/297/2026: common contingencies 28.30%, MEI 0.90%, unemployment 7.05% / 8.30%, FOGASA 0.20%, vocational training 0.70%, AT/EP from the tariff, solidarity contribution above 5,101.20, overtime in the AT/EP base with its 28.30% / 14% additional contribution, the LGSS art. 152 exemption past retirement age (IT 1.55% only). Withholding rates checked against the AEAT calculation service."}
         ],
@@ -630,7 +643,7 @@ def main():
              "message": "Employees drawing a retirement pension compatible with the work contribute under LGSS art. 153 (IT, AT/EP and a 9% solidarity contribution), which this template does not do"},
             {"id": "retiredWithinMaximum", "type": "REQUIRE", "source": "lgss",
              "when": "#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE'",
-             "condition": "#socialEarnings - #earningsByComponent['BONUS'] - #earningsByComponent['OT'] + #divide(#employee['annualExtraPay'], 12, 2, 'HALF_UP') <= #p['maximumBase'] and #earningsByComponent['OT'] == 0",
+             "condition": "#socialEarnings - #socialEarningsByComponent['BONUS'] - #socialEarningsByComponent['OT'] + #divide(#employee['annualExtraPay'], 12, 2, 'HALF_UP') <= #p['maximumBase'] and #earningsByComponent['OT'] == 0",
              "message": "For an employee past retirement age (LGSS art. 152), pay above the maximum base (solidarity contribution) or overtime is not supported"},
             {"id": "noMultipleEmployment", "type": "REQUIRE", "source": "orden-pjc-297-2026", "condition": "!" + emp_key("multipleEmployment"),
              "message": "Employees in multiple employment (pluriempleo) share the maximum base between companies (Orden PJC/297/2026 art. 10), which this template does not do"},
@@ -643,7 +656,7 @@ def main():
             {"id": "monthlyContributionGroup", "type": "REQUIRE", "source": "orden-pjc-297-2026", "condition": GROUP + " <= 7",
              "message": "Contribution groups 8 to 11 contribute on daily bases (Orden PJC/297/2026 art. 3), which this template does not do"},
             {"id": "overtimeWithPay", "type": "REQUIRE", "source": "lgss",
-             "condition": "#earningsByComponent['OT'] == 0 or #socialEarnings - #earningsByComponent['BONUS'] - #earningsByComponent['OT'] > 0",
+             "condition": "#earningsByComponent['OT'] == 0 or #socialEarnings - #socialEarningsByComponent['BONUS'] - #socialEarningsByComponent['OT'] > 0",
              "message": "Overtime paid without ordinary pay in the same run is not supported: the contribution bases start from the month's ordinary pay"},
             {"id": "partTimeHoursGiven", "type": "REQUIRE", "source": "orden-pjc-297-2026", "condition": "(#fte >= 1 and #fullPeriod) or " + PART,
              "message": "Part-time employee: set the employee's partTimeHours (hours worked this month) for the hourly minimum bases (Orden PJC/297/2026 arts. 38-39)"},
@@ -726,7 +739,7 @@ def main():
                           " #divide(#ytd.base('incomeTax', 'TAX') * #withholdingRate, 100, 6, 'HALF_UP') - #ytd.amount('incomeTax', 'TAX')) * 200 <= #ytd.periods('incomeTax', 'TAX')",
              "message": "The withholding rate computed from the current data differs from the rate applied earlier this year: regularize it under RIRPF art. 87 and enter the regularized rate as withholdingRateOverride with reason REGULARIZED"},
             # Social security (Orden PJC/297/2026)
-            {"id": "monthlyPay", "type": "VALUE", "source": "lgss", "expr": "#pos(#socialEarnings - #earningsByComponent['BONUS'] - #earningsByComponent['OT'])"},
+            {"id": "monthlyPay", "type": "VALUE", "source": "lgss", "expr": "#pos(#socialEarnings - #socialEarningsByComponent['BONUS'] - #socialEarningsByComponent['OT'])"},
             {"id": "contributionPay", "type": "VALUE", "source": "orden-pjc-297-2026",
              "expr": "#monthlyPay > 0 ? #monthlyPay + #divide(" + emp_key("annualExtraPay") + ", 12, 2, 'HALF_UP') : 0"},
             {"id": "commonMinimumBase", "type": "VALUE", "source": "orden-pjc-297-2026",

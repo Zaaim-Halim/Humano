@@ -417,7 +417,9 @@ public class TenantInitializationService {
     private void seedDefaultPayComponents() {
         seedPayComponent(PayComponentCode.BASIC, "Basic salary", Kind.EARNING, Measurement.AMOUNT, true, true);
         seedPayComponent(PayComponentCode.OT, "Overtime", Kind.EARNING, Measurement.HOURS, true, true);
-        seedPayComponent(PayComponentCode.BONUS, "Bonus", Kind.EARNING, Measurement.AMOUNT, true, false);
+        // Bonuses, holiday allowances and 13th months are contributory wage in every country Humano has a payroll
+        // template for; a tenant can still mark the component otherwise on the pay rules page.
+        seedPayComponent(PayComponentCode.BONUS, "Bonus", Kind.EARNING, Measurement.AMOUNT, true, true);
         seedPayComponent(PayComponentCode.TAX_PIT, "Personal income tax", Kind.DEDUCTION, Measurement.AMOUNT, false, false);
     }
 

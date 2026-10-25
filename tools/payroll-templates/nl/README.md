@@ -17,6 +17,12 @@ werknemersverzekeringen (AWf, Aof, opslag Wko, Whk) and the werkgeversheffing Zv
   chapter 6): cumulative wage, against loontijdvakken × the table 11 period maximum (€ 6.617,41 a month,
   € 1.527,09 a week, never more than € 79.409), minus the base already charged. From the AOW month no
   employee-insurance premiums are due; the Zvw continues.
+- **Bijzondere beloningen** (BONUS earnings: vakantiebijslag, 13e maand, gratificaties): the official _witte tabel
+  bijzondere beloningen 2026_ (`wit_bb_nl_std_20260101.xlsx`), read with `#table.band` on the employee's jaarloon
+  (`specialPaymentAnnualWage`, Handboek §9.3.6), standaardtarief plus verrekeningspercentage when the
+  loonheffingskorting applies, rounded down to cents; or `specialPaymentRate` from a machtiging. They are
+  added to the VCR cumulative wage. `build_template.py` checks every percentage against the tariff rates
+  and credit factors of the Rekenvoorschriften.
 - The employee's pensioenpremie (pre-tax `RETIREMENT` deduction) reduces all three wages (Handboek
   §8.2 example).
 - Payment-date basis: the loontijdvak counts in the year in which the wage is paid. The wage-tax line

@@ -151,6 +151,8 @@ export default class PayRuleEditorComponent {
     const all = [...this.allRules().values()].flat();
     return { components: this.components().length, rules: all.length, active: all.filter(r => r.active).length };
   });
+  /** Component id whose taxable / social flag change is in flight. */
+  protected readonly updatingComponentId = signal<string | null>(null);
   /** Rule id whose activate/deactivate call is in flight, to block double toggles. */
   protected readonly togglingId = signal<string | null>(null);
   /** Failure of the rules fetch — kept apart from `error` so the page itself stays usable. */
@@ -350,6 +352,27 @@ export default class PayRuleEditorComponent {
   protected addRuleFor(componentId: string): void {
     this.form.controls.payComponentId.setValue(componentId);
     this.view.set('new');
+  }
+
+  /**
+   * Whether an earning is taxable and counts toward social security: what payroll templates take into the
+   * tax and contribution bases. Applied optimistically; reverted if the save fails.
+   */
+  protected setComponentFlag(component: PayComponent, flag: 'taxable' | 'contributesToSocial', value: boolean): void {
+    const apply = (v: boolean): void => this.components.update(list => list.map(c => (c.id === component.id ? { ...c, [flag]: v } : c)));
+    this.updatingComponentId.set(component.id);
+    apply(value);
+    this.service.updateComponentFlags(component.id, { [flag]: value }).subscribe({
+      next: () => {
+        this.updatingComponentId.set(null);
+        this.toast.success(this.translate.instant('humano.payRules.componentSaved', { name: component.name }));
+      },
+      error: (err: unknown) => {
+        apply(!value);
+        this.updatingComponentId.set(null);
+        this.toast.danger(normalizeHttpError(err));
+      },
+    });
   }
 
   /**

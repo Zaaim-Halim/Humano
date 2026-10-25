@@ -102,6 +102,9 @@
     <!-- Payroll runs: employees a calculation could not pay, and the reason a run was approved anyway -->
     <include file="config/liquibase/changelog/tenant/20261025-payroll-run-issues-changelog.xml" relativeToChangelogFile="false"/>
 
+    <!-- Bonus pay component: subject to social contributions by default -->
+    <include file="config/liquibase/changelog/tenant/20261025-bonus-social-default-changelog.xml" relativeToChangelogFile="false"/>
+
     <!--  will add tenant liquibase changelogs here -->
 
 </databaseChangeLog>
