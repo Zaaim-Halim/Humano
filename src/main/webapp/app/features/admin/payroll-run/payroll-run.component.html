@@ -71,8 +71,12 @@
     <div class="hum-insights__kpis" style="margin-top: var(--space-4)">
       <div class="hum-kpi hum-kpi--hero">
         <div class="hum-kpi__label"><lucide-icon name="wallet" [size]="14" />{{ 'humano.payrollRun.net' | translate }}</div>
-        <div class="hum-kpi__value">
-          {{ s.totalNet | money: s.currencyCode }}
+        <div class="hum-kpi__value" [class.hum-kpi__value--multi]="mixedCurrencies()">
+          @for (t of s.totalsByCurrency; track t.currencyCode) {
+            <span>{{ t.totalNet | money: t.currencyCode }}</span>
+          } @empty {
+            {{ s.totalNet | money: s.currencyCode }}
+          }
           @if (s.comparison; as c) {
             <span class="hum-delta" [class.is-up]="c.netChange >= 0">{{ pct(c.netChangePercentage) }}</span>
           }
@@ -81,8 +85,12 @@
       </div>
       <div class="hum-kpi">
         <div class="hum-kpi__label"><lucide-icon name="trending-up" [size]="14" />{{ 'humano.payrollRun.gross' | translate }}</div>
-        <div class="hum-kpi__value">
-          {{ s.totalGross | money: s.currencyCode }}
+        <div class="hum-kpi__value" [class.hum-kpi__value--multi]="mixedCurrencies()">
+          @for (t of s.totalsByCurrency; track t.currencyCode) {
+            <span>{{ t.totalGross | money: t.currencyCode }}</span>
+          } @empty {
+            {{ s.totalGross | money: s.currencyCode }}
+          }
           @if (s.comparison; as c) {
             <span class="hum-delta" [class.is-up]="c.grossChange >= 0">{{ pct(c.grossChangePercentage) }}</span>
           }
@@ -90,6 +98,8 @@
         <div class="hum-kpi__hint">
           @if (s.comparison; as c) {
             {{ 'humano.payrollRun.vsPrevious' | translate: { amount: (c.previousGross | money: s.currencyCode) } }}
+          } @else if (mixedCurrencies()) {
+            {{ 'humano.payrollRun.inCurrencies' | translate: { count: s.totalsByCurrency.length } }}
           } @else {
             {{ 'humano.payrollRun.firstRun' | translate }}
           }
@@ -97,43 +107,68 @@
       </div>
       <div class="hum-kpi">
         <div class="hum-kpi__label"><lucide-icon name="landmark" [size]="14" />{{ 'humano.payrollRun.deductions' | translate }}</div>
-        <div class="hum-kpi__value">{{ s.totalDeductions | money: s.currencyCode }}</div>
-        <div class="hum-kpi__hint">{{ 'humano.payrollRun.ofGross' | translate: { pct: share(s.totalDeductions, s.totalGross) } }}</div>
+        <div class="hum-kpi__value" [class.hum-kpi__value--multi]="mixedCurrencies()">
+          @for (t of s.totalsByCurrency; track t.currencyCode) {
+            <span>{{ t.totalDeductions | money: t.currencyCode }}</span>
+          } @empty {
+            {{ s.totalDeductions | money: s.currencyCode }}
+          }
+        </div>
+        @if (s.totalGross !== null) {
+          <div class="hum-kpi__hint">
+            {{ 'humano.payrollRun.ofGross' | translate: { pct: share(s.totalDeductions ?? 0, s.totalGross) } }}
+          </div>
+        }
       </div>
       <div class="hum-kpi">
         <div class="hum-kpi__label"><lucide-icon name="building-2" [size]="14" />{{ 'humano.payrollRun.totalCost' | translate }}</div>
-        <div class="hum-kpi__value">{{ s.totalEmployerCost | money: s.currencyCode }}</div>
-        <div class="hum-kpi__hint">
-          {{ 'humano.payrollRun.employerCharges' | translate: { amount: (s.totalEmployerCost - s.totalGross | money: s.currencyCode) } }}
+        <div class="hum-kpi__value" [class.hum-kpi__value--multi]="mixedCurrencies()">
+          @for (t of s.totalsByCurrency; track t.currencyCode) {
+            <span>{{ t.totalEmployerCost | money: t.currencyCode }}</span>
+          } @empty {
+            {{ s.totalEmployerCost | money: s.currencyCode }}
+          }
         </div>
+        @if (s.totalEmployerCost !== null && s.totalGross !== null) {
+          <div class="hum-kpi__hint">
+            {{ 'humano.payrollRun.employerCharges' | translate: { amount: (s.totalEmployerCost - s.totalGross | money: s.currencyCode) } }}
+          </div>
+        }
       </div>
     </div>
 
-    <!-- Where the money goes -->
-    <section class="hum-card hum-insights__card" style="margin-top: var(--space-4)">
-      <header class="hum-insights__head">
-        <span class="hum-records__icon"><lucide-icon name="chart-pie" [size]="16" /></span>
-        <h3>{{ 'humano.payrollRun.costBreakdown' | translate }}</h3>
-      </header>
-      <div class="hum-stackbar hum-stackbar--lg">
-        @for (part of costParts(); track part.key) {
-          <span
-            [style.width.%]="part.pct"
-            [style.background]="part.color"
-            [title]="(part.key | translate) + ': ' + (part.amount | money: s.currencyCode)"
-          ></span>
+    <!-- Where the money goes (nothing to split before the run is calculated) -->
+    @if (costSplits().length) {
+      <section class="hum-card hum-insights__card" style="margin-top: var(--space-4)">
+        <header class="hum-insights__head">
+          <span class="hum-records__icon"><lucide-icon name="chart-pie" [size]="16" /></span>
+          <h3>{{ 'humano.payrollRun.costBreakdown' | translate }}</h3>
+        </header>
+        @for (split of costSplits(); track split.currencyCode) {
+          @if (mixedCurrencies()) {
+            <div class="hum-kpi__label" style="margin-top: var(--space-3)">{{ split.currencyCode }}</div>
+          }
+          <div class="hum-stackbar hum-stackbar--lg">
+            @for (part of split.parts; track part.key) {
+              <span
+                [style.width.%]="part.pct"
+                [style.background]="part.color"
+                [title]="(part.key | translate) + ': ' + (part.amount | money: split.currencyCode)"
+              ></span>
+            }
+          </div>
+          <ul class="hum-dash-legend hum-dash-legend--wide">
+            @for (part of split.parts; track part.key) {
+              <li>
+                <i [style.background]="part.color"></i>{{ part.key | translate }}
+                <strong class="tabular-nums">{{ part.amount | money: split.currencyCode }}</strong>
+                <span class="hum-kpi__hint">{{ part.pct | number: '1.0-0' }}%</span>
+              </li>
+            }
+          </ul>
         }
-      </div>
-      <ul class="hum-dash-legend hum-dash-legend--wide">
-        @for (part of costParts(); track part.key) {
-          <li>
-            <i [style.background]="part.color"></i>{{ part.key | translate }}
-            <strong class="tabular-nums">{{ part.amount | money: s.currencyCode }}</strong>
-            <span class="hum-kpi__hint">{{ part.pct | number: '1.0-0' }}%</span>
-          </li>
-        }
-      </ul>
-    </section>
+      </section>
+    }
 
     <div class="hum-insights__grid" style="margin-top: var(--space-4)">
       <!-- Components -->
@@ -144,21 +179,21 @@
         </header>
         <div class="hum-kpi__label">{{ 'humano.payrollRun.earnings' | translate }}</div>
         <div class="hum-typebars" style="margin: var(--space-2) 0 var(--space-4)">
-          @for (c of earnings(); track c.name) {
+          @for (c of earnings(); track c.name + c.currencyCode) {
             <div class="hum-typebars__row hum-typebars__row--money">
               <span class="hum-typebars__label">{{ c.name }}</span>
               <span class="hum-typebars__track"><span [style.width.%]="c.pct" style="background: var(--success-solid)"></span></span>
-              <span class="hum-typebars__value">{{ c.amount | money: s.currencyCode }}</span>
+              <span class="hum-typebars__value">{{ c.amount | money: c.currencyCode }}</span>
             </div>
           }
         </div>
         <div class="hum-kpi__label">{{ 'humano.payrollRun.deductions' | translate }}</div>
         <div class="hum-typebars" style="margin-top: var(--space-2)">
-          @for (c of deductionParts(); track c.name) {
+          @for (c of deductionParts(); track c.name + c.currencyCode) {
             <div class="hum-typebars__row hum-typebars__row--money">
               <span class="hum-typebars__label">{{ c.name }}</span>
               <span class="hum-typebars__track"><span [style.width.%]="c.pct" style="background: var(--warning-solid)"></span></span>
-              <span class="hum-typebars__value">{{ c.amount | money: s.currencyCode }}</span>
+              <span class="hum-typebars__value">{{ c.amount | money: c.currencyCode }}</span>
             </div>
           }
         </div>
@@ -177,14 +212,14 @@
                 <div class="hum-dept-pay__head">
                   <strong>{{ d.name }}</strong>
                   <span class="hum-kpi__hint">{{
-                    'humano.payrollRun.deptMeta' | translate: { count: d.employeeCount, avg: (d.averageSalary | money: s.currencyCode) }
+                    'humano.payrollRun.deptMeta' | translate: { count: d.employeeCount, avg: (d.averageSalary | money: d.currencyCode) }
                   }}</span>
                   <span class="hum-records__spacer"></span>
-                  <span class="tabular-nums">{{ d.totalGross | money: s.currencyCode }}</span>
+                  <span class="tabular-nums">{{ d.totalGross | money: d.currencyCode }}</span>
                 </div>
                 <span
                   class="hum-dept-pay__bar"
-                  [title]="('humano.payrollRun.net' | translate) + ' ' + (d.totalNet | money: s.currencyCode)"
+                  [title]="('humano.payrollRun.net' | translate) + ' ' + (d.totalNet | money: d.currencyCode)"
                 >
                   <span class="is-net" [style.width.%]="d.netPct"></span>
                   <span class="is-ded" [style.width.%]="d.grossPct - d.netPct"></span>

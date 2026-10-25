@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
+import { forkJoin } from 'rxjs';
 
 import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
@@ -23,7 +24,7 @@ import {
   TextareaComponent,
   ToastService,
 } from 'app/shared/ui';
-import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
+import { MoneyPipe, PayPeriodPipe, PluralPipe, RunMoneyPipe } from 'app/shared/util/format.pipes';
 
 import { InitiatePayrollRunRequest, PayrollCalendar, PayrollCalendarService, PayrollRun, PayrollRunService, RunStatus } from '../index';
 
@@ -49,6 +50,8 @@ const STAGES: RunStatus[] = [RunStatus.DRAFT, RunStatus.CALCULATED, RunStatus.AP
     DatePipe,
     TranslatePipe,
     MoneyPipe,
+    RunMoneyPipe,
+    PluralPipe,
     PayPeriodPipe,
     LucideAngularModule,
     PageHeaderComponent,
@@ -85,19 +88,28 @@ export default class PayrollRunsComponent {
   protected readonly previous = computed(() => this.runs()?.[1] ?? null);
   protected readonly netChange = computed(() => {
     const [a, b] = [this.latest(), this.previous()];
-    return a && b && b.totalNet ? ((a.totalNet - b.totalNet) / b.totalNet) * 100 : null;
+    // Only between two single totals in the same currency.
+    return a?.totalNet != null && b?.totalNet && a.currencyCode === b.currencyCode ? ((a.totalNet - b.totalNet) / b.totalNet) * 100 : null;
   });
   protected readonly inProgress = computed(() => (this.runs() ?? []).filter(r => r.status !== RunStatus.POSTED).length);
-  /** Trend bars, oldest first; heights relative to the largest gross. */
+  /**
+   * Trend bars, oldest first; heights relative to the largest gross. Runs paying people in several
+   * currencies have no single total to plot and are left out.
+   */
   protected readonly trend = computed(() => {
-    const list = [...(this.runs() ?? [])].reverse().slice(-12);
-    const max = Math.max(1, ...list.map(r => r.totalGross));
+    const list = [...(this.runs() ?? [])]
+      .reverse()
+      .filter(r => r.totalGross !== null)
+      .slice(-12);
+    const max = Math.max(1, ...list.map(r => r.totalGross ?? 0));
     return list.map(r => ({
       run: r,
-      net: (r.totalNet / max) * 100,
-      deductions: (r.totalDeductions / max) * 100,
+      net: ((r.totalNet ?? 0) / max) * 100,
+      deductions: ((r.totalDeductions ?? 0) / max) * 100,
     }));
   });
+  /** Runs left out of the trend because they pay people in several currencies. */
+  protected readonly trendLeftOut = computed(() => (this.runs() ?? []).filter(r => r.totalGross === null).length);
 
   // New run panel.
   protected readonly formOpen = signal(false);
@@ -119,6 +131,9 @@ export default class PayrollRunsComponent {
     return opts;
   });
   protected readonly noPeriods = computed(() => !this.calendarsLoading() && !this.calendarsError() && this.periodOptions().length <= 1);
+  /** Loading calendars already needs payroll-calendar access, so whoever sees them can create periods. */
+  protected readonly canCreatePeriods = computed(() => this.calendars().length > 0);
+  protected readonly creatingPeriods = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
     periodId: ['', Validators.required],
@@ -169,6 +184,22 @@ export default class PayrollRunsComponent {
       error: (err: unknown) => {
         this.calendarsError.set(normalizeHttpError(err));
         this.calendarsLoading.set(false);
+      },
+    });
+  }
+
+  /** Creates each active calendar's periods up to three months ahead, then offers them in the picker. */
+  protected createPeriods(): void {
+    this.creatingPeriods.set(true);
+    forkJoin(this.calendars().map(c => this.calendarService.createUpcomingPeriods(c.id))).subscribe({
+      next: created => {
+        this.toast.success(this.label('humano.payrollRuns.periodsCreated', { n: created.flat().length }));
+        this.creatingPeriods.set(false);
+        this.loadCalendars();
+      },
+      error: (err: unknown) => {
+        this.toast.danger(normalizeHttpError(err));
+        this.creatingPeriods.set(false);
       },
     });
   }

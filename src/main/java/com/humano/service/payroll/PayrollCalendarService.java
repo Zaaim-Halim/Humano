@@ -11,6 +11,7 @@ import com.humano.repository.payroll.PayrollCalendarRepository;
 import com.humano.repository.payroll.PayrollPeriodRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -33,6 +34,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class PayrollCalendarService {
 
     private static final Logger log = LoggerFactory.getLogger(PayrollCalendarService.class);
+
+    /** How far ahead {@link #createUpcomingPeriods} creates periods; the calendar response lists this window. */
+    private static final int UPCOMING_MONTHS = 3;
+    /** Days from period end to payment for periods created by {@link #createUpcomingPeriods}; weekends move it later. */
+    private static final int DEFAULT_PAYMENT_DAY_OFFSET = 5;
 
     private final PayrollCalendarRepository calendarRepository;
     private final PayrollPeriodRepository periodRepository;
@@ -128,6 +134,48 @@ public class PayrollCalendarService {
         log.info("Generated {} payroll periods for calendar {}", savedPeriods.size(), calendar.getId());
 
         return savedPeriods.stream().map(this::toPeriodResponse).toList();
+    }
+
+    /**
+     * Creates the calendar's periods from the current one to {@link #UPCOMING_MONTHS} months ahead, the
+     * window a new run can pick from (see {@code toCalendarResponse}). Continues after the latest
+     * existing period when that one ended recently, so the cadence is kept; otherwise starts at the
+     * period containing today (month start for monthly calendars, Monday for weekly ones). Existing
+     * periods are left as they are.
+     */
+    public List<PayrollPeriodResponse> createUpcomingPeriods(UUID calendarId) {
+        PayrollCalendar calendar = calendarRepository
+            .findById(calendarId)
+            .orElseThrow(() -> new EntityNotFoundException("PayrollCalendar", calendarId));
+        LocalDate today = LocalDate.now();
+        LocalDate horizon = today.plusMonths(UPCOMING_MONTHS);
+
+        LocalDate start = currentPeriodStart(today, calendar.getFrequency());
+        Optional<LocalDate> latestEnd = periodRepository
+            .findAll((Specification<PayrollPeriod>) (root, query, cb) -> cb.equal(root.get("calendar").get("id"), calendarId))
+            .stream()
+            .map(PayrollPeriod::getEndDate)
+            .max(Comparator.naturalOrder());
+        if (latestEnd.isPresent() && latestEnd.get().isAfter(start.minusMonths(1))) {
+            start = latestEnd.get().plusDays(1);
+        }
+        if (start.isAfter(horizon)) {
+            return List.of();
+        }
+
+        // End on a period boundary: generatePeriods cuts the last period short at the end date.
+        LocalDate end = start;
+        for (LocalDate s = start; !s.isAfter(horizon); s = end.plusDays(1)) {
+            end = calculatePeriodEnd(s, calendar.getFrequency());
+        }
+        return generatePeriods(new GeneratePayrollPeriodsRequest(calendarId, start, end, DEFAULT_PAYMENT_DAY_OFFSET, true));
+    }
+
+    private static LocalDate currentPeriodStart(LocalDate today, Frequency frequency) {
+        return switch (frequency) {
+            case WEEKLY, BIWEEKLY -> today.with(DayOfWeek.MONDAY);
+            default -> today.withDayOfMonth(1);
+        };
     }
 
     /**

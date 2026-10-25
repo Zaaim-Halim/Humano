@@ -52,6 +52,12 @@ public class PayrollCalendarResource {
         return ResponseEntity.ok(calendarService.setCalendarActive(id, active));
     }
 
+    /** Creates the calendar's periods from the current one to three months ahead, so a run can be started. */
+    @PostMapping("/{id}/upcoming-periods")
+    public ResponseEntity<List<PayrollPeriodResponse>> createUpcomingPeriods(@PathVariable UUID id) {
+        return ResponseEntity.ok(calendarService.createUpcomingPeriods(id));
+    }
+
     @GetMapping("/upcoming-periods")
     public ResponseEntity<Map<String, List<PayrollPeriodResponse>>> upcomingPeriods(@RequestParam(defaultValue = "30") int days) {
         return ResponseEntity.ok(calendarService.getUpcomingPeriodsByCalendar(days));

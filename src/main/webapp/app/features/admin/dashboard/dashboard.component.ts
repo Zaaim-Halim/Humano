@@ -17,7 +17,7 @@ import { CompanyService } from 'app/core/company/company.service';
 import { SubscriptionStatus } from 'app/features/platform/models/enums/subscription-status.enum';
 import { MeBillingService } from 'app/features/platform/services/me-billing.service';
 import { AvatarComponent, PageHeaderComponent, ProgressComponent, SkeletonComponent } from 'app/shared/ui';
-import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
+import { MoneyPipe, PayPeriodPipe, RunMoneyPipe } from 'app/shared/util/format.pipes';
 
 import { PayrollRun, PayrollRunService, RunStatus } from '../index';
 
@@ -76,6 +76,7 @@ const LOCATION_COLOR: Record<string, string> = {
     TranslatePipe,
     LucideAngularModule,
     MoneyPipe,
+    RunMoneyPipe,
     PayPeriodPipe,
     PageHeaderComponent,
     AvatarComponent,
@@ -166,10 +167,14 @@ export default class DashboardComponent {
   protected readonly runs = signal<PayrollRun[] | null>(null);
   protected readonly lastPosted = computed(() => (this.runs() ?? []).find(r => r.status === RunStatus.POSTED) ?? null);
   protected readonly inProgress = computed(() => (this.runs() ?? []).find(r => r.status !== RunStatus.POSTED) ?? null);
+  /** Net per run, oldest first; runs paying people in several currencies have no single total and are left out. */
   protected readonly trend = computed(() => {
-    const list = [...(this.runs() ?? [])].reverse().slice(-6);
-    const max = Math.max(1, ...list.map(r => r.totalNet));
-    return list.map(r => ({ run: r, pct: (r.totalNet / max) * 100 }));
+    const list = [...(this.runs() ?? [])]
+      .reverse()
+      .filter(r => r.totalNet !== null)
+      .slice(-6);
+    const max = Math.max(1, ...list.map(r => r.totalNet ?? 0));
+    return list.map(r => ({ run: r, pct: ((r.totalNet ?? 0) / max) * 100 }));
   });
   protected readonly stages = [RunStatus.DRAFT, RunStatus.CALCULATED, RunStatus.APPROVED, RunStatus.POSTED];
 

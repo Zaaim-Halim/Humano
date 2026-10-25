@@ -26,7 +26,7 @@ import {
 } from 'app/shared/ui';
 import { stripHtml } from 'app/shared/util/strip-html';
 
-import { PayrollResult, PayrollRun, PayrollRunService, PayrollRunSummary, RunStatus } from '../index';
+import { ComponentTotal, PayrollResult, PayrollRun, PayrollRunService, PayrollRunSummary, RunStatus } from '../index';
 
 const STEP_ORDER: RunStatus[] = [RunStatus.DRAFT, RunStatus.CALCULATED, RunStatus.APPROVED, RunStatus.POSTED];
 
@@ -36,6 +36,13 @@ interface Holder<T> {
   error: string | null;
 }
 const idle = <T>(): Holder<T> => ({ data: null, loading: false, error: null });
+
+/** The largest value per currency (at least 1), for bar widths that never compare currencies. */
+function maxByCurrency<T extends { currencyCode: string | null }>(list: T[], value: (item: T) => number): (code: string | null) => number {
+  const max = new Map<string | null, number>();
+  for (const item of list) max.set(item.currencyCode, Math.max(max.get(item.currencyCode) ?? 1, value(item)));
+  return code => max.get(code) ?? 1;
+}
 
 /**
  * Payroll Run — `/payroll/runs/:id`. Figures with change vs the previous posted run, where the
@@ -102,40 +109,49 @@ export default class PayrollRunComponent {
     const i = status ? STEP_ORDER.indexOf(status) : 0;
     return i < 0 ? 0 : i;
   });
-  /** Departments, largest gross first; bar widths relative to the largest gross. */
+  /** Employees are paid in several currencies and the run has no reporting currency: no single totals. */
+  protected readonly mixedCurrencies = computed(() => (this.summary().data?.totalsByCurrency.length ?? 0) > 1);
+
+  /**
+   * Departments (split by currency in a mixed run), largest gross first within each currency; bar
+   * widths relative to the largest gross in the same currency.
+   */
   protected readonly byDepartment = computed(() => {
-    const list = Object.values(this.summary().data?.byDepartment ?? {}).sort((a, b) => b.totalGross - a.totalGross);
-    const max = Math.max(1, ...list.map(d => d.totalGross));
+    const list = Object.entries(this.summary().data?.byDepartment ?? {})
+      .map(([name, d]) => ({ ...d, name }))
+      .sort((a, b) => (a.currencyCode ?? '').localeCompare(b.currencyCode ?? '') || b.totalGross - a.totalGross);
+    const max = maxByCurrency(list, d => d.totalGross);
     return list.map(d => ({
-      name: d.departmentName,
+      name: d.name,
+      currencyCode: d.currencyCode,
       employeeCount: d.employeeCount,
       totalGross: d.totalGross,
       totalNet: d.totalNet,
       averageSalary: d.averageSalary,
-      grossPct: (d.totalGross / max) * 100,
-      netPct: (d.totalNet / max) * 100,
+      grossPct: (d.totalGross / max(d.currencyCode)) * 100,
+      netPct: (d.totalNet / max(d.currencyCode)) * 100,
     }));
   });
 
-  /** Total cost split: what employees take home, what is withheld, what the employer adds. */
-  protected readonly costParts = computed(() => {
-    const s = this.summary().data;
-    if (!s) return [];
-    const total = Math.max(1, s.totalEmployerCost);
-    const parts = [
-      { key: 'humano.payrollRun.net', amount: s.totalNet, color: 'var(--brand)' },
-      { key: 'humano.payrollRun.employeeDeductions', amount: s.totalDeductions, color: 'var(--warning-solid)' },
-      {
-        key: 'humano.payrollRun.employerChargesShort',
-        amount: Math.max(0, s.totalEmployerCost - s.totalGross),
-        color: 'var(--violet-500)',
-      },
-    ];
-    return parts.map(p => ({ ...p, pct: (p.amount / total) * 100 }));
-  });
+  /** Total cost split per currency: what employees take home, what is withheld, what the employer adds. */
+  protected readonly costSplits = computed(() =>
+    (this.summary().data?.totalsByCurrency ?? []).map(t => {
+      const total = Math.max(1, t.totalEmployerCost);
+      const parts = [
+        { key: 'humano.payrollRun.net', amount: t.totalNet, color: 'var(--brand)' },
+        { key: 'humano.payrollRun.employeeDeductions', amount: t.totalDeductions, color: 'var(--warning-solid)' },
+        {
+          key: 'humano.payrollRun.employerChargesShort',
+          amount: Math.max(0, t.totalEmployerCost - t.totalGross),
+          color: 'var(--violet-500)',
+        },
+      ];
+      return { currencyCode: t.currencyCode, parts: parts.map(p => ({ ...p, pct: (p.amount / total) * 100 })) };
+    }),
+  );
 
-  protected readonly earnings = computed(() => this.components(this.summary().data?.earningsByComponent));
-  protected readonly deductionParts = computed(() => this.components(this.summary().data?.deductionsByComponent));
+  protected readonly earnings = computed(() => this.components(this.summary().data?.earnings));
+  protected readonly deductionParts = computed(() => this.components(this.summary().data?.deductions));
 
   // Results list
   protected readonly query = signal('');
@@ -163,12 +179,13 @@ export default class PayrollRunComponent {
     return whole ? ((Number(part) / Number(whole)) * 100).toFixed(0) : '0';
   }
 
-  private components(map: Record<string, number> | undefined): { name: string; amount: number; pct: number }[] {
-    const list = Object.entries(map ?? {})
-      .map(([name, amount]) => ({ name, amount: Number(amount) }))
-      .sort((a, b) => b.amount - a.amount);
-    const max = Math.max(1, ...list.map(c => c.amount));
-    return list.map(c => ({ ...c, pct: (c.amount / max) * 100 }));
+  /** Components largest first within each currency; bar widths relative to the largest in the same currency. */
+  private components(totals: ComponentTotal[] | undefined): { name: string; currencyCode: string; amount: number; pct: number }[] {
+    const list = (totals ?? [])
+      .map(c => ({ name: c.name, currencyCode: c.currencyCode, amount: c.amount }))
+      .sort((a, b) => a.currencyCode.localeCompare(b.currencyCode) || b.amount - a.amount);
+    const max = maxByCurrency(list, c => c.amount);
+    return list.map(c => ({ ...c, pct: (c.amount / max(c.currencyCode)) * 100 }));
   }
 
   constructor() {

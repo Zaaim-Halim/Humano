@@ -11,6 +11,7 @@ import com.humano.domain.shared.Employee;
 import com.humano.dto.payroll.request.ApprovePayrollRunRequest;
 import com.humano.dto.payroll.request.InitiatePayrollRunRequest;
 import com.humano.dto.payroll.request.RecalculatePayrollRequest;
+import com.humano.dto.payroll.response.PayrollCurrencyTotals;
 import com.humano.dto.payroll.response.PayrollRunResponse;
 import com.humano.dto.payroll.response.PayrollRunSummaryResponse;
 import com.humano.repository.hr.LeaveRequestRepository;
@@ -40,6 +41,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -1344,55 +1346,33 @@ public class PayrollProcessingService {
 
         List<PayrollResult> results = resultsWithDepartments(runId);
 
-        // P3.4 — when the run has a reporting currency, the summary totals are computed
-        // from the per-result reporting_* columns (all employees expressed in the SAME
-        // currency, so the sum is meaningful). Otherwise the run is single-currency and we
-        // sum native totals as before. A row with reporting fields NULL falls back to its
-        // native amount so a partially-converted run (some employees in reporting ccy,
-        // some not) still produces a finite summary instead of NPEing.
+        // P3.4 — with a reporting currency every total is in it (reporting_* columns); without
+        // one, each currency the employees are paid in gets its own totals, and the single
+        // totals exist only when there is just one.
         boolean useReporting = run.getReportingCurrency() != null;
-        BigDecimal totalGross = BigDecimal.ZERO;
-        BigDecimal totalDeductions = BigDecimal.ZERO;
-        BigDecimal totalNet = BigDecimal.ZERO;
-        BigDecimal totalEmployerCost = BigDecimal.ZERO;
+        List<PayrollCurrencyTotals> byCurrency = totalsByCurrency(run, results);
+        PayrollCurrencyTotals total = singleTotal(run, byCurrency);
 
-        for (PayrollResult result : results) {
-            totalGross = totalGross.add(useReporting ? coalesce(result.getReportingGross(), result.getGross()) : result.getGross());
-            totalDeductions = totalDeductions.add(
-                useReporting ? coalesce(result.getReportingTotalDeductions(), result.getTotalDeductions()) : result.getTotalDeductions()
-            );
-            totalNet = totalNet.add(useReporting ? coalesce(result.getReportingNet(), result.getNet()) : result.getNet());
-            totalEmployerCost = totalEmployerCost.add(
-                useReporting ? coalesce(result.getReportingEmployerCost(), result.getEmployerCost()) : result.getEmployerCost()
-            );
-        }
-
-        // Get breakdown by component. One query for every line in the run, instead of a
-        // per-result query inside the loop.
-        Map<String, BigDecimal> earningsByComponent = new HashMap<>();
-        Map<String, BigDecimal> deductionsByComponent = new HashMap<>();
-
+        // Breakdown by component, in each line's own currency (the employee's: lines are never
+        // converted). One query for every line in the run, instead of a per-result query.
+        Map<List<String>, BigDecimal> earningTotals = new LinkedHashMap<>();
+        Map<List<String>, BigDecimal> deductionTotals = new LinkedHashMap<>();
         List<PayrollLine> allLines = payrollLineRepository.findAll(
             (Specification<PayrollLine>) (root, query, cb) -> cb.equal(root.get("result").get("run").get("id"), runId)
         );
         for (PayrollLine line : allLines) {
-            String componentName = line.displayName();
+            List<String> key = List.of(line.displayName(), currencyOf(line.getResult()));
             if (line.getComponent().getKind() == Kind.EARNING) {
-                earningsByComponent.merge(componentName, line.getAmount(), BigDecimal::add);
+                earningTotals.merge(key, line.getAmount(), BigDecimal::add);
             } else if (line.getComponent().getKind() == Kind.DEDUCTION) {
-                deductionsByComponent.merge(componentName, line.getAmount().abs(), BigDecimal::add);
+                deductionTotals.merge(key, line.getAmount().abs(), BigDecimal::add);
             }
         }
-
-        // P3.4 — currency label reflects what we're summing. Reporting → run's reporting
-        // currency; native → first result's currency (legacy behaviour; meaningful only
-        // when all employees share a native currency).
-        String currencyCode;
-        if (useReporting) {
-            currencyCode = run.getReportingCurrency().getCode().getCode();
-        } else {
-            currencyCode = results.isEmpty() ? null : results.get(0).getCurrency().getCode().getCode();
-        }
+        List<PayrollRunSummaryResponse.ComponentTotal> earnings = componentTotals(earningTotals);
+        List<PayrollRunSummaryResponse.ComponentTotal> deductions = componentTotals(deductionTotals);
+        String currencyCode = total != null ? total.currencyCode() : null;
+        boolean linesInCurrency = Stream.concat(earnings.stream(), deductions.stream()).allMatch(c -> c.currencyCode().equals(currencyCode)
+        );
 
         Map<PayrollResult, String> departments = departmentsOf(results);
         return new PayrollRunSummaryResponse(
@@ -1401,19 +1381,23 @@ public class PayrollProcessingService {
             results.size(),
             results.size(),
             0, // Error count
-            totalGross,
-            totalDeductions,
-            totalNet,
-            totalEmployerCost,
+            total != null ? total.totalGross() : null,
+            total != null ? total.totalDeductions() : null,
+            total != null ? total.totalNet() : null,
+            total != null ? total.totalEmployerCost() : null,
             // Employer cost already includes gross pay (gross + employer charges + benefits), so
             // it IS the total cost of the payroll — adding net on top would count wages twice.
-            totalEmployerCost,
+            total != null ? total.totalEmployerCost() : null,
             currencyCode,
-            earningsByComponent,
-            deductionsByComponent,
-            departmentBreakdown(results, useReporting, departments),
-            topEarners(results, useReporting, departments),
-            comparisonWithPrevious(run, results.size(), totalGross, totalNet, useReporting)
+            byCurrency,
+            linesInCurrency ? componentMap(earnings) : Map.of(),
+            linesInCurrency ? componentMap(deductions) : Map.of(),
+            earnings,
+            deductions,
+            departmentBreakdown(results, run, total == null, departments),
+            // Pay in different currencies can't be ranked against each other.
+            total != null ? topEarners(results, run, departments) : List.of(),
+            total != null ? comparisonWithPrevious(run, results.size(), total) : null
         );
     }
 
@@ -1458,14 +1442,29 @@ public class PayrollProcessingService {
         return departments;
     }
 
-    /** Headcount, gross, net and average gross per department, largest gross first. */
+    /**
+     * Headcount, gross, net and average gross per department, largest gross first. With {@code
+     * byCurrency} each department is split by the currency its people are paid in, keyed
+     * "department · currency".
+     */
     private Map<String, PayrollRunSummaryResponse.DepartmentPayrollSummary> departmentBreakdown(
         List<PayrollResult> results,
-        boolean reporting,
+        PayrollRun run,
+        boolean byCurrency,
         Map<PayrollResult, String> departments
     ) {
-        Map<String, List<PayrollResult>> byDept = results.stream().collect(java.util.stream.Collectors.groupingBy(departments::get));
-        return byDept
+        boolean reporting = run.getReportingCurrency() != null;
+        Map<List<String>, List<PayrollResult>> groups = results
+            .stream()
+            .collect(
+                Collectors.groupingBy(
+                    r -> byCurrency ? List.of(departments.get(r), totalsCurrencyOf(run, r)) : List.of(departments.get(r)),
+                    LinkedHashMap::new,
+                    Collectors.toList()
+                )
+            );
+        Map<String, PayrollRunSummaryResponse.DepartmentPayrollSummary> out = new LinkedHashMap<>();
+        groups
             .entrySet()
             .stream()
             .map(e -> {
@@ -1473,38 +1472,35 @@ public class PayrollProcessingService {
                 BigDecimal net = e.getValue().stream().map(r -> netOf(r, reporting)).reduce(BigDecimal.ZERO, BigDecimal::add);
                 int count = e.getValue().size();
                 return new PayrollRunSummaryResponse.DepartmentPayrollSummary(
-                    e.getKey(),
+                    e.getKey().get(0),
+                    totalsCurrencyOf(run, e.getValue().get(0)),
                     count,
                     gross,
                     net,
                     gross.divide(BigDecimal.valueOf(count), MONEY_SCALE, MONEY_ROUNDING)
                 );
             })
-            .sorted(java.util.Comparator.comparing(PayrollRunSummaryResponse.DepartmentPayrollSummary::totalGross).reversed())
-            .collect(
-                java.util.stream.Collectors.toMap(
-                    PayrollRunSummaryResponse.DepartmentPayrollSummary::departmentName,
-                    d -> d,
-                    (a, b) -> a,
-                    java.util.LinkedHashMap::new
-                )
-            );
+            .sorted(Comparator.comparing(PayrollRunSummaryResponse.DepartmentPayrollSummary::totalGross).reversed())
+            .forEach(d -> out.put(byCurrency ? d.departmentName() + " · " + d.currencyCode() : d.departmentName(), d));
+        return out;
     }
 
     private List<PayrollRunSummaryResponse.EmployeePayrollSummary> topEarners(
         List<PayrollResult> results,
-        boolean reporting,
+        PayrollRun run,
         Map<PayrollResult, String> departments
     ) {
+        boolean reporting = run.getReportingCurrency() != null;
         return results
             .stream()
-            .sorted(java.util.Comparator.comparing((PayrollResult r) -> grossOf(r, reporting)).reversed())
+            .sorted(Comparator.comparing((PayrollResult r) -> grossOf(r, reporting)).reversed())
             .limit(5)
             .map(r ->
                 new PayrollRunSummaryResponse.EmployeePayrollSummary(
                     r.getEmployee().getId(),
                     r.getEmployee().getFirstName() + " " + r.getEmployee().getLastName(),
                     departments.get(r),
+                    totalsCurrencyOf(run, r),
                     grossOf(r, reporting),
                     netOf(r, reporting)
                 )
@@ -1512,14 +1508,79 @@ public class PayrollProcessingService {
             .toList();
     }
 
-    /** Against the latest posted run of an earlier period, if any. */
+    /**
+     * A run's totals per currency, largest headcount first: one entry in the reporting currency when
+     * the run has one (a result not yet converted counts at its native amount, as before), otherwise
+     * one per currency its employees are paid in. Amounts in different currencies are never added.
+     */
+    static List<PayrollCurrencyTotals> totalsByCurrency(PayrollRun run, List<PayrollResult> results) {
+        boolean reporting = run.getReportingCurrency() != null;
+        Map<String, PayrollCurrencyTotals> byCode = new LinkedHashMap<>();
+        for (PayrollResult r : results) {
+            String code = totalsCurrencyOf(run, r);
+            PayrollCurrencyTotals one = new PayrollCurrencyTotals(
+                code,
+                1,
+                grossOf(r, reporting),
+                reporting ? coalesce(r.getReportingTotalDeductions(), r.getTotalDeductions()) : r.getTotalDeductions(),
+                netOf(r, reporting),
+                reporting ? coalesce(r.getReportingEmployerCost(), r.getEmployerCost()) : r.getEmployerCost()
+            );
+            byCode.merge(code, one, PayrollCurrencyTotals::plus);
+        }
+        return byCode
+            .values()
+            .stream()
+            .sorted(
+                Comparator.comparingInt(PayrollCurrencyTotals::employeeCount).reversed().thenComparing(PayrollCurrencyTotals::currencyCode)
+            )
+            .toList();
+    }
+
+    /**
+     * The run's single totals: its only currency's, zero for a run without results, or null when its
+     * employees are paid in several currencies and it has no reporting currency.
+     */
+    static PayrollCurrencyTotals singleTotal(PayrollRun run, List<PayrollCurrencyTotals> byCurrency) {
+        if (byCurrency.size() > 1) return null;
+        if (byCurrency.size() == 1) return byCurrency.get(0);
+        return PayrollCurrencyTotals.empty(run.getReportingCurrency() != null ? run.getReportingCurrency().getCode().getCode() : null);
+    }
+
+    /** The currency a result counts in towards the run's totals: the reporting one, or its own. */
+    private static String totalsCurrencyOf(PayrollRun run, PayrollResult r) {
+        return run.getReportingCurrency() != null ? run.getReportingCurrency().getCode().getCode() : currencyOf(r);
+    }
+
+    private static String currencyOf(PayrollResult r) {
+        return r.getCurrency().getCode().getCode();
+    }
+
+    /** Component totals keyed by (name, currency), largest first. */
+    private static List<PayrollRunSummaryResponse.ComponentTotal> componentTotals(Map<List<String>, BigDecimal> totals) {
+        return totals
+            .entrySet()
+            .stream()
+            .map(e -> new PayrollRunSummaryResponse.ComponentTotal(e.getKey().get(0), e.getKey().get(1), e.getValue()))
+            .sorted(Comparator.comparing(PayrollRunSummaryResponse.ComponentTotal::amount).reversed())
+            .toList();
+    }
+
+    /** By component name, for a run whose lines are all in one currency. */
+    private static Map<String, BigDecimal> componentMap(List<PayrollRunSummaryResponse.ComponentTotal> totals) {
+        Map<String, BigDecimal> out = new HashMap<>();
+        totals.forEach(c -> out.merge(c.name(), c.amount(), BigDecimal::add));
+        return out;
+    }
+
+    /** Against the latest posted run of an earlier period, if any and in the same single currency. */
     private PayrollRunSummaryResponse.ComparisonWithPreviousPeriod comparisonWithPrevious(
         PayrollRun run,
         int employees,
-        BigDecimal gross,
-        BigDecimal net,
-        boolean reporting
+        PayrollCurrencyTotals total
     ) {
+        BigDecimal gross = total.totalGross();
+        BigDecimal net = total.totalNet();
         java.time.LocalDate start = run.getPeriod().getStartDate();
         List<PayrollRun> earlier = payrollRunRepository.findAll(
             (Specification<PayrollRun>) (root, query, cb) ->
@@ -1533,11 +1594,16 @@ public class PayrollProcessingService {
         if (earlier.isEmpty()) {
             return null;
         }
+        PayrollRun previousRun = earlier.get(0);
         List<PayrollResult> previous = payrollResultRepository.findAll(
-            (Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), earlier.get(0).getId())
+            (Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), previousRun.getId())
         );
-        BigDecimal prevGross = previous.stream().map(r -> grossOf(r, reporting)).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal prevNet = previous.stream().map(r -> netOf(r, reporting)).reduce(BigDecimal.ZERO, BigDecimal::add);
+        PayrollCurrencyTotals previousTotal = singleTotal(previousRun, totalsByCurrency(previousRun, previous));
+        if (previousTotal == null || !Objects.equals(previousTotal.currencyCode(), total.currencyCode())) {
+            return null;
+        }
+        BigDecimal prevGross = previousTotal.totalGross();
+        BigDecimal prevNet = previousTotal.totalNet();
         return new PayrollRunSummaryResponse.ComparisonWithPreviousPeriod(
             prevGross,
             gross.subtract(prevGross),
@@ -2244,19 +2310,38 @@ public class PayrollProcessingService {
             pageable.getSort().isSorted() ? pageable.getSort() : Sort.by(Sort.Direction.DESC, "period.startDate", "createdDate")
         );
         Page<PayrollRun> page = payrollRunRepository.findHistory(sorted);
-        Map<UUID, RunTotalsRow> totals = new HashMap<>();
+        // One row per run and native currency, already in the reporting currency when the run has one.
+        Map<UUID, List<RunTotalsRow>> rows = new HashMap<>();
         if (page.hasContent()) {
             for (RunTotalsRow row : payrollResultRepository.totalsForRuns(page.map(PayrollRun::getId).getContent())) {
-                // Mixed-currency runs keep the first currency's totals — the same limitation as the summary.
-                totals.putIfAbsent(row.runId(), row);
+                rows.computeIfAbsent(row.runId(), k -> new ArrayList<>()).add(row);
             }
         }
         return page.map(run -> {
-            RunTotalsRow t = totals.get(run.getId());
+            Map<String, PayrollCurrencyTotals> byCode = new LinkedHashMap<>();
+            for (RunTotalsRow t : rows.getOrDefault(run.getId(), List.of())) {
+                String code = run.getReportingCurrency() != null ? run.getReportingCurrency().getCode().getCode() : t.currency().getCode();
+                PayrollCurrencyTotals one = new PayrollCurrencyTotals(
+                    code,
+                    (int) t.employees(),
+                    t.gross(),
+                    t.deductions(),
+                    t.net(),
+                    t.employerCost()
+                );
+                byCode.merge(code, one, PayrollCurrencyTotals::plus);
+            }
+            List<PayrollCurrencyTotals> byCurrency = byCode
+                .values()
+                .stream()
+                .sorted(
+                    Comparator.comparingInt(PayrollCurrencyTotals::employeeCount)
+                        .reversed()
+                        .thenComparing(PayrollCurrencyTotals::currencyCode)
+                )
+                .toList();
+            PayrollCurrencyTotals total = singleTotal(run, byCurrency);
             PayrollPeriod period = run.getPeriod();
-            String currency = run.getReportingCurrency() != null
-                ? run.getReportingCurrency().getCode().getCode()
-                : t != null ? t.currency().getCode() : null;
             return new PayrollRunResponse(
                 run.getId(),
                 period.getId(),
@@ -2266,12 +2351,13 @@ public class PayrollProcessingService {
                 period.getPaymentDate(),
                 run.getScope(),
                 run.getStatus(),
-                t != null ? (int) t.employees() : 0,
-                t != null ? t.gross() : BigDecimal.ZERO,
-                t != null ? t.deductions() : BigDecimal.ZERO,
-                t != null ? t.net() : BigDecimal.ZERO,
-                t != null ? t.employerCost() : BigDecimal.ZERO,
-                currency,
+                byCurrency.stream().mapToInt(PayrollCurrencyTotals::employeeCount).sum(),
+                total != null ? total.totalGross() : null,
+                total != null ? total.totalDeductions() : null,
+                total != null ? total.totalNet() : null,
+                total != null ? total.totalEmployerCost() : null,
+                total != null ? total.currencyCode() : null,
+                byCurrency,
                 run.getApprovedAt(),
                 run.getApprovedBy() != null ? run.getApprovedBy().getFirstName() + " " + run.getApprovedBy().getLastName() : null,
                 Collections.emptyList(),
@@ -2296,32 +2382,9 @@ public class PayrollProcessingService {
             (Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), run.getId())
         );
 
-        // P3.4 — branch on reporting currency to avoid cross-currency native summation.
-        // See getPayrollRunSummary for the same pattern + null-safe fallback rationale.
-        boolean useReporting = run.getReportingCurrency() != null;
-        BigDecimal totalGross = results
-            .stream()
-            .map(r -> useReporting ? coalesce(r.getReportingGross(), r.getGross()) : r.getGross())
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalDeductions = results
-            .stream()
-            .map(r -> useReporting ? coalesce(r.getReportingTotalDeductions(), r.getTotalDeductions()) : r.getTotalDeductions())
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalNet = results
-            .stream()
-            .map(r -> useReporting ? coalesce(r.getReportingNet(), r.getNet()) : r.getNet())
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalEmployerCost = results
-            .stream()
-            .map(r -> useReporting ? coalesce(r.getReportingEmployerCost(), r.getEmployerCost()) : r.getEmployerCost())
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        String currencyCode;
-        if (useReporting) {
-            currencyCode = run.getReportingCurrency().getCode().getCode();
-        } else {
-            currencyCode = results.isEmpty() ? null : results.get(0).getCurrency().getCode().getCode();
-        }
+        // P3.4 — per currency, never summed across currencies; see totalsByCurrency.
+        List<PayrollCurrencyTotals> byCurrency = totalsByCurrency(run, results);
+        PayrollCurrencyTotals total = singleTotal(run, byCurrency);
 
         return new PayrollRunResponse(
             run.getId(),
@@ -2333,11 +2396,12 @@ public class PayrollProcessingService {
             run.getScope(),
             run.getStatus(),
             results.size(),
-            totalGross,
-            totalDeductions,
-            totalNet,
-            totalEmployerCost,
-            currencyCode,
+            total != null ? total.totalGross() : null,
+            total != null ? total.totalDeductions() : null,
+            total != null ? total.totalNet() : null,
+            total != null ? total.totalEmployerCost() : null,
+            total != null ? total.currencyCode() : null,
+            byCurrency,
             run.getApprovedAt(),
             run.getApprovedBy() != null ? run.getApprovedBy().getFirstName() + " " + run.getApprovedBy().getLastName() : null,
             errors,

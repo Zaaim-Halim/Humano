@@ -13,7 +13,7 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
-import { Observable, map } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 
 import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
@@ -36,6 +36,7 @@ import {
 } from 'app/shared/ui';
 
 import {
+  CountryService,
   DepartmentService,
   EmployeeCategoryService,
   EmploymentTypeService,
@@ -48,6 +49,7 @@ import {
 } from 'app/features/admin';
 import { ROLE_GROUPS, humanizeCode } from 'app/features/admin/models/user-admin.model';
 import { OnboardingService } from 'app/features/admin/services/onboarding.service';
+import { CurrentTenantService } from 'app/features/platform/services/current-tenant.service';
 import {
   EmployeeAttributeService,
   EmployeeService,
@@ -84,8 +86,9 @@ function dateOrder(group: AbstractControl): ValidationErrors | null {
  *   via `POST /api/hr/employees` (one step). There is no separate user
  *   management and no self-registration — every employee is added here.
  *
- * Country is intentionally omitted: no country reference endpoint is exposed to
- * the frontend yet, and `countryId` is optional on the API.
+ * The country of employment decides which payroll template covers the employee. Create mode
+ * preselects the company's country; the API keeps the stored country when none is sent, so
+ * the field can be changed but not cleared.
  */
 /** Classification fields backed by Settings → Lists. */
 type RefKey = 'employmentType' | 'level' | 'grade' | 'category' | 'maritalStatus';
@@ -126,6 +129,8 @@ export default class EmployeeFormComponent implements OnInit {
   private readonly departmentService = inject(DepartmentService);
   private readonly positionService = inject(PositionService);
   private readonly unitService = inject(OrganizationalUnitService);
+  private readonly countryService = inject(CountryService);
+  private readonly currentTenant = inject(CurrentTenantService);
 
   /** Edit target id (null in create mode). */
   protected readonly employeeId = signal<string | null>(null);
@@ -153,6 +158,7 @@ export default class EmployeeFormComponent implements OnInit {
   protected readonly departments = signal<SelectOption[]>([]);
   protected readonly positions = signal<SelectOption[]>([]);
   protected readonly units = signal<SelectOption[]>([]);
+  protected readonly countries = signal<SelectOption[]>([]);
 
   /**
    * Classification lists (Settings → Lists): only entries switched on are offered, but an
@@ -262,6 +268,7 @@ export default class EmployeeFormComponent implements OnInit {
       departmentId: [''],
       positionId: ['', [Validators.required]],
       unitId: ['', [Validators.required]],
+      countryId: [''],
       managerId: [''],
       // Classification — choices come from Settings → Lists.
       employmentTypeId: [''],
@@ -479,6 +486,7 @@ export default class EmployeeFormComponent implements OnInit {
       ...(v.endDate ? { endDate: v.endDate } : {}),
       ...(v.status ? { status: v.status as EmployeeStatus } : {}),
       ...(v.departmentId ? { departmentId: v.departmentId } : {}),
+      ...(v.countryId ? { countryId: v.countryId } : {}),
       ...(v.managerId ? { managerId: v.managerId } : {}),
       ...(v.employmentTypeId ? { employmentType: { id: v.employmentTypeId } } : {}),
       ...(v.levelId ? { level: { id: v.levelId } } : {}),
@@ -565,6 +573,7 @@ export default class EmployeeFormComponent implements OnInit {
             departmentId: p.departmentId ?? '',
             positionId: p.positionId ?? '',
             unitId: p.unitId ?? '',
+            countryId: p.countryId ?? '',
             managerId: p.managerId ?? '',
             employmentTypeId: p.employmentType?.id ?? '',
             levelId: p.level?.id ?? '',
@@ -665,5 +674,29 @@ export default class EmployeeFormComponent implements OnInit {
           ),
         ),
       );
+
+    this.loadCountries();
+  }
+
+  /** Country options; a new employee starts in the company's country (left unset when it can't be read). */
+  private loadCountries(): void {
+    // Read from the route: loadOptions runs before the edit id is stored.
+    const company$ = this.route.snapshot.paramMap.has('id')
+      ? of(null)
+      : this.currentTenant.current().pipe(
+          map(t => t.country),
+          catchError(() => of(null)),
+        );
+    forkJoin([this.countryService.list(), company$])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([countries, companyCode]) => {
+        this.countries.set([
+          { value: '', label: this.translate.instant('humano.employeeForm.notSet') },
+          ...countries.map(c => ({ value: c.id, label: c.name })),
+        ]);
+        const company = countries.find(c => c.code === companyCode);
+        const control = this.form.controls.countryId;
+        if (company && !control.value) control.setValue(company.id);
+      });
   }
 }

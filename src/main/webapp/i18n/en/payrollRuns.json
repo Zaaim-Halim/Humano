@@ -11,7 +11,9 @@
       "start": "Start run",
       "initiated": "Payroll run started",
       "noPeriodsTitle": "No open periods",
-      "noPeriodsBody": "There are no open payroll periods to run. Generate or open a period in the payroll calendar first.",
+      "noPeriodsBody": "There are no open pay periods to run yet. Create them from this month to three months ahead; payment is due five days after each period ends.",
+      "createPeriods": "Create pay periods",
+      "periodsCreated": "{{ n }} pay periods created",
       "loadHint": "Loading periods needs payroll-calendar access.",
       "lastNet": "Last net payroll",
       "peoplePaid": "People paid",
@@ -20,6 +22,10 @@
       "inProgress": "Runs in progress",
       "inProgressHint": "Not yet posted",
       "trend": "Net pay and deductions by month",
+      "trendLeftOut": {
+        "one": "1 run paying people in several currencies is left out: its totals are per currency",
+        "other": "{{ count }} runs paying people in several currencies are left out: their totals are per currency"
+      },
       "net": "Net",
       "gross": "Gross",
       "deductions": "Deductions",

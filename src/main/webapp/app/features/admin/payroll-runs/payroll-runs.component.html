@@ -37,7 +37,9 @@
       <section class="hum-dir-stats hum-dir-stats--even">
         <div class="hum-dir-stat">
           <div class="hum-dir-stat__label">{{ 'humano.payrollRuns.lastNet' | translate }}</div>
-          <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums">{{ l.totalNet | money: l.currencyCode }}</div>
+          <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums" [class.hum-dir-stat__value--multi]="l.totalNet === null">
+            {{ l | runMoney: 'totalNet' }}
+          </div>
           <div class="hum-dir-stat__sub">
             {{ null | payPeriod: l.periodCode }}
             @if (netChange() !== null) {
@@ -56,7 +58,12 @@
         </div>
         <div class="hum-dir-stat">
           <div class="hum-dir-stat__label">{{ 'humano.payrollRuns.employerCost' | translate }}</div>
-          <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums">{{ l.totalEmployerCost | money: l.currencyCode }}</div>
+          <div
+            class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums"
+            [class.hum-dir-stat__value--multi]="l.totalEmployerCost === null"
+          >
+            {{ l | runMoney: 'totalEmployerCost' }}
+          </div>
         </div>
         <div class="hum-dir-stat" [class.hum-dir-stat--warn]="inProgress() > 0">
           <div class="hum-dir-stat__label">{{ 'humano.payrollRuns.inProgress' | translate }}</div>
@@ -100,6 +107,11 @@
           </button>
         }
       </div>
+      @if (trendLeftOut()) {
+        <div class="hum-kpi__hint">
+          {{ 'humano.payrollRuns.trendLeftOut' | plural: trendLeftOut() | translate: { count: trendLeftOut() } }}
+        </div>
+      }
     </section>
 
     <h3 class="hum-section-title">{{ 'humano.payrollRuns.history' | translate }}</h3>
@@ -135,11 +147,11 @@
           </div>
           <div class="hum-run__figure">
             <span class="hum-run__label">{{ 'humano.payrollRuns.gross' | translate }}</span>
-            <span class="tabular-nums">{{ r.totalGross | money: r.currencyCode }}</span>
+            <span class="tabular-nums">{{ r | runMoney: 'totalGross' }}</span>
           </div>
           <div class="hum-run__figure">
             <span class="hum-run__label">{{ 'humano.payrollRuns.net' | translate }}</span>
-            <strong class="tabular-nums">{{ r.totalNet | money: r.currencyCode }}</strong>
+            <strong class="tabular-nums">{{ r | runMoney: 'totalNet' }}</strong>
           </div>
           <lucide-icon name="chevron-right" [size]="16" class="hum-run__chevron" />
         </a>
@@ -157,9 +169,14 @@
       <hum-button variant="outline" size="sm" (click)="loadCalendars()">{{ 'humano.action.retry' | translate }}</hum-button>
     </hum-alert>
   } @else if (noPeriods()) {
-    <hum-alert tone="info" [title]="'humano.payrollRuns.noPeriodsTitle' | translate">{{
-      'humano.payrollRuns.noPeriodsBody' | translate
-    }}</hum-alert>
+    <hum-alert tone="info" [title]="'humano.payrollRuns.noPeriodsTitle' | translate">
+      <div style="margin-bottom: var(--space-2)">{{ 'humano.payrollRuns.noPeriodsBody' | translate }}</div>
+      @if (canCreatePeriods()) {
+        <hum-button variant="outline" size="sm" icon="calendar-plus" [loading]="creatingPeriods()" (click)="createPeriods()">{{
+          'humano.payrollRuns.createPeriods' | translate
+        }}</hum-button>
+      }
+    </hum-alert>
   } @else {
     <form [formGroup]="form" (ngSubmit)="submit()" style="display: grid; gap: var(--space-4)">
       <hum-form-field

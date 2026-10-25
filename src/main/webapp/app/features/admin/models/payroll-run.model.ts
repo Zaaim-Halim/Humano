@@ -11,7 +11,21 @@ export interface PayrollValidationError {
   templateId: string | null;
 }
 
-/** A payroll run — returned by initiate/calculate/approve/post/recalculate. */
+/** A run's totals in one currency (backend `PayrollCurrencyTotals`). */
+export interface PayrollCurrencyTotals {
+  currencyCode: string;
+  employeeCount: number;
+  totalGross: number;
+  totalDeductions: number;
+  totalNet: number;
+  totalEmployerCost: number;
+}
+
+/**
+ * A payroll run — returned by initiate/calculate/approve/post/recalculate. The single totals and
+ * `currencyCode` are null when employees are paid in several currencies and the run has no reporting
+ * currency; `totalsByCurrency` always has one entry per currency.
+ */
 export interface PayrollRun {
   id: string;
   periodId: string;
@@ -22,11 +36,12 @@ export interface PayrollRun {
   scope: string | null;
   status: RunStatus;
   employeeCount: number;
-  totalGross: number;
-  totalDeductions: number;
-  totalNet: number;
-  totalEmployerCost: number;
+  totalGross: number | null;
+  totalDeductions: number | null;
+  totalNet: number | null;
+  totalEmployerCost: number | null;
   currencyCode: string | null;
+  totalsByCurrency: PayrollCurrencyTotals[];
   approvedAt: string | null;
   approvedBy: string | null;
   validationErrors: PayrollValidationError[];
@@ -58,28 +73,45 @@ export interface RecalculatePayrollRequest {
   reason?: string;
 }
 
-/** `GET /api/payroll/runs/{id}/summary`. */
+/**
+ * `GET /api/payroll/runs/{id}/summary`. In a run paid in several currencies without a reporting
+ * currency the single totals, `currencyCode` and `comparison` are null and departments are split by
+ * currency; `earnings` / `deductions` carry each component's currency.
+ */
 export interface PayrollRunSummary {
   runId: string;
   periodCode: string | null;
   totalEmployees: number;
   processedEmployees: number;
   errorCount: number;
-  totalGross: number;
-  totalDeductions: number;
-  totalNet: number;
-  totalEmployerCost: number;
-  totalPayrollCost: number;
+  totalGross: number | null;
+  totalDeductions: number | null;
+  totalNet: number | null;
+  totalEmployerCost: number | null;
+  totalPayrollCost: number | null;
   currencyCode: string | null;
+  totalsByCurrency: PayrollCurrencyTotals[];
+  /** Filled only when every line is in `currencyCode`; prefer `earnings`. */
   earningsByComponent: Record<string, number>;
+  /** Filled only when every line is in `currencyCode`; prefer `deductions`. */
   deductionsByComponent: Record<string, number>;
+  earnings: ComponentTotal[];
+  deductions: ComponentTotal[];
   byDepartment: Record<string, DepartmentPayrollSummary>;
   topEarners: EmployeePayrollSummary[];
   comparison: ComparisonWithPreviousPeriod | null;
 }
 
+/** One pay component's total in one currency. */
+export interface ComponentTotal {
+  name: string;
+  currencyCode: string;
+  amount: number;
+}
+
 export interface DepartmentPayrollSummary {
   departmentName: string;
+  currencyCode: string | null;
   employeeCount: number;
   totalGross: number;
   totalNet: number;
@@ -90,6 +122,7 @@ export interface EmployeePayrollSummary {
   employeeId: string;
   employeeName: string | null;
   department: string | null;
+  currencyCode: string | null;
   gross: number;
   net: number;
 }

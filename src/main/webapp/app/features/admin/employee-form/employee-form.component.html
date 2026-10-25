@@ -129,6 +129,13 @@
             >
               <hum-select formControlName="unitId" [options]="units()" [invalid]="invalid('unitId')" />
             </hum-form-field>
+            <hum-form-field
+              [label]="'humano.employeeForm.country' | translate"
+              controlId="emp-country"
+              [hint]="'humano.employeeForm.countryHint' | translate"
+            >
+              <hum-select formControlName="countryId" [options]="countries()" />
+            </hum-form-field>
             <hum-form-field [label]="'humano.employeeForm.manager' | translate" controlId="emp-manager">
               <hum-autocomplete
                 formControlName="managerId"

@@ -25,6 +25,8 @@
       "department": "Department",
       "position": "Position",
       "unit": "Org unit",
+      "country": "Country of employment",
+      "countryHint": "Decides which payroll template computes their taxes and contributions",
       "manager": "Manager",
       "statusUnset": "Not set",
       "departmentUnset": "No department",

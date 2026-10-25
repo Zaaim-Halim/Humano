@@ -18,7 +18,7 @@ import {
   PageHeaderComponent,
   SkeletonComponent,
 } from 'app/shared/ui';
-import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
+import { MoneyPipe, PayPeriodPipe, RunMoneyPipe } from 'app/shared/util/format.pipes';
 
 import { PayrollRun, PayrollRunService, Payslip, PayslipSearchRequest, PayslipService } from '../index';
 
@@ -46,6 +46,7 @@ function sessionStorageView(): 'cards' | 'table' {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MoneyPipe,
+    RunMoneyPipe,
     PayPeriodPipe,
     ReactiveFormsModule,
     RouterLink,

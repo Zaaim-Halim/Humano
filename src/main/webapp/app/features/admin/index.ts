@@ -32,6 +32,8 @@ export type {
   PayrollRun,
   PayrollValidationError,
   PayrollRunSummary,
+  PayrollCurrencyTotals,
+  ComponentTotal,
   DepartmentPayrollSummary,
   EmployeePayrollSummary,
   ComparisonWithPreviousPeriod,
@@ -61,6 +63,9 @@ export type { PayrollPeriod, GeneratePayrollPeriodsRequest } from './models/payr
 
 export { CurrencyService } from './services/currency.service';
 export type { Currency } from './models/currency.model';
+
+export { CountryService } from './services/country.service';
+export type { Country } from './models/country.model';
 
 export { PayrollCalendarService } from './services/payroll-calendar.service';
 export type { PayrollCalendar, PayrollPeriodSummary } from './models/payroll-calendar.model';

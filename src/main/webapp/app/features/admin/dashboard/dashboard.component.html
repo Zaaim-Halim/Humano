@@ -113,7 +113,7 @@
             @if (lastPosted(); as r) {
               <a class="hum-dash-run" [routerLink]="['/payroll/runs', r.id]">
                 <span class="hum-kpi__label">{{ 'humano.dashboard.lastPaid' | translate }}</span>
-                <strong>{{ r.totalNet | money: r.currencyCode }}</strong>
+                <strong>{{ r | runMoney: 'totalNet' }}</strong>
                 <span class="hum-kpi__hint"
                   >{{ null | payPeriod: r.periodCode }} · {{ 'humano.dashboard.people' | translate: { count: r.employeeCount } }}</span
                 >

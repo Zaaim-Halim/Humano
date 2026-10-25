@@ -24,26 +24,34 @@
       <section class="hum-dir-stats hum-dir-stats--even">
         <div class="hum-dir-stat">
           <div class="hum-dir-stat__label">{{ 'humano.payslips.totalNet' | translate }}</div>
-          <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums">{{ r.totalNet | money: r.currencyCode }}</div>
+          <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums">{{ r | runMoney: 'totalNet' }}</div>
           <div class="hum-dir-stat__sub">{{ 'humano.payslips.paidOn' | translate: { date: (r.paymentDate | date: 'mediumDate') } }}</div>
         </div>
         <div class="hum-dir-stat">
           <div class="hum-dir-stat__label">{{ 'humano.payslips.totalGross' | translate }}</div>
-          <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums">{{ r.totalGross | money: r.currencyCode }}</div>
+          <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums">{{ r | runMoney: 'totalGross' }}</div>
         </div>
         <div class="hum-dir-stat">
           <div class="hum-dir-stat__label">{{ 'humano.payslips.averageNet' | translate }}</div>
           <div class="hum-dir-stat__value hum-dir-stat__value--money tabular-nums">
-            {{ (r.employeeCount ? r.totalNet / r.employeeCount : 0) | money: r.currencyCode }}
+            @if (r.totalNet !== null) {
+              {{ (r.employeeCount ? r.totalNet / r.employeeCount : 0) | money: r.currencyCode }}
+            } @else {
+              —
+            }
           </div>
         </div>
         <div class="hum-dir-stat">
           <div class="hum-dir-stat__label">{{ 'humano.payslips.deductionRate' | translate }}</div>
           <div class="hum-dir-stat__value tabular-nums">
-            {{ r.totalGross ? ((r.totalDeductions / r.totalGross) * 100).toFixed(1) : 0 }}%
+            @if (r.totalGross !== null && r.totalDeductions !== null) {
+              {{ r.totalGross ? ((r.totalDeductions / r.totalGross) * 100).toFixed(1) : 0 }}%
+            } @else {
+              —
+            }
           </div>
           <div class="hum-meter" [style.--hum-accent]="'var(--indigo-300)'">
-            <span [style.width.%]="r.totalGross ? (r.totalDeductions / r.totalGross) * 100 : 0"></span>
+            <span [style.width.%]="r.totalGross && r.totalDeductions !== null ? (r.totalDeductions / r.totalGross) * 100 : 0"></span>
           </div>
         </div>
       </section>

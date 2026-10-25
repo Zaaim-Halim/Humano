@@ -48,6 +48,36 @@ export class MoneyPipe implements PipeTransform {
   }
 }
 
+type RunTotalField = 'totalGross' | 'totalDeductions' | 'totalNet' | 'totalEmployerCost';
+type RunCurrencyTotals = { currencyCode: string } & Record<RunTotalField, number | string>;
+
+/**
+ * A payroll run's total: `run | runMoney: 'totalNet'` → `€5,999.15`. When the run pays people in
+ * several currencies and has no single total, each currency's: `€5,999.15 · HUF 214,662.00`.
+ */
+@Pipe({ name: 'runMoney' })
+export class RunMoneyPipe implements PipeTransform {
+  private readonly company = inject(CompanyService);
+
+  transform(
+    run:
+      | ({ currencyCode: string | null; totalsByCurrency?: RunCurrencyTotals[] | null } & Record<RunTotalField, number | string | null>)
+      | null
+      | undefined,
+    field: RunTotalField,
+  ): string {
+    if (!run) {
+      return '—';
+    }
+    const single = run[field];
+    if (single !== null && single !== '') {
+      return formatter(run.currencyCode ?? this.company.profile()?.currencyCode ?? null, false).format(Number(single));
+    }
+    const parts = (run.totalsByCurrency ?? []).map(t => formatter(t.currencyCode, false).format(Number(t[field])));
+    return parts.length ? parts.join(' · ') : '—';
+  }
+}
+
 /**
  * Human label for a payroll period (`September 2026`) from its start date, or from a
  * `YYYY-MM-…` period code; falls back to the raw code.

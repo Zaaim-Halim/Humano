@@ -41,6 +41,7 @@
       "paidTo": "Paid to {{ count }} people",
       "vsPrevious": "vs {{ amount }} last run",
       "firstRun": "No previous run to compare",
+      "inCurrencies": "Paid in {{ count }} currencies, each totalled on its own",
       "fillInDetails": "Fill in their details",
       "ofGross": "{{ pct }}% of gross",
       "totalCost": "Total cost",

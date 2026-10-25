@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Response DTO for payroll run details.
+ * Response DTO for payroll run details. The single totals and {@code currencyCode} are null when the
+ * run's employees are paid in several currencies and it has no reporting currency; {@code
+ * totalsByCurrency} always holds one entry per currency.
  */
 public record PayrollRunResponse(
     UUID id,
@@ -25,6 +27,7 @@ public record PayrollRunResponse(
     BigDecimal totalNet,
     BigDecimal totalEmployerCost,
     String currencyCode,
+    List<PayrollCurrencyTotals> totalsByCurrency,
     OffsetDateTime approvedAt,
     String approvedBy,
     List<PayrollValidationError> validationErrors,

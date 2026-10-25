@@ -5665,6 +5665,11 @@ a.hum-heatmap__name:hover {
   font-size: var(--text-2xl);
 }
 
+/* A total per currency (a run paying people in several currencies). */
+.hum-dir-stat__value--multi {
+  font-size: var(--text-lg);
+}
+
 .hum-delta {
   display: inline-flex;
   align-items: center;
@@ -7736,6 +7741,14 @@ button.hum-records__empty:hover {
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--text-muted);
+}
+
+/* A total per currency, one per line (a run paying people in several currencies). */
+.hum-kpi__value--multi {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  font-size: var(--text-lg);
 }
 
 .hum-kpi__value.is-positive {
