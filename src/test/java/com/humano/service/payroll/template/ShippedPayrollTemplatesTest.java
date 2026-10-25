@@ -425,6 +425,11 @@ class ShippedPayrollTemplatesTest {
             .containsEntry("futaRate", "0.060")
             .containsEntry("futaMaximumCredit", "0.054")
             .containsEntry("futaWageBase", "7000");
+        // Pub 15 (2026) section 7: optional flat 22%; 37% on supplemental wages over $1 million.
+        assertThat(values)
+            .containsEntry("supplementalFlatRate", "0.22")
+            .containsEntry("mandatorySupplementalRate", "0.37")
+            .containsEntry("mandatorySupplementalThreshold", "1000000");
         // Pub 15-T (2026) Worksheet 1A lines 1g and 1k.
         assertThat(values)
             .containsEntry("standardAdjustmentMarried", "12900")

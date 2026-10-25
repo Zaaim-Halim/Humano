@@ -13,6 +13,16 @@ templates.
   decimals); the amount to withhold is rounded to the cent, or to the dollar when the employer sets
   `roundToWholeDollars` (Pub 15-T allows either, used consistently). The published tentative amounts
   (column C) are used as printed — the engine checks them against the brackets below them.
+- **Supplemental wages** (Pub 15 section 7, Reg. 31.3402(g)-1): the BONUS earnings paid with a period's
+  regular wages (overtime stays regular wages, which Pub 15 allows). Up to $1,000,000 a year they are
+  added to the regular wages (`supplementalWageMethod` AGGREGATE, the default) or, with FLAT_RATE,
+  withheld at 22% on their own line — only where income tax was withheld from regular wages before (a
+  posted run this year, or `incomeTaxWithheldBefore` for last year or before Humano); otherwise they are
+  aggregated, as Pub 15 requires. Supplemental wages over $1,000,000 in the year are withheld at 37%
+  whatever the method and the Form W-4, also for an employee exempt from withholding. The year's total is
+  the base of the `federalIncomeTaxSupplemental` line (recorded at 0 too) plus
+  `broughtForwardSupplementalWages`. Pre-tax deductions are shared between regular and supplemental
+  wages pro rata. A bonus without regular wages in the period is refused under the aggregate method.
 - **FICA** (Pub 15 section 9): 6.2% + 6.2% social security up to the $184,500 wage base, 1.45% + 1.45%
   Medicare, 0.9% Additional Medicare withheld on wages above $200,000 in the year.
 - **FUTA** (Pub 15 section 14): 0.6% (6.0% less the maximum 5.4% credit) on the first $7,000.
@@ -26,11 +36,12 @@ templates.
 
 ## Sources (retrieved 2026-10-20)
 
-| Id                | Document                                                        |
-| ----------------- | --------------------------------------------------------------- |
-| `irs-pub15t-2026` | Publication 15-T (2026), Federal Income Tax Withholding Methods |
-| `irs-pub15-2026`  | Publication 15 (2026), (Circular E) Employer's Tax Guide        |
-| `irs-fw4-2026`    | Form W-4 (2026), Employee's Withholding Certificate             |
+| Id                     | Document                                                               |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `irs-pub15t-2026`      | Publication 15-T (2026), Federal Income Tax Withholding Methods        |
+| `irs-pub15-2026`       | Publication 15 (2026), (Circular E) Employer's Tax Guide               |
+| `irs-fw4-2026`         | Form W-4 (2026), Employee's Withholding Certificate                    |
+| `treas-reg-31-3402g-1` | 26 CFR 31.3402(g)-1, Supplemental wage payments (retrieved 2026-10-25) |
 
 ## Verification
 
@@ -42,20 +53,27 @@ templates.
 - 28 of those rows and the Pub 15-T nonresident alien example ($31) are template test cases, run by
   the Java engine at startup and in CI; derived cases cover pre-tax deductions, credits, the wage
   bases, Additional Medicare, FUTA and mid-year adoption.
+- Supplemental wages: Pub 15 Example 3 (22% of a $1,000 bonus, $220) and derived cases for the aggregate
+  default, the fallback when nothing was withheld before, crossing $1,000,000 under both methods, an
+  exempt employee over $1,000,000, brought-forward supplemental wages, a nonresident alien and the
+  pro-rata pre-tax split. `build_template.py` checks the 22% and 37% sentences of Pub 15 and the
+  regulation's text on exempt status and deferral allocation.
 - `PayrollTemplatePayrollRunIT` runs January and February for a $120,000-a-month employee with a
   $1,000 401(k) deferral: the second month stops social security at $184,500, starts Additional
   Medicare at $200,000 and owes no more FUTA.
 
 ## Not supported
 
-Supplemental wage flat rates (22% optional / 37% mandatory over $1M — supplemental pay is withheld as
-regular wages), FICA/FUTA-exempt employment, tips, fringe benefits, group-term life over $50,000,
+Supplemental wages paid without regular wages under the aggregate method (method 1b with another
+period's wages), bonuses posted before version 2026.1.2 in the $1,000,000 total (enter them as brought
+forward), FICA/FUTA-exempt employment, tips, fringe benefits, group-term life over $50,000,
 third-party sick pay, FUTA credit reduction states (reconciled on Form 940), daily or quarterly pay.
 
 ## Rebuilding
 
 ```sh
-# p15t.pdf and p15.pdf from irs.gov/pub/irs-pdf/, converted with ../bg/pdftext.py to p15t.txt and p15.txt (same folder)
+# p15t.pdf and p15.pdf from irs.gov/pub/irs-pdf/, converted with ../bg/pdftext.py to p15t.txt and p15.txt (same folder),
+# and reg3402g1.html from https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-26?part=31&section=31.3402(g)-1
 python3 -I build_template.py /path/to/p15t.txt ../../../src/main/resources/payroll-templates/us/us-federal-employment.json
 npx prettier --write ../../../src/main/resources/payroll-templates/us/us-federal-employment.json
 ```

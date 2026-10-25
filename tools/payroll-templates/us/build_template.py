@@ -29,13 +29,18 @@ SOURCES = {
         "url": "https://www.irs.gov/pub/irs-pdf/p15t.pdf",
     },
     "irs-pub15-2026": {
-        "title": "IRS Publication 15 (2026), (Circular E) Employer's Tax Guide — section 9 (social security and Medicare: 6.2% to $184,500, 1.45%, Additional Medicare 0.9% over $200,000) and section 14 (FUTA 6.0% on $7,000, credit up to 5.4%)",
+        "title": "IRS Publication 15 (2026), (Circular E) Employer's Tax Guide — section 7 (supplemental wages: optional flat 22% if income tax was withheld from regular wages in the current or preceding calendar year, otherwise aggregate; mandatory 37% on supplemental wages over $1 million in the calendar year), section 9 (social security and Medicare: 6.2% to $184,500, 1.45%, Additional Medicare 0.9% over $200,000) and section 14 (FUTA 6.0% on $7,000, credit up to 5.4%)",
         "url": "https://www.irs.gov/pub/irs-pdf/p15.pdf",
     },
     "irs-notice-1392": {
         "title": "IRS Notice 1392 (Rev. January 2020), Supplemental Form W-4 Instructions for Nonresident Aliens — Step 1(c): 'Check the Single or Married filing separately box regardless of your actual marital status'; 'Do not claim that you are exempt from withholding'; PDF SHA-256 06f5a942f0497be9930d8ffc84d1ba9641cc21a56ffed60c0cccdf59a00ed61f",
         "url": "https://www.irs.gov/pub/irs-pdf/n1392.pdf",
         "retrieved": "2026-10-24",
+    },
+    "treas-reg-31-3402g-1": {
+        "title": "26 CFR 31.3402(g)-1, Supplemental wage payments — (a)(2) mandatory flat rate withholding on the excess over $1,000,000 without regard to any entries on Form W-4, including exempt status; (a)(4)(ii) salary reduction deferrals allocated to the type of compensation they reduce; (a)(7) optional flat rate withholding, without regard to Form W-4 entries other than exempt status",
+        "url": "https://www.ecfr.gov/current/title-26/part-31/section-31.3402(g)-1",
+        "retrieved": "2026-10-25",
     },
     "irs-fw4-2026": {
         "title": "IRS Form W-4 (2026), Employee's Withholding Certificate — steps 1(c), 2(c), 3, 4(a)-(c) and exemption from withholding",
@@ -47,6 +52,7 @@ for s in SOURCES.values():
 
 STATUSES = {"SINGLE": "SINGLE", "MARRIED_FILING_JOINTLY": "MFJ", "HEAD_OF_HOUSEHOLD": "HOH"}
 # Worksheet 1A line 1g (no Step 2 checkbox), line 1k (2019 or earlier Forms W-4, per allowance).
+FLAT_RATE, MANDATORY_RATE, MANDATORY_THRESHOLD = D("0.22"), D("0.37"), D("1000000")
 LINE_1G = {"MARRIED_FILING_JOINTLY": D("12900"), "SINGLE": D("8600"), "HEAD_OF_HOUSEHOLD": D("8600")}
 ALLOWANCE = D("4300")
 # Nonresident alien adjustment per payroll period: Table 1 (first paid before 2020, no 2020+ W-4), Table 2.
@@ -88,7 +94,24 @@ def check_pub15(text):
     for needle in ["the social security tax rate is 6.2%", "The social security wage base limit is $184,500",
                    "tax rate for Medicare is 1.45%", "0.9% Additional Medicare T ax from wages you pay to an employee in excess of $200,000",
                    "For 2026, the FUTA tax rate is 6.0%", "credit may be as much as 5.4% of FUTA taxable wages",
-                   "single FUTA tax wage base limit ($7,000 for 2026)"]:
+                   "single FUTA tax wage base limit ($7,000 for 2026)",
+                   "the excess is sub- ject to withholding at 37% (or the highest rate of income tax for the year). Withhold using the 37% rate without re- gard to the employee’s Form W -4.",
+                   "If you withheld income tax from an employee’s regular wages in the current or immediately preceding calen- dar year, you can use one of the following methods for the supplemental wages. a. Withhold a flat 22%",
+                   "If you didn’t withhold income tax from the employee’s regular wages in the current or immediately preceding calendar year, use method 1b.",
+                   "Regardless of the method you use to withhold income tax on supplemental wages, they’re subject to social security, Medicare, and FUTA taxes."]:
+        assert needle in flat, needle
+
+
+def check_regulation(path):
+    """26 CFR 31.3402(g)-1 as served by the eCFR renderer API (HTML)."""
+    import html
+    import re
+    flat = " ".join(html.unescape(re.sub(r"<[^>]+>", " ", open(path, encoding="utf-8").read())).split())
+    for needle in ["If a supplemental wage payment, when added to all supplemental wage payments previously made by one employer",
+                   "to an employee during the calendar year, exceeds $1,000,000, the rate used in determining the amount of withholding on the excess",
+                   "including whether the employee has claimed exempt status on Form W-4 or whether the employee has requested additional withholding on Form W-4",
+                   "without regard to any entries on the Form W-4 other than the entry claiming exempt status on Form W-4",
+                   "employers must allocate such salary reduction deferral amounts to the type of compensation"]:
         assert needle in flat, needle
 
 
@@ -140,10 +163,22 @@ def expected_lines(schedules, c):
     ytd = {k: D(v) for k, v in c.get("ytd", {}).items()}
     bf = emp.get("broughtForwardYear") == "2026"
     lines = []
-    fit = federal_income_tax(schedules, c["frequency"], max(gross - retirement - insurance, D(0)), emp,
+    # Supplemental wages (Pub 15 section 7): the BONUS earnings, their share of the pre-tax deductions taken pro rata.
+    wages = max(gross - retirement - insurance, D(0))
+    bonus = D(c.get("earningsByComponent", {}).get("BONUS", "0"))
+    supplemental = min(cents(max(bonus, D(0)) * wages / gross), wages) if gross > 0 else D(0)
+    so_far = ytd.get("federalIncomeTaxSupplemental.TAX.base", D(0)) + (D(emp.get("broughtForwardSupplementalWages", "0")) if bf else 0)
+    under = min(supplemental, max(MANDATORY_THRESHOLD - so_far, D(0)))
+    flat = er.get("supplementalWageMethod") == "FLAT_RATE" and (
+        ytd.get("federalIncomeTax.TAX.amount", D(0)) > 0 or emp.get("incomeTaxWithheldBefore") == "true")
+    fit = federal_income_tax(schedules, c["frequency"], wages - supplemental + (D(0) if flat else under), emp,
                              er.get("roundToWholeDollars") == "true")
     if fit:
         lines.append({"step": "federalIncomeTax", "side": "TAX", "amount": str(fit)})
+    if bonus != 0:
+        optional = under * FLAT_RATE if flat and emp.get("exemptFromWithholding") != "true" else D(0)
+        lines.append({"step": "federalIncomeTaxSupplemental", "side": "TAX", "amount": str(cents(optional + (supplemental - under) * MANDATORY_RATE)),
+                      "keep": True})
     fica = max(gross - insurance, D(0))
     ss_ytd = ytd.get("socialSecurity.EMPLOYEE.base", D(0)) + (D(emp.get("broughtForwardSocialSecurityWages", "0")) if bf else 0)
     ss_wages = min(fica, max(SS_BASE - ss_ytd, D(0)))
@@ -159,7 +194,7 @@ def expected_lines(schedules, c):
     futa_wages = min(fica, max(FUTA_BASE - futa_ytd, D(0)))
     if futa_wages > 0 and er.get("futaExempt") != "true":
         lines.append({"step": "futa", "side": "EMPLOYER", "amount": str(cents(futa_wages * (FUTA_RATE - FUTA_CREDIT)))})
-    return [l for l in lines if D(l["amount"]) != 0]
+    return [{k: v for k, v in l.items() if k != "keep"} for l in lines if D(l["amount"]) != 0 or l.get("keep")]
 
 
 def check_wage_brackets(schedules, rows):
@@ -237,6 +272,64 @@ def official_cases(rows):
     return out
 
 
+MAY = ("2026-05-01", "2026-05-31", "2026-05-29")
+SINCE = "2020-01-01"
+
+
+def ytd_may(fit="260.00", supplemental=None, **extra):
+    """Four earlier posted months this year (social security, Medicare and FUTA bases left to the case)."""
+    y = {"medicare.EMPLOYEE.periods": "4", "federalIncomeTax.TAX.amount": fit}
+    if supplemental is not None:
+        y["federalIncomeTaxSupplemental.TAX.base"] = supplemental
+    y.update(extra)
+    return y
+
+
+def supplemental_cases(derived, single):
+    """Pub 15 section 7: bonus (BONUS earnings) with the regular wages of the period."""
+    flat = {"supplementalWageMethod": "FLAT_RATE"}
+    pay = lambda salary, bonus: {"earningsByComponent": {"BASIC": salary, "BONUS": bonus}}
+    big = {"socialSecurity.EMPLOYEE.base": "184500.00", "medicare.EMPLOYEE.base": "900000.00", "futa.EMPLOYER.base": "7000.00"}
+    return [
+        case("Pub 15 example 3: bonus at the 22% flat rate", "IRS Pub 15 (2026) section 7, Example 3: 22% of Sharon's $1,000 bonus, $220 "
+             "(regular wages by the percentage method; Example 2's 2026 Form W-4, single, no steps 2-4)", "MONTHLY", "3000.00", single, flat,
+             period=MAY, ytd=ytd_may(), employmentStartDate=SINCE, **pay("2000.00", "1000.00")),
+        case("bonus aggregated with regular wages (default)", derived + "; Pub 15 section 7 method 1b: the total withheld as a single "
+             "payment for a regular payroll period", "MONTHLY", "3000.00", single, period=MAY, ytd=ytd_may(), employmentStartDate=SINCE,
+             **pay("2000.00", "1000.00")),
+        case("flat rate elected but no income tax withheld before: aggregated", derived + "; Pub 15 section 7 rule 2: without "
+             "withholding from regular wages this year or last, use method 1b", "MONTHLY", "3000.00", single, flat, period=MAY,
+             ytd=ytd_may(fit="0"), employmentStartDate=SINCE, **pay("2000.00", "1000.00")),
+        case("flat rate in January for an employee withheld from last year", derived, "MONTHLY", "9000.00",
+             {"filingStatus": "SINGLE", "incomeTaxWithheldBefore": "true"}, flat, period=("2026-01-01", "2026-01-31", "2026-01-30"),
+             employmentStartDate=SINCE, **pay("6000.00", "3000.00")),
+        case("bonus crossing $1,000,000 of supplemental wages, flat rate", derived + "; Reg. 31.3402(g)-1(a)(4)(iv): 37% only on the part "
+             "over $1,000,000 ($100,000 at 22% + $200,000 at 37%)", "MONTHLY", "320000.00", single, flat, period=MAY,
+             ytd=ytd_may(fit="20000.00", supplemental="900000.00", **big), employmentStartDate=SINCE, **pay("20000.00", "300000.00")),
+        case("bonus crossing $1,000,000 of supplemental wages, aggregated", derived + "; the $100,000 under the threshold is aggregated, "
+             "the $200,000 over it withheld at 37%", "MONTHLY", "320000.00", single, period=MAY,
+             ytd=ytd_may(fit="20000.00", supplemental="900000.00", **big), employmentStartDate=SINCE, **pay("20000.00", "300000.00")),
+        case("supplemental wages over $1,000,000 for an employee exempt from withholding", derived + "; Reg. 31.3402(g)-1(a)(2): the 37% "
+             "applies without regard to any entries on Form W-4, including exempt status", "MONTHLY", "520000.00",
+             {"filingStatus": "SINGLE", "exemptFromWithholding": "true"}, flat, period=MAY,
+             ytd=ytd_may(fit="0", supplemental="1200000.00", **big), employmentStartDate=SINCE, **pay("20000.00", "500000.00")),
+        case("supplemental wages brought forward count toward $1,000,000", derived, "MONTHLY", "250000.00",
+             {"filingStatus": "SINGLE", "broughtForwardYear": "2026", "broughtForwardSocialSecurityWages": "184500.00",
+              "broughtForwardMedicareWages": "950000.00", "broughtForwardFutaWages": "7000.00", "broughtForwardSupplementalWages": "850000.00"},
+             period=("2026-10-01", "2026-10-31", "2026-10-30"), employmentStartDate=SINCE, **pay("25000.00", "225000.00")),
+        case("nonresident alien: the Table 2 addition applies to regular wages only under the flat rate", derived + "; Pub 15-T: the "
+             "nonresident alien procedure doesn't apply if the 22% optional flat rate is used", "BIWEEKLY", "4400.00",
+             {"filingStatus": "SINGLE", "nonresidentAlien": "true"}, flat, period=("2026-05-04", "2026-05-17", "2026-05-22"),
+             ytd=ytd_may(), employmentStartDate=SINCE, **pay("2400.00", "2000.00")),
+        case("pre-tax deductions shared pro rata between regular and supplemental wages", derived + "; Reg. 31.3402(g)-1(a)(4)(ii) "
+             "allocation, pro rata here", "MONTHLY", "7500.00", single, flat, period=MAY, ytd=ytd_may(), employmentStartDate=SINCE,
+             preTaxDeductionsByType={"RETIREMENT": "600.00", "INSURANCE": "150.00"}, **pay("5000.00", "2500.00")),
+        case("flat rate and Form W-4 extra withholding: extra withholding stays with regular wages", derived, "MONTHLY", "6000.00",
+             {"filingStatus": "MARRIED_FILING_JOINTLY", "extraWithholding": "50.00", "dependentsAmount": "2200"}, dict(flat, roundToWholeDollars="true"),
+             period=MAY, ytd=ytd_may(), employmentStartDate=SINCE, **pay("4500.00", "1500.00")),
+    ]
+
+
 def test_cases(rows):
     derived = "Derived from Pub 15-T Worksheet 1A and Pub 15 by build_template.py expected_lines()"
     single = {"filingStatus": "SINGLE"}
@@ -282,7 +375,7 @@ def test_cases(rows):
              period=("2026-10-01", "2026-10-31", "2026-10-30"), employmentStartDate="2026-10-05"),
         case("first payroll of the year", derived, "BIWEEKLY", "3000.00", single,
              period=("2025-12-22", "2026-01-04", "2026-01-09"), employmentStartDate="2018-01-01"),
-    ]
+    ] + supplemental_cases(derived, single)
     for c in cases:
         c["expectLines"] = expected_lines(SCHEDULES, c)
     errors = [
@@ -302,6 +395,9 @@ def test_cases(rows):
              "MONTHLY", "5000.00", {"filingStatus": "MARRIED_FILING_JOINTLY", "nonresidentAlien": "true"}, expectError="Notice 1392"),
         case("nonresident alien claiming exemption is refused", "IRS Notice 1392: do not claim that you are exempt from withholding",
              "MONTHLY", "5000.00", {"filingStatus": "SINGLE", "nonresidentAlien": "true", "exemptFromWithholding": "true"}, expectError="exemption"),
+        case("a bonus without regular wages is refused under the aggregate method", "Pub 15 section 7, method 1b: aggregate with the current or preceding period's regular wages",
+             "MONTHLY", "1000.00", single, period=MAY, earningsByComponent={"BONUS": "1000.00"}, ytd=ytd_may(), employmentStartDate=SINCE,
+             expectError="without regular wages"),
         case("2027 is not covered", "2027 tables are published in December 2026", "MONTHLY", "5000.00", single,
              period=("2027-01-01", "2027-01-31", "2027-01-29"), expectError="a newer template version is needed"),
     ]
@@ -322,6 +418,7 @@ def main():
     text = open(sys.argv[1], encoding="utf-8").read()
     pub15 = os.path.join(os.path.dirname(sys.argv[1]), "p15.txt")
     check_pub15(open(pub15, encoding="utf-8").read())
+    check_regulation(os.path.join(os.path.dirname(sys.argv[1]), "reg3402g1.html"))
     SCHEDULES = pub15t.annual_schedules(text)
     check_publication(text, SCHEDULES)
     rows = pub15t.wage_brackets(text)
@@ -342,7 +439,7 @@ def main():
         "schemaVersion": 1,
         "id": "us-federal-employment",
         "name": "United States — federal income tax withholding, FICA and FUTA",
-        "version": "2026.1.1",
+        "version": "2026.1.2",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "US"},
         "validity": {"from": FROM, "to": TO},
@@ -351,7 +448,9 @@ def main():
         "taxYearStart": "--01-01",
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
-        "changelog": [{"version": "2026.1.1", "date": "2026-10-24",
+        "changelog": [{"version": "2026.1.2", "date": "2026-10-25",
+                       "summary": "Supplemental wages (BONUS earnings): the mandatory 37% rate on supplemental wages over $1,000,000 in the calendar year, applied regardless of Form W-4, and an employer option to withhold the flat 22% instead of aggregating with regular wages (Pub 15 section 7). Before, all supplemental wages were aggregated, also above $1,000,000."},
+                      {"version": "2026.1.1", "date": "2026-10-24",
                        "summary": "Corrects silent errors: a nonresident alien marked married filing jointly or head of household, or claiming exemption from withholding, is now refused (IRS Notice 1392) instead of being under-withheld."},
                       {"version": "2026.1.0", "date": RETRIEVED,
                        "summary": "Wages paid in 2026: Pub 15-T percentage method for automated payroll systems (2020 or later and 2019 or earlier Forms W-4, nonresident alien adjustment); social security, Medicare, Additional Medicare and FUTA per Pub 15."}],
@@ -360,6 +459,8 @@ def main():
             "employer": [
                 {"key": "roundToWholeDollars", "type": "BOOLEAN", "required": False, "defaultValue": "false",
                  "description": "Round federal income tax withholding to the nearest dollar (Pub 15-T allows it if used consistently)"},
+                {"key": "supplementalWageMethod", "type": "ENUM", "required": False, "values": ["AGGREGATE", "FLAT_RATE"], "defaultValue": "AGGREGATE",
+                 "description": "Income tax on supplemental wages (BONUS earnings) up to $1,000,000 a year: AGGREGATE adds them to the period's regular wages; FLAT_RATE withholds 22% where income tax was withheld from the employee's regular wages this year or last, and aggregates otherwise (Pub 15 section 7)"},
                 {"key": "futaExempt", "type": "BOOLEAN", "required": False, "defaultValue": "false",
                  "description": "The employer is exempt from FUTA (e.g. a 501(c)(3) organization or a government employer)"},
             ],
@@ -384,6 +485,10 @@ def main():
                  "description": "The employee claimed exemption from withholding on a Form W-4 valid for 2026"},
                 {"key": "nonresidentAlien", "type": "BOOLEAN", "required": False, "defaultValue": "false",
                  "description": "Nonresident alien employee (Pub 15-T Tables 1 and 2 are added to wages for income tax withholding only)"},
+                {"key": "incomeTaxWithheldBefore", "type": "BOOLEAN", "required": False, "defaultValue": "false",
+                 "description": "Income tax was withheld from this employee's regular wages last year, or this year before Humano: allows the 22% flat rate on supplemental wages before any withholding is posted in Humano this year"},
+                {"key": "broughtForwardSupplementalWages", "type": "DECIMAL", "required": False, "min": 0,
+                 "description": "Supplemental wages paid this year before Humano, including by businesses under common control (counts toward the $1,000,000 for the mandatory 37% rate)"},
                 {"key": "broughtForwardYear", "type": "INTEGER", "required": False, "min": 2000, "max": 2100,
                  "description": "Calendar year the brought-forward wages belong to; other years' figures are ignored"},
                 {"key": "broughtForwardSocialSecurityWages", "type": "DECIMAL", "required": False, "min": 0,
@@ -406,6 +511,9 @@ def main():
             "futaRate": p(str(FUTA_RATE), "irs-pub15-2026"),
             "futaMaximumCredit": p(str(FUTA_CREDIT), "irs-pub15-2026"),
             "futaWageBase": p(str(FUTA_BASE), "irs-pub15-2026"),
+            "supplementalFlatRate": p(str(FLAT_RATE), "irs-pub15-2026"),
+            "mandatorySupplementalRate": p(str(MANDATORY_RATE), "irs-pub15-2026"),
+            "mandatorySupplementalThreshold": p(str(MANDATORY_THRESHOLD), "irs-pub15-2026"),
         },
         "tables": {
             "annualWithholding": {
@@ -447,9 +555,25 @@ def main():
              "message": "No earlier payroll this year is recorded for this employee, who was employed before this period: set broughtForwardYear and the social security, Medicare and FUTA wages already paid this year (0 if none) so the wage bases and the Additional Medicare threshold apply correctly"},
             # Federal income tax: Pub 15-T Worksheet 1A.
             {"id": "incomeTaxWages", "type": "VALUE", "expr": fit_wages},
+            # Supplemental wages (Pub 15 section 7): the BONUS earnings, with their pro-rata share of the pre-tax deductions.
+            {"id": "supplementalWages", "type": "VALUE",
+             "expr": "#taxableEarnings - #reductions > 0 ? #min(#divide(#pos(#taxableEarningsByComponent['BONUS']) * #incomeTaxWages, #taxableEarnings - #reductions, 2, 'HALF_UP'), #incomeTaxWages) : 0"},
+            {"id": "supplementalWagesToDate", "type": "VALUE",
+             "expr": "#ytd.base('federalIncomeTaxSupplemental', 'TAX') + (" + bf.format("broughtForwardSupplementalWages") + ")"},
+            {"id": "supplementalUpToThreshold", "type": "VALUE",
+             "expr": "#min(#supplementalWages, #pos(#p['mandatorySupplementalThreshold'] - #supplementalWagesToDate))"},
+            {"id": "flatRateSupplemental", "type": "VALUE",
+             "expr": "#employer['supplementalWageMethod'] == 'FLAT_RATE' and (#ytd.amount('federalIncomeTax', 'TAX') > 0 or #employee['incomeTaxWithheldBefore'])"},
+            {"id": "regularWages", "type": "VALUE", "expr": "#incomeTaxWages - #supplementalWages"},
+            {"id": "supplementalWithRegularWages", "type": "REQUIRE", "source": "irs-pub15-2026",
+             "when": "!#flatRateSupplemental and !#employee['exemptFromWithholding'] and #supplementalUpToThreshold > 0",
+             "condition": "#regularWages > 0",
+             "message": "Supplemental wages without regular wages in the same period are aggregated with another period's regular wages (Pub 15 section 7, method 1b), which this template does not support: pay the bonus with a period's regular wages, or use supplementalWageMethod FLAT_RATE"},
+            {"id": "withholdingWages", "type": "VALUE",
+             "expr": "#flatRateSupplemental ? #regularWages : #regularWages + #supplementalUpToThreshold"},
             {"id": "nonresidentAddition", "type": "VALUE", "when": "#employee['nonresidentAlien']",
              "expr": f"#table.lookup('nonresidentAlienAddition', #frequency, #employee['w4Version'])"},
-            {"id": "annualWages", "type": "VALUE", "expr": "(#incomeTaxWages + #nonresidentAddition) * #periodsPerYear"},
+            {"id": "annualWages", "type": "VALUE", "expr": "(#withholdingWages + #nonresidentAddition) * #periodsPerYear"},
             {"id": "adjustedAnnualWages", "type": "VALUE",
              "expr": f"{modern} ? #pos(#annualWages + #employee['otherIncome'] - #employee['deductions'] - (#employee['multipleJobs'] ? 0 : "
                      f"(#employee['filingStatus'] == 'MARRIED_FILING_JOINTLY' ? #p['standardAdjustmentMarried'] : #p['standardAdjustmentOther'])))"
@@ -461,8 +585,14 @@ def main():
             {"id": "withholding", "type": "VALUE",
              "expr": "#pos(#tentativeWithholding - #creditsPerPeriod) + #employee['extraWithholding']"},
             {"id": "federalIncomeTax", "type": "TAX", "label": "Federal income tax", "ledger": "INCOME_TAX", "source": "irs-pub15t-2026",
-             "when": "!#employee['exemptFromWithholding']", "base": "#incomeTaxWages",
+             "when": "!#employee['exemptFromWithholding']", "base": "#withholdingWages",
              "amount": "#employer['roundToWholeDollars'] ? #round(#withholding, 0, 'HALF_UP') : #withholding"},
+            # Over $1,000,000 a year: 37% regardless of Form W-4, also for an employee exempt from withholding (Reg. 31.3402(g)-1(a)(2)).
+            # The line is recorded at 0 too: its base is the year's supplemental wages.
+            {"id": "federalIncomeTaxSupplemental", "type": "TAX", "label": "Federal income tax (supplemental wages)", "ledger": "INCOME_TAX",
+             "source": "irs-pub15-2026", "when": "#earningsByComponent['BONUS'] != 0", "base": "#supplementalWages", "recordZero": True,
+             "amount": "#round((#flatRateSupplemental and !#employee['exemptFromWithholding'] ? #supplementalUpToThreshold * #p['supplementalFlatRate'] : 0)"
+                       " + (#supplementalWages - #supplementalUpToThreshold) * #p['mandatorySupplementalRate'], 2, 'HALF_UP')"},
             # FICA: Pub 15 section 9. Section 125 deductions are excluded from FICA and FUTA wages; 401(k) deferrals are not.
             {"id": "ficaWages", "type": "VALUE", "expr": fica_wages},
             {"id": "socialSecurityWagesToDate", "type": "VALUE",
@@ -487,7 +617,8 @@ def main():
         ],
         "limitations": [
             "Federal only: state and local income taxes, state unemployment (SUTA) and state disability insurance are separate templates.",
-            "Weekly, biweekly, semimonthly and monthly pay; supplemental wages are withheld as regular wages (aggregate), so the optional 22% flat rate and the mandatory 37% rate on supplemental wages over $1,000,000 are not applied.",
+            "Weekly, biweekly, semimonthly and monthly pay.",
+            "Supplemental wages are the BONUS earnings paid with a period's regular wages; overtime is treated as regular wages, which Pub 15 allows. Up to $1,000,000 a year they are aggregated with the period's regular wages, or withheld at 22% if the employer chose FLAT_RATE and income tax was withheld from the employee's regular wages earlier this year in Humano or the employee is marked incomeTaxWithheldBefore (otherwise aggregated, as Pub 15 requires); the current period's own regular withholding is not counted. Above $1,000,000 a year: 37%, also for employees exempt from withholding. Pre-tax deductions are shared between regular and supplemental wages pro rata. Supplemental wages without regular wages in the period are refused unless FLAT_RATE applies. Bonuses posted with version 2026.1.1 or earlier recorded no supplemental wages: enter them as broughtForwardSupplementalWages if the year's total could pass $1,000,000.",
             "Pre-tax deductions: RETIREMENT is treated as 401(k)/403(b)/457(b) elective deferrals (reduce income tax wages only) and INSURANCE as section 125 cafeteria plan deductions (reduce income tax, FICA and FUTA wages); other pre-tax types are refused.",
             "FICA- or FUTA-exempt employment (e.g. F-1/J-1 students, family employees, some religious and government employment) is not modelled.",
             "FUTA is accrued at 0.6% (6.0% less the maximum 5.4% credit); credit reductions for a state (announced in November) and late state payments are reconciled on Form 940.",
