@@ -44,7 +44,10 @@ export interface PayrollRun {
   totalsByCurrency: PayrollCurrencyTotals[];
   approvedAt: string | null;
   approvedBy: string | null;
+  /** The employees the latest calculation could not pay (empty in the run list). */
   validationErrors: PayrollValidationError[];
+  /** Why the run was approved without `validationErrors`; null otherwise. */
+  issueOverrideReason: string | null;
   createdAt: string | null;
   createdBy: string | null;
 }
@@ -63,6 +66,9 @@ export interface ApprovePayrollRunRequest {
   approverId: string;
   approvalNotes?: string;
   forceApproval?: boolean;
+  /** Required, with a reason, when the run has `validationErrors`: those employees are not paid by it. */
+  approveDespiteIssues?: boolean;
+  issueOverrideReason?: string;
 }
 
 export interface RecalculatePayrollRequest {

@@ -10,6 +10,7 @@ import com.humano.domain.payroll.PayrollPeriod;
 import com.humano.dto.payroll.response.PayrollPeriodResponse;
 import com.humano.repository.payroll.PayrollCalendarRepository;
 import com.humano.repository.payroll.PayrollPeriodRepository;
+import com.humano.repository.payroll.PayrollRunRepository;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -39,6 +40,9 @@ class PayrollCalendarUpcomingPeriodsTest {
 
     @Mock
     private PayrollPeriodRepository periodRepository;
+
+    @Mock
+    private PayrollRunRepository runRepository;
 
     @InjectMocks
     private PayrollCalendarService service;

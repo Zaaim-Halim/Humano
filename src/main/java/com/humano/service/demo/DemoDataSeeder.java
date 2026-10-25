@@ -2333,8 +2333,18 @@ public class DemoDataSeeder {
         if (status == RunStatus.CALCULATED) {
             Seeded approver = byKey.get("payroll.admin");
             UUID approverId = approver != null ? approver.id() : null;
+            // Fail-soft as above: employees the run could not pay (logged) don't stop the demo's history.
             status = payrollProcessingService
-                .approvePayrollRun(new ApprovePayrollRunRequest(runId, approverId, "Reviewed against last month's variance report.", false))
+                .approvePayrollRun(
+                    new ApprovePayrollRunRequest(
+                        runId,
+                        approverId,
+                        "Reviewed against last month's variance report.",
+                        false,
+                        true,
+                        "Demo data: employees the sample payroll could not calculate are left out."
+                    )
+                )
                 .status();
         }
         if (status == RunStatus.APPROVED) {

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { MoneyPipe, PayPeriodPipe } from 'app/shared/util/format.pipes';
-import { DecimalPipe } from '@angular/common';
+import { MoneyPipe, PayPeriodPipe, PluralPipe } from 'app/shared/util/format.pipes';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -14,19 +14,22 @@ import { CurrentEmployeeService } from 'app/features/employee';
 import {
   AlertComponent,
   ButtonComponent,
+  CheckboxComponent,
   DialogComponent,
   EmptyStateComponent,
+  FormFieldComponent,
   PageHeaderComponent,
   SkeletonRowComponent,
   AvatarComponent,
   InputComponent,
   SelectComponent,
   StepperComponent,
+  TextareaComponent,
   ToastService,
 } from 'app/shared/ui';
 import { stripHtml } from 'app/shared/util/strip-html';
 
-import { ComponentTotal, PayrollResult, PayrollRun, PayrollRunService, PayrollRunSummary, RunStatus } from '../index';
+import { ComponentTotal, PayrollPeriodService, PayrollResult, PayrollRun, PayrollRunService, PayrollRunSummary, RunStatus } from '../index';
 
 const STEP_ORDER: RunStatus[] = [RunStatus.DRAFT, RunStatus.CALCULATED, RunStatus.APPROVED, RunStatus.POSTED];
 
@@ -62,6 +65,9 @@ function maxByCurrency<T extends { currencyCode: string | null }>(list: T[], val
     RouterLink,
     FormsModule,
     DecimalPipe,
+    DatePipe,
+    PluralPipe,
+    FormFieldComponent,
     LucideAngularModule,
     AvatarComponent,
     InputComponent,
@@ -73,6 +79,8 @@ function maxByCurrency<T extends { currencyCode: string | null }>(list: T[], val
     StepperComponent,
     ButtonComponent,
     DialogComponent,
+    CheckboxComponent,
+    TextareaComponent,
     AlertComponent,
     EmptyStateComponent,
     SkeletonRowComponent,
@@ -85,8 +93,11 @@ export default class PayrollRunComponent {
 
   /** Who may fill in employees' payroll template details (and so follow a refused employee's link). */
   protected readonly canEditTemplateDetails = inject(AccountService).hasPermission(Permission.MANAGE_TAX_BRACKETS);
+  /** Who may move the period's payment date (the payroll-calendar endpoint). */
+  private readonly canConfigureCalendar = inject(AccountService).hasPermission(Permission.CONFIGURE_PAYROLL_CALENDAR);
 
   private readonly runService = inject(PayrollRunService);
+  private readonly periodService = inject(PayrollPeriodService);
   private readonly currentEmployee = inject(CurrentEmployeeService);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
@@ -97,6 +108,28 @@ export default class PayrollRunComponent {
   protected readonly run = signal<PayrollRun | null>(null);
   protected readonly busy = signal(false);
   protected readonly confirm = signal<'approve' | 'post' | null>(null);
+
+  /** Employees the latest calculation could not pay: approving leaves them unpaid, so it takes an override and a reason. */
+  protected readonly issueCount = computed(() => this.run()?.validationErrors.length ?? 0);
+  protected readonly approveDespiteIssues = signal(false);
+  protected readonly overrideReason = signal('');
+  protected readonly canConfirm = computed(
+    () => this.confirm() !== 'approve' || this.issueCount() === 0 || (this.approveDespiteIssues() && this.overrideReason().trim() !== ''),
+  );
+
+  /** The payment date can move until the run is approved; a calculated run then needs recalculating. */
+  protected readonly canChangePayDate = computed(() => {
+    const status = this.run()?.status;
+    return this.canConfigureCalendar && (status === RunStatus.DRAFT || status === RunStatus.CALCULATED);
+  });
+  protected readonly editingPayDate = signal(false);
+  protected readonly payDateDraft = signal('');
+  /** Paid in a later year than the period ends: templates that tax by payment date apply that year's rules. */
+  protected readonly payYear = computed(() => {
+    const pay = this.run()?.paymentDate?.slice(0, 4);
+    const end = this.run()?.periodEnd?.slice(0, 4);
+    return pay && end && pay !== end ? pay : null;
+  });
 
   protected readonly steps = computed(() => [
     this.translate.instant('humano.payrollRun.stepDraft'),
@@ -197,11 +230,7 @@ export default class PayrollRunComponent {
   }
 
   protected load(id: string): void {
-    this.runService.find(id).subscribe({
-      // Keep validation errors from the last action: the GET does not carry them.
-      next: run =>
-        this.run.update(prev => ({ ...run, validationErrors: prev?.id === run.id ? prev.validationErrors : run.validationErrors })),
-    });
+    this.runService.find(id).subscribe({ next: run => this.run.set(run) });
     this.summary.set({ data: null, loading: true, error: null });
     this.runService.summary(id).subscribe({
       next: data => this.summary.set({ data, loading: false, error: null }),
@@ -236,6 +265,40 @@ export default class PayrollRunComponent {
     });
   }
 
+  protected openApprove(): void {
+    this.approveDespiteIssues.set(false);
+    this.overrideReason.set('');
+    this.confirm.set('approve');
+  }
+
+  protected editPayDate(): void {
+    this.payDateDraft.set(this.run()?.paymentDate ?? '');
+    this.editingPayDate.set(true);
+  }
+
+  protected savePayDate(): void {
+    const run = this.run();
+    const date = this.payDateDraft();
+    if (!run || !date) return;
+    this.busy.set(true);
+    this.periodService.updatePaymentDate(run.periodId, date).subscribe({
+      next: () => {
+        this.toast.success(
+          this.translate.instant(
+            run.status === RunStatus.CALCULATED ? 'humano.payrollRun.payDateSavedRecalculate' : 'humano.payrollRun.payDateSaved',
+          ),
+        );
+        this.editingPayDate.set(false);
+        this.busy.set(false);
+        this.load(this.id());
+      },
+      error: (err: unknown) => {
+        this.toast.danger(normalizeHttpError(err));
+        this.busy.set(false);
+      },
+    });
+  }
+
   protected confirmAction(): void {
     const kind = this.confirm();
     if (kind === 'approve') {
@@ -245,7 +308,8 @@ export default class PayrollRunComponent {
         this.confirm.set(null);
         return;
       }
-      this.act(this.runService.approve(this.id(), { payrollRunId: this.id(), approverId }), 'humano.payrollRun.approved');
+      const override = this.issueCount() > 0 ? { approveDespiteIssues: true, issueOverrideReason: this.overrideReason().trim() } : {};
+      this.act(this.runService.approve(this.id(), { payrollRunId: this.id(), approverId, ...override }), 'humano.payrollRun.approved');
     } else if (kind === 'post') {
       this.act(this.runService.postRun(this.id()), 'humano.payrollRun.posted');
     }

@@ -171,6 +171,10 @@ public class PayrollProcessingService {
     /** Runs each employee's calculation in its own tenant {@code REQUIRES_NEW} transaction. */
     private final PayrollEmployeeTransactionExecutor employeeTransactionExecutor;
 
+    /** The employees a run's latest calculation could not pay; they block approval. */
+    private final PayrollRunIssueRepository payrollRunIssueRepository;
+    private final PayslipRepository payslipRepository;
+
     /** P3.4: maximum days a fallback rate may lag the payment date before the per-employee
      *  calculation fails with a {@code BusinessRuleViolationException}. */
     @org.springframework.beans.factory.annotation.Value("${humano.payroll.max-exchange-rate-staleness-days:7}")
@@ -204,8 +208,12 @@ public class PayrollProcessingService {
         PayrollEmployeeTransactionExecutor employeeTransactionExecutor,
         EmployeeRoleHistory roleHistory,
         PayrollTemplateService payrollTemplateService,
-        PayrollTemplateEngine payrollTemplateEngine
+        PayrollTemplateEngine payrollTemplateEngine,
+        PayrollRunIssueRepository payrollRunIssueRepository,
+        PayslipRepository payslipRepository
     ) {
+        this.payrollRunIssueRepository = payrollRunIssueRepository;
+        this.payslipRepository = payslipRepository;
         this.roleHistory = roleHistory;
         this.payrollTemplateService = payrollTemplateService;
         this.payrollTemplateEngine = payrollTemplateEngine;
@@ -312,7 +320,7 @@ public class PayrollProcessingService {
                 existing.getStatus(),
                 hash
             );
-            return toRunResponse(existing, Collections.emptyList());
+            return toRunResponse(existing);
         }
 
         // Period-DRAFT guard (separate concern, preserved). Catches a DRAFT for a
@@ -364,7 +372,7 @@ public class PayrollProcessingService {
             run.getReportingCurrency() == null ? "<native-only>" : run.getReportingCurrency().getCode().name()
         );
 
-        return toRunResponse(run, Collections.emptyList());
+        return toRunResponse(run);
     }
 
     /**
@@ -413,6 +421,7 @@ public class PayrollProcessingService {
         Map<PayComponentCode, PayComponent> componentsByCode = loadComponentsByCode();
 
         List<PayrollRunResponse.PayrollValidationError> errors = new ArrayList<>();
+        Set<UUID> calculated = new HashSet<>();
         int processedCount = 0;
         for (Employee employee : employees) {
             UUID employeeId = employee.getId();
@@ -430,6 +439,7 @@ public class PayrollProcessingService {
                         .orElseThrow(() -> new EntityNotFoundException("Employee", employeeId));
                     calculateEmployeePayroll(freshRun, freshRun.getPeriod(), freshEmployee, componentsByCode);
                 });
+                calculated.add(employeeId);
                 processedCount++;
             } catch (Exception e) {
                 String name = employee.getFirstName() + " " + employee.getLastName();
@@ -460,12 +470,82 @@ public class PayrollProcessingService {
             }
         }
 
+        // Someone this calculation could not pay must not keep a result from an earlier one (they
+        // would be paid stale amounts); they stay listed with the run, blocking approval, until the
+        // next calculation.
+        removeResultsExcept(run, calculated);
+        replaceIssues(run, errors);
+        run.setIssueOverrideReason(null);
         run.setStatus(RunStatus.CALCULATED);
         run = payrollRunRepository.save(run);
 
         log.info("Completed payroll calculation for run {}. Processed: {}, Errors: {}", runId, processedCount, errors.size());
 
-        return toRunResponse(run, errors);
+        return toRunResponse(run);
+    }
+
+    /**
+     * Deletes the run's results (with their lines, and payslips of a recalculated approved run) for
+     * everyone not in {@code calculated}: employees the calculation refused, or no longer in scope.
+     */
+    private void removeResultsExcept(PayrollRun run, Set<UUID> calculated) {
+        List<PayrollResult> stale = payrollResultRepository
+            .findAll((Specification<PayrollResult>) (root, query, cb) -> cb.equal(root.get("run").get("id"), run.getId()))
+            .stream()
+            .filter(r -> !calculated.contains(r.getEmployee().getId()))
+            .toList();
+        for (PayrollResult result : stale) {
+            UUID resultId = result.getId();
+            payslipRepository.deleteAll(
+                payslipRepository.findAll((Specification<Payslip>) (root, query, cb) -> cb.equal(root.get("result").get("id"), resultId))
+            );
+            payrollLineRepository.deleteAll(
+                payrollLineRepository.findAll(
+                    (Specification<PayrollLine>) (root, query, cb) -> cb.equal(root.get("result").get("id"), resultId)
+                )
+            );
+            payrollResultRepository.delete(result);
+        }
+        if (!stale.isEmpty()) {
+            log.info("Removed {} result(s) of run {} for employees this calculation did not pay", stale.size(), run.getId());
+        }
+    }
+
+    /** Replaces the run's stored issues with this calculation's. */
+    private void replaceIssues(PayrollRun run, List<PayrollRunResponse.PayrollValidationError> errors) {
+        payrollRunIssueRepository.deleteByRunId(run.getId());
+        payrollRunIssueRepository.saveAll(
+            errors
+                .stream()
+                .map(e -> {
+                    PayrollRunIssue issue = new PayrollRunIssue();
+                    issue.setRun(run);
+                    issue.setEmployee(employeeRepository.getReferenceById(e.employeeId()));
+                    issue.setErrorCode(e.errorCode());
+                    issue.setMessage(e.message());
+                    issue.setTemplateId(e.templateId());
+                    return issue;
+                })
+                .toList()
+        );
+    }
+
+    /** The employees the run's latest calculation could not pay, as on the calculation response. */
+    private List<PayrollRunResponse.PayrollValidationError> issuesOf(PayrollRun run) {
+        return payrollRunIssueRepository
+            .findByRunId(run.getId())
+            .stream()
+            .map(i ->
+                new PayrollRunResponse.PayrollValidationError(
+                    i.getEmployee().getId(),
+                    i.getEmployee().getFirstName() + " " + i.getEmployee().getLastName(),
+                    i.getErrorCode(),
+                    i.getMessage(),
+                    "ERROR",
+                    i.getTemplateId()
+                )
+            )
+            .toList();
     }
 
     /**
@@ -1151,6 +1231,21 @@ public class PayrollProcessingService {
         // Validate approver has authority
         validateApprovalAuthority(approver, run, request.forceApproval());
 
+        // Employees the calculation could not pay are not paid by this run: approving it anyway
+        // takes an explicit override with a reason, recorded on the run.
+        long issues = payrollRunIssueRepository.countByRunId(run.getId());
+        String overrideReason = request.issueOverrideReason() != null ? request.issueOverrideReason().trim() : "";
+        if (issues > 0 && (!request.approveDespiteIssues() || overrideReason.isEmpty())) {
+            throw new BusinessRuleViolationException(
+                issues +
+                " employee(s) could not be calculated and would not be paid by this run. Fix them and recalculate, " +
+                "or approve without them and give the reason."
+            );
+        }
+        if (issues > 0) {
+            log.warn("Run {} approved without {} employee(s) it could not calculate: {}", run.getId(), issues, overrideReason);
+        }
+        run.setIssueOverrideReason(issues > 0 ? overrideReason : null);
         run.setStatus(RunStatus.APPROVED);
         run.setApprovedAt(OffsetDateTime.now());
         run.setApprovedBy(approver);
@@ -1171,7 +1266,7 @@ public class PayrollProcessingService {
         }
         log.info("Payroll run {} approved by {}", run.getId(), approver.getId());
 
-        return toRunResponse(run, Collections.emptyList());
+        return toRunResponse(run);
     }
 
     /**
@@ -1221,7 +1316,7 @@ public class PayrollProcessingService {
 
         log.info("Payroll run {} posted and period {} closed", run.getId(), period.getId());
 
-        return toRunResponse(run, Collections.emptyList());
+        return toRunResponse(run);
     }
 
     /**
@@ -1380,7 +1475,7 @@ public class PayrollProcessingService {
             run.getPeriod().getCode(),
             results.size(),
             results.size(),
-            0, // Error count
+            (int) payrollRunIssueRepository.countByRunId(runId),
             total != null ? total.totalGross() : null,
             total != null ? total.totalDeductions() : null,
             total != null ? total.totalNet() : null,
@@ -2361,6 +2456,7 @@ public class PayrollProcessingService {
                 run.getApprovedAt(),
                 run.getApprovedBy() != null ? run.getApprovedBy().getFirstName() + " " + run.getApprovedBy().getLastName() : null,
                 Collections.emptyList(),
+                run.getIssueOverrideReason(),
                 run.getCreatedDate() != null ? OffsetDateTime.from(run.getCreatedDate().atOffset(java.time.ZoneOffset.UTC)) : null,
                 run.getCreatedBy()
             );
@@ -2371,10 +2467,10 @@ public class PayrollProcessingService {
     @Transactional(value = "tenantTransactionManager", readOnly = true)
     public PayrollRunResponse getRun(UUID runId) {
         PayrollRun run = payrollRunRepository.findById(runId).orElseThrow(() -> new EntityNotFoundException("PayrollRun", runId));
-        return toRunResponse(run, Collections.emptyList());
+        return toRunResponse(run);
     }
 
-    private PayrollRunResponse toRunResponse(PayrollRun run, List<PayrollRunResponse.PayrollValidationError> errors) {
+    private PayrollRunResponse toRunResponse(PayrollRun run) {
         PayrollPeriod period = run.getPeriod();
 
         // Get aggregated totals
@@ -2404,7 +2500,8 @@ public class PayrollProcessingService {
             byCurrency,
             run.getApprovedAt(),
             run.getApprovedBy() != null ? run.getApprovedBy().getFirstName() + " " + run.getApprovedBy().getLastName() : null,
-            errors,
+            issuesOf(run),
+            run.getIssueOverrideReason(),
             run.getCreatedDate() != null ? OffsetDateTime.from(run.getCreatedDate().atOffset(java.time.ZoneOffset.UTC)) : null,
             run.getCreatedBy()
         );

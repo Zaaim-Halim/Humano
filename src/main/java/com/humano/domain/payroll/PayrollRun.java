@@ -106,6 +106,13 @@ public class PayrollRun extends AbstractAuditingEntity<UUID> {
     private Currency reportingCurrency;
 
     /**
+     * Why the run was approved although its latest calculation could not pay some employees (its
+     * {@link PayrollRunIssue}s); null when it had none. Cleared when the run is recalculated.
+     */
+    @Column(name = "issue_override_reason", length = 1000)
+    private String issueOverrideReason;
+
+    /**
      * Optimistic-lock guard for the run lifecycle (DRAFT&rarr;CALCULATED&rarr;APPROVED&rarr;POSTED).
      * <p>
      * The status transitions are check-then-act (read current status, validate, write the
@@ -210,6 +217,14 @@ public class PayrollRun extends AbstractAuditingEntity<UUID> {
 
     public void setReportingCurrency(Currency reportingCurrency) {
         this.reportingCurrency = reportingCurrency;
+    }
+
+    public String getIssueOverrideReason() {
+        return issueOverrideReason;
+    }
+
+    public void setIssueOverrideReason(String issueOverrideReason) {
+        this.issueOverrideReason = issueOverrideReason;
     }
 
     public Long getVersion() {

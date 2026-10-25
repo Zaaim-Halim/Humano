@@ -1,6 +1,7 @@
 package com.humano.service.payroll.template;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.humano.IntegrationTest;
 import com.humano.domain.enumeration.CountryCode;
@@ -26,7 +27,10 @@ import com.humano.domain.payroll.PayrollLine;
 import com.humano.domain.payroll.PayrollPeriod;
 import com.humano.domain.payroll.PayrollResult;
 import com.humano.domain.payroll.PayrollRun;
+import com.humano.domain.shared.Authority;
 import com.humano.domain.shared.Employee;
+import com.humano.domain.shared.Permission;
+import com.humano.dto.payroll.request.ApprovePayrollRunRequest;
 import com.humano.dto.payroll.request.ConfigurePayrollTemplateRequest;
 import com.humano.dto.payroll.request.InitiatePayrollRunRequest;
 import com.humano.dto.payroll.response.PayrollRunResponse;
@@ -44,15 +48,22 @@ import com.humano.repository.payroll.PayrollPeriodRepository;
 import com.humano.repository.payroll.PayrollResultRepository;
 import com.humano.repository.payroll.PayrollRunRepository;
 import com.humano.repository.payroll.PayrollTemplateAdoptionRepository;
+import com.humano.repository.shared.AuthorityRepository;
 import com.humano.repository.shared.EmployeeRepository;
+import com.humano.repository.shared.PermissionRepository;
+import com.humano.security.AuthorityPermissionService;
+import com.humano.security.PermissionsConstants;
+import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.payroll.PayrollProcessingService;
 import com.humano.service.payroll.template.engine.YtdAccess;
 import com.humano.service.payroll.template.model.LineSide;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -137,6 +148,15 @@ class PayrollTemplatePayrollRunIT {
 
     @Autowired
     private EmployeeTemplateProfileRepository profiles;
+
+    @Autowired
+    private AuthorityRepository authorities;
+
+    @Autowired
+    private AuthorityPermissionService permissionService;
+
+    @Autowired
+    private PermissionRepository permissions;
 
     private TransactionTemplate tx;
     private final List<Runnable> cleanup = new ArrayList<>();
@@ -316,6 +336,39 @@ class PayrollTemplatePayrollRunIT {
         // The period itself, and a new tax year, see nothing.
         assertThat(ytd(template, LocalDate.of(2026, 3, 1))).isEmpty();
         assertThat(ytd(template, LocalDate.of(2027, 1, 1))).isEmpty();
+    }
+
+    @Test
+    void anEmployeeRefusedOnRecalculationLosesTheEarlierResultAndBlocksApproval() {
+        templateService.configure(TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of("kidCode", "62")));
+        templateService.saveProfile(TEMPLATE, employee.getId(), Map.of("qualificationGroup", "2"));
+        PayrollRunResponse first = calculate(period(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)));
+        assertThat(resultCount(first.id())).isEqualTo(1);
+
+        // Their details go missing: the recalculation refuses them, and their earlier result must not
+        // stay in the run to be paid.
+        tx.executeWithoutResult(s -> profiles.findByEmployeeIdAndTemplateId(employee.getId(), TEMPLATE).ifPresent(profiles::delete));
+        PayrollRunResponse again = payrollService.calculatePayroll(first.id());
+
+        assertThat(again.validationErrors()).anySatisfy(err -> assertThat(err.employeeId()).isEqualTo(employee.getId()));
+        assertThat(resultCount(first.id())).isZero();
+        // Kept with the run: a reload still lists them.
+        assertThat(payrollService.getRun(first.id()).validationErrors()).anySatisfy(err ->
+            assertThat(err.employeeId()).isEqualTo(employee.getId())
+        );
+
+        grantPayrollApproval();
+        assertThatThrownBy(() -> payrollService.approvePayrollRun(approval(first.id(), false, null)))
+            .isInstanceOf(BusinessRuleViolationException.class)
+            .hasMessageContaining("could not be calculated");
+        assertThatThrownBy(() -> payrollService.approvePayrollRun(approval(first.id(), true, "  ")))
+            .isInstanceOf(BusinessRuleViolationException.class)
+            .hasMessageContaining("could not be calculated");
+
+        PayrollRunResponse approved = payrollService.approvePayrollRun(approval(first.id(), true, "Paid by hand this month"));
+
+        assertThat(approved.status()).isEqualTo(RunStatus.APPROVED);
+        assertThat(approved.issueOverrideReason()).isEqualTo("Paid by hand this month");
     }
 
     @Test
@@ -602,6 +655,43 @@ class PayrollTemplatePayrollRunIT {
             new InitiatePayrollRunRequest(period.getId(), InitiatePayrollRunRequest.PayrollScope.ALL, List.of(), false, null, null)
         );
         return payrollService.calculatePayroll(run.id());
+    }
+
+    /** Our employee's results in the run (other employees of the test tenant may be in it too). */
+    private long resultCount(UUID runId) {
+        return tx.execute(s ->
+            results.count(
+                (Specification<PayrollResult>) (root, q, cb) ->
+                    cb.and(cb.equal(root.get("run").get("id"), runId), cb.equal(root.get("employee").get("id"), employee.getId()))
+            )
+        );
+    }
+
+    /** Our employee, with a role that may approve payroll, approves the run. */
+    private ApprovePayrollRunRequest approval(UUID runId, boolean despiteIssues, String reason) {
+        return new ApprovePayrollRunRequest(runId, employee.getId(), null, false, despiteIssues, reason);
+    }
+
+    /** Gives our employee a role of its own that may approve payroll (the test tenant's roles carry no permissions). */
+    private void grantPayrollApproval() {
+        String role = "ROLE_TEST_PAYROLL_APPROVER_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        boolean newPermission = !permissions.existsById(PermissionsConstants.APPROVE_PAYROLL);
+        tx.executeWithoutResult(s -> {
+            Permission approve = permissions
+                .findById(PermissionsConstants.APPROVE_PAYROLL)
+                .orElseGet(() -> permissions.saveAndFlush(new Permission().name(PermissionsConstants.APPROVE_PAYROLL)));
+            Authority approver = authorities.saveAndFlush(new Authority().name(role).permissions(new HashSet<>(Set.of(approve))));
+            Employee e = employees.findById(employee.getId()).orElseThrow();
+            e.getAuthorities().add(approver);
+            employees.save(e);
+        });
+        permissionService.refreshPermissionCache();
+        // Runs after the employee (and so their role assignment) is deleted.
+        cleanup.add(() -> {
+            authorities.deleteById(role);
+            if (newPermission) permissions.deleteById(PermissionsConstants.APPROVE_PAYROLL);
+            permissionService.evictCurrentTenant();
+        });
     }
 
     private PayrollResult resultOf(UUID runId) {

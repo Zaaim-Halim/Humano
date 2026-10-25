@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
-import { forkJoin } from 'rxjs';
+import { Observable, forkJoin, of, switchMap } from 'rxjs';
 
 import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
@@ -16,6 +17,7 @@ import {
   DrawerComponent,
   EmptyStateComponent,
   FormFieldComponent,
+  InputComponent,
   PageHeaderComponent,
   SelectComponent,
   SkeletonComponent,
@@ -26,7 +28,15 @@ import {
 } from 'app/shared/ui';
 import { MoneyPipe, PayPeriodPipe, PluralPipe, RunMoneyPipe } from 'app/shared/util/format.pipes';
 
-import { InitiatePayrollRunRequest, PayrollCalendar, PayrollCalendarService, PayrollRun, PayrollRunService, RunStatus } from '../index';
+import {
+  InitiatePayrollRunRequest,
+  PayrollCalendar,
+  PayrollCalendarService,
+  PayrollPeriodService,
+  PayrollRun,
+  PayrollRunService,
+  RunStatus,
+} from '../index';
 
 /** Lifecycle order, for the per-run progress bar. */
 const STAGES: RunStatus[] = [RunStatus.DRAFT, RunStatus.CALCULATED, RunStatus.APPROVED, RunStatus.POSTED];
@@ -56,6 +66,7 @@ const STAGES: RunStatus[] = [RunStatus.DRAFT, RunStatus.CALCULATED, RunStatus.AP
     LucideAngularModule,
     PageHeaderComponent,
     FormFieldComponent,
+    InputComponent,
     SelectComponent,
     TextareaComponent,
     SwitchComponent,
@@ -73,6 +84,7 @@ export default class PayrollRunsComponent {
   private readonly fb = inject(FormBuilder);
   private readonly runService = inject(PayrollRunService);
   private readonly calendarService = inject(PayrollCalendarService);
+  private readonly periodService = inject(PayrollPeriodService);
   private readonly router = inject(Router);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
@@ -137,12 +149,33 @@ export default class PayrollRunsComponent {
 
   protected readonly form = this.fb.nonNullable.group({
     periodId: ['', Validators.required],
+    paymentDate: [''],
     draftMode: [false],
     notes: ['', Validators.maxLength(1000)],
   });
 
+  /** The selected period's stored payment date, to tell whether the form changed it. */
+  private readonly storedPaymentDate = signal<string | null>(null);
+  /** Paid in a later year than the period ends: templates that tax by payment date apply that year's rules. */
+  protected readonly payYear = signal<string | null>(null);
+
   constructor() {
     this.loadRuns();
+    // Picking a period shows its payment date, which can be moved before the run starts.
+    this.form.controls.periodId.valueChanges.pipe(takeUntilDestroyed()).subscribe(id => {
+      const period = this.calendars()
+        .flatMap(c => c.upcomingPeriods)
+        .find(p => p.id === id);
+      this.storedPaymentDate.set(period?.paymentDate ?? null);
+      this.form.controls.paymentDate.setValue(period?.paymentDate ?? '');
+    });
+    this.form.controls.paymentDate.valueChanges.pipe(takeUntilDestroyed()).subscribe(date => {
+      const period = this.calendars()
+        .flatMap(c => c.upcomingPeriods)
+        .find(p => p.id === this.form.controls.periodId.value);
+      const year = date.slice(0, 4);
+      this.payYear.set(period && year && year !== period.endDate.slice(0, 4) ? year : null);
+    });
   }
 
   /** Index of a status in the lifecycle (0–3). */
@@ -155,7 +188,7 @@ export default class PayrollRunsComponent {
   }
 
   protected openNewRun(): void {
-    this.form.reset({ periodId: '', draftMode: false, notes: '' });
+    this.form.reset({ periodId: '', paymentDate: '', draftMode: false, notes: '' });
     this.formOpen.set(true);
     if (!this.calendars().length) this.loadCalendars();
   }
@@ -215,8 +248,13 @@ export default class PayrollRunsComponent {
       draftMode: raw.draftMode,
       ...(raw.notes.trim() ? { notes: raw.notes.trim() } : {}),
     };
+    // A moved payment date is saved on the period first: it decides which year's rules apply.
+    const moveDate$: Observable<unknown> =
+      raw.paymentDate && raw.paymentDate !== this.storedPaymentDate()
+        ? this.periodService.updatePaymentDate(raw.periodId, raw.paymentDate)
+        : of(null);
     this.submitting.set(true);
-    this.runService.initiate(body).subscribe({
+    moveDate$.pipe(switchMap(() => this.runService.initiate(body))).subscribe({
       next: run => {
         this.toast.success(this.label('humano.payrollRuns.initiated'));
         this.submitting.set(false);

@@ -10,7 +10,8 @@ import java.util.UUID;
 /**
  * Response DTO for payroll run details. The single totals and {@code currencyCode} are null when the
  * run's employees are paid in several currencies and it has no reporting currency; {@code
- * totalsByCurrency} always holds one entry per currency.
+ * totalsByCurrency} always holds one entry per currency. {@code validationErrors} are the employees the
+ * latest calculation could not pay (empty in the run list).
  */
 public record PayrollRunResponse(
     UUID id,
@@ -31,6 +32,8 @@ public record PayrollRunResponse(
     OffsetDateTime approvedAt,
     String approvedBy,
     List<PayrollValidationError> validationErrors,
+    /** Why the run was approved although {@code validationErrors} were left unpaid; null otherwise. */
+    String issueOverrideReason,
     OffsetDateTime createdAt,
     String createdBy
 ) {

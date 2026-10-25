@@ -7743,6 +7743,21 @@ button.hum-records__empty:hover {
   color: var(--text-muted);
 }
 
+/* A payroll run's payment date, with its change control. */
+.hum-run-paydate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.hum-run-paydate .hum-input {
+  width: auto;
+}
+
 /* A total per currency, one per line (a run paying people in several currencies). */
 .hum-kpi__value--multi {
   flex-direction: column;

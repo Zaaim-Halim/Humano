@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- The employees a run's latest calculation could not pay (refused by a template, missing
+         details, any calculation error), kept with the run so they show whenever it is opened and
+         block approval. Replaced on every calculation. -->
+    <changeSet id="20261025-payroll-run-issue" author="halimzaaim">
+        <createTable tableName="payroll_run_issue">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_payroll_run_issue"/>
+            </column>
+            <column name="run_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="error_code" type="VARCHAR(60)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="template_id" type="VARCHAR(80)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="payroll_run_issue" indexName="ix_payroll_run_issue_run">
+            <column name="run_id"/>
+        </createIndex>
+        <addForeignKeyConstraint
+            baseTableName="payroll_run_issue"
+            baseColumnNames="run_id"
+            constraintName="fk_payroll_run_issue_run"
+            referencedTableName="payroll_run"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            baseTableName="payroll_run_issue"
+            baseColumnNames="employee_id"
+            constraintName="fk_payroll_run_issue_employee"
+            referencedTableName="employee"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <!-- Why a run was approved although some employees could not be calculated (they are not paid by
+         it); null when it had none. -->
+    <changeSet id="20261025-payroll-run-issue-override" author="halimzaaim">
+        <addColumn tableName="payroll_run">
+            <column name="issue_override_reason" type="VARCHAR(1000)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

@@ -95,7 +95,14 @@ public class PayrollRunResource {
     @PostMapping("/{id}/approve")
     @RequirePermission(PermissionsConstants.APPROVE_PAYROLL)
     public ResponseEntity<PayrollRunResponse> approve(@PathVariable UUID id, @Valid @RequestBody ApprovePayrollRunRequest body) {
-        ApprovePayrollRunRequest safe = new ApprovePayrollRunRequest(id, body.approverId(), body.approvalNotes(), body.forceApproval());
+        ApprovePayrollRunRequest safe = new ApprovePayrollRunRequest(
+            id,
+            body.approverId(),
+            body.approvalNotes(),
+            body.forceApproval(),
+            body.approveDespiteIssues(),
+            body.issueOverrideReason()
+        );
         return ResponseEntity.ok(processingService.approvePayrollRun(safe));
     }
 

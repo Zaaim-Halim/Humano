@@ -1,14 +1,17 @@
 package com.humano.service.payroll;
 
 import com.humano.domain.enumeration.payroll.Frequency;
+import com.humano.domain.enumeration.payroll.RunStatus;
 import com.humano.domain.payroll.PayrollCalendar;
 import com.humano.domain.payroll.PayrollPeriod;
+import com.humano.domain.payroll.PayrollRun;
 import com.humano.dto.payroll.request.CreatePayrollCalendarRequest;
 import com.humano.dto.payroll.request.GeneratePayrollPeriodsRequest;
 import com.humano.dto.payroll.response.PayrollCalendarResponse;
 import com.humano.dto.payroll.response.PayrollPeriodResponse;
 import com.humano.repository.payroll.PayrollCalendarRepository;
 import com.humano.repository.payroll.PayrollPeriodRepository;
+import com.humano.repository.payroll.PayrollRunRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.time.DayOfWeek;
@@ -42,10 +45,16 @@ public class PayrollCalendarService {
 
     private final PayrollCalendarRepository calendarRepository;
     private final PayrollPeriodRepository periodRepository;
+    private final PayrollRunRepository runRepository;
 
-    public PayrollCalendarService(PayrollCalendarRepository calendarRepository, PayrollPeriodRepository periodRepository) {
+    public PayrollCalendarService(
+        PayrollCalendarRepository calendarRepository,
+        PayrollPeriodRepository periodRepository,
+        PayrollRunRepository runRepository
+    ) {
         this.calendarRepository = calendarRepository;
         this.periodRepository = periodRepository;
+        this.runRepository = runRepository;
     }
 
     /**
@@ -285,8 +294,29 @@ public class PayrollCalendarService {
             throw new BusinessRuleViolationException("Cannot update payment date for closed period");
         }
 
-        if (newPaymentDate.isBefore(period.getEndDate())) {
-            throw new BusinessRuleViolationException("Payment date cannot be before period end date");
+        // Pay may fall before the period ends (e.g. on the 25th, or December's before the year ends).
+        if (newPaymentDate.isBefore(period.getStartDate())) {
+            throw new BusinessRuleViolationException("Payment date cannot be before the period starts");
+        }
+
+        // The payment date decides which year's rules apply to templates on a payment-date basis, so
+        // results already calculated with the old one must not be approved: an approved or posted run
+        // keeps its date, and a calculated one goes back to draft to be recalculated.
+        List<PayrollRun> runs = runRepository.findAll(
+            (Specification<PayrollRun>) (root, query, cb) -> cb.equal(root.get("period").get("id"), periodId)
+        );
+        if (runs.stream().anyMatch(r -> r.getStatus() == RunStatus.APPROVED || r.getStatus() == RunStatus.POSTED)) {
+            throw new BusinessRuleViolationException("The payment date can't change once a run for the period is approved");
+        }
+        if (newPaymentDate.equals(period.getPaymentDate())) {
+            return toPeriodResponse(period);
+        }
+        for (PayrollRun run : runs) {
+            if (run.getStatus() == RunStatus.CALCULATED) {
+                run.setStatus(RunStatus.DRAFT);
+                runRepository.save(run);
+                log.info("Run {} back to draft: its period's payment date changed", run.getId());
+            }
         }
 
         period.setPaymentDate(newPaymentDate);

@@ -13,6 +13,8 @@
       "noPeriodsTitle": "No open periods",
       "noPeriodsBody": "There are no open pay periods to run yet. Create them from this month to three months ahead; payment is due five days after each period ends.",
       "createPeriods": "Create pay periods",
+      "paymentDate": "Payment date",
+      "paymentDateHint": "When the pay reaches people. It can fall before the period ends.",
       "periodsCreated": "{{ n }} pay periods created",
       "loadHint": "Loading periods needs payroll-calendar access.",
       "lastNet": "Last net payroll",

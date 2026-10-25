@@ -16,7 +16,7 @@
           <hum-button variant="secondary" size="sm" icon="refresh-cw" [loading]="busy()" (click)="recalculate()">{{
             'humano.payrollRun.recalculate' | translate
           }}</hum-button>
-          <hum-button variant="primary" size="sm" icon="check" [loading]="busy()" (click)="confirm.set('approve')">{{
+          <hum-button variant="primary" size="sm" icon="check" [loading]="busy()" (click)="openApprove()">{{
             'humano.payrollRun.approve' | translate
           }}</hum-button>
         }
@@ -40,8 +40,37 @@
   <!-- Lifecycle stepper -->
   <hum-stepper [steps]="steps()" [current]="currentStep()" />
 
+  <!-- Payment date: decides which year's rules templates on a payment-date basis apply -->
+  @if (run(); as r) {
+    <div class="hum-run-paydate">
+      <lucide-icon name="calendar" [size]="14" />
+      @if (editingPayDate()) {
+        <hum-input type="date" inputId="run-paydate" [ngModel]="payDateDraft()" (ngModelChange)="payDateDraft.set($event)" />
+        <hum-button size="sm" variant="primary" [loading]="busy()" [disabled]="!payDateDraft()" (click)="savePayDate()">{{
+          'humano.action.save' | translate
+        }}</hum-button>
+        <hum-button size="sm" variant="ghost" (click)="editingPayDate.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+      } @else {
+        <span>{{ 'humano.payrollRun.paidOn' | translate: { date: (r.paymentDate | date: 'mediumDate') } }}</span>
+        @if (canChangePayDate()) {
+          <hum-button size="sm" variant="ghost" (click)="editPayDate()">{{ 'humano.payrollRun.changePayDate' | translate }}</hum-button>
+        }
+      }
+      @if (payYear(); as year) {
+        <span class="hum-kpi__hint">{{ 'humano.payrollRun.payYearHint' | translate: { year } }}</span>
+      }
+    </div>
+  }
+
   @if (run()?.validationErrors?.length) {
-    <hum-alert tone="warning" [title]="'humano.payrollRun.validationTitle' | translate">
+    <hum-alert tone="warning" [title]="'humano.payrollRun.unpaidTitle' | plural: issueCount() | translate: { count: issueCount() }">
+      <div style="margin-bottom: var(--space-2)">
+        @if (run()!.issueOverrideReason; as reason) {
+          {{ 'humano.payrollRun.approvedWithout' | translate: { reason } }}
+        } @else {
+          {{ 'humano.payrollRun.unpaidHint' | translate }}
+        }
+      </div>
       <ul style="margin: 0; padding-left: var(--space-4)">
         @for (v of run()!.validationErrors; track v.errorCode + v.employeeId) {
           <li>
@@ -311,9 +340,32 @@
   hasFooter
   (closed)="confirm.set(null)"
 >
+  @if (confirm() === 'approve' && issueCount() > 0) {
+    <div style="display: grid; gap: var(--space-3)">
+      <hum-alert tone="warning" [title]="'humano.payrollRun.unpaidTitle' | plural: issueCount() | translate: { count: issueCount() }">{{
+        'humano.payrollRun.approveDespiteHint' | translate
+      }}</hum-alert>
+      <hum-checkbox [label]="'humano.payrollRun.approveDespite' | translate" [(checked)]="approveDespiteIssues" />
+      @if (approveDespiteIssues()) {
+        <hum-form-field [label]="'humano.payrollRun.overrideReason' | translate" controlId="run-override-reason" required>
+          <hum-textarea
+            [rows]="3"
+            [placeholder]="'humano.payrollRun.overrideReasonPlaceholder' | translate"
+            [ngModel]="overrideReason()"
+            (ngModelChange)="overrideReason.set($event)"
+          />
+        </hum-form-field>
+      }
+    </div>
+  }
   <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
     <hum-button variant="secondary" (click)="confirm.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
-    <hum-button [variant]="confirm() === 'post' ? 'primary' : 'secondary'" [loading]="busy()" (click)="confirmAction()">
+    <hum-button
+      [variant]="confirm() === 'post' ? 'primary' : 'secondary'"
+      [loading]="busy()"
+      [disabled]="!canConfirm()"
+      (click)="confirmAction()"
+    >
       {{ (confirm() === 'post' ? 'humano.payrollRun.post' : 'humano.payrollRun.approve') | translate }}
     </hum-button>
   </div>

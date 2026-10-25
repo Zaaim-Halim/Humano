@@ -187,6 +187,19 @@
       >
         <hum-select inputId="run-period" formControlName="periodId" [options]="periodOptions()" [invalid]="invalid('periodId')" />
       </hum-form-field>
+      @if (form.controls.periodId.value) {
+        <hum-form-field
+          [label]="'humano.payrollRuns.paymentDate' | translate"
+          controlId="run-paydate"
+          [hint]="
+            payYear()
+              ? ('humano.payrollRun.payYearHint' | translate: { year: payYear() })
+              : ('humano.payrollRuns.paymentDateHint' | translate)
+          "
+        >
+          <hum-input inputId="run-paydate" type="date" formControlName="paymentDate" />
+        </hum-form-field>
+      }
       <hum-switch formControlName="draftMode" [label]="'humano.payrollRuns.draftMode' | translate" />
       <hum-form-field [label]="'humano.payrollRuns.notes' | translate" controlId="run-notes">
         <hum-textarea inputId="run-notes" formControlName="notes" [rows]="3" />
