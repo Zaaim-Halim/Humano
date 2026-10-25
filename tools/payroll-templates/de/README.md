@@ -21,6 +21,19 @@ Gesamtsozialversicherungsbeitrag (KV, RV, AV, PV) with the U1, U2 and U3 levies,
   reductions (−0,25 for the 2nd to 5th child under 25). Ceilings are € 5.812,50 (KV/PV) and € 8.450
   (RV/AV) a month. U1/U2 use the employee's Krankenkasse's rates; U3 is 0,15 %; all three use the
   RV-capped wage.
+- **Sonstige Bezüge** (BONUS earnings: Weihnachts-/Urlaubsgeld, Prämien, 13. Gehalt), paid with a period's current
+  wage:
+  - Lohnsteuer, SolZ and the church-tax base come from the same PAP call (SONSTB, JRE4, JFREIB, JHINZU → STS,
+    SOLZS, BKS). § 39b Abs. 3 EStG: the voraussichtlicher Jahresarbeitslohn is this year's posted current wages
+    and sonstige Bezüge with you (or the brought-forward figures from before Humano), earlier employers' wages
+    from their Lohnsteuerbescheinigungen, and the current monthly wage for the rest of the year and for months
+    at earlier employers without one. They are taxed in the year they are paid (§ 38a Abs. 1 Satz 3), so a
+    payment date in another year is refused.
+  - Contributions treat them as einmalig gezahltes Arbeitsentgelt (§ 23a SGB IV): added to the month's base up to
+    the anteilige Beitragsbemessungsgrenze (months with contributions this year × the monthly ceiling, less what
+    was already charged), separately for KV/PV and RV/AV. The März-Klausel case is refused. U1 leaves them out
+    (§ 7 Abs. 2 AAG); U2 and the Insolvenzgeldumlage include them.
+  - Not supported: Entschädigungen with the Fünftelregelung, one-off payments after leaving, Vermögensbeteiligungen.
 - **Period basis**: current wages count in the year in which the pay period ends (§ 38a Abs. 1 Satz 2
   EStG); contributions count in the month earned. December wages paid in January use 2026.
 - Ages follow §§ 187, 188 BGB (a year of life is completed the day before the birthday). That decides
@@ -54,7 +67,11 @@ ceiling against the downloaded statute texts.
 - Every numeric constant of the XML (247 of 249) appears in the published Anlage 1 PDF. The two that
   don't are an unused constant (`ZAHL500`) and 17,799, the zone base of § 32a Abs. 1 EStG, which is
   checked against the statute.
-- The template's 18 computed cases and 14 refusals run through the Java engine (the generated PAP)
+- `lohnsteuer_statute.other_payment` implements § 39b Abs. 3 from the statute text (the difference of two annual
+  taxes, with the PAP's roundings). It matched the generated PAP on **20,000 random sonstige-Bezüge cases**
+  (2026-10-25, generated data not committed), and the PAP's current-wage Lohnsteuer, SolZ and BK were identical
+  with and without the sonstiger Bezug in all of them (`DeLohnsteuerPap2026Test` keeps two of these checks).
+- The template's 29 computed cases and 20 refusals run through the Java engine (the generated PAP)
   at startup and in CI. `PayrollTemplatePayrollRunIT` runs a December 2026 payroll paid in January
   2027 through the Spring-wired extension.
 - Second verification (2026-10-21, not committed: generated data): 20,000 random full-template cases

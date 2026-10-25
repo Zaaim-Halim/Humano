@@ -32,6 +32,7 @@ import org.springframework.stereotype.Component;
  *   <li>Earnings: {@code #grossEarnings}, {@code #earningsByComponent['BONUS']} (by pay-component code; 0 for a
  *   code with none), {@code #socialEarnings}, {@code #socialEarningsByComponent['BONUS']} (the part of a
  *   component's earnings subject to social contributions), {@code #taxableEarnings},
+ *   {@code #taxableEarningsByComponent['BONUS']} (the taxable part of a component's earnings),
  *   {@code #reductions} (unpaid leave), {@code #preTaxDeductions} (tenant pre-tax deductions; a template
  *   that doesn't model them should REQUIRE them to be zero), {@code #preTaxDeductionsByType['RETIREMENT']}
  *   (the same by deduction type; 0 for a type with none).</li>
@@ -64,6 +65,7 @@ public class PayrollTemplateEngine {
         "grossEarnings",
         "earningsByComponent",
         "socialEarningsByComponent",
+        "taxableEarningsByComponent",
         "socialEarnings",
         "taxableEarnings",
         "reductions",
@@ -134,6 +136,14 @@ public class PayrollTemplateEngine {
             socialByComponent.put(code.name(), nz(source == null ? null : source.get(code.name())));
         }
         vars.put("socialEarningsByComponent", new StrictMap("pay component", socialByComponent));
+        Map<String, BigDecimal> taxableByComponent = new HashMap<>();
+        for (PayComponentCode code : PayComponentCode.values()) {
+            Map<String, BigDecimal> source = in.taxableEarningsByComponent() != null
+                ? in.taxableEarningsByComponent()
+                : in.earningsByComponent();
+            taxableByComponent.put(code.name(), nz(source == null ? null : source.get(code.name())));
+        }
+        vars.put("taxableEarningsByComponent", new StrictMap("pay component", taxableByComponent));
         vars.put("socialEarnings", nz(in.socialEarnings()));
         vars.put("taxableEarnings", nz(in.taxableEarnings()));
         vars.put("reductions", nz(in.reductions()));

@@ -49,7 +49,9 @@ public class PayrollTemplateValidator {
     private static final Pattern EMPLOYER_KEY = Pattern.compile("#employer\\['([^']+)'\\]");
     private static final Pattern PARAMETER = Pattern.compile("#p\\['([^']+)'\\]");
     private static final Pattern PRE_TAX_TYPE = Pattern.compile("#preTaxDeductionsByType\\['([^']+)'\\]");
-    private static final Pattern COMPONENT = Pattern.compile("#(?:earningsByComponent|socialEarningsByComponent)\\['([^']+)'\\]");
+    private static final Pattern COMPONENT = Pattern.compile(
+        "#(?:earningsByComponent|socialEarningsByComponent|taxableEarningsByComponent)\\['([^']+)'\\]"
+    );
     private static final Pattern TABLE_CALL = Pattern.compile("#table\\.(\\w+)\\(\\s*('([^']*)')?");
     private static final Pattern YTD_CALL = Pattern.compile("#ytd\\.(\\w+)\\(\\s*'([^']*)'\\s*,\\s*'([^']*)'\\s*\\)");
     private static final Set<String> TABLE_METHODS = Set.of("lookup", "bracketTax", "band");

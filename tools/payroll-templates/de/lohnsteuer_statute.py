@@ -147,3 +147,23 @@ def annual(stkl, a, kvz, pvs, pvz, pva, zkf=D(0), allowance=D(0), addition=D(0),
     exempt = D(40700) if stkl == 3 else D(20350)
     solz = floor(min(jbmg * D("0.055"), (jbmg - exempt) * D("0.119")), "0.01") if jbmg > exempt else D(0)
     return jlst, jbmg, solz
+
+
+def other_payment(stkl, jre4, sonstb, kvz, pvs, pvz, pva, zkf=D(0), jfreib=D(0), jhinzu=D(0), alter1=0, ajahr=0, factor=None):
+    """(Lohnsteuer, Solidaritätszuschlag, Maßstabsteuer BKS) on a sonstiger Bezug, § 39b Abs. 3 EStG.
+
+    The annual Lohnsteuer for the maßgebender Jahresarbeitslohn (expected annual wage without the sonstiger
+    Bezug, less the annual Freibetrag, plus the Hinzurechnungsbetrag, less the Altersentlastungsbetrag) and
+    for the same including it; the difference is the tax on the sonstiger Bezug (Satz 8). With a Faktor (§ 39f)
+    the difference is multiplied by it. The PAP's binding roundings apply: the difference down to whole euros.
+    SolZ is 5.5 % of it, cents dropped, when the annual SolZ base with the sonstiger Bezug (tax after the
+    Kinderfreibeträge) exceeds the exemption (§ 3 Abs. 3, § 4 SolzG; no phase-in for sonstige Bezüge in the
+    PAP). The church-tax base is the tax on the sonstiger Bezug itself."""
+    without = annual(stkl, jre4, kvz, pvs, pvz, pva, zkf, jfreib, jhinzu, alter1, ajahr, None)[0]
+    with_it = annual(stkl, jre4 + sonstb, kvz, pvs, pvz, pva, zkf, jfreib, jhinzu, alter1, ajahr, None)[0]
+    diff = (with_it - without) * (factor if factor is not None else D(1))
+    sts = max(floor(diff), D(0))
+    jbmg = annual(stkl, jre4 + sonstb, kvz, pvs, pvz, pva, zkf, jfreib, jhinzu, alter1, ajahr, factor)[1]
+    exempt = D(40700) if stkl == 3 else D(20350)
+    solzs = floor(sts * D("0.055"), "0.01") if jbmg > exempt else D(0)
+    return sts, solzs, sts

@@ -1,7 +1,7 @@
 """Build src/main/resources/payroll-templates/de/de-employment.json — German Lohnsteuer,
-Solidaritätszuschlag and Kirchensteuer on current monthly wages (PAP 2026 via the de.lohnsteuer-pap-2026
-extension) and the Gesamtsozialversicherungsbeitrag (KV, RV, AV, PV) with the U1, U2 and U3 levies, for
-wage periods in 2026.
+Solidaritätszuschlag and Kirchensteuer on current monthly wages and sonstige Bezüge (PAP 2026 via the
+de.lohnsteuer-pap-2026 extension) and the Gesamtsozialversicherungsbeitrag (KV, RV, AV, PV) with the U1, U2
+and U3 levies, including einmalig gezahltes Arbeitsentgelt (§ 23a SGB IV), for wage periods in 2026.
 
 Every rate and ceiling is checked against the statute texts (gesetze-im-internet.de snapshots) before
 writing. Expected tax amounts in the test cases come from lohnsteuer_statute.py (written from the EStG,
@@ -28,14 +28,15 @@ SOURCES = {
         "title": "BMF-Schreiben vom 12. November 2025 (IV C 5 - S 2361/00025/016/028), Anlage 1: Programmablaufplan für die maschinelle Berechnung der vom Arbeitslohn einzubehaltenden Lohnsteuer, des Solidaritätszuschlags und der Maßstabsteuer für die Kirchenlohnsteuer für 2026; XML-Pseudocode Lohnsteuer2026 (ITZBund)",
         "url": "https://www.bmf-steuerrechner.de/javax.faces.resource/daten/xmls/Lohnsteuer2026.xml.xhtml",
     },
-    "estg": {"title": "Einkommensteuergesetz §§ 9a, 10c, 24a, 24b, 32 Abs. 6, 32a, 39b, 39f, 51a", "url": GII + "estg/"},
+    "estg": {"title": "Einkommensteuergesetz §§ 9a, 10c, 24a, 24b, 32 Abs. 6, 32a, 38a Abs. 1 (sonstige Bezüge in the year paid), 39b Abs. 2 and 3 (voraussichtlicher Jahresarbeitslohn, frühere Dienstverhältnisse hochgerechnet), 39f, 51a", "url": GII + "estg/"},
+    "sgb4-23a": {"title": "SGB IV § 23a: einmalig gezahltes Arbeitsentgelt — month paid, anteilige Beitragsbemessungsgrenze for all employment with the same employer in the year (Abs. 3), März-Klausel (Abs. 4), KV ceiling decides for KV-pflichtige (Abs. 5)", "url": GII + "sgb_4/__23a.html"},
     "solzg": {"title": "Solidaritätszuschlaggesetz 1995 §§ 3, 4", "url": GII + "solzg_1995/"},
     "svbezgrv-2026": {"title": "Sozialversicherungsrechengrößen-Verordnung 2026 §§ 2, 4 (BGBl. 2025 I Nr. 278)", "url": GII + "svbezgrv_2026/"},
     "sgb5": {"title": "SGB V § 241 (allgemeiner Beitragssatz 14,6 %), § 242 (Zusatzbeitrag), § 249 (Tragung)", "url": GII + "sgb_5/__241.html"},
     "bsv-2018": {"title": "Beitragssatzverordnung 2018 § 1: allgemeine Rentenversicherung 18,6 % (no later Beitragssatzverordnung)", "url": GII + "bsv_2018/__1.html"},
     "sgb3": {"title": "SGB III § 341 (Arbeitslosenversicherung 2,6 %), §§ 358, 360 (Insolvenzgeldumlage 0,15 % of the RV wage)", "url": GII + "sgb_3/__341.html"},
     "sgb11": {"title": "SGB XI § 55 (Beitragssatz, Kinderlosenzuschlag 0,6, Abschläge 0,25), § 58 (Tragung, Sachsen); PBAV 2025 § 1 (3,6 %)", "url": GII + "pbav_2025/__1.html"},
-    "aag": {"title": "Aufwendungsausgleichsgesetz §§ 1, 7 (U1 for employers with up to 30 employees, U1/U2 on the RV wage)", "url": GII + "aufag/__7.html"},
+    "aag": {"title": "Aufwendungsausgleichsgesetz §§ 1, 7 (U1 for employers with up to 30 employees, U1/U2 on the RV wage; einmalig gezahlte Arbeitsentgelte are left out of U1, § 7 Abs. 2 Satz 2)", "url": GII + "aufag/__7.html"},
     "bvv": {"title": "Beitragsverfahrensverordnung §§ 1, 2 (calendar month, rounding, halves)", "url": GII + "beitrvv/__2.html"},
     "sgb4": {"title": "SGB IV § 20 Abs. 2 (Übergangsbereich up to 2 000 EUR)", "url": GII + "sgb_4/__20.html"},
     "sgb6": {"title": "SGB VI § 5 Abs. 4, § 172 (pensioners, Regelaltersgrenze: employer-only share), § 235 (Regelaltersgrenze)", "url": GII + "sgb_6/__235.html"},
@@ -77,12 +78,22 @@ def check_law(folder):
                            "ergibt sich der Beitrag aus der Summe der getrennt berechneten gerundeten Anteile"],
         "sgb_4___20.html": ["die regelmäßig 2 000 Euro im Monat nicht übersteigen"],
         "aufag_1.html": ["nicht mehr als 30 Arbeitnehmer"],
-        "aufag_7.html": ["nach dem die Beiträge zur gesetzlichen Rentenversicherung"],
+        "aufag_7.html": ["nach dem die Beiträge zur gesetzlichen Rentenversicherung",
+                         "sowie einmalig gezahlte Arbeitsentgelte nach § 23a des Vierten Buches Sozialgesetzbuch nicht zu berücksichtigen"],
         "estg___51a.html": ["beim Steuerabzug vom Arbeitslohn Bemessungsgrundlage die Lohnsteuer"],
         "sgb_6___235.html": ["1959 14 66 2 1960 16 66 4 1961 18 66 6"],
         "sgb_3___28.html": ["mit Ablauf des Monats, in dem sie das maßgebliche Lebensjahr vollenden"],
         "sgb_6___172.html": ["tragen die Arbeitgeber die Hälfte des Beitrags"],
         "sgb_5___243.html": ["Der ermäßigte Beitragssatz beträgt 14,0 Prozent"],
+        "estg___38a.html": ["Arbeitslohn, der nicht als laufender Arbeitslohn gezahlt wird (sonstige Bezüge), wird in dem Kalenderjahr bezogen, in dem er dem Arbeitnehmer zufließt"],
+        "estg___39b.html": ["den voraussichtlichen Jahresarbeitslohn ohne den sonstigen Bezug festzustellen",
+                            "wenn der laufende Arbeitslohn im Monat der Zahlung des sonstigen Bezugs entsprechend der Beschäftigungsdauer bei früheren Arbeitgebern hochgerechnet wird",
+                            "um einen etwaigen als Lohnsteuerabzugsmerkmal mitgeteilten Jahresfreibetrag zu vermindern und um einen etwaigen Jahreshinzurechnungsbetrag zu erhöhen",
+                            "Der Unterschiedsbetrag zwischen den ermittelten Jahreslohnsteuerbeträgen ist die Lohnsteuer, die vom sonstigen Bezug einzubehalten ist"],
+        "sgb_4___23a.html": ["soweit das bisher gezahlte beitragspflichtige Arbeitsentgelt die anteilige Beitragsbemessungsgrenze nicht erreicht",
+                             "der der Dauer aller Beschäftigungsverhältnisse bei demselben Arbeitgeber im laufenden Kalenderjahr bis zum Ablauf des Entgeltabrechnungszeitraumes entspricht",
+                             "In der Zeit vom 1. Januar bis zum 31. März einmalig gezahltes Arbeitsentgelt ist dem letzten Entgeltabrechnungszeitraum des vergangenen Kalenderjahres zuzuordnen",
+                             "allein die Beitragsbemessungsgrenze der gesetzlichen Krankenversicherung maßgebend"],
     }
     for name, texts in needles.items():
         t = law_text(folder, name)
@@ -111,8 +122,10 @@ def expected_lines(c):
     from datetime import date
     emp, er = c["employee"], c["employer"]
     start = date.fromisoformat(c["periodStart"])
-    wage = D(c["grossEarnings"])
-    sv = D(c.get("socialEarnings", c["grossEarnings"]))
+    by = c.get("earningsByComponent", {"BASIC": c["grossEarnings"]})
+    one_off = D(by.get("BONUS", "0"))
+    wage = D(c["grossEarnings"]) - one_off
+    sv = D(c.get("socialEarnings", c["grossEarnings"])) - one_off
     stkl = int(emp["taxClass"])
     kvz = D(emp["healthFundAdditionalRate"])
     pvs = 1 if er["state"] == "SN" else 0
@@ -126,16 +139,42 @@ def expected_lines(c):
     factor = D(emp["factor"]) if emp.get("factor") else None
     lst, solz, bk = ls.monthly(stkl, wage, kvz, pvs, pvz, pva, D(emp.get("childAllowances", "0")), D(emp.get("taxAllowance", "0")),
                                D(emp.get("taxAddition", "0")), alter1, c64.year + 1, factor)
-    lines = []
-    if lst:
-        lines.append({"step": "lohnsteuer", "side": "TAX", "amount": str(lst)})
+    church_rate = CHURCH_BY_BW if er["state"] in ("BY", "BW") else CHURCH
+    lines = [{"step": "lohnsteuer", "side": "TAX", "amount": str(lst)}]  # recorded even at 0: its base builds the annual wage
     if solz:
         lines.append({"step": "solidaritaetszuschlag", "side": "TAX", "amount": str(solz)})
     if emp.get("churchMember") == "true":
-        kist = (bk * (CHURCH_BY_BW if er["state"] in ("BY", "BW") else CHURCH)).quantize(D("0.01"), rounding=ROUND_FLOOR)
+        kist = (bk * church_rate).quantize(D("0.01"), rounding=ROUND_FLOOR)
         if kist:
             lines.append({"step": "kirchensteuer", "side": "TAX", "amount": str(kist)})
     kv_base, rv_base = min(sv, KV_BBG), min(sv, RV_BBG)
+    u1_base = rv_base
+    if one_off:
+        # § 23a SGB IV: up to the anteilige Beitragsbemessungsgrenze for the months with contributions this year.
+        ytd = {k: D(v) for k, v in c.get("ytd", {}).items()}
+        bf = emp.get("broughtForwardYear") == "2026"
+        g = lambda key: D(emp.get(key, "0")) if bf else D(0)
+        months = ytd.get("krankenversicherung.EMPLOYEE.periods", D(0)) + g("broughtForwardMonths") + 1
+        prior_kv = ytd.get("krankenversicherung.EMPLOYEE.base", D(0)) + g("broughtForwardKvBase")
+        prior_rv = ytd.get("rentenversicherung.EMPLOYEE.base", D(0)) + g("broughtForwardRvBase")
+        kv_base += min(one_off, max(months * KV_BBG - prior_kv - kv_base, D(0)))
+        rv_base += min(one_off, max(months * RV_BBG - prior_rv - rv_base, D(0)))
+        # § 39b Abs. 3 EStG: voraussichtlicher Jahresarbeitslohn without this sonstiger Bezug.
+        month = start.month
+        jre4 = (ytd.get("lohnsteuer.TAX.base", D(0)) + ytd.get("lohnsteuerSonstigeBezuege.TAX.base", D(0))
+                + g("broughtForwardTaxWage") + g("broughtForwardOtherPayments") + D(emp.get("priorEmployersWage", "0"))
+                + wage * (D(emp.get("priorEmployersMonths", "0")) + 13 - month))
+        jfreib = D(emp.get("annualTaxAllowance", "0")) if D(emp.get("taxAllowance", "0")) > 0 else D(0)
+        jhinzu = D(emp.get("annualTaxAddition", "0")) if D(emp.get("taxAddition", "0")) > 0 else D(0)
+        sts, solzs, bks = ls.other_payment(stkl, jre4, one_off, kvz, pvs, pvz, pva, D(emp.get("childAllowances", "0")),
+                                           jfreib, jhinzu, alter1, c64.year + 1, factor)
+        lines.append({"step": "lohnsteuerSonstigeBezuege", "side": "TAX", "amount": str(sts)})
+        if solzs:
+            lines.append({"step": "solidaritaetszuschlagSonstigeBezuege", "side": "TAX", "amount": str(solzs)})
+        if emp.get("churchMember") == "true":
+            kist = (bks * church_rate).quantize(D("0.01"), rounding=ROUND_FLOOR)
+            if kist:
+                lines.append({"step": "kirchensteuerSonstigeBezuege", "side": "TAX", "amount": str(kist)})
     kv = r2(kv_base * (KV_HALF + kvz / 200))
     lines += [{"step": "krankenversicherung", "side": s, "amount": str(kv)} for s in ("EMPLOYEE", "EMPLOYER")]
     rv = r2(rv_base * RV_HALF)
@@ -146,7 +185,7 @@ def expected_lines(c):
     pv_er = r2(kv_base * (PV_SN_EMPLOYER if pvs else PV_HALF))
     lines += [{"step": "pflegeversicherung", "side": "EMPLOYEE", "amount": str(pv_ee)}, {"step": "pflegeversicherung", "side": "EMPLOYER", "amount": str(pv_er)}]
     if er.get("u1Participation") == "true":
-        u1 = r2(rv_base * D(emp["u1Rate"]) / 100)
+        u1 = r2(u1_base * D(emp["u1Rate"]) / 100)
         if u1:
             lines.append({"step": "umlageU1", "side": "EMPLOYER", "amount": str(u1)})
     u2 = r2(rv_base * D(emp["u2Rate"]) / 100)
@@ -179,6 +218,53 @@ def case(name, gross, emp, birth="1988-03-15", employer=None, period=MONTH, **ex
     return c
 
 
+OCTOBER = ("2026-10-01", "2026-10-31", "2026-10-30")
+
+
+def ytd_months(months, wage, other="0"):
+    """Year-to-date figures for `months` posted months of a regular monthly `wage` (below both ceilings) and earlier sonstige Bezüge."""
+    w, o = D(wage), D(other)
+    return {"lohnsteuer.TAX.base": str(w * months), "lohnsteuer.TAX.periods": str(months), "lohnsteuerSonstigeBezuege.TAX.base": str(o),
+            "krankenversicherung.EMPLOYEE.base": str(min(w, KV_BBG) * months + min(o, KV_BBG)), "krankenversicherung.EMPLOYEE.periods": str(months),
+            "rentenversicherung.EMPLOYEE.base": str(min(w, RV_BBG) * months + o), "rentenversicherung.EMPLOYEE.periods": str(months)}
+
+
+def other_payment_cases():
+    """Sonstige Bezüge with October's wage: § 39b Abs. 3 EStG by lohnsteuer_statute.other_payment, § 23a SGB IV as above."""
+    bonus = lambda salary, amount: {"BASIC": salary, "BONUS": amount}
+    since = "2020-01-01"
+    return [
+        case("Weihnachtsgeld below both ceilings, Steuerklasse I", "6000.00", employee(), period=OCTOBER,
+             earningsByComponent=bonus("4000.00", "2000.00"), ytd=ytd_months(9, "4000.00"), employmentStartDate=since),
+        case("bonus partly above the anteilige KV ceiling", "13500.00", employee(), period=OCTOBER,
+             earningsByComponent=bonus("5500.00", "8000.00"), ytd=ytd_months(9, "5500.00"), employmentStartDate=since),
+        case("second sonstiger Bezug this year counts the first in the annual wage", "7500.00", employee(), period=OCTOBER,
+             earningsByComponent=bonus("4500.00", "3000.00"), ytd=ytd_months(9, "4500.00", "2500.00"), employmentStartDate=since),
+        case("Steuerklasse III, 2 Kinderfreibeträge, church in Bavaria", "13000.00",
+             employee(taxClass=3, childAllowances="2.0", churchMember="true", pvParent="true", pvChildrenUnder25=2, healthFundAdditionalRate="2.50"),
+             employer={"state": "BY", "u1Participation": "false"}, period=OCTOBER, earningsByComponent=bonus("6500.00", "6500.00"),
+             ytd=ytd_months(9, "6500.00"), employmentStartDate=since),
+        case("sonstiger Bezug in Steuerklasse V", "4100.00", employee(taxClass=5, healthFundAdditionalRate="3.10"), period=OCTOBER,
+             earningsByComponent=bonus("2600.00", "1500.00"), ytd=ytd_months(9, "2600.00"), employmentStartDate=since),
+        case("Jahresfreibetrag with a monthly Freibetrag, church in NRW", "6200.00",
+             employee(taxAllowance="250.00", annualTaxAllowance="3000.00", churchMember="true"), period=OCTOBER,
+             earningsByComponent=bonus("3900.00", "2300.00"), ytd=ytd_months(9, "3900.00"), employmentStartDate=since),
+        case("joined in July: three months at an earlier employer extrapolated", "7000.00", employee(priorEmployersMonths=3), period=OCTOBER,
+             earningsByComponent=bonus("4200.00", "2800.00"), ytd=ytd_months(3, "4200.00"), employmentStartDate="2026-07-01"),
+        case("joined in July with the earlier employer's Lohnsteuerbescheinigung", "7000.00", employee(priorEmployersWage="21000.00"), period=OCTOBER,
+             earningsByComponent=bonus("4200.00", "2800.00"), ytd=ytd_months(3, "4200.00"), employmentStartDate="2026-07-01"),
+        case("first payroll in Humano in October with brought-forward figures", "9000.00",
+             employee(broughtForwardYear=2026, broughtForwardMonths=9, broughtForwardTaxWage="45000.00", broughtForwardOtherPayments="0",
+                      broughtForwardKvBase="45000.00", broughtForwardRvBase="45000.00"), period=OCTOBER,
+             earningsByComponent=bonus("5000.00", "4000.00"), employmentStartDate=since),
+        case("U1 leaves the one-off payment out; U2 and the Insolvenzgeldumlage include it", "6600.00", employee(u1Rate="1.60"),
+             employer={"state": "HE", "u1Participation": "true"}, period=OCTOBER, earningsByComponent=bonus("3600.00", "3000.00"),
+             ytd=ytd_months(9, "3600.00"), employmentStartDate=since),
+        case("January bonus within the anteilige ceiling: no März-Klausel", "5500.00", employee(), period=("2026-01-01", "2026-01-31", "2026-01-30"),
+             earningsByComponent=bonus("4000.00", "1500.00"), employmentStartDate=since),
+    ]
+
+
 def test_cases():
     cases = [
         case("Steuerklasse I, 4.000 EUR, childless, no church", "4000.00", employee()),
@@ -207,15 +293,26 @@ def test_cases():
         case("public employer without Insolvenzgeldumlage", "4100.00", employee(), employer={"state": "BE", "u1Participation": "false", "insolvencyLevyExempt": "true"}),
         case("December 2026 wages paid on 8 January 2027 use the 2026 rules", "4400.00", employee(churchMember="true"),
              period=("2026-12-01", "2026-12-31", "2027-01-08")),
-    ]
+    ] + other_payment_cases()
     for c in cases:
         c["expectLines"] = expected_lines(c)
     errors = [
         case("a pay period that is not a calendar month is refused", "4000.00", employee(), period=("2026-06-15", "2026-07-14", "2026-07-14"),
              expectError="calendar month"),
         case("joining or leaving during the month is refused", "2000.00", employee(), employedThroughout=False, expectError="whole calendar month"),
-        case("sonstige Bezüge (bonus) are refused", "6000.00", employee(), earningsByComponent={"BASIC": "4000.00", "BONUS": "2000.00"},
-             expectError="Sonstige Bezüge"),
+        case("a sonstiger Bezug paid in the next year is refused", "6500.00", employee(), period=("2026-12-01", "2026-12-31", "2027-01-08"),
+             earningsByComponent={"BASIC": "4500.00", "BONUS": "2000.00"}, ytd=ytd_months(11, "4500.00"), expectError="§ 38a"),
+        case("a sonstiger Bezug with earlier months missing from the payrolls is refused", "6000.00", employee(), period=OCTOBER,
+             earningsByComponent={"BASIC": "4000.00", "BONUS": "2000.00"}, ytd=ytd_months(5, "4000.00"), employmentStartDate="2020-01-01",
+             expectError="brought-forward"),
+        case("a sonstiger Bezug with a monthly Freibetrag needs the Jahresfreibetrag", "6000.00", employee(taxAllowance="250.00"), period=OCTOBER,
+             earningsByComponent={"BASIC": "4000.00", "BONUS": "2000.00"}, ytd=ytd_months(9, "4000.00"), expectError="annualTaxAllowance"),
+        case("a sonstiger Bezug for someone who joined this year needs their earlier employers' wages", "6000.00", employee(), period=OCTOBER,
+             earningsByComponent={"BASIC": "4000.00", "BONUS": "2000.00"}, ytd=ytd_months(3, "4000.00"), employmentStartDate="2026-07-01",
+             expectError="priorEmployersWage"),
+        case("März-Klausel: a February bonus above the anteilige Beitragsbemessungsgrenze is refused", "15500.00", employee(),
+             period=("2026-02-01", "2026-02-28", "2026-02-27"), earningsByComponent={"BASIC": "5500.00", "BONUS": "10000.00"},
+             ytd=ytd_months(1, "5500.00"), employmentStartDate="2020-01-01", expectError="März-Klausel"),
         case("pre-tax deductions (Entgeltumwandlung) are refused", "4000.00", employee(), preTaxDeductionsByType={"RETIREMENT": "200.00"},
              expectError="Entgeltumwandlung"),
         case("a regular wage of 2.000 EUR or less is refused (Übergangsbereich)", "1900.00", employee(), expectError="Übergangsbereich"),
@@ -242,12 +339,15 @@ def p(value, source):
 def main():
     check_law(sys.argv[1])
     state_church = " or ".join(f"#employer['state'] == '{s}'" for s in ("BY", "BW"))
-    sv = "#socialEarnings - #reductions"
+    # Current wages: the earnings without the sonstige Bezüge / einmalig gezahltes Arbeitsentgelt (BONUS).
+    sv = "#socialEarnings - #reductions - #socialEarningsByComponent['BONUS']"
+    bonus = "#earningsByComponent['BONUS'] != 0"
+    bf = "(#broughtForward ? #coalesce(#employee['{0}'], 0) : 0)"
     template = {
         "schemaVersion": 1,
         "id": "de-employment",
         "name": "Deutschland — Lohnsteuer, Solidaritätszuschlag, Kirchensteuer und Gesamtsozialversicherungsbeitrag",
-        "version": "2026.1.1",
+        "version": "2026.1.2",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "DE"},
         "validity": {"from": FROM, "to": TO},
@@ -256,7 +356,9 @@ def main():
         "taxYearStart": "--01-01",
         "dateBasis": "PERIOD",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
-        "changelog": [{"version": "2026.1.1", "date": "2026-10-24",
+        "changelog": [{"version": "2026.1.2", "date": "2026-10-25",
+                       "summary": "Sonstige Bezüge (BONUS: Weihnachts-/Urlaubsgeld, Prämien, 13. Gehalt) are supported: Lohnsteuer, SolZ and Kirchensteuer by the PAP's annual-wage method (§ 39b Abs. 3 EStG) on the voraussichtlicher Jahresarbeitslohn from this year's payrolls, and contributions as einmalig gezahltes Arbeitsentgelt up to the anteilige Beitragsbemessungsgrenze (§ 23a SGB IV); U1 leaves them out (§ 7 Abs. 2 AAG). The Lohnsteuer line is now recorded even at 0, so its base builds the annual wage. Before, a period with a BONUS was refused."},
+                      {"version": "2026.1.1", "date": "2026-10-24",
                        "summary": "Corrects silent errors: U1 participation without the employee's U1 rate, and care-insurance children under 25 without the parent flag, are now refused instead of giving no U1 levy or the childless surcharge without the child reductions."},
                       {"version": "2026.1.0", "date": RETRIEVED,
                        "summary": "2026: Lohnsteuer, Solidaritätszuschlag and Maßstabsteuer by the BMF PAP 2026 (generated from the official XML pseudocode); Kirchensteuer; KV, RV, AV, PV contributions and the U1, U2, U3 levies for regular monthly wages."}],
@@ -300,6 +402,26 @@ def main():
                  "description": "U1 Umlagesatz of the employee's Krankenkasse in percent (when the employer takes part in U1)"},
                 {"key": "u2Rate", "type": "DECIMAL", "required": True, "min": 0, "max": 10,
                  "description": "U2 Umlagesatz of the employee's Krankenkasse in percent"},
+                {"key": "annualTaxAllowance", "type": "DECIMAL", "required": False, "min": 0,
+                 "description": "Jahresfreibetrag (ELStAM) in EUR, needed for sonstige Bezüge when a monthly Freibetrag is set (§ 39b Abs. 3 Satz 3 EStG)"},
+                {"key": "annualTaxAddition", "type": "DECIMAL", "required": False, "min": 0,
+                 "description": "Jahreshinzurechnungsbetrag (ELStAM) in EUR, needed for sonstige Bezüge when a monthly Hinzurechnungsbetrag is set"},
+                {"key": "priorEmployersWage", "type": "DECIMAL", "required": False, "min": 0,
+                 "description": "For an employee who joined this year: Arbeitslohn from earlier employers this year per the Lohnsteuerbescheinigungen they presented (0 if none); needed for sonstige Bezüge (§ 39b Abs. 3 Satz 1 EStG)"},
+                {"key": "priorEmployersMonths", "type": "INTEGER", "required": False, "min": 0, "max": 11,
+                 "description": "For an employee who joined this year: months worked for earlier employers this year without a Lohnsteuerbescheinigung presented; the current monthly wage is extrapolated over them (§ 39b Abs. 3 Satz 2 EStG)"},
+                {"key": "broughtForwardYear", "type": "INTEGER", "required": False, "min": 2000, "max": 2100,
+                 "description": "Year the brought-forward figures belong to (payrolls with you this year before Humano); other years' figures are ignored"},
+                {"key": "broughtForwardMonths", "type": "INTEGER", "required": False, "min": 0, "max": 11,
+                 "description": "Months with contributions from current wages with you this year before the first payroll in Humano"},
+                {"key": "broughtForwardTaxWage", "type": "DECIMAL", "required": False, "min": 0,
+                 "description": "Laufender Arbeitslohn (steuerpflichtig) paid by you this year before the first payroll in Humano"},
+                {"key": "broughtForwardOtherPayments", "type": "DECIMAL", "required": False, "min": 0,
+                 "description": "Sonstige Bezüge (steuerpflichtig) paid by you this year before the first payroll in Humano"},
+                {"key": "broughtForwardKvBase", "type": "DECIMAL", "required": False, "min": 0,
+                 "description": "Beitragspflichtiges Arbeitsentgelt KV/PV this year before the first payroll in Humano"},
+                {"key": "broughtForwardRvBase", "type": "DECIMAL", "required": False, "min": 0,
+                 "description": "Beitragspflichtiges Arbeitsentgelt RV/AV this year before the first payroll in Humano"},
             ],
         },
         "parameters": {
@@ -316,8 +438,6 @@ def main():
              "message": "German contributions are computed per calendar month (BVV § 1): the pay period must be a calendar month"},
             {"id": "wholeMonth", "type": "REQUIRE", "condition": "#employedThroughout",
              "message": "Joining or leaving during the month (Teillohnzahlungszeitraum, anteilige Beitragsbemessungsgrenze) is not supported: employ the whole calendar month"},
-            {"id": "noBonus", "type": "REQUIRE", "condition": "#earningsByComponent['BONUS'] == 0",
-             "message": "Sonstige Bezüge (bonus, Weihnachts-/Urlaubsgeld) need the annual-wage method and one-off-payment contribution rules, which this template does not support"},
             {"id": "noPreTax", "type": "REQUIRE", "condition": "#preTaxDeductions == 0",
              "message": "Pre-tax deductions (Entgeltumwandlung, § 3 Nr. 63 EStG / § 1 SvEV) are not supported"},
             {"id": "regular", "type": "REQUIRE", "condition": "#employee['employmentType'] == 'REGULAR'",
@@ -348,25 +468,79 @@ def main():
             {"id": "pvReductions", "type": "VALUE",
              "expr": "#employee['pvParent'] ? #min(#pos(#employee['pvChildrenUnder25'] - 1), 4) : 0"},
             {"id": "saxony", "type": "VALUE", "expr": "#employer['state'] == 'SN' ? 1 : 0"},
+            # Sonstige Bezüge / einmalig gezahltes Arbeitsentgelt (BONUS).
+            {"id": "otherPaymentInPaymentYear", "type": "REQUIRE", "source": "estg", "when": bonus,
+             "condition": "#paymentDate.getYear() == #periodEnd.getYear()",
+             "message": "A sonstiger Bezug is taxed in the year it is paid (§ 38a Abs. 1 Satz 3 EStG), and this period's payment date falls in another year: move the pay date into the period's year (Change pay date on the run), or pay the bonus in a period of the payment year"},
+            {"id": "annualAllowanceKnown", "type": "REQUIRE", "source": "estg", "when": bonus + " and #employee['taxAllowance'] > 0",
+             "condition": "#employee['annualTaxAllowance'] != null", "detail": "annualTaxAllowance",
+             "message": "The Lohnsteuer on a sonstiger Bezug uses the annual Freibetrag (§ 39b Abs. 3 EStG): enter annualTaxAllowance, the Jahresfreibetrag from ELStAM, in the employee's details for this template"},
+            {"id": "annualAdditionKnown", "type": "REQUIRE", "source": "estg", "when": bonus + " and #employee['taxAddition'] > 0",
+             "condition": "#employee['annualTaxAddition'] != null", "detail": "annualTaxAddition",
+             "message": "The Lohnsteuer on a sonstiger Bezug uses the annual Hinzurechnungsbetrag (§ 39b Abs. 3 EStG): enter annualTaxAddition, the Jahreshinzurechnungsbetrag from ELStAM, in the employee's details for this template"},
+            {"id": "priorEmployersKnown", "type": "REQUIRE", "source": "estg", "when": bonus + " and #employmentStartDate > #taxYearStartDate",
+             "condition": "#employee['priorEmployersWage'] != null or #employee['priorEmployersMonths'] != null", "detail": "priorEmployersWage",
+             "message": "The employee joined this year: the voraussichtlicher Jahresarbeitslohn for the sonstiger Bezug includes earlier employers' wages (§ 39b Abs. 3 EStG). Enter priorEmployersWage from their Lohnsteuerbescheinigungen, or priorEmployersMonths without one (0 if they had no earlier employer this year)"},
+            {"id": "broughtForward", "type": "VALUE",
+             "expr": "#employee['broughtForwardYear'] != null and #employee['broughtForwardYear'] == #taxYear"},
+            {"id": "monthsEarlier", "type": "VALUE",
+             "expr": "#taxMonth - 1 - (#employmentStartDate > #taxYearStartDate ? #employmentStartDate.getMonthValue() - 1 : 0)"},
+            {"id": "monthsRecorded", "type": "VALUE",
+             "expr": "#ytd.periods('krankenversicherung', 'EMPLOYEE') + " + bf.format("broughtForwardMonths")},
+            {"id": "earlierMonthsKnown", "type": "REQUIRE", "source": "sgb4-23a", "when": bonus,
+             "condition": "#monthsRecorded == #monthsEarlier", "detail": "broughtForwardYear",
+             "message": "A sonstiger Bezug needs this year's earlier pay with you (annual wage, § 39b Abs. 3 EStG; anteilige Beitragsbemessungsgrenze, § 23a SGB IV), and not every earlier month of employment this year is in a posted payroll: post the earlier runs, or set broughtForwardYear and the brought-forward figures for the months before Humano"},
+            {"id": "regularKvBase", "type": "VALUE", "expr": f"#min({sv}, #p['kvBbgMonth'])"},
+            {"id": "regularRvBase", "type": "VALUE", "expr": f"#min({sv}, #p['rvBbgMonth'])"},
+            {"id": "oneOffSocial", "type": "VALUE", "expr": "#socialEarningsByComponent['BONUS']"},
+            {"id": "priorKvBase", "type": "VALUE", "when": bonus,
+             "expr": "#ytd.base('krankenversicherung', 'EMPLOYEE') + " + bf.format("broughtForwardKvBase")},
+            {"id": "priorRvBase", "type": "VALUE", "when": bonus,
+             "expr": "#ytd.base('rentenversicherung', 'EMPLOYEE') + " + bf.format("broughtForwardRvBase")},
+            {"id": "marchClause", "type": "REQUIRE", "source": "sgb4-23a",
+             "when": bonus + " and #taxMonth <= 3 and #employmentStartDate < #taxYearStartDate",
+             "condition": "#priorKvBase + #regularKvBase + #oneOffSocial <= (#monthsRecorded + 1) * #p['kvBbgMonth'] and "
+                          "#priorRvBase + #regularRvBase + #oneOffSocial <= (#monthsRecorded + 1) * #p['rvBbgMonth']",
+             "message": "Einmalig gezahltes Arbeitsentgelt paid from January to March above the anteilige Beitragsbemessungsgrenze belongs to last December (März-Klausel, § 23a Abs. 4 SGB IV), which this template does not support: correct the previous year's December payroll instead"},
+            {"id": "oneOffKvBase", "type": "VALUE", "when": bonus,
+             "expr": "#min(#oneOffSocial, #pos((#monthsRecorded + 1) * #p['kvBbgMonth'] - #priorKvBase - #regularKvBase))"},
+            {"id": "oneOffRvBase", "type": "VALUE", "when": bonus,
+             "expr": "#min(#oneOffSocial, #pos((#monthsRecorded + 1) * #p['rvBbgMonth'] - #priorRvBase - #regularRvBase))"},
+            {"id": "regularTaxWage", "type": "VALUE", "expr": "#pos(#taxableEarnings - #reductions - #taxableEarningsByComponent['BONUS'])"},
+            {"id": "otherPayment", "type": "VALUE", "expr": "#taxableEarningsByComponent['BONUS']"},
+            {"id": "expectedAnnualWage", "type": "VALUE", "when": bonus,
+             "expr": "#ytd.base('lohnsteuer', 'TAX') + #ytd.base('lohnsteuerSonstigeBezuege', 'TAX') + " + bf.format("broughtForwardTaxWage")
+                     + " + " + bf.format("broughtForwardOtherPayments") + " + #coalesce(#employee['priorEmployersWage'], 0)"
+                     " + #regularTaxWage * (#coalesce(#employee['priorEmployersMonths'], 0) + 13 - #taxMonth)"},
             {"id": "pap", "type": "EXTENSION", "extension": "de.lohnsteuer-pap-2026", "source": "bmf-pap-2026",
              "inputs": {
-                 "stkl": "#employee['taxClass']", "lzz": "2", "wage": "#pos(#taxableEarnings - #reductions)",
+                 "stkl": "#employee['taxClass']", "lzz": "2", "wage": "#regularTaxWage",
                  "allowance": "#employee['taxAllowance']", "addition": "#employee['taxAddition']",
                  "childAllowances": "#employee['childAllowances']", "church": "#employee['churchMember'] ? 1 : 0",
                  "kvz": "#employee['healthFundAdditionalRate']", "pvs": "#saxony", "pvz": "#pvChildless", "pva": "#pvReductions",
                  "alter1": "#alter1", "ajahr": "#ajahr",
                  "factorProcedure": "#employee['factor'] != null ? 1 : 0", "factor": "#coalesce(#employee['factor'], 1)",
+                 "otherPayment": "#otherPayment", "expectedAnnualWage": "#expectedAnnualWage",
+                 "annualAllowance": "#employee['taxAllowance'] > 0 ? #coalesce(#employee['annualTaxAllowance'], 0) : 0",
+                 "annualAddition": "#employee['taxAddition'] > 0 ? #coalesce(#employee['annualTaxAddition'], 0) : 0",
              }},
             {"id": "lohnsteuer", "type": "TAX", "label": "Lohnsteuer", "ledger": "INCOME_TAX", "source": "bmf-pap-2026",
-             "base": "#pos(#taxableEarnings - #reductions)", "amount": "#pap['lst']"},
+             "base": "#regularTaxWage", "amount": "#pap['lst']", "recordZero": True},
             {"id": "solidaritaetszuschlag", "type": "TAX", "label": "Solidaritätszuschlag", "ledger": "OTHER", "source": "bmf-pap-2026",
              "amount": "#pap['solz']"},
             {"id": "kirchensteuer", "type": "TAX", "label": "Kirchensteuer", "ledger": "OTHER", "source": "ekd-kist-2026",
              "when": "#employee['churchMember']", "base": "#pap['bk']",
              "amount": f"#round(#pap['bk'] * ({state_church} ? #p['churchRateByBw'] : #p['churchRate']), 2, 'FLOOR')"},
+            {"id": "lohnsteuerSonstigeBezuege", "type": "TAX", "label": "Lohnsteuer (sonstiger Bezug)", "ledger": "INCOME_TAX", "source": "bmf-pap-2026",
+             "when": bonus, "base": "#otherPayment", "amount": "#pap['sts']", "recordZero": True},
+            {"id": "solidaritaetszuschlagSonstigeBezuege", "type": "TAX", "label": "Solidaritätszuschlag (sonstiger Bezug)", "ledger": "OTHER",
+             "source": "bmf-pap-2026", "when": bonus, "amount": "#pap['solzs']"},
+            {"id": "kirchensteuerSonstigeBezuege", "type": "TAX", "label": "Kirchensteuer (sonstiger Bezug)", "ledger": "OTHER", "source": "ekd-kist-2026",
+             "when": bonus + " and #employee['churchMember']", "base": "#pap['bks']",
+             "amount": f"#round(#pap['bks'] * ({state_church} ? #p['churchRateByBw'] : #p['churchRate']), 2, 'FLOOR')"},
             # Gesamtsozialversicherungsbeitrag (BVV §§ 1, 2): equal halves are one rounded half each; unequal shares rounded separately.
-            {"id": "kvBase", "type": "VALUE", "expr": f"#min({sv}, #p['kvBbgMonth'])"},
-            {"id": "rvBase", "type": "VALUE", "expr": f"#min({sv}, #p['rvBbgMonth'])"},
+            {"id": "kvBase", "type": "VALUE", "expr": "#regularKvBase + #oneOffKvBase"},
+            {"id": "rvBase", "type": "VALUE", "expr": "#regularRvBase + #oneOffRvBase"},
             {"id": "kvRateHalf", "type": "VALUE", "expr": "#p['kvHalf'] + #divide(#employee['healthFundAdditionalRate'], 200, 8, 'HALF_UP')"},
             {"id": "krankenversicherung", "type": "CONTRIBUTION", "label": "Krankenversicherung", "ledger": "MEDICARE", "source": "sgb5",
              "base": "#kvBase", "employee": {"rate": "#kvRateHalf"}, "employer": {"rate": "#kvRateHalf"}},
@@ -379,7 +553,7 @@ def main():
              "employee": {"rate": "(#saxony == 1 ? #p['pvSaxonyEmployee'] : #p['pvHalf']) + (#pvChildless == 1 ? #p['pvChildless'] : 0) - #pvReductions * #p['pvChildReduction']"},
              "employer": {"rate": "#saxony == 1 ? #p['pvSaxonyEmployer'] : #p['pvHalf']"}},
             {"id": "umlageU1", "type": "CONTRIBUTION", "label": "Umlage U1", "ledger": "OTHER", "source": "aag",
-             "when": "#employer['u1Participation']", "base": "#rvBase",
+             "when": "#employer['u1Participation']", "base": "#regularRvBase",
              "employer": {"rate": "#divide(#employee['u1Rate'], 100, 8, 'HALF_UP')"}},
             {"id": "umlageU2", "type": "CONTRIBUTION", "label": "Umlage U2", "ledger": "OTHER", "source": "aag", "base": "#rvBase",
              "employer": {"rate": "#divide(#employee['u2Rate'], 100, 8, 'HALF_UP')"}},
@@ -387,13 +561,14 @@ def main():
              "when": "!#employer['insolvencyLevyExempt']", "base": "#rvBase", "employer": {"rate": "#p['insolvencyLevy']"}},
         ],
         "limitations": [
-            "Regular monthly wages (laufender Arbeitslohn) for whole calendar months; joining or leaving mid-month, sonstige Bezüge (bonus, Weihnachts-/Urlaubsgeld) and Entgeltumwandlung are refused.",
+            "Monthly wages for whole calendar months; joining or leaving mid-month and Entgeltumwandlung are refused.",
+            "Sonstige Bezüge are the BONUS earnings (Weihnachts-/Urlaubsgeld, Prämien, 13. Gehalt), paid with a period's current wage: Lohnsteuer by the annual-wage method (§ 39b Abs. 3 EStG) on the voraussichtlicher Jahresarbeitslohn = this year's posted current wages and sonstige Bezüge (or brought-forward figures) plus the current monthly wage for the rest of the year and for months at earlier employers without a Lohnsteuerbescheinigung; contributions up to the anteilige Beitragsbemessungsgrenze of the months with contributions (§ 23a SGB IV); U1 leaves them out. Refused: a payment date in another year (§ 38a Abs. 1 Satz 3 EStG), the März-Klausel (January to March above the anteilige BBG, § 23a Abs. 4), an earlier month of employment this year missing from the posted payrolls. Not supported: Entschädigungen and the Fünftelregelung (§ 34 EStG; do not pay redundancy payments as BONUS), one-off payments after leaving (§ 23a Abs. 2), Vermögensbeteiligungen. Months whose current wage paid no Lohnsteuer before version 2026.1.2 recorded no wage and are missing from the annual wage.",
             "Beitragsgruppe 1111 (KV general rate, RV, AV, PV all statutory); Midijobs (Übergangsbereich), Minijobs, private health insurance, old-age pensioners, employees exempt from pension insurance, employees aged 66 or over (Regelaltersgrenze), Werkstudenten, apprentices below 2 000 EUR and other Personengruppen are refused or out of scope.",
             "Voluntary KV members above the Jahresarbeitsentgeltgrenze are computed as in the Firmenzahlerverfahren (contribution withheld, employer share paid); Selbstzahler with a § 257 SGB V subsidy are not supported.",
             "Kirchensteuer: 8 % in BY and BW, 9 % elsewhere, by the Betriebsstätte's Land, cents truncated; a Mindestkirchensteuer (where a church still levies one) and the Kappung are not applied.",
             "Care insurance in Sachsen follows the employer's Land, taken as the place of work.",
             "U1/U2 rates are the employee's Krankenkasse's; U1 applies when the employer takes part (§ 1 AAG).",
-            "Status LAW_DERIVED: the Lohnsteuer code is generated from the BMF's XML pseudocode and reproduced 180,000 amounts of an implementation written from the EStG text (all Steuerklassen, Kinderfreibeträge, church base, Sachsen, PV surcharge/reductions, Altersentlastungsbetrag, Frei-/Hinzurechnungsbeträge, Faktor); the BMF's own calculator interface has not been used.",
+            "Status LAW_DERIVED: the Lohnsteuer code is generated from the BMF's XML pseudocode and reproduced 180,000 amounts of an implementation written from the EStG text (all Steuerklassen, Kinderfreibeträge, church base, Sachsen, PV surcharge/reductions, Altersentlastungsbetrag, Frei-/Hinzurechnungsbeträge, Faktor), and 20,000 sonstige-Bezüge cases of its § 39b Abs. 3 counterpart; the BMF's own calculator interface has not been used.",
         ],
         "testCases": test_cases(),
     }

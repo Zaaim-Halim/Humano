@@ -10,13 +10,14 @@ import org.springframework.stereotype.Component;
 
 /**
  * Lohnsteuer, Solidaritätszuschlag and the Maßstabsteuer for the Kirchenlohnsteuer for current wages
- * (laufender Arbeitslohn) in 2026, by the BMF's Programmablaufplan 2026 ({@link Lohnsteuer2026}, generated
- * from the official XML pseudocode).
+ * (laufender Arbeitslohn) and sonstige Bezüge in 2026, by the BMF's Programmablaufplan 2026
+ * ({@link Lohnsteuer2026}, generated from the official XML pseudocode).
  * <p>
  * This class only maps units: amounts come in and go out in euros, the PAP works in cents (its inputs
- * RE4, LZZFREIB, LZZHINZU; its outputs LSTLZZ, SOLZLZZ, BK). Other-payments fields (sonstige Bezüge,
- * Versorgungsbezüge, private health insurance) are left at their PAP defaults; templates that need them
- * must refuse such cases until the extension exposes them.
+ * RE4, LZZFREIB, LZZHINZU, SONSTB, JRE4, JFREIB, JHINZU; its outputs LSTLZZ, SOLZLZZ, BK, STS, SOLZS, BKS).
+ * Entschädigungen (SONSTENT, JRE4ENT: Fünftelregelung), Versorgungsbezüge, Vermögensbeteiligungen and
+ * private health insurance are left at their PAP defaults; templates that need them must refuse such cases
+ * until the extension exposes them.
  *
  * <h2>Inputs</h2>
  * {@code stkl} 1-6; {@code lzz} Lohnzahlungszeitraum 1 Jahr, 2 Monat, 3 Woche, 4 Tag; {@code wage} — RE4 in
@@ -24,10 +25,14 @@ import org.springframework.stereotype.Component;
  * (e.g. 1.5); {@code church} — 1 if a church-tax member (R); {@code kvz} — the health fund's
  * Zusatzbeitragssatz in percent (e.g. 2.90); {@code pvs}, {@code pvz}, {@code pva} — care-insurance
  * Saxony flag, childless surcharge flag, number of child reductions; {@code alter1}/{@code ajahr} —
- * Altersentlastungsbetrag; {@code factorProcedure}/{@code factor} — Faktorverfahren (af, f).
+ * Altersentlastungsbetrag; {@code factorProcedure}/{@code factor} — Faktorverfahren (af, f);
+ * {@code otherPayment} — SONSTB, the sonstige Bezüge paid with this period (0 if none);
+ * {@code expectedAnnualWage} — JRE4, the voraussichtlicher Jahresarbeitslohn without them (§ 39b Abs. 3 EStG);
+ * {@code annualAllowance}/{@code annualAddition} — JFREIB/JHINZU, the annual Frei- and Hinzurechnungsbetrag.
  *
  * <h2>Outputs</h2>
- * {@code lst}, {@code solz}, {@code bk} — for the pay period, in euros.
+ * {@code lst}, {@code solz}, {@code bk} — for the pay period's current wage; {@code sts}, {@code solzs},
+ * {@code bks} — for the sonstige Bezüge; in euros.
  */
 @Component
 public class DeLohnsteuerPap2026 implements PayrollTemplateExtension {
@@ -57,13 +62,17 @@ public class DeLohnsteuerPap2026 implements PayrollTemplateExtension {
             "alter1",
             "ajahr",
             "factorProcedure",
-            "factor"
+            "factor",
+            "otherPayment",
+            "expectedAnnualWage",
+            "annualAllowance",
+            "annualAddition"
         );
     }
 
     @Override
     public Set<String> outputNames() {
-        return Set.of("lst", "solz", "bk");
+        return Set.of("lst", "solz", "bk", "sts", "solzs", "bks");
     }
 
     @Override
@@ -84,12 +93,29 @@ public class DeLohnsteuerPap2026 implements PayrollTemplateExtension {
         pap.AJAHR = integer(inputs, "ajahr", 0, 9999);
         pap.af = integer(inputs, "factorProcedure", 0, 1);
         pap.f = decimal(inputs, "factor").doubleValue();
+        pap.SONSTB = cents(inputs, "otherPayment");
+        pap.JRE4 = cents(inputs, "expectedAnnualWage");
+        pap.JFREIB = cents(inputs, "annualAllowance");
+        pap.JHINZU = cents(inputs, "annualAddition");
         // Statutory health and care insurance, pension and unemployment insurance at the general ceilings.
         pap.PKV = 0;
         pap.KRV = 0;
         pap.ALV = 0;
         pap.main();
-        return Map.of("lst", euros(pap.LSTLZZ), "solz", euros(pap.SOLZLZZ), "bk", euros(pap.BK));
+        return Map.of(
+            "lst",
+            euros(pap.LSTLZZ),
+            "solz",
+            euros(pap.SOLZLZZ),
+            "bk",
+            euros(pap.BK),
+            "sts",
+            euros(pap.STS),
+            "solzs",
+            euros(pap.SOLZS),
+            "bks",
+            euros(pap.BKS)
+        );
     }
 
     private static int integer(Map<String, Object> inputs, String name, int min, int max) {

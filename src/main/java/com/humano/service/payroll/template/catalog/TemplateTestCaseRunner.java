@@ -62,6 +62,7 @@ public final class TemplateTestCaseRunner {
             c.socialEarnings() != null ? c.socialEarnings() : c.grossEarnings(),
             c.socialEarningsByComponent(),
             c.taxableEarnings() != null ? c.taxableEarnings() : c.grossEarnings(),
+            c.taxableEarningsByComponent(),
             c.reductions() != null ? c.reductions() : BigDecimal.ZERO,
             c.preTaxDeductions() != null
                 ? c.preTaxDeductions()

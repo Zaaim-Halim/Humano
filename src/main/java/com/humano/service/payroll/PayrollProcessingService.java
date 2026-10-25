@@ -616,6 +616,7 @@ public class PayrollProcessingService {
         BigDecimal nonSocialEarnings = BigDecimal.ZERO;
         // The social part of each component's earnings, for payroll templates that treat components apart.
         Map<String, BigDecimal> socialEarningsByComponent = new HashMap<>();
+        Map<String, BigDecimal> taxableEarningsByComponent = new HashMap<>();
         BigDecimal preTaxDeductions = BigDecimal.ZERO;
         BigDecimal postTaxDeductions = BigDecimal.ZERO;
         BigDecimal taxWithheld = BigDecimal.ZERO;
@@ -644,6 +645,8 @@ public class PayrollProcessingService {
             handledComponentIds.add(basicComponent.getId());
             if (!Boolean.TRUE.equals(basicComponent.getTaxable())) {
                 nonTaxableEarnings = nonTaxableEarnings.add(baseSalary);
+            } else {
+                taxableEarningsByComponent.merge(basicComponent.getCode().name(), baseSalary, BigDecimal::add);
             }
             if (!Boolean.TRUE.equals(basicComponent.getContributesToSocial())) {
                 nonSocialEarnings = nonSocialEarnings.add(baseSalary);
@@ -680,6 +683,8 @@ public class PayrollProcessingService {
             earningsByComponent.merge(input.getComponent().getCode().name(), amt, BigDecimal::add);
             if (!Boolean.TRUE.equals(input.getComponent().getTaxable())) {
                 nonTaxableEarnings = nonTaxableEarnings.add(amt);
+            } else {
+                taxableEarningsByComponent.merge(input.getComponent().getCode().name(), amt, BigDecimal::add);
             }
             if (!Boolean.TRUE.equals(input.getComponent().getContributesToSocial())) {
                 nonSocialEarnings = nonSocialEarnings.add(amt);
@@ -718,6 +723,8 @@ public class PayrollProcessingService {
                 earningsByComponent.merge(PayComponentCode.BONUS.name(), amt, BigDecimal::add);
                 if (!Boolean.TRUE.equals(bonusComponent.getTaxable())) {
                     nonTaxableEarnings = nonTaxableEarnings.add(amt);
+                } else {
+                    taxableEarningsByComponent.merge(bonusComponent.getCode().name(), amt, BigDecimal::add);
                 }
                 if (!Boolean.TRUE.equals(bonusComponent.getContributesToSocial())) {
                     nonSocialEarnings = nonSocialEarnings.add(amt);
@@ -740,6 +747,8 @@ public class PayrollProcessingService {
             earningsByComponent.merge(component.getCode().name(), amt, BigDecimal::add);
             if (!Boolean.TRUE.equals(component.getTaxable())) {
                 nonTaxableEarnings = nonTaxableEarnings.add(amt);
+            } else {
+                taxableEarningsByComponent.merge(component.getCode().name(), amt, BigDecimal::add);
             }
             if (!Boolean.TRUE.equals(component.getContributesToSocial())) {
                 nonSocialEarnings = nonSocialEarnings.add(amt);
@@ -911,6 +920,7 @@ public class PayrollProcessingService {
                     grossPay.subtract(nonSocialEarnings),
                     socialEarningsByComponent,
                     grossPay.subtract(nonTaxableEarnings),
+                    taxableEarningsByComponent,
                     leaveReductions,
                     otherPreTaxDeductions,
                     preTaxDeductionsByType,
