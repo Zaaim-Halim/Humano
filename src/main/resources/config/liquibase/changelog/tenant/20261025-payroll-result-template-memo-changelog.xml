@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Values a payroll template keeps from one period to the next (its `remember` steps), such as the
+         Spanish withholding rate and the figures it was determined from, which a later regularization
+         (RIRPF art. 87) starts from. Template id -> step id -> value. -->
+    <changeSet id="20261025-payroll-result-template-memo" author="halimzaaim">
+        <addColumn tableName="payroll_result">
+            <column name="template_memo" type="${jsonType}"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

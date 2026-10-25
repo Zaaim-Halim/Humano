@@ -66,6 +66,9 @@ PARAMS = {
     "mobilityExpenses": ("2000", "rirpf"),
     "disabledWorkerExpenses": ("3500", "rirpf"),
     "disabledWorkerExpensesHigh": ("7750", "rirpf"),
+    "irregularReductionRate": ("0.30", "lirpf"),  # art. 18.2
+    "irregularIncomeLimit": ("300000", "lirpf"),
+    "terminationIrregularThreshold": ("700000", "lirpf"),
     "red20Lower": ("14852", "lirpf"),  # art. 20 (RDL 4/2024)
     "red20Middle": ("17673.52", "lirpf"),
     "red20Upper": ("19747.50", "lirpf"),
@@ -93,6 +96,19 @@ PARAMS = {
     "housingReductionRate": ("0.02", "aeat-algoritmo-2026"),
     "minimumRateShortContract": ("2.00", "rirpf"),  # art. 86.2, in percent like the rate
     "minimumRateSpecial": ("15.00", "rirpf"),
+    "minimumRateShortContractCeuta": ("0.80", "rirpf"),  # art. 86.2: Ceuta and Melilla (and La Palma, DA 57ª LIRPF)
+    "minimumRateSpecialCeuta": ("6.00", "rirpf"),
+    "ceutaQuotaShare": ("0.40", "rirpf"),  # art. 80.2: the rate reduced by 60%
+    "maximumRegularizedRate": ("47.00", "rirpf"),  # art. 87.5
+    "maximumRegularizedRateCeuta": ("19.00", "rirpf"),
+    "childMaintenanceMinimumIncrease": ("1980", "rirpf"),  # art. 85.2
+    # Training contracts, Orden art. 46 first rule: monthly fixed quotas
+    "trainingCommonEmployee": ("11.51", "orden-pjc-297-2026"),
+    "trainingCommonEmployer": ("57.72", "orden-pjc-297-2026"),
+    "trainingProfessionalEmployer": ("7.95", "orden-pjc-297-2026"),
+    "trainingWageGuaranteeEmployer": ("4.38", "orden-pjc-297-2026"),
+    "trainingVocationalEmployee": ("0.28", "orden-pjc-297-2026"),
+    "trainingVocationalEmployer": ("2.16", "orden-pjc-297-2026"),
     # Social security
     "maximumBase": ("5101.20", "orden-pjc-297-2026"),
     "accidentMinimumBase": ("1424.40", "orden-pjc-297-2026"),
@@ -157,14 +173,17 @@ def estimated_contributions(emp):
     at = min(max(monthly, D("1424.40")), D("5101.20"))
     if emp.get("retirementSituation") == "PAST_RETIREMENT_AGE":  # LGSS art. 152: only IT, 0.25%
         return 12 * cent(cc * D("0.0025"))
+    if emp.get("trainingContract") == "true":  # Orden art. 46, first rule: 11.51 + 0.28 fixed, MEI and unemployment on the minimum
+        return 12 * (D("11.51") + D("0.28") + cent(D("1424.40") * D("0.0015")) + cent(D("1424.40") * D("0.0155")))
     unemployment = D("0.016") if emp["unemploymentRate"] == "FIXED_TERM" else D("0.0155")
     month = (cent(cc * D("0.047")) + cent(cc * D("0.0015")) + cent(at * unemployment) + cent(at * D("0.001"))
              + cent(solidarity(monthly, True)))
     return 12 * month
 
 
-def withholding_rate(emp, birth_year, year=2026):
-    """The AEAT algorithm, step by step (RIRPF arts. 81-86)."""
+def withholding_rate(emp, birth_year, year=2026, details=False):
+    """The AEAT algorithm, step by step (RIRPF arts. 81-86). With details, also the figures a later
+    regularization starts from: BASE, MINPERFA and CUOTA (0 when exempt)."""
     retrib = D(emp["annualPay"])
     cotizaciones = D(emp["annualSocialContributions"]) if "annualSocialContributions" in emp else estimated_contributions(emp)
     numdes = int(emp.get("descendants", "0"))
@@ -181,7 +200,9 @@ def withholding_rate(emp, birth_year, year=2026):
         otros = D(0)
     if otros > retrib - cotizaciones:
         otros = retrib - cotizaciones
-    rnt = max(retrib - cotizaciones, D(0))
+    # IRREGULAR1: the art. 18.2 LIRPF reduction, 30% of the irregular income, at most 30% of 300,000 (RIRPF art. 83.3.a)
+    irregular1 = min(trunc2(D(emp.get("irregularIncomeAmount", "0")) * D("0.30")), D(90000))
+    rnt = max(retrib - irregular1 - cotizaciones, D(0))
     if rnt <= D(14852):
         red20 = D(7302)
     elif rnt <= D("17673.52"):
@@ -192,7 +213,7 @@ def withholding_rate(emp, birth_year, year=2026):
         red20 = D(0)
     red20 = cent(red20)
     rntredu = max(rnt - otros - red20, D(0))
-    redu = D(600) if numdes > 2 else D(0)
+    redu = (D(600) if numdes > 2 else D(0)) + D(emp.get("spousalPension", "0"))
     base = rntredu - redu if rntredu > redu else D(0)
     # MÍNIMO PERSONAL Y FAMILIAR
     age = year - birth_year
@@ -203,13 +224,20 @@ def withholding_rate(emp, birth_year, year=2026):
     mindes3 = sum((D(2800) * entero for _ in range(under3)), D(0))
     mindes = cent(mindesg) + cent(mindes3)
     conv = D(emp.get("ascendantsSharedBy", "1"))
-    n65, n75 = int(emp.get("ascendants65", "0")), int(emp.get("ascendants75", "0"))
+    n65 = int(emp.get("ascendants65", "0")) + int(emp.get("ascendantsDisabledUnder65", "0"))
+    n75 = int(emp.get("ascendants75", "0"))
     as65 = sum((D(1150) / conv for _ in range(n65 + n75)), D(0))
     as75 = sum((D(1400) / conv for _ in range(n75)), D(0))
     minas = cent(as65) + cent(as75)
     disper = {"FROM_65": D(9000), "FROM_33": D(3000), "FROM_33_REDUCED_MOBILITY": D(3000)}.get(disability, D(0))
     asisper = D(3000) if disability in ("FROM_65", "FROM_33_REDUCED_MOBILITY") else D(0)
-    minperfa = mincon + mindes + minas + disper + asisper
+    d33, d33m, d65 = (int(emp.get(k, "0")) for k in ("descendantsDisability33", "descendantsDisability33Mobility", "descendantsDisability65"))
+    a33, a33m, a65 = (int(emp.get(k, "0")) for k in ("ascendantsDisability33", "ascendantsDisability33Mobility", "ascendantsDisability65"))
+    disdes = cent(sum([D(3000) * entero] * (d33 + d33m) + [D(9000) * entero] * d65, D(0)))
+    disas = cent(sum([D(3000) / conv] * (a33 + a33m) + [D(9000) / conv] * a65, D(0)))
+    asisdes = cent(sum([D(3000) * entero] * (d33m + d65), D(0)))
+    asisas = cent(sum([D(3000) / conv] * (a33m + a65), D(0)))
+    minperfa = mincon + mindes + minas + disper + asisper + disdes + disas + asisdes + asisas
     # TABLA 1
     col = 2 if numdes >= 2 else numdes
     limit = D(EXEMPT[emp["familySituation"]][col])
@@ -217,23 +245,142 @@ def withholding_rate(emp, birth_year, year=2026):
     if exempt:
         cuota = D(0)
     else:
-        c1, c2 = escala(base), escala(minperfa)
+        anualidades = D(emp.get("childMaintenance", "0"))
+        if anualidades > 0 and base - anualidades > 0:
+            c1, c2 = escala(base - anualidades) + escala(anualidades), escala(minperfa + 1980)
+        else:
+            c1, c2 = escala(base), escala(minperfa)
         cuota = c1 - c2 if c1 > c2 else D(0)
         if retrib <= D(35200):
             cuota = min(cuota, (retrib - limit) * D("0.43"))
     minopago = trunc2(D("0.02") * retrib) if emp.get("housingLoan") == "true" and retrib < D("33007.20") else D(0)
-    dif = max(cuota - minopago, D(0))
+    ceuta = emp.get("taxTerritory") == "CEUTA_MELILLA_LA_PALMA"
+    dif = max((cuota * D("0.40") if ceuta else cuota) - minopago, D(0))
     tipo = trunc2(dif / retrib * 100)
     contract = emp["withholdingContract"]
-    if contract == "SPECIAL_RELATIONSHIP" and tipo < D(15):
-        tipo = D("15.00")
-    elif contract == "UNDER_ONE_YEAR" and tipo < D(2):
-        tipo = D("2.00")
+    special, short = (D("6.00"), D("0.80")) if ceuta else (D("15.00"), D("2.00"))
+    if contract == "SPECIAL_RELATIONSHIP" and tipo < special:
+        tipo = special
+    elif contract == "UNDER_ONE_YEAR" and tipo < short:
+        tipo = short
+    if details:
+        return {"tipo": tipo, "base": base, "minperfa": minperfa, "cuota": cuota, "retrib": retrib, "ceuta": ceuta}
     return tipo
 
 
-def applied_rate(emp, birth_year):
-    tipo = withholding_rate(emp, birth_year)
+def minimum_rate(emp, tipo):
+    """RIRPF art. 86.2 minimums (0.8% / 6% for Ceuta, Melilla and La Palma)."""
+    ceuta = emp.get("taxTerritory") == "CEUTA_MELILLA_LA_PALMA"
+    special, short = (D("6.00"), D("0.80")) if ceuta else (D("15.00"), D("2.00"))
+    if emp["withholdingContract"] == "SPECIAL_RELATIONSHIP" and tipo < special:
+        return special
+    if emp["withholdingContract"] == "UNDER_ONE_YEAR" and tipo < short:
+        return short
+    return tipo
+
+
+def regularization_causes(emp, prior, now):
+    """RIRPF art. 87.2 causes as the AEAT service numbers them, from what changed since the determination
+    kept in `prior`: 1 base, 2 minimum, 3 spousal pension, 4 child maintenance, 5 situation 2 to 3; 11 otherwise."""
+    causes = []
+    if now["base"] != prior["withholdingBase"]:
+        causes.append(1)
+    if now["minperfa"] != prior["personalFamilyMinimum"]:
+        causes.append(2)
+    spousal, maintenance = D(emp.get("spousalPension", "0")), D(emp.get("childMaintenance", "0"))
+    if spousal > 0 and spousal != prior["spousalPensionDetermined"]:
+        causes.append(3)
+    if maintenance > 0 and maintenance != prior["childMaintenanceDetermined"]:
+        causes.append(4)
+    if prior["familySituationCode"] == 2 and emp["familySituation"] == "3":
+        causes.append(5)
+    return causes or [11]
+
+
+def regularized_rate(emp, birth_year, prior, percibido, retenido):
+    """RIRPF art. 87.3 and 87.5 as the AEAT algorithm's REGULARIZACIÓN section computes them, without the
+    housing-loan and Ceuta-change branches: (TIPOREG, IMPORTE)."""
+    now = withholding_rate(emp, birth_year, details=True)
+    retrib, ceuta = now["retrib"], now["ceuta"]
+    importereg = now["cuota"] * D("0.40") if ceuta else now["cuota"]
+    tiporeg = trunc2(max((importereg - retenido) / (retrib - percibido) * 100, D(0)))
+    if ceuta and tiporeg > 19:
+        tiporeg = D("19.00")
+    elif tiporeg > 47:
+        tiporeg = D("47.00")
+    else:
+        tiporeg = minimum_rate(emp, tiporeg)
+    importe = cent((retrib - percibido) * tiporeg / 100 + retenido)
+    causes = regularization_causes(emp, prior, now)
+    if any(c >= 5 for c in causes):
+        return tiporeg, importe
+    tipoa, importea = prior["appliedRate"], prior["annualWithholding"]
+    diferencia = max(prior["withholdingBase"] - prior["personalFamilyMinimum"], D(0))
+    nueva = now["base"] - now["minperfa"]
+    revisar = False
+    if diferencia >= nueva and tiporeg > tipoa:  # 87.5, first paragraph
+        tiporeg, revisar = tipoa, True
+    elif diferencia < nueva and importea < importe:  # 87.5, second paragraph
+        incremento, incremento_base = importe - importea, nueva - diferencia
+        if incremento > incremento_base:
+            revisar = True
+            importe = importea + incremento_base
+            tiporeg = max((importe - retenido) / (retrib - percibido) * 100, D(0))
+            tiporeg = trunc2(tiporeg) if tiporeg > 0 else D(0)
+            importe = (retrib - percibido) * tiporeg / 100 + retenido
+            if importe - importea > incremento_base and tiporeg > 0:
+                tiporeg = trunc2((importea + incremento_base - retenido) / (retrib - percibido) * 100)
+    if revisar:
+        tiporeg = minimum_rate(emp, tiporeg)
+        importe = cent((retrib - percibido) * tiporeg / 100 + retenido)
+    return tiporeg, importe
+
+
+def determination_memo(emp, birth_year, rate=None):
+    """What the template keeps from a first determination (its remember steps), as #ytd.last keys."""
+    d = withholding_rate(emp, birth_year, details=True)
+    rate = withholding_rate(emp, birth_year) if rate is None else D(rate)
+    memo = {"annualPayDetermined": d["retrib"], "withholdingBase": d["base"], "personalFamilyMinimum": d["minperfa"],
+            "withholdingRate": withholding_rate(emp, birth_year), "familySituationCode": D(emp["familySituation"]),
+            "spousalPensionDetermined": D(emp.get("spousalPension", "0")), "childMaintenanceDetermined": D(emp.get("childMaintenance", "0")),
+            "housingLoanFlag": D(1) if emp.get("housingLoan") == "true" else D(0), "ceutaFlag": D(1) if d["ceuta"] else D(0),
+            "automaticRate": rate, "appliedRate": rate, "annualWithholding": cent(d["retrib"] * rate / 100)}
+    return {"last:" + k: str(v) for k, v in memo.items()}
+
+
+def months_paid(emp, birth_year, months, rate=None, monthly=None):
+    """Year to date after `months` posted months of annualPay / 12 at the determination's rate, with its memo."""
+    memo = determination_memo(emp, birth_year, rate)
+    pay = D(monthly) if monthly else cent(D(emp["annualPay"]) / 12)
+    r = D(memo["last:appliedRate"])
+    return {**memo, "incomeTax.TAX.base": str(pay * months), "incomeTax.TAX.amount": str(cent(pay * r / 100) * months),
+            "incomeTax.TAX.periods": str(months), "workAccident.EMPLOYER.periods": str(months)}
+
+
+def automatic_rate(emp, birth_year, ytd):
+    """The rate before any override: the computed one at the first determination, the kept one while
+    nothing changes, the regularized one (RIRPF art. 87) once the data change."""
+    prior = {k[len("last:"):]: D(v) for k, v in (ytd or {}).items() if k.startswith("last:")}
+    fresh = withholding_rate(emp, birth_year)
+    if emp.get("withholdingRateOverrideReason") == "REGULARIZED":
+        return D(emp["withholdingRateOverride"])
+    if not prior:
+        return fresh
+    now = withholding_rate(emp, birth_year, details=True)
+    flags = {"annualPayDetermined": now["retrib"], "withholdingBase": now["base"], "personalFamilyMinimum": now["minperfa"],
+             "withholdingRate": fresh, "familySituationCode": D(emp["familySituation"]),
+             "spousalPensionDetermined": D(emp.get("spousalPension", "0")), "childMaintenanceDetermined": D(emp.get("childMaintenance", "0")),
+             "housingLoanFlag": D(1) if emp.get("housingLoan") == "true" else D(0), "ceutaFlag": D(1) if now["ceuta"] else D(0)}
+    if all(prior[k] == v for k, v in flags.items()):
+        return prior["automaticRate"]
+    bf = emp.get("broughtForwardYear") == "2026"
+    percibido = D((ytd or {}).get("incomeTax.TAX.base", "0")) + (D(emp.get("broughtForwardPay", "0")) if bf else 0)
+    retenido = D((ytd or {}).get("incomeTax.TAX.amount", "0")) + (D(emp.get("broughtForwardWithheld", "0")) if bf else 0)
+    return regularized_rate(emp, birth_year, prior, percibido, retenido)[0]
+
+
+def applied_rate(emp, birth_year, ytd=None):
+    tipo = automatic_rate(emp, birth_year, ytd)
     reason = emp.get("withholdingRateOverrideReason", "NONE")
     if reason == "REGULARIZED":
         return D(emp["withholdingRateOverride"])
@@ -270,7 +417,19 @@ def expected_lines(c):
             cc_min, at_min = D(MIN_BASES[group][0]), D("1424.40")
         cc = min(max(rem, cc_min), D("5101.20"))
         at = min(max(rem + overtime, at_min), D("5101.20"))  # overtime only in the AT/EP base (LGSS art. 147.2.e)
-        if emp.get("retirementSituation") == "PAST_RETIREMENT_AGE":
+        if emp.get("trainingContract") == "true":
+            # Orden art. 46, first rule: fixed quotas; MEI (third rule) and unemployment (art. 33.2.a.1) on the minimum bases
+            add("trainingCommonContingencies", "EMPLOYEE", D("11.51"))
+            add("trainingCommonContingencies", "EMPLOYER", D("57.72"))
+            add("intergenerationalEquity", "EMPLOYEE", cent(cc * D("0.0015")))
+            add("intergenerationalEquity", "EMPLOYER", cent(cc * D("0.0075")))
+            add("unemployment", "EMPLOYEE", cent(at * D("0.0155")))
+            add("unemployment", "EMPLOYER", cent(at * D("0.055")))
+            add("trainingWageGuaranteeFund", "EMPLOYER", D("4.38"))
+            add("trainingVocationalTraining", "EMPLOYEE", D("0.28"))
+            add("trainingVocationalTraining", "EMPLOYER", D("2.16"))
+            add("trainingWorkAccident", "EMPLOYER", D("7.95"))
+        elif emp.get("retirementSituation") == "PAST_RETIREMENT_AGE":
             # LGSS art. 152: exempt from common contingencies (but IT), unemployment, FOGASA and training;
             # Orden art. 32.1.a): IT 1.55% (1.30 / 0.25); no MEI without retirement contributions (art. 127 bis)
             add("temporaryIncapacity", "EMPLOYEE", cent(cc * D("0.0025")))
@@ -286,7 +445,8 @@ def expected_lines(c):
             add("wageGuaranteeFund", "EMPLOYER", cent(at * D("0.002")))
             add("vocationalTraining", "EMPLOYEE", cent(at * D("0.001")))
             add("vocationalTraining", "EMPLOYER", cent(at * D("0.006")))
-        add("workAccident", "EMPLOYER", cent(at * D(emp.get("accidentRate", er["accidentRate"]))))
+        if emp.get("trainingContract") != "true":
+            add("workAccident", "EMPLOYER", cent(at * D(emp.get("accidentRate", er["accidentRate"]))))
         if rem > D("5101.20"):
             add("solidarity", "EMPLOYEE", cent(solidarity(rem, True)))
             add("solidarity", "EMPLOYER", cent(solidarity(rem, False)))
@@ -296,14 +456,14 @@ def expected_lines(c):
             add("overtime", "EMPLOYER", cent(overtime * (D("0.12") if fm else D("0.236"))))
     # Withholding: the payment times the rate, to the cent; recorded even at 0%
     if gross > 0:
-        rate = applied_rate(emp, int(c["birthDate"][:4]))
+        rate = applied_rate(emp, int(c["birthDate"][:4]), c.get("ytd"))
         add("incomeTax", "TAX", cent(gross * rate / 100), keep_zero=True)
     return lines
 
 
 def case(name, evidence, gross, employee, start="2026-03-01", end="2026-03-31", payment=None, whole=True,
          error=None, by_component=None, birth="1985-06-15", employer=None, ytd=None, pre_tax=None,
-         reductions=None, fte=None, social=None, social_by=None):
+         reductions=None, fte=None, social=None, social_by=None, employed=None):
     c = {"name": name, "evidence": evidence, "periodStart": start, "periodEnd": end, "frequency": "MONTHLY"}
     if payment:
         c["paymentDate"] = payment
@@ -322,6 +482,8 @@ def case(name, evidence, gross, employee, start="2026-03-01", end="2026-03-31", 
         c["employedThroughout"] = False
     if birth:
         c["birthDate"] = birth
+    if employed:
+        c["employmentStartDate"] = employed
     c.update({"employer": employer if employer is not None else {"accidentRate": "0.015"}, "employee": employee})
     if ytd:
         c["ytd"] = ytd
@@ -335,6 +497,113 @@ def std(**kw):
          "unemploymentRate": "INDEFINITE", "taxTerritory": "COMMON"}
     e.update(kw)
     return e
+
+
+def group2_cases(law):
+    """Disabled dependants, court-ordered payments, Ceuta / Melilla / La Palma and training contracts."""
+    two = dict(familySituation="2", descendants="2", descendantsComputation="WHOLE")
+    return [
+        case("descendants with a disability, by whole", "LIRPF art. 60.2: one child 33-65% with reduced mobility (3,000 + 3,000), one 65% or more "
+             "(9,000 + 3,000); descendant minimum 2,400 + 2,700. " + law, "5000.00",
+             std(annualPay="60000.00", annualSocialContributions="3890.00", contributionGroup="1", descendantsDisability33Mobility="1", descendantsDisability65="1", dependantsWithDisability="true", **two)),
+        case("a descendant with a disability, by half", "RIRPF art. 84.2: the disability minimum halves with the descendant's. " + law, "2600.00",
+             std(annualPay="31200.00", annualSocialContributions="2000.00", familySituation="3", descendants="1", descendantsComputation="HALF", descendantsDisability33="1")),
+        case("ascendants with a disability, shared by two", "LIRPF arts. 59-61: a parent of 60 with 33-65% and one of 80 with 65% or more, living with the employee and "
+             "a sibling: (1,150 x 2 + 1,400 + 3,000 + 9,000 + 3,000) / 2. " + law, "2400.00",
+             std(annualPay="28800.00", annualSocialContributions="1850.00", ascendantsDisabledUnder65="1", ascendants75="1", ascendantsSharedBy="2",
+                 ascendantsDisability33="1", ascendantsDisability65="1", dependantsWithDisability="true")),
+        case("compensatory pension to the spouse", "RIRPF art. 83.3: 6,000 a year off the base (algorithm CONYUGE). " + law, "3500.00",
+             std(annualPay="42000.00", annualSocialContributions="2700.00", spousalPension="6000.00", courtOrderedPayments="true")),
+        case("child maintenance below the base", "RIRPF art. 85.2: scale on 7,200 and on the rest separately, minimum + 1,980. " + law, "3500.00",
+             std(annualPay="42000.00", annualSocialContributions="2700.00", childMaintenance="7200.00", courtOrderedPayments="true")),
+        case("child maintenance not below the base", "RIRPF art. 85.2 applies only when the maintenance is below the base; otherwise the ordinary scale. " + law, "1500.00",
+             std(annualPay="18000.00", annualSocialContributions="1170.00", childMaintenance="15000.00", courtOrderedPayments="true")),
+        case("Ceuta resident working there", "RIRPF art. 80.2: the rate reduced by 60% (quota x 0.40 in the algorithm). " + law, "3000.00",
+             std(annualPay="36000.00", annualSocialContributions="2330.00", taxTerritory="CEUTA_MELILLA_LA_PALMA")),
+        case("La Palma, contract under a year: 0.8% minimum", "RIRPF art. 86.2: 0.8% instead of 2% for income with the art. 68.4 LIRPF deduction; DA 57ª LIRPF for La Palma. " + law,
+             "1250.00", std(annualPay="15000.00", annualSocialContributions="975.00", taxTerritory="CEUTA_MELILLA_LA_PALMA", withholdingContract="UNDER_ONE_YEAR")),
+        case("Melilla, special relationship: 6% minimum", "RIRPF art. 86.2: 6% instead of 15%. " + law, "1800.00",
+             std(annualPay="21600.00", annualSocialContributions="1400.00", taxTerritory="CEUTA_MELILLA_LA_PALMA", withholdingContract="SPECIAL_RELATIONSHIP")),
+        case("training contract at the minimum base", "Orden art. 46 first rule: 69.23 (57.72 + 11.51) common, 7.95 professional, 4.38 FOGASA, 2.44 (2.16 + 0.28) vocational "
+             "training; unemployment (art. 33.2.a.1.º) and MEI (third rule) on 1,424.40. " + law, "1300.00",
+             std(annualPay="15600.00", trainingContract="true", withholdingContract="UNDER_ONE_YEAR")),
+        case("training contract with the contributions estimated", "RIRPF art. 83.2.a: the expected contributions are the training quotas x 12. " + law, "1424.40",
+             std(annualPay="17092.80", trainingContract="true")),
+    ]
+
+
+def month(m):
+    return {"start": f"2026-{m:02d}-01", "end": f"2026-{m:02d}-{[31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]}"}
+
+
+def regularization_cases(law):
+    """RIRPF art. 87: the determination kept from earlier months (#ytd.last) and what changed since."""
+    reg = "RIRPF art. 87.3 as the AEAT algorithm's REGULARIZACIÓN computes it: new annual quota less what was withheld, over the pay still to come; "
+    aeat = " Regularized rate matching the AEAT calculation service with the same causes. " + law
+    def contrib(pay):
+        return str(cent(min(D(pay), D("73372.80")) * D("0.0648")))
+    base = std(annualPay="28500.00", annualSocialContributions="1700.00")
+    raise_ = dict(base, annualPay="33000.00", annualSocialContributions=contrib("33000.00"))
+    two = std(annualPay="30000.00", annualSocialContributions="1944.00", familySituation="2")
+    low = std(annualPay="30000.00", annualSocialContributions="1944.00")
+    exempt = std(annualPay="15000.00", annualSocialContributions="972.00")
+    bf = dict(raise_, broughtForwardYear="2026", broughtForwardMonths="3", broughtForwardPay="7125.00", broughtForwardWithheld="1137.15")
+    return [
+        case("a rate determined earlier is kept while nothing changes", "RIRPF art. 87: the rate changes only by regularization; the kept 17.50% "
+             "applies although the data give 15.96% from scratch. " + law, "2375.00", base, birth="1980-02-01",
+             ytd=months_paid(base, 1980, 4, rate="17.50"), employed="2020-01-01", **month(5)),
+        case("raise from July: the rate is regularized", reg + "28,500 to 33,000 after six months at 15.96%." + aeat,
+             "2750.00", raise_, birth="1980-02-01", ytd=months_paid(base, 1980, 6), employed="2020-01-01", **month(7)),
+        case("new child after an earlier rate of 8%: not raised (art. 87.5, first paragraph)", reg + "the change only lowers base minus minimum, "
+             "so the regularized 21.81% is limited to the 8% applied before." + aeat, "2500.00",
+             dict(two, descendants="1", descendantsComputation="WHOLE"), ytd=months_paid(two, 1985, 6, rate="8.00"), employed="2020-01-01", **month(7)),
+        case("raise after an earlier rate of 8%: increase capped (art. 87.5, second paragraph)", reg + "the extra annual withholding is limited "
+             "to the increase in base minus minimum (935.20): 2,400 + 935.20 over the remaining pay, 13.34% instead of 25.05%." + aeat, "2583.33",
+             dict(low, annualPay="31000.00", annualSocialContributions=contrib("31000.00")), ytd=months_paid(low, 1985, 6, rate="8.00"), employed="2020-01-01", **month(7)),
+        case("spouse starts earning: situation 2 to 3 without the limits (cause 5)", reg + "the limits of art. 87.5 don't apply to this cause." + aeat,
+             "2500.00", dict(two, familySituation="3"), ytd=months_paid(two, 1985, 5, rate="8.00"), employed="2020-01-01", **month(6)),
+        case("contract becomes shorter than a year: the 2% minimum (cause 11)", reg + "nothing withheld at 0%, the minimum of RIRPF art. 86.2 applies." + aeat,
+             "1250.00", dict(exempt, withholdingContract="UNDER_ONE_YEAR"), ytd=months_paid(exempt, 1985, 4), employed="2020-01-01", **month(5)),
+        case("child maintenance ordered in June (cause 4)", reg + "RIRPF art. 85.2 from the new determination." + aeat, "2500.00",
+             dict(low, childMaintenance="6000.00", courtOrderedPayments="true"), ytd=months_paid(low, 1985, 5), employed="2020-01-01", **month(6)),
+        case("regularization counting pay before Humano", reg + "three months brought forward (7,125 paid, 1,137.15 withheld) and three posted "
+             "months in Humano." + aeat, "2750.00", bf, birth="1980-02-01", ytd=months_paid(base, 1980, 3), employed="2020-01-01", **month(7)),
+        case("rate requested higher than the regularized one", "RIRPF art. 88.5: the 25% the employee asked for applies over the regularized rate. " + law,
+             "2750.00", dict(raise_, withholdingRateOverride="25.00", withholdingRateOverrideReason="REQUESTED_HIGHER"), birth="1980-02-01",
+             ytd=months_paid(base, 1980, 6), employed="2020-01-01", **month(7)),
+        case("Ceuta resident's raise: quota x 0.40 in the regularization", reg + "RIRPF art. 80.2 also applies to the new quota (IMPORTEREG = CUOTA x 0.40)." + aeat,
+             "2750.00", dict(raise_, taxTerritory="CEUTA_MELILLA_LA_PALMA"), birth="1980-02-01",
+             ytd=months_paid(dict(base, taxTerritory="CEUTA_MELILLA_LA_PALMA"), 1980, 6), employed="2020-01-01", **month(7)),
+        case("rate requested below the regularized one", "RIRPF art. 88.5: a requested rate applies only when higher, so the regularized 18.64% applies over 17%. " + law,
+             "2750.00", dict(raise_, withholdingRateOverride="17.00", withholdingRateOverrideReason="REQUESTED_HIGHER"), birth="1980-02-01",
+             ytd=months_paid(base, 1980, 6), employed="2020-01-01", **month(7)),
+        case("spouse starts earning and a raise: causes 1 and 5, without the limits", reg + "with cause 5 the limits of art. 87.5 don't apply." + aeat,
+             "2750.00", dict(two, familySituation="3", annualPay="33000.00", annualSocialContributions=contrib("33000.00")),
+             ytd=months_paid(two, 1985, 6, rate="8.00"), employed="2020-01-01", **month(7)),
+        case("a rate regularized by hand carries over", "REGULARIZED: the employer's rate is used as entered. " + law, "2750.00",
+             dict(raise_, withholdingRateOverride="18.40", withholdingRateOverrideReason="REGULARIZED"), birth="1980-02-01",
+             ytd=months_paid(base, 1980, 6), employed="2020-01-01", **month(7)),
+    ]
+
+
+def regularization_errors():
+    def contrib(pay):
+        return str(cent(min(D(pay), D("73372.80")) * D("0.0648")))
+    loan = std(annualPay="30000.00", annualSocialContributions="1944.00", housingLoan="true")
+    base = std(annualPay="28500.00", annualSocialContributions="1700.00")
+    return [
+        case("regularization with the housing-loan reduction refused", "RIRPF art. 87.3.b): the reduction's own regularization is not modelled", "2700.00",
+             dict(loan, annualPay="32400.00", annualSocialContributions=contrib("32400.00"), housingLoan="false"),
+             ytd=months_paid(loan, 1985, 6), error="housing-loan", employed="2020-01-01", **month(7)),
+        case("moving into the Ceuta regime refused", "RIRPF art. 87.2.9.º not modelled", "2375.00", dict(base, taxTerritory="CEUTA_MELILLA_LA_PALMA"),
+             birth="1980-02-01", ytd=months_paid(base, 1980, 6), error="Ceuta", employed="2020-01-01", **month(7)),
+        case("regularization with earlier months not in Humano", "RIRPF art. 87.3.b): everything withheld this year", "2750.00",
+             dict(base, annualPay="33000.00", annualSocialContributions=contrib("33000.00")), birth="1980-02-01",
+             ytd=months_paid(base, 1980, 3), error="brought-forward", employed="2020-01-01", **month(10)),
+        case("annual pay not above what was already paid", "algorithm validation 34", "2375.00",
+             dict(base, annualPay="14000.00", annualSocialContributions=contrib("14000.00")), birth="1980-02-01",
+             ytd=months_paid(base, 1980, 6), error="already paid", employed="2020-01-01", **month(7)),
+    ]
 
 
 def test_cases():
@@ -446,7 +715,26 @@ def test_cases():
              "Earlier lines at 15.96%: 2,375 x 3 months and a 1,000 extra run: 379.05 x 3 + 159.60 = 1,296.75 on 8,125. " + law,
              "2375.00", std(annualSocialContributions="1700.00"), birth="1980-02-01", start="2026-04-01", end="2026-04-30",
              ytd={"incomeTax.TAX.base": "8125.00", "incomeTax.TAX.amount": "1296.75", "incomeTax.TAX.periods": "4"}),
+        # Irregular income (LIRPF art. 18.2; RIRPF arts. 12, 83.3.a): the annual pay includes it, the rate's base is reduced by 30% of it.
+        case("payment for termination by mutual agreement in the annual pay",
+             "RIRPF art. 12.1.f): notoriously irregular; 30% of 12,000 = 3,600 off the base (algorithm IRREGULAR1). " + law,
+             "3000.00", std(annualPay="45000.00", irregularIncome="true", irregularIncomeAmount="12000.00", annualSocialContributions="2100.00")),
+        case("bonus generated over more than two years, family situation 2",
+             "LIRPF art. 18.2: 30% of 60,000 = 18,000 off the base; two children, one under 3, by whole. " + law,
+             "7500.00", std(annualPay="150000.00", contributionGroup="1", irregularIncomeAmount="60000.00", annualSocialContributions="4900.00",
+                            familySituation="2", descendants="2", descendantsUnder3="1", descendantsComputation="WHOLE")),
+        case("irregular income above 300,000: the reduction stops at 90,000",
+             "LIRPF art. 18.2: the income with the reduction is at most 300,000 a year; algorithm validation 19. " + law,
+             "25000.00", std(annualPay="600000.00", contributionGroup="1", irregularIncomeAmount="400000.00", annualSocialContributions="4900.00")),
+        case("irregular income lowering the base into the work income reduction",
+             "Without it RNT = 24,000 - 1,600 = 22,400, above 19,747.50 (no art. 20 reduction); 30% of 9,000 = 2,700 brings RNT to 19,700, "
+             "which gets 2,364.34 - 1.14 x (19,700 - 17,673.52) = 54.15. " + law,
+             "2000.00", std(annualPay="24000.00", irregularIncomeAmount="9000.00", annualSocialContributions="1600.00")),
+        case("irregular income on a contract under a year: the 2% minimum",
+             "RIRPF art. 86.2: 3.76% without the irregular income; with 30% of 6,000 off the base the computed rate falls below 2%, so 2% applies. " + law,
+             "1450.00", std(annualPay="17400.00", irregularIncomeAmount="6000.00", withholdingContract="UNDER_ONE_YEAR", annualSocialContributions="1127.52")),
     ]
+    computed += group2_cases(law) + regularization_cases(law)
     for c in computed:
         c["expectLines"] = expected_lines(c)
     zero = case("no pay, no lines", "nothing is paid, so nothing is due", "0", std())
@@ -456,7 +744,6 @@ def test_cases():
              {k: v for k, v in std().items() if k != "annualPay"}, error="annualPay"),
         case("Basque Country workplace refused", "Concierto Económico art. 7.Uno.a)", "2000.00", std(taxTerritory="BASQUE_COUNTRY"), error="Concierto"),
         case("Navarre workplace refused", "Convenio Económico art. 10.1.a)", "2000.00", std(taxTerritory="NAVARRE"), error="Convenio"),
-        case("Ceuta, Melilla or La Palma refused", "RIRPF art. 80.2 reduction not modelled", "2000.00", std(taxTerritory="CEUTA_MELILLA_LA_PALMA"), error="Ceuta"),
         case("daily-base group refused", "Orden art. 3: groups 8-11 contribute by day", "2000.00", std(contributionGroup="9"), error="groups 8 to 11"),
         case("overtime without regular pay", "the bases start from the month's ordinary pay", "300.00", std(), by_component={"OT": "300.00"}, error="Overtime"),
         case("descendants without how they count", "RIRPF art. 84.2: by half unless the employee has the exclusive right", "2000.00", std(descendants="1"), error="descendantsComputation"),
@@ -474,20 +761,35 @@ def test_cases():
              "2500.00", std(annualPay="30000.00"), start="2026-04-01", end="2026-04-30",
              ytd={"incomeTax.TAX.base": "7125.00", "incomeTax.TAX.amount": "1137.15", "incomeTax.TAX.periods": "3"}, error="regulariz"),
         case("daily manual workers refused", "RIRPF art. 83.2: 100 x the daily wage", "2000.00", std(withholdingContract="DAILY_MANUAL"), error="daily"),
-        case("training contracts refused", "Orden art. 46 fixed quotas", "1200.00", std(trainingContract="true"), error="Training"),
+        case("training contract in group 2 refused", "Orden art. 46: 'base mínima' of the regime or of the group is not settled", "1700.00",
+             std(trainingContract="true", contributionGroup="2"), error="groups 4 to 7"),
+        case("training contract with overtime refused", "ET art. 11.2: no overtime in training contracts but force majeure", "1400.00",
+             std(trainingContract="true"), by_component={"BASIC": "1300.00", "OT": "100.00"}, error="without overtime"),
+        case("training contract above the minimum base refused", "Orden art. 46 second and third rules", "1600.00",
+             std(trainingContract="true", annualPay="19200.00"), error="above the minimum base"),
         case("working pensioner refused", "LGSS art. 153", "2000.00", std(retirementSituation="WORKING_PENSIONER"), birth="1958-04-01", error="art. 153"),
         case("past retirement age above the maximum base refused", "solidarity for exempt employees not settled", "6000.00",
              std(annualPay="72000.00", contributionGroup="1", retirementSituation="PAST_RETIREMENT_AGE"), birth="1958-04-01", error="past retirement age"),
         case("multiple employment refused", "Orden art. 10", "2000.00", std(multipleEmployment="true"), error="multiple employment"),
-        case("dependants with a disability refused", "not modelled", "2000.00", std(descendants="1", descendantsComputation="WHOLE", dependantsWithDisability="true"), error="disability"),
-        case("court-ordered payments refused", "RIRPF arts. 83.3, 85.2 not modelled", "2000.00", std(courtOrderedPayments="true"), error="Court-ordered"),
-        case("irregular income refused", "RIRPF art. 83.3.a) not modelled", "2000.00", std(irregularIncome="true"), error="Irregular"),
+        case("dependants with a disability without how many", "LIRPF art. 60.2 needs the grade of each", "2000.00",
+             std(descendants="1", descendantsComputation="WHOLE", dependantsWithDisability="true"), error="descendantsDisability33"),
+        case("more disabled descendants than descendants", "they are among the descendants", "2000.00",
+             std(descendants="1", descendantsComputation="WHOLE", descendantsDisability65="2"), error="cannot be more"),
+        case("disabled ascendant under 65 without a grade", "LIRPF art. 59.1: under 65 only with a disability", "2000.00",
+             std(ascendantsDisabledUnder65="1"), error="disability grade"),
+        case("court-ordered payments without the amounts", "RIRPF arts. 83.3, 85.2", "2000.00", std(courtOrderedPayments="true"), error="spousalPension"),
+        case("irregular income without its amount", "RIRPF art. 83.3.a) needs the amount with the reduction", "2000.00", std(irregularIncome="true"),
+             error="irregularIncomeAmount"),
+        case("irregular income larger than the annual pay", "it is part of the annual pay", "2000.00", std(irregularIncomeAmount="30000.00"),
+             error="cannot be larger"),
+        case("irregular income above 700,000 refused", "LIRPF art. 18.2: termination pay limit not modelled", "60000.00",
+             std(annualPay="900000.00", contributionGroup="1", irregularIncomeAmount="750000.00", irregularIncome="true"), error="700,000"),
         case("no birth date", "the minimum depends on the year of birth", "2000.00", std(), birth=None, error="birth date"),
         case("paid in the next year", "RIRPF art. 78: withholding follows the payment, 2027 rules", "2000.00", std(),
              start="2026-12-01", end="2026-12-31", payment="2027-01-05", error="same year"),
         case("pre-tax deductions are refused", "not modelled", "2000.00", std(), pre_tax="50.00", error="Pre-tax deductions are not supported"),
         case("2027 is not covered", "2027 values not yet set", "2000.00", std(), start="2027-01-01", end="2027-01-31", error="a newer template version is needed"),
-    ]
+    ] + regularization_errors()
     return computed + [zero] + errors
 
 
@@ -505,6 +807,19 @@ PART = emp_key("partTimeHours") + " != null"
 E_DESC = emp_key("descendants")
 E_COMP = emp_key("descendantsComputation")
 EMP_FM = emp_key("overtimeForceMajeure")
+CEUTA = "(" + emp_key("taxTerritory") + " == 'CEUTA_MELILLA_LA_PALMA')"
+TRAINING = emp_key("trainingContract")
+OV = emp_key("withholdingRateOverrideReason")
+
+
+def LAST(step):
+    """The value a remember step kept in the latest earlier posted period (null at the first)."""
+    return "#ytd.last('" + step + "')"
+
+
+# RIRPF art. 86.2 minimums applied to a rate expression ({0})
+MIN_RATE = ("(" + emp_key("withholdingContract") + " == 'UNDER_ONE_YEAR' ? #max({0}, " + CEUTA + " ? #p['minimumRateShortContractCeuta'] : #p['minimumRateShortContract'])"
+            " : (" + emp_key("withholdingContract") + " == 'SPECIAL_RELATIONSHIP' ? #max({0}, " + CEUTA + " ? #p['minimumRateSpecialCeuta'] : #p['minimumRateSpecial']) : {0}))")
 
 
 def main():
@@ -512,7 +827,7 @@ def main():
         "schemaVersion": 1,
         "id": "es-employment",
         "name": "Spain — employment (Régimen General, territorio común)",
-        "version": "2026.1.1",
+        "version": "2026.1.3",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "ES"},
         "validity": {"from": FROM, "to": TO},
@@ -522,6 +837,10 @@ def main():
         "dateBasis": "PERIOD",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.3", "date": "2026-10-25",
+             "summary": "Descendants and ascendants with a disability (LIRPF art. 60.2), court-ordered spousal pension and child maintenance (RIRPF arts. 83.3, 85.2), residents of Ceuta, Melilla and La Palma working there (RIRPF arts. 80.2, 86.2) and training contracts paid at the minimum base (Orden art. 46 fixed quotas); before, all of them were refused. The withholding rate is regularized automatically when the data change during the year (RIRPF art. 87.3 with the limits of art. 87.5, from the determination kept with each result); before, the run was refused until the regularized rate was entered."},
+            {"version": "2026.1.2", "date": "2026-10-25",
+             "summary": "Irregular income: the annual pay may include income generated over more than two years or notoriously irregular (irregularIncomeAmount); the withholding rate's base is reduced by 30% of it, up to 300,000 EUR of income (LIRPF art. 18.2, RIRPF art. 83.3.a), as the AEAT algorithm's IRREGULAR1. Before, irregularIncome was refused."},
             {"version": "2026.1.1", "date": "2026-10-25",
              "summary": "The month's ordinary pay for the contribution bases is the social earnings less the part of the extra payments and overtime that is itself in them. Before, a Bonus component not marked subject to social contributions was subtracted twice, which could leave a month with an extra pay without common-contingency contributions."},
             {"version": "2026.1.0", "date": RETRIEVED,
@@ -535,7 +854,7 @@ def main():
             ],
             "employee": [
                 {"key": "taxTerritory", "type": "ENUM", "required": True, "values": ["COMMON", "BASQUE_COUNTRY", "NAVARRE", "CEUTA_MELILLA_LA_PALMA"],
-                 "description": "Where the withholding belongs: COMMON for work performed in the common territory. Work performed in the Basque Country or Navarre is withheld under the foral rules (Concierto art. 7.Uno.a; Convenio art. 10.1.a) and income of residents of Ceuta, Melilla or La Palma earned there has a 60% reduction (RIRPF art. 80.2) — those are refused"},
+                 "description": "Where the withholding belongs: COMMON for work performed in the common territory; CEUTA_MELILLA_LA_PALMA for an employee resident in Ceuta, Melilla or La Palma whose work income is obtained there, withheld at the rate reduced by 60% (RIRPF art. 80.2; DA 57ª LIRPF for La Palma) — a resident working elsewhere is COMMON. Work performed in the Basque Country or Navarre is withheld under the foral rules (Concierto art. 7.Uno.a; Convenio art. 10.1.a) and is refused"},
                 {"key": "annualPay", "type": "DECIMAL", "required": True, "min": "0.01",
                  "description": "Expected gross pay from this employer in 2026 (RETRIB, RIRPF art. 83.2): fixed and foreseeable variable pay, in cash and in kind, without arrears belonging to earlier years. For a contract renewed in the year, include what was paid earlier in the year"},
                 {"key": "annualExtraPay", "type": "DECIMAL", "required": False, "defaultValue": "0", "min": 0,
@@ -545,7 +864,7 @@ def main():
                 {"key": "familySituation", "type": "ENUM", "required": True, "values": ["1", "2", "3"],
                  "description": "Family situation from the employee's modelo 145 (RIRPF art. 81.1): 1 single, widowed, divorced or separated with descendants and the single-parent joint-filing reduction; 2 married with a spouse earning no more than 1,500 EUR a year; 3 any other (and when not stated)"},
                 {"key": "descendants", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 16,
-                 "description": "Children and other descendants giving right to the minimum (LIRPF art. 58): under 25 at the end of 2026 (born 2002 or later), living with the employee, earning no more than 8,000 EUR and not filing a return with more than 1,800 EUR (LIRPF art. 61.2.ª)"},
+                 "description": "Children and other descendants giving right to the minimum (LIRPF art. 58): under 25 at the end of 2026 (born 2002 or later), or of any age with a disability, living with the employee, earning no more than 8,000 EUR and not filing a return with more than 1,800 EUR (LIRPF art. 61.2.ª). Children receiving court-ordered maintenance from the employee do not count (RIRPF art. 85.2)"},
                 {"key": "descendantsUnder3", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 16,
                  "description": "Of those descendants, the ones born in 2024 or later, or adopted or fostered in 2024 or later (+2,800 each, LIRPF art. 58.2)"},
                 {"key": "descendantsComputation", "type": "ENUM", "required": False, "values": ["WHOLE", "HALF"],
@@ -554,8 +873,22 @@ def main():
                  "description": "Parents or other ascendants aged 65 to 74 in 2026 (born 1952 to 1961) living with the employee at least half the year, earning no more than 8,000 EUR and not filing a return with more than 1,800 EUR (LIRPF arts. 59, 61.2.ª)"},
                 {"key": "ascendants75", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 6,
                  "description": "Ascendants aged 75 or more in 2026 (born 1951 or earlier), same conditions (+1,400 each, LIRPF art. 59.2)"},
+                {"key": "ascendantsDisabledUnder65", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 6,
+                 "description": "Ascendants under 65 in 2026 with a disability of 33% or more, same conditions; they give right to the ascendant minimum (LIRPF art. 59.1) and are counted again in ascendantsDisability*"},
                 {"key": "ascendantsSharedBy", "type": "INTEGER", "required": False, "defaultValue": "1", "min": 1, "max": 10,
                  "description": "Number of descendants (the employee included) the ascendants live with, who share their minimum (LIRPF art. 61.1.ª); the same for all of them"},
+                {"key": "descendantsDisability33", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 16,
+                 "description": "Of the descendants, those with a disability from 33% to under 65% without reduced mobility or need of help (+3,000 each, LIRPF art. 60.2)"},
+                {"key": "descendantsDisability33Mobility", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 16,
+                 "description": "Of the descendants, those with a disability from 33% to under 65% with reduced mobility or needing help from another person (+3,000 and +3,000 assistance each)"},
+                {"key": "descendantsDisability65", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 16,
+                 "description": "Of the descendants, those with a disability of 65% or more (+9,000 and +3,000 assistance each)"},
+                {"key": "ascendantsDisability33", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 6,
+                 "description": "Of the ascendants counted (65 to 74, 75 or more, disabled under 65), those with a disability from 33% to under 65% without reduced mobility (+3,000 each, shared like their minimum)"},
+                {"key": "ascendantsDisability33Mobility", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 6,
+                 "description": "Of the ascendants counted, those with a disability from 33% to under 65% with reduced mobility or needing help (+3,000 and +3,000 assistance each, shared)"},
+                {"key": "ascendantsDisability65", "type": "INTEGER", "required": False, "defaultValue": "0", "min": 0, "max": 6,
+                 "description": "Of the ascendants counted, those with a disability of 65% or more (+9,000 and +3,000 assistance each, shared)"},
                 {"key": "disability", "type": "ENUM", "required": False, "defaultValue": "NONE", "values": ["NONE", "FROM_33", "FROM_33_REDUCED_MOBILITY", "FROM_65"],
                  "description": "The employee's own disability: 33% to 65%, the same with reduced mobility or needing help from another person, or 65% or more (LIRPF art. 60; RIRPF art. 83.2.b)"},
                 {"key": "geographicMobility", "type": "BOOLEAN", "required": False, "defaultValue": "false",
@@ -567,7 +900,15 @@ def main():
                 {"key": "withholdingRateOverride", "type": "DECIMAL", "required": False, "min": 0, "max": 47,
                  "description": "Withholding rate in percent with two decimals replacing the computed one, with its reason"},
                 {"key": "withholdingRateOverrideReason", "type": "ENUM", "required": False, "defaultValue": "NONE", "values": ["NONE", "REGULARIZED", "REQUESTED_HIGHER"],
-                 "description": "REGULARIZED: the rate the employer regularized under RIRPF art. 87 after a change in the data (used as entered); REQUESTED_HIGHER: a higher rate the employee asked for in writing (RIRPF art. 88.5; used when above the computed one)"},
+                 "description": "REGULARIZED: a rate the employer regularized under RIRPF art. 87 (used as entered and carried on; needed only where the template doesn't regularize: housing-loan reduction, moving into or out of Ceuta, Melilla or La Palma, or no kept determination yet); REQUESTED_HIGHER: a higher rate the employee asked for in writing (RIRPF art. 88.5; used when above the computed one)"},
+                {"key": "broughtForwardYear", "type": "INTEGER", "required": False, "min": 2000, "max": 2100,
+                 "description": "Year the brought-forward figures belong to (pay with you this year before the first payroll in Humano); other years' figures are ignored. Needed to regularize the rate when earlier months are not in Humano"},
+                {"key": "broughtForwardMonths", "type": "INTEGER", "required": False, "min": 0, "max": 11,
+                 "description": "Months paid by you this year before the first payroll in Humano"},
+                {"key": "broughtForwardPay", "type": "DECIMAL", "required": False, "min": 0,
+                 "description": "Work income paid by you this year before the first payroll in Humano (retribuciones satisfechas)"},
+                {"key": "broughtForwardWithheld", "type": "DECIMAL", "required": False, "min": 0,
+                 "description": "IRPF withheld by you on it (retenciones practicadas)"},
                 {"key": "contributionGroup", "type": "INTEGER", "required": True, "min": 1, "max": 11,
                  "description": "Social security contribution group (grupo de cotización) of the employee's professional category, 1 to 7 (Orden art. 3); groups 8 to 11 contribute by day and are refused"},
                 {"key": "unemploymentRate", "type": "ENUM", "required": True, "values": ["INDEFINITE", "FIXED_TERM"],
@@ -581,15 +922,21 @@ def main():
                 {"key": "retirementSituation", "type": "ENUM", "required": False, "defaultValue": "NONE", "values": ["NONE", "PAST_RETIREMENT_AGE", "WORKING_PENSIONER"],
                  "description": "PAST_RETIREMENT_AGE: the employee has reached the ordinary retirement age of LGSS art. 205.1.a) and does not work for a public administration — exempt from common contingencies except IT, unemployment, FOGASA and vocational training (LGSS art. 152); WORKING_PENSIONER: draws a retirement pension compatible with the work (art. 153, 9% solidarity) — not supported"},
                 {"key": "trainingContract", "type": "BOOLEAN", "required": False, "defaultValue": "false",
-                 "description": "Training contract (formación en alternancia or the earlier training contracts) with the fixed quotas of Orden art. 46 — not supported"},
+                 "description": "Training contract (formación en alternancia, or a remaining contrato para la formación y el aprendizaje): fixed monthly quotas of Orden art. 46 while the common-contingencies base does not exceed the minimum base; full-time, groups 4 to 7, no overtime"},
                 {"key": "multipleEmployment", "type": "BOOLEAN", "required": False, "defaultValue": "false",
                  "description": "The employee also works for another company (pluriempleo), sharing the maximum base (Orden art. 10) — not supported"},
                 {"key": "dependantsWithDisability", "type": "BOOLEAN", "required": False, "defaultValue": "false",
-                 "description": "A descendant or ascendant has a disability, or a descendant of 25 or more counts for that reason (LIRPF art. 60.2) — not supported"},
+                 "description": "A descendant or ascendant has a disability (LIRPF art. 60.2): enter them in descendantsDisability* / ascendantsDisability*"},
                 {"key": "courtOrderedPayments", "type": "BOOLEAN", "required": False, "defaultValue": "false",
-                 "description": "The employee pays a court-ordered compensatory pension to a spouse or maintenance to children (RIRPF arts. 83.3.f, 85.2) — not supported"},
+                 "description": "The employee pays a court-ordered compensatory pension to a spouse or maintenance to children: enter spousalPension and/or childMaintenance"},
+                {"key": "spousalPension", "type": "DECIMAL", "required": False, "defaultValue": "0", "min": 0,
+                 "description": "Compensatory pension to the spouse fixed by court order, annual amount (reduces the base, RIRPF art. 83.3; algorithm CONYUGE)"},
+                {"key": "childMaintenance", "type": "DECIMAL", "required": False, "defaultValue": "0", "min": 0,
+                 "description": "Maintenance for children fixed by court order, annual amount (anualidades por alimentos, RIRPF art. 85.2): when below the base, the scale applies separately to it and to the rest, and the minimum is increased by 1,980; those children do not count as descendants"},
                 {"key": "irregularIncome", "type": "BOOLEAN", "required": False, "defaultValue": "false",
-                 "description": "The annual pay includes income generated over more than two years or obtained irregularly with the 30% reduction (RIRPF art. 83.3.a) — not supported"},
+                 "description": "The annual pay includes income with the 30% reduction (LIRPF art. 18.2): set irregularIncomeAmount"},
+                {"key": "irregularIncomeAmount", "type": "DECIMAL", "required": False, "min": 0,
+                 "description": "Part of annualPay with the 30% reduction of LIRPF art. 18.2, imputed in this single year: income generated over more than two years (for termination pay, the years of service), unless you applied the reduction to such income of this employee in the five previous years (RIRPF art. 83.3.a), or income notoriously irregular in time (RIRPF art. 12.1: relocation pay above the exempt amounts, payments for termination by mutual agreement, non-exempt literary, artistic or scientific prizes, ...). Paid in instalments only within RIRPF art. 12.2. At most 700,000"},
             ],
         },
         "parameters": {name: dated(value, src) for name, (value, src) in PARAMS.items()},
@@ -633,12 +980,14 @@ def main():
              "message": "Unpaid leave is not supported: days registered without pay contribute on the minimum base (Orden PJC/297/2026 art. 7)"},
             {"id": "wholeMonth", "type": "REQUIRE", "source": "orden-pjc-297-2026", "condition": "#employedThroughout",
              "message": "The employee must be employed for the whole month: bases for a month started or ended part-way are prorated by days, which this template does not do"},
-            {"id": "commonTerritory", "type": "REQUIRE", "condition": emp_key("taxTerritory") + " == 'COMMON'",
-             "message": "Only the common tax territory is supported: withholding on work performed in the Basque Country or Navarre follows the foral rules (Concierto Económico art. 7.Uno.a; Convenio Económico art. 10.1.a), and income earned in Ceuta, Melilla or La Palma by their residents has the 60% reduction of RIRPF art. 80.2"},
+            {"id": "commonTerritory", "type": "REQUIRE", "condition": emp_key("taxTerritory") + " == 'COMMON' or " + emp_key("taxTerritory") + " == 'CEUTA_MELILLA_LA_PALMA'",
+             "message": "Withholding on work performed in the Basque Country or Navarre follows the foral rules (Concierto Económico art. 7.Uno.a; Convenio Económico art. 10.1.a), which this template does not do"},
             {"id": "noDailyManual", "type": "REQUIRE", "source": "rirpf", "condition": emp_key("withholdingContract") + " != 'DAILY_MANUAL'",
              "message": "Manual workers paid by the daily wage (peonadas) are not supported: their annual pay is 100 x the daily wage (RIRPF art. 83.2)"},
-            {"id": "noTrainingContract", "type": "REQUIRE", "source": "orden-pjc-297-2026", "condition": "!" + emp_key("trainingContract"),
-             "message": "Training contracts contribute fixed quotas (Orden PJC/297/2026 art. 46), which this template does not do"},
+            {"id": "noTrainingContract", "type": "REQUIRE", "source": "orden-pjc-297-2026", "when": emp_key("trainingContract"),
+             "condition": GROUP + " >= 4 and !(" + PART + ") and #earningsByComponent['OT'] == 0 and " + emp_key("unemploymentRate") + " == 'INDEFINITE'"
+                          " and #employee['retirementSituation'] == 'NONE'",
+             "message": "Training contracts are supported full-time in contribution groups 4 to 7, without overtime, with unemploymentRate INDEFINITE (Orden PJC/297/2026 arts. 33.2.a.1.º, 46)"},
             {"id": "noWorkingPensioner", "type": "REQUIRE", "source": "lgss", "condition": "#employee['retirementSituation'] != 'WORKING_PENSIONER'",
              "message": "Employees drawing a retirement pension compatible with the work contribute under LGSS art. 153 (IT, AT/EP and a 9% solidarity contribution), which this template does not do"},
             {"id": "retiredWithinMaximum", "type": "REQUIRE", "source": "lgss",
@@ -647,12 +996,31 @@ def main():
              "message": "For an employee past retirement age (LGSS art. 152), pay above the maximum base (solidarity contribution) or overtime is not supported"},
             {"id": "noMultipleEmployment", "type": "REQUIRE", "source": "orden-pjc-297-2026", "condition": "!" + emp_key("multipleEmployment"),
              "message": "Employees in multiple employment (pluriempleo) share the maximum base between companies (Orden PJC/297/2026 art. 10), which this template does not do"},
-            {"id": "noDisabledDependants", "type": "REQUIRE", "source": "lirpf", "condition": "!" + emp_key("dependantsWithDisability"),
-             "message": "Descendants or ascendants with a disability are not supported by this template (LIRPF art. 60.2)"},
-            {"id": "noCourtOrderedPayments", "type": "REQUIRE", "source": "rirpf", "condition": "!" + emp_key("courtOrderedPayments"),
-             "message": "Court-ordered compensatory pensions or child maintenance are not supported (RIRPF arts. 83.3.f, 85.2)"},
-            {"id": "noIrregularIncome", "type": "REQUIRE", "source": "rirpf", "condition": "!" + emp_key("irregularIncome"),
-             "message": "Irregular income with the 30% reduction is not supported (RIRPF art. 83.3.a)"},
+            {"id": "noDisabledDependants", "type": "REQUIRE", "source": "lirpf", "detail": "descendantsDisability33",
+             "condition": "!" + emp_key("dependantsWithDisability") + " or " + emp_key("descendantsDisability33") + " + " + emp_key("descendantsDisability33Mobility") + " + " + emp_key("descendantsDisability65")
+                          + " + " + emp_key("ascendantsDisability33") + " + " + emp_key("ascendantsDisability33Mobility") + " + " + emp_key("ascendantsDisability65") + " > 0",
+             "message": "A descendant or ascendant has a disability: enter how many in descendantsDisability33, descendantsDisability33Mobility, descendantsDisability65 or the ascendant equivalents (LIRPF art. 60.2)"},
+            {"id": "disabledDescendantsCounted", "type": "REQUIRE", "source": "lirpf",
+             "condition": emp_key("descendantsDisability33") + " + " + emp_key("descendantsDisability33Mobility") + " + " + emp_key("descendantsDisability65") + " <= " + emp_key("descendants"),
+             "message": "Descendants with a disability are counted among the descendants, so there cannot be more of them"},
+            {"id": "disabledAscendantsCounted", "type": "REQUIRE", "source": "lirpf",
+             "condition": emp_key("ascendantsDisabledUnder65") + " <= " + emp_key("ascendantsDisability33") + " + " + emp_key("ascendantsDisability33Mobility") + " + " + emp_key("ascendantsDisability65")
+                          + " and " + emp_key("ascendantsDisability33") + " + " + emp_key("ascendantsDisability33Mobility") + " + " + emp_key("ascendantsDisability65")
+                          + " <= " + emp_key("ascendants65") + " + " + emp_key("ascendants75") + " + " + emp_key("ascendantsDisabledUnder65"),
+             "message": "Ascendants with a disability are counted among the ascendants (65 to 74, 75 or more, disabled under 65), and each disabled one under 65 has a disability grade"},
+            {"id": "noCourtOrderedPayments", "type": "REQUIRE", "source": "rirpf", "detail": "spousalPension",
+             "condition": "!" + emp_key("courtOrderedPayments") + " or " + emp_key("spousalPension") + " + " + emp_key("childMaintenance") + " > 0",
+             "message": "The employee pays court-ordered amounts: enter the annual spousalPension and/or childMaintenance (RIRPF arts. 83.3, 85.2)"},
+            {"id": "noIrregularIncome", "type": "REQUIRE", "source": "rirpf",
+             "condition": "!" + emp_key("irregularIncome") + " or " + emp_key("irregularIncomeAmount") + " != null",
+             "detail": "irregularIncomeAmount",
+             "message": "The annual pay includes irregular income: enter irregularIncomeAmount, the part of annualPay with the 30% reduction (LIRPF art. 18.2; RIRPF art. 83.3.a)"},
+            {"id": "irregularIncomeWithinPay", "type": "REQUIRE", "source": "rirpf",
+             "condition": "#coalesce(" + emp_key("irregularIncomeAmount") + ", 0) <= " + PAY,
+             "message": "irregularIncomeAmount is part of annualPay, so it cannot be larger"},
+            {"id": "irregularIncomeBelowTerminationCap", "type": "REQUIRE", "source": "lirpf",
+             "condition": "#coalesce(" + emp_key("irregularIncomeAmount") + ", 0) <= #p['terminationIrregularThreshold']",
+             "message": "Irregular income above 700,000 EUR is not supported: for termination pay the income with the reduction falls from 300,000 EUR to zero at 1,000,000 EUR (LIRPF art. 18.2)"},
             {"id": "monthlyContributionGroup", "type": "REQUIRE", "source": "orden-pjc-297-2026", "condition": GROUP + " <= 7",
              "message": "Contribution groups 8 to 11 contribute on daily bases (Orden PJC/297/2026 art. 3), which this template does not do"},
             {"id": "overtimeWithPay", "type": "REQUIRE", "source": "lgss",
@@ -688,53 +1056,147 @@ def main():
             {"id": "estimateAccidentBase", "type": "VALUE", "source": "orden-pjc-297-2026",
              "expr": "#clamp(#estimateMonthly, #p['accidentMinimumBase'], #p['maximumBase'])"},
             {"id": "estimatedContributions", "type": "VALUE", "source": "rirpf",
-             "expr": "#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE' ? 12 * #round(#estimateCommonBase * #p['retiredIncapacityEmployeeRate'], 2, 'HALF_UP') : 12 * (#round(#estimateCommonBase * #p['commonEmployeeRate'], 2, 'HALF_UP') + #round(#estimateCommonBase * #p['equityEmployeeRate'], 2, 'HALF_UP')"
+             "expr": emp_key("trainingContract") + " ? 12 * (#p['trainingCommonEmployee'] + #p['trainingVocationalEmployee'] + #round(#table.lookup('minimumBases', " + GROUP + ", 'monthly') * #p['equityEmployeeRate'], 2, 'HALF_UP')"
+                     " + #round(#p['accidentMinimumBase'] * #p['unemploymentIndefiniteEmployeeRate'], 2, 'HALF_UP'))"
+                     " : #employee['retirementSituation'] == 'PAST_RETIREMENT_AGE' ? 12 * #round(#estimateCommonBase * #p['retiredIncapacityEmployeeRate'], 2, 'HALF_UP') : 12 * (#round(#estimateCommonBase * #p['commonEmployeeRate'], 2, 'HALF_UP') + #round(#estimateCommonBase * #p['equityEmployeeRate'], 2, 'HALF_UP')"
                      " + #round(#estimateAccidentBase * (" + emp_key("unemploymentRate") + " == 'FIXED_TERM' ? #p['unemploymentFixedTermEmployeeRate'] : #p['unemploymentIndefiniteEmployeeRate']), 2, 'HALF_UP')"
                      " + #round(#estimateAccidentBase * #p['trainingEmployeeRate'], 2, 'HALF_UP') + #round(#table.bracketTax('solidarity', 'EMPLOYEE', #estimateMonthly), 2, 'HALF_UP'))"},
             {"id": "socialContributions", "type": "VALUE", "source": "rirpf",
              "expr": "#coalesce(" + emp_key("annualSocialContributions") + ", #estimatedContributions)"},
             {"id": "netWorkIncome", "type": "VALUE", "source": "rirpf", "expr": "#pos(" + PAY + " - #socialContributions)"},
+            # IRREGULAR1: 30% of the irregular income up to 300,000, cents dropped so it never exceeds 30% of the pay (algorithm validations 19-20)
+            {"id": "irregularReduction", "type": "VALUE", "source": "lirpf",
+             "expr": "#round(#min(#coalesce(" + emp_key("irregularIncomeAmount") + ", 0), #p['irregularIncomeLimit']) * #p['irregularReductionRate'], 2, 'DOWN')"},
+            {"id": "reducedNetWorkIncome", "type": "VALUE", "source": "aeat-algoritmo-2026",
+             "expr": "#pos(" + PAY + " - #irregularReduction - #socialContributions)"},
             {"id": "otherExpenses", "type": "VALUE", "source": "rirpf",
              "expr": "#min(#p['generalExpenses'] + (" + emp_key("geographicMobility") + " ? #p['mobilityExpenses'] : 0)"
                      " + (" + emp_key("disability") + " == 'FROM_65' or " + emp_key("disability") + " == 'FROM_33_REDUCED_MOBILITY' ? #p['disabledWorkerExpensesHigh']"
                      " : (" + emp_key("disability") + " == 'FROM_33' ? #p['disabledWorkerExpenses'] : 0)), #netWorkIncome)"},
             {"id": "workIncomeReduction", "type": "VALUE", "source": "lirpf",
-             "expr": "#netWorkIncome <= #p['red20Lower'] ? #p['red20Max'] : (#netWorkIncome <= #p['red20Middle']"
-                     " ? #round(#p['red20Max'] - #p['red20Slope1'] * (#netWorkIncome - #p['red20Lower']), 2, 'HALF_UP')"
-                     " : (#netWorkIncome < #p['red20Upper'] ? #round(#p['red20MiddleAmount'] - #p['red20Slope2'] * (#netWorkIncome - #p['red20Middle']), 2, 'HALF_UP') : 0))"},
-            {"id": "withholdingBase", "type": "VALUE", "source": "rirpf",
-             "expr": "#pos(#pos(#netWorkIncome - #otherExpenses - #workIncomeReduction) - (" + emp_key("descendants") + " > 2 ? #p['largeFamilyReduction'] : 0))"},
+             "expr": "#reducedNetWorkIncome <= #p['red20Lower'] ? #p['red20Max'] : (#reducedNetWorkIncome <= #p['red20Middle']"
+                     " ? #round(#p['red20Max'] - #p['red20Slope1'] * (#reducedNetWorkIncome - #p['red20Lower']), 2, 'HALF_UP')"
+                     " : (#reducedNetWorkIncome < #p['red20Upper'] ? #round(#p['red20MiddleAmount'] - #p['red20Slope2'] * (#reducedNetWorkIncome - #p['red20Middle']), 2, 'HALF_UP') : 0))"},
+            {"id": "withholdingBase", "type": "VALUE", "remember": True, "source": "rirpf",
+             "expr": "#pos(#pos(#reducedNetWorkIncome - #otherExpenses - #workIncomeReduction) - ((" + emp_key("descendants") + " > 2 ? #p['largeFamilyReduction'] : 0) + " + emp_key("spousalPension") + "))"},
             {"id": "taxpayerAge", "type": "VALUE", "source": "aeat-algoritmo-2026", "expr": "#periodEnd.getYear() - #birthYear"},
             {"id": "descendantsWhole", "type": "VALUE", "source": "lirpf",
              "expr": "(" + emp_key("descendants") + " >= 1 ? #p['descendant1'] : 0) + (" + emp_key("descendants") + " >= 2 ? #p['descendant2'] : 0)"
                      " + (" + emp_key("descendants") + " >= 3 ? #p['descendant3'] : 0) + (" + emp_key("descendants") + " > 3 ? (" + emp_key("descendants") + " - 3) * #p['descendant4'] : 0)"
                      " + " + emp_key("descendantsUnder3") + " * #p['descendantUnder3']"},
-            {"id": "personalFamilyMinimum", "type": "VALUE", "source": "lirpf",
+            # Disabled descendants (by whole or half like the others) and ascendants (shared like their minimum), LIRPF art. 60.2
+            {"id": "descendantsDisabilityWhole", "type": "VALUE", "source": "lirpf",
+             "expr": "(" + emp_key("descendantsDisability33") + " + " + emp_key("descendantsDisability33Mobility") + ") * #p['disabilityMinimum'] + " + emp_key("descendantsDisability65") + " * #p['disabilityMinimumHigh']"
+                     " + (" + emp_key("descendantsDisability33Mobility") + " + " + emp_key("descendantsDisability65") + ") * #p['assistanceMinimum']"},
+            {"id": "dependantsDisabilityMinimum", "type": "VALUE", "source": "lirpf",
+             "expr": "(" + E_COMP + " == 'HALF' ? #divide(#descendantsDisabilityWhole, 2, 2, 'HALF_UP') : #descendantsDisabilityWhole)"
+                     " + #divide((" + emp_key("ascendantsDisability33") + " + " + emp_key("ascendantsDisability33Mobility") + ") * #p['disabilityMinimum'] + " + emp_key("ascendantsDisability65") + " * #p['disabilityMinimumHigh'], " + emp_key("ascendantsSharedBy") + ", 2, 'HALF_UP')"
+                     " + #divide((" + emp_key("ascendantsDisability33Mobility") + " + " + emp_key("ascendantsDisability65") + ") * #p['assistanceMinimum'], " + emp_key("ascendantsSharedBy") + ", 2, 'HALF_UP')"},
+            {"id": "personalFamilyMinimum", "type": "VALUE", "remember": True, "source": "lirpf",
              "expr": "#p['personalMinimum'] + (#taxpayerAge > 64 ? #p['age65Minimum'] : 0) + (#taxpayerAge > 74 ? #p['age75Minimum'] : 0)"
                      " + (" + E_COMP + " == 'HALF' ? #divide(#descendantsWhole, 2, 2, 'HALF_UP') : #descendantsWhole)"
-                     " + #divide((" + emp_key("ascendants65") + " + " + emp_key("ascendants75") + ") * #p['ascendantMinimum'], " + emp_key("ascendantsSharedBy") + ", 2, 'HALF_UP')"
+                     " + #divide((" + emp_key("ascendants65") + " + " + emp_key("ascendants75") + " + " + emp_key("ascendantsDisabledUnder65") + ") * #p['ascendantMinimum'], " + emp_key("ascendantsSharedBy") + ", 2, 'HALF_UP')"
                      " + #divide(" + emp_key("ascendants75") + " * #p['ascendant75Minimum'], " + emp_key("ascendantsSharedBy") + ", 2, 'HALF_UP')"
                      " + (" + emp_key("disability") + " == 'FROM_65' ? #p['disabilityMinimumHigh'] + #p['assistanceMinimum']"
                      " : (" + emp_key("disability") + " == 'FROM_33_REDUCED_MOBILITY' ? #p['disabilityMinimum'] + #p['assistanceMinimum']"
-                     " : (" + emp_key("disability") + " == 'FROM_33' ? #p['disabilityMinimum'] : 0)))"},
+                     " : (" + emp_key("disability") + " == 'FROM_33' ? #p['disabilityMinimum'] : 0)))"
+                     " + #dependantsDisabilityMinimum"},
             {"id": "exemptLimit", "type": "VALUE", "source": "rirpf",
              "expr": "#table.lookup('exemptLimits', " + emp_key("familySituation") + ", " + emp_key("descendants") + " >= 2 ? 'd2' : (" + emp_key("descendants") + " == 1 ? 'd1' : 'd0'))"},
             {"id": "withholdingQuota", "type": "VALUE", "source": "rirpf",
-             "expr": "#pos(#table.bracketTax('withholdingScale', #withholdingBase) - #table.bracketTax('withholdingScale', #personalFamilyMinimum))"},
+             "expr": emp_key("childMaintenance") + " > 0 and #withholdingBase - " + emp_key("childMaintenance") + " > 0"
+                     " ? #pos(#table.bracketTax('withholdingScale', #withholdingBase - " + emp_key("childMaintenance") + ") + #table.bracketTax('withholdingScale', " + emp_key("childMaintenance") + ")"
+                     " - #table.bracketTax('withholdingScale', #personalFamilyMinimum + #p['childMaintenanceMinimumIncrease']))"
+                     " : #pos(#table.bracketTax('withholdingScale', #withholdingBase) - #table.bracketTax('withholdingScale', #personalFamilyMinimum))"},
             {"id": "cappedQuota", "type": "VALUE", "source": "rirpf",
              "expr": PAY + " <= #p['capIncomeLimit'] ? #pos(#min(#withholdingQuota, (" + PAY + " - #exemptLimit) * #p['capRate'])) : #withholdingQuota"},
             {"id": "housingReduction", "type": "VALUE", "source": "aeat-algoritmo-2026",
              "expr": emp_key("housingLoan") + " ? #round(" + PAY + " * #p['housingReductionRate'], 2, 'DOWN') : 0"},
             {"id": "computedRate", "type": "VALUE", "source": "rirpf",
-             "expr": PAY + " <= #exemptLimit ? 0 : #divide(#pos(#cappedQuota - #housingReduction) * 100, " + PAY + ", 2, 'DOWN')"},
-            {"id": "withholdingRate", "type": "VALUE", "source": "rirpf",
-             "expr": emp_key("withholdingContract") + " == 'UNDER_ONE_YEAR' ? #max(#computedRate, #p['minimumRateShortContract'])"
-                     " : (" + emp_key("withholdingContract") + " == 'SPECIAL_RELATIONSHIP' ? #max(#computedRate, #p['minimumRateSpecial']) : #computedRate)"},
-            {"id": "appliedRate", "type": "VALUE", "source": "rirpf",
+             "expr": PAY + " <= #exemptLimit ? 0 : #divide(#pos((" + CEUTA + " ? #cappedQuota * #p['ceutaQuotaShare'] : #cappedQuota) - #housingReduction) * 100, " + PAY + ", 2, 'DOWN')"},
+            {"id": "withholdingRate", "type": "VALUE", "remember": True, "source": "rirpf",
+             "expr": emp_key("withholdingContract") + " == 'UNDER_ONE_YEAR' ? #max(#computedRate, " + CEUTA + " ? #p['minimumRateShortContractCeuta'] : #p['minimumRateShortContract'])"
+                     " : (" + emp_key("withholdingContract") + " == 'SPECIAL_RELATIONSHIP' ? #max(#computedRate, " + CEUTA + " ? #p['minimumRateSpecialCeuta'] : #p['minimumRateSpecial']) : #computedRate)"},
+            # Regularization (RIRPF art. 87; AEAT algorithm REGULARIZACIÓN): the rate determined earlier this year is kept
+            # with each result; when the data it came from change, the new rate spreads the new annual quota less what
+            # was withheld over the pay still to come, within the limits of art. 87.5.
+            {"id": "annualPayDetermined", "type": "VALUE", "remember": True, "source": "rirpf", "expr": PAY},
+            {"id": "familySituationCode", "type": "VALUE", "remember": True, "source": "rirpf",
+             "expr": emp_key("familySituation") + " == '1' ? 1 : (" + emp_key("familySituation") + " == '2' ? 2 : 3)"},
+            {"id": "spousalPensionDetermined", "type": "VALUE", "remember": True, "source": "rirpf", "expr": emp_key("spousalPension")},
+            {"id": "childMaintenanceDetermined", "type": "VALUE", "remember": True, "source": "rirpf", "expr": emp_key("childMaintenance")},
+            {"id": "housingLoanFlag", "type": "VALUE", "remember": True, "source": "rirpf", "expr": emp_key("housingLoan") + " ? 1 : 0"},
+            {"id": "ceutaFlag", "type": "VALUE", "remember": True, "source": "rirpf", "expr": CEUTA + " ? 1 : 0"},
+            {"id": "earlierDetermination", "type": "VALUE", "source": "rirpf", "expr": LAST("appliedRate") + " != null"},
+            {"id": "dataChanged", "type": "VALUE", "source": "rirpf",
+             "expr": "#earlierDetermination and (" + LAST("annualPayDetermined") + " != #annualPayDetermined or " + LAST("withholdingBase") + " != #withholdingBase"
+                     " or " + LAST("personalFamilyMinimum") + " != #personalFamilyMinimum or " + LAST("withholdingRate") + " != #withholdingRate"
+                     " or " + LAST("familySituationCode") + " != #familySituationCode or " + LAST("spousalPensionDetermined") + " != #spousalPensionDetermined"
+                     " or " + LAST("childMaintenanceDetermined") + " != #childMaintenanceDetermined or " + LAST("housingLoanFlag") + " != #housingLoanFlag"
+                     " or " + LAST("ceutaFlag") + " != #ceutaFlag)"},
+            {"id": "regularize", "type": "VALUE", "source": "rirpf", "expr": "#dataChanged and " + OV + " != 'REGULARIZED'"},
+            {"id": "broughtForward", "type": "VALUE", "expr": emp_key("broughtForwardYear") + " != null and " + emp_key("broughtForwardYear") + " == #taxYear"},
+            {"id": "paidSoFar", "type": "VALUE", "source": "rirpf",
+             "expr": "#ytd.base('incomeTax', 'TAX') + (#broughtForward ? #coalesce(" + emp_key("broughtForwardPay") + ", 0) : 0)"},
+            {"id": "withheldSoFar", "type": "VALUE", "source": "rirpf",
+             "expr": "#ytd.amount('incomeTax', 'TAX') + (#broughtForward ? #coalesce(" + emp_key("broughtForwardWithheld") + ", 0) : 0)"},
+            {"id": "regularizationWithoutHousingLoan", "type": "REQUIRE", "source": "rirpf", "when": "#regularize",
+             "condition": "#housingLoanFlag == 0 and " + LAST("housingLoanFlag") + " == 0",
+             "message": "The withholding data changed and the housing-loan reduction is or was applied, whose regularization (RIRPF art. 87.3.b) this template does not do: regularize the rate and enter it as withholdingRateOverride with reason REGULARIZED"},
+            {"id": "regularizationSameTerritory", "type": "REQUIRE", "source": "rirpf", "when": "#regularize",
+             "condition": "#ceutaFlag == " + LAST("ceutaFlag"),
+             "message": "The employee moved into or out of the Ceuta, Melilla and La Palma regime during the year, whose regularization (RIRPF art. 87.2.9.º) this template does not do: regularize the rate and enter it as withholdingRateOverride with reason REGULARIZED"},
+            {"id": "regularizationPayRemaining", "type": "REQUIRE", "source": "rirpf", "when": "#regularize",
+             "condition": PAY + " > #paidSoFar",
+             "message": "annualPay must include what was already paid this year and be larger than it: the regularized rate applies to the pay still to come (RIRPF art. 87.3.c)"},
+            {"id": "monthsEarlier", "type": "VALUE",
+             "expr": "#taxMonth - 1 - (#employmentStartDate != null and #employmentStartDate > #taxYearStartDate ? #employmentStartDate.getMonthValue() - 1 : 0)"},
+            {"id": "monthsRecorded", "type": "VALUE",
+             "expr": "#ytd.periods('workAccident', 'EMPLOYER') + #ytd.periods('trainingWorkAccident', 'EMPLOYER') + (#broughtForward ? #coalesce(" + emp_key("broughtForwardMonths") + ", 0) : 0)"},
+            {"id": "regularizationEarlierPayKnown", "type": "REQUIRE", "source": "rirpf", "when": "#regularize", "detail": "broughtForwardYear",
+             "condition": "#monthsRecorded >= #monthsEarlier",
+             "message": "The withholding data changed, and regularizing the rate needs everything paid and withheld this year (RIRPF art. 87.3.b), but not every earlier month with you is in a posted payroll: set broughtForwardYear and the brought-forward pay and withholding for the months before Humano"},
+            {"id": "regularizationQuota", "type": "VALUE", "source": "aeat-algoritmo-2026", "when": "#regularize",
+             "expr": "(" + PAY + " <= #exemptLimit ? 0 : #cappedQuota) * (" + CEUTA + " ? #p['ceutaQuotaShare'] : 1)"},
+            {"id": "regularizationCauses", "type": "VALUE", "source": "aeat-algoritmo-2026", "when": "#regularize",
+             # causes 1-4 of the algorithm (base, minimum, spousal pension, child maintenance) are limited by art. 87.5; 5 (situation 2 to 3) and 11 are not
+             "expr": "(#withholdingBase != " + LAST("withholdingBase") + " or #personalFamilyMinimum != " + LAST("personalFamilyMinimum") +
+                     " or (" + emp_key("spousalPension") + " > 0 and #spousalPensionDetermined != " + LAST("spousalPensionDetermined") + ")"
+                     " or (" + emp_key("childMaintenance") + " > 0 and #childMaintenanceDetermined != " + LAST("childMaintenanceDetermined") + "))"
+                     " and !(" + LAST("familySituationCode") + " == 2 and #familySituationCode == 3)"},
+            {"id": "remainingPay", "type": "VALUE", "when": "#regularize", "expr": PAY + " - #paidSoFar"},
+            {"id": "rawRegularizedRate", "type": "VALUE", "source": "rirpf", "when": "#regularize",
+             "expr": "#pos(#divide((#regularizationQuota - #withheldSoFar) * 100, #remainingPay, 2, 'DOWN'))"},
+            {"id": "boundedRegularizedRate", "type": "VALUE", "source": "rirpf", "when": "#regularize",
+             "expr": "#min(#rawRegularizedRate, " + CEUTA + " ? #p['maximumRegularizedRateCeuta'] : #p['maximumRegularizedRate'])"},
+            {"id": "minimumRegularizedRate", "type": "VALUE", "source": "rirpf", "when": "#regularize",
+             "expr": "#rawRegularizedRate > (" + CEUTA + " ? #p['maximumRegularizedRateCeuta'] : #p['maximumRegularizedRate']) ? #boundedRegularizedRate : " + MIN_RATE.format("#boundedRegularizedRate")},
+            {"id": "regularizedAnnualAmount", "type": "VALUE", "source": "aeat-algoritmo-2026", "when": "#regularize",
+             "expr": "#round(#divide(#remainingPay * #minimumRegularizedRate, 100, 6, 'HALF_UP') + #withheldSoFar, 2, 'HALF_UP')"},
+            # art. 87.5: no higher rate when the change only lowers (base - minimum); no more extra withholding than its increase
+            {"id": "earlierDifference", "type": "VALUE", "when": "#regularize", "expr": "#pos(" + LAST("withholdingBase") + " - " + LAST("personalFamilyMinimum") + ")"},
+            {"id": "newDifference", "type": "VALUE", "when": "#regularize", "expr": "#withholdingBase - #personalFamilyMinimum"},
+            {"id": "rateNotRaised", "type": "VALUE", "source": "rirpf", "when": "#regularize",
+             "expr": "#regularizationCauses and #earlierDifference >= #newDifference and #minimumRegularizedRate > " + LAST("appliedRate")},
+            {"id": "increaseCapped", "type": "VALUE", "source": "rirpf", "when": "#regularize",
+             "expr": "#regularizationCauses and #earlierDifference < #newDifference and " + LAST("annualWithholding") + " < #regularizedAnnualAmount"
+                     " and #regularizedAnnualAmount - " + LAST("annualWithholding") + " > #newDifference - #earlierDifference"},
+            {"id": "cappedRegularizedRate", "type": "VALUE", "source": "aeat-algoritmo-2026", "when": "#regularize",
+             "expr": "#pos(#divide((" + LAST("annualWithholding") + " + #newDifference - #earlierDifference - #withheldSoFar) * 100, #remainingPay, 2, 'DOWN'))"},
+            {"id": "regularizedRate", "type": "VALUE", "source": "rirpf", "when": "#regularize",
+             "expr": "#rateNotRaised ? " + MIN_RATE.format(LAST("appliedRate")) + " : (#increaseCapped ? " + MIN_RATE.format("#cappedRegularizedRate") + " : #minimumRegularizedRate)"},
+            # A rate the employer regularized by hand (REGULARIZED) becomes the determination that carries over.
+            {"id": "automaticRate", "type": "VALUE", "remember": True, "source": "rirpf",
+             "expr": OV + " == 'REGULARIZED' ? " + emp_key("withholdingRateOverride") + " : (!#earlierDetermination ? #withholdingRate"
+                     " : (#regularize ? #regularizedRate : " + LAST("automaticRate") + "))"},
+            {"id": "annualWithholding", "type": "VALUE", "remember": True, "source": "aeat-algoritmo-2026",
+             "expr": "#earlierDetermination and !#dataChanged and " + OV + " != 'REGULARIZED' ? " + LAST("annualWithholding")
+                     + " : #round(#divide((" + PAY + " - #paidSoFar) * #automaticRate, 100, 6, 'HALF_UP') + #withheldSoFar, 2, 'HALF_UP')"},
+            {"id": "appliedRate", "type": "VALUE", "remember": True, "source": "rirpf",
              "expr": emp_key("withholdingRateOverrideReason") + " == 'REGULARIZED' ? " + emp_key("withholdingRateOverride")
-                     + " : (" + emp_key("withholdingRateOverrideReason") + " == 'REQUESTED_HIGHER' ? #max(#withholdingRate, " + emp_key("withholdingRateOverride") + ") : #withholdingRate)"},
+                     + " : (" + emp_key("withholdingRateOverrideReason") + " == 'REQUESTED_HIGHER' ? #max(#automaticRate, " + emp_key("withholdingRateOverride") + ") : #automaticRate)"},
             {"id": "rateMatchesYearToDate", "type": "REQUIRE", "source": "rirpf",
-             "when": "#ytd.periods('incomeTax', 'TAX') > 0 and " + emp_key("withholdingRateOverrideReason") + " == 'NONE'",
+             "when": "#ytd.periods('incomeTax', 'TAX') > 0 and !#earlierDetermination and " + emp_key("withholdingRateOverrideReason") + " == 'NONE'",
              "condition": "#max(#ytd.amount('incomeTax', 'TAX') - #divide(#ytd.base('incomeTax', 'TAX') * #withholdingRate, 100, 6, 'HALF_UP'),"
                           " #divide(#ytd.base('incomeTax', 'TAX') * #withholdingRate, 100, 6, 'HALF_UP') - #ytd.amount('incomeTax', 'TAX')) * 200 <= #ytd.periods('incomeTax', 'TAX')",
              "message": "The withholding rate computed from the current data differs from the rate applied earlier this year: regularize it under RIRPF art. 87 and enter the regularized rate as withholdingRateOverride with reason REGULARIZED"},
@@ -748,8 +1210,21 @@ def main():
              "expr": PART + " ? #round(" + emp_key("partTimeHours") + " * #p['partTimeAccidentHourlyBase'], 2, 'HALF_UP') : #p['accidentMinimumBase']"},
             {"id": "commonBase", "type": "VALUE", "source": "orden-pjc-297-2026", "expr": "#clamp(#contributionPay, #commonMinimumBase, #p['maximumBase'])"},
             {"id": "accidentBase", "type": "VALUE", "source": "orden-pjc-297-2026", "expr": "#clamp(#contributionPay + #earningsByComponent['OT'], #accidentMinimumBase, #p['maximumBase'])"},
+            {"id": "trainingWithinMinimumBase", "type": "REQUIRE", "source": "orden-pjc-297-2026", "when": TRAINING + " and #contributionPay > 0",
+             "condition": "#contributionPay <= #commonMinimumBase",
+             "message": "Training contract paid above the minimum base: Orden PJC/297/2026 art. 46 adds contributions on the excess, and its third rule leaves open whether the MEI then uses the actual or the minimum base, so this template refuses it"},
+            {"id": "trainingCommonContingencies", "type": "CONTRIBUTION", "label": "Common contingencies, training contract (Orden art. 46)", "ledger": "SOCIAL_SECURITY", "source": "orden-pjc-297-2026",
+             "when": "#contributionPay > 0 and " + TRAINING, "base": "#commonBase",
+             "employee": {"amount": "#p['trainingCommonEmployee']"}, "employer": {"amount": "#p['trainingCommonEmployer']"}},
+            {"id": "trainingWorkAccident", "type": "CONTRIBUTION", "label": "Professional contingencies, training contract (Orden art. 46)", "ledger": "WORK_INJURY", "source": "orden-pjc-297-2026",
+             "when": "#contributionPay > 0 and " + TRAINING, "base": "#accidentBase", "employer": {"amount": "#p['trainingProfessionalEmployer']"}},
+            {"id": "trainingWageGuaranteeFund", "type": "CONTRIBUTION", "label": "Wage Guarantee Fund, training contract (Orden art. 46)", "ledger": "OTHER", "source": "orden-pjc-297-2026",
+             "when": "#contributionPay > 0 and " + TRAINING, "base": "#accidentBase", "employer": {"amount": "#p['trainingWageGuaranteeEmployer']"}},
+            {"id": "trainingVocationalTraining", "type": "CONTRIBUTION", "label": "Vocational training, training contract (Orden art. 46)", "ledger": "OTHER", "source": "orden-pjc-297-2026",
+             "when": "#contributionPay > 0 and " + TRAINING, "base": "#accidentBase",
+             "employee": {"amount": "#p['trainingVocationalEmployee']"}, "employer": {"amount": "#p['trainingVocationalEmployer']"}},
             {"id": "commonContingencies", "type": "CONTRIBUTION", "label": "Common contingencies (contingencias comunes)", "ledger": "SOCIAL_SECURITY", "source": "orden-pjc-297-2026",
-             "when": "#contributionPay > 0 and !(#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE')", "base": "#commonBase",
+             "when": "#contributionPay > 0 and !(#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE') and !#employee['trainingContract']", "base": "#commonBase",
              "employee": {"rate": "#p['commonEmployeeRate']"}, "employer": {"rate": "#p['commonEmployerRate']"}},
             {"id": "temporaryIncapacity", "type": "CONTRIBUTION", "label": "Temporary incapacity past retirement age (IT, art. 152 LGSS)", "ledger": "SOCIAL_SECURITY", "source": "orden-pjc-297-2026",
              "when": "#contributionPay > 0 and #employee['retirementSituation'] == 'PAST_RETIREMENT_AGE'", "base": "#commonBase",
@@ -762,12 +1237,12 @@ def main():
              "employee": {"rate": emp_key("unemploymentRate") + " == 'FIXED_TERM' ? #p['unemploymentFixedTermEmployeeRate'] : #p['unemploymentIndefiniteEmployeeRate']"},
              "employer": {"rate": emp_key("unemploymentRate") + " == 'FIXED_TERM' ? #p['unemploymentFixedTermEmployerRate'] : #p['unemploymentIndefiniteEmployerRate']"}},
             {"id": "wageGuaranteeFund", "type": "CONTRIBUTION", "label": "Wage Guarantee Fund (FOGASA)", "ledger": "OTHER", "source": "orden-pjc-297-2026",
-             "when": "#contributionPay > 0 and !(#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE')", "base": "#accidentBase", "employer": {"rate": "#p['wageGuaranteeRate']"}},
+             "when": "#contributionPay > 0 and !(#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE') and !#employee['trainingContract']", "base": "#accidentBase", "employer": {"rate": "#p['wageGuaranteeRate']"}},
             {"id": "vocationalTraining", "type": "CONTRIBUTION", "label": "Vocational training (formación profesional)", "ledger": "OTHER", "source": "orden-pjc-297-2026",
-             "when": "#contributionPay > 0 and !(#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE')", "base": "#accidentBase",
+             "when": "#contributionPay > 0 and !(#employee['retirementSituation'] == 'PAST_RETIREMENT_AGE') and !#employee['trainingContract']", "base": "#accidentBase",
              "employee": {"rate": "#p['trainingEmployeeRate']"}, "employer": {"rate": "#p['trainingEmployerRate']"}},
             {"id": "workAccident", "type": "CONTRIBUTION", "label": "Work accidents and occupational diseases (AT/EP)", "ledger": "WORK_INJURY", "source": "lgss",
-             "when": "#contributionPay > 0", "base": "#accidentBase",
+             "when": "#contributionPay > 0 and !#employee['trainingContract']", "base": "#accidentBase",
              "employer": {"rate": "#coalesce(" + emp_key("accidentRate") + ", #employer['accidentRate'])"}},
             {"id": "solidarity", "type": "CONTRIBUTION", "label": "Solidarity contribution (cotización adicional de solidaridad)", "ledger": "SOCIAL_SECURITY", "source": "orden-pjc-297-2026",
              "when": "#contributionPay > #p['maximumBase']", "base": "#contributionPay",
@@ -781,13 +1256,16 @@ def main():
              "when": "#taxableEarnings > 0", "base": "#taxableEarnings", "rate": "#divide(#appliedRate, 100, 4, 'HALF_UP')", "recordZero": True},
         ],
         "limitations": [
-            "Common tax territory, Régimen General employees paid monthly in EUR in 2026, for whole months with the payment in the same year. Work performed in the Basque Country or Navarre, residents of Ceuta, Melilla and La Palma, contribution groups 8 to 11, training contracts, multiple employment, part months, unpaid leave and working pensioners (LGSS art. 153) are refused. Employees past the ordinary retirement age contribute only IT (1.30% / 0.25%) and AT/EP (LGSS art. 152; Orden art. 32.1.a), not when paid above the maximum base or overtime. Overtime (OT) enters only the AT/EP base and carries the additional contribution of Orden art. 5 (28.30%, or 14% for force majeure); it must be paid with ordinary pay in the same run.",
-            "The withholding rate is recomputed each run from the annual figures entered (annual pay, contributions, family data from modelo 145) and applied to the whole payment. RIRPF art. 87 regularization is not automated: once the data change during the year the run refuses until the employer enters the regularized rate (withholdingRateOverride, REGULARIZED). A higher rate requested under art. 88.5 can be entered as REQUESTED_HIGHER.",
+            "Common tax territory, Régimen General employees paid monthly in EUR in 2026, for whole months with the payment in the same year. Work performed in the Basque Country or Navarre, contribution groups 8 to 11, multiple employment, part months, unpaid leave and working pensioners (LGSS art. 153) are refused. Employees past the ordinary retirement age contribute only IT (1.30% / 0.25%) and AT/EP (LGSS art. 152; Orden art. 32.1.a), not when paid above the maximum base or overtime. Overtime (OT) enters only the AT/EP base and carries the additional contribution of Orden art. 5 (28.30%, or 14% for force majeure); it must be paid with ordinary pay in the same run.",
+            "Residents of Ceuta, Melilla or La Palma whose work income is obtained there (taxTerritory CEUTA_MELILLA_LA_PALMA) are withheld at the rate reduced by 60%, with minimums of 0.8% and 6% (RIRPF arts. 80.2, 86.2; DA 57ª LIRPF); the contribution reductions for Ceuta and Melilla are not applied.",
+            "Training contracts (formación en alternancia and remaining contratos para la formación y el aprendizaje) pay the fixed quotas of Orden art. 46 while the common-contingencies base does not exceed the minimum base, full-time in groups 4 to 7 without overtime; above the minimum base they are refused, as the Orden's third rule leaves open which base the MEI uses then.",
+            "The withholding rate comes from the annual figures entered (annual pay, contributions, family data from modelo 145) and applies to the whole payment. Each result keeps the determination (rate, annual withholding, base, minimum and the data they came from); while nothing changes the kept rate carries on, and when the data change the rate is regularized (RIRPF art. 87.3) from the pay and withholding so far, within the limits of art. 87.5 for changes in the base, the minimum, a spousal pension or child maintenance (as the AEAT algorithm's causes 1 to 4). Not automated, so refused until the employer enters the rate as withholdingRateOverride REGULARIZED: changes while a housing-loan reduction is or was applied, moving into or out of the Ceuta, Melilla and La Palma regime, and data changed in months posted before version 2026.1.3 (no kept determination). Earlier months not in Humano need the brought-forward pay and withholding. A higher rate requested under art. 88.5 can be entered as REQUESTED_HIGHER. Regularization starts in the first run after the data change; the quarterly option of art. 87.4 is not offered.",
             "Without annualSocialContributions the expected employee contributions are estimated as 12 months on annualPay / 12 at full-time bases.",
-            "Not modelled: dependants with a disability, court-ordered payments (arts. 83.3.f, 85.2), irregular income (art. 83.3.a), pensioners and the unemployed, pay in kind and its ingreso a cuenta, arrears of earlier years (15% fixed rate), fixed rates (directors, courses, authors), the special regime for workers posted to Spain, sick leave and birth leave months (their own bases), contribution reductions and incentives, and the 33.62 EUR charge at the end of fixed-term contracts under 30 days (Orden art. 28).",
+            "Dependants with a disability are counted by grade (all descendants by whole or all by half, all ascendants shared the same way); children receiving court-ordered maintenance must not be entered as descendants.",
+            "Not modelled: irregular income above 700,000 EUR, pensioners and the unemployed, pay in kind and its ingreso a cuenta, arrears of earlier years (15% fixed rate), fixed rates (directors, courses, authors), the special regime for workers posted to Spain, sick leave and birth leave months (their own bases), contribution reductions and incentives, and the 33.62 EUR charge at the end of fixed-term contracts under 30 days (Orden art. 28).",
             "Extra payments (BONUS) are prorated over the year in the contribution base from annualExtraPay (Orden art. 1, monthly-paid employees); a run holding only BONUS pays withholding but no contributions.",
             "Contributions are rounded to the cent, half up, per line; part-time minimum bases (hours x hourly base) and the extra-pay proration to the cent, half up.",
-            "Status LAW_DERIVED: values are cited from the BOE consolidated texts, the Orden PJC/297/2026 and the AEAT 2026 algorithm and help; the cases are derived from them (one reproduces the AEAT help's 15.96% example) and every case's withholding rate matches the AEAT calculation service.",
+            "Status LAW_DERIVED: values are cited from the BOE consolidated texts, the Orden PJC/297/2026 and the AEAT 2026 algorithm and help; the cases are derived from them (one reproduces the AEAT help's 15.96% example) and every case's withholding rate, regularized rates included, matches the AEAT calculation service.",
         ],
         "testCases": test_cases(),
     }
@@ -797,4 +1275,5 @@ def main():
     print("wrote", sys.argv[1], "with", len(template["testCases"]), "test cases")
 
 
-main()
+if __name__ == "__main__":
+    main()

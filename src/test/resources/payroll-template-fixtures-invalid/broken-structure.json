@@ -189,6 +189,22 @@
         "rate": "#p['rate']",
         "amount": "#grossEarnings"
       }
+    },
+    {
+      "id": "readsLast",
+      "type": "VALUE",
+      "expr": "#ytd.last('divides')"
+    },
+    {
+      "id": "keptContribution",
+      "type": "CONTRIBUTION",
+      "label": "Kept",
+      "ledger": "OTHER",
+      "base": "#grossEarnings",
+      "employee": {
+        "rate": "#p['rate']"
+      },
+      "remember": true
     }
   ],
   "limitations": [],

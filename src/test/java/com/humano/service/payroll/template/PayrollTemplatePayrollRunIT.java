@@ -60,6 +60,7 @@ import com.humano.service.payroll.template.model.LineSide;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -90,6 +91,7 @@ class PayrollTemplatePayrollRunIT {
     private static final String US_TEMPLATE = "us-federal-employment";
     private static final String NL_TEMPLATE = "nl-employment";
     private static final String DE_TEMPLATE = "de-employment";
+    private static final String ES_TEMPLATE = "es-employment";
 
     @Autowired
     private PayrollTemplateService templateService;
@@ -607,6 +609,72 @@ class PayrollTemplatePayrollRunIT {
             "umlageU2/EMPLOYER_CHARGE=9.6",
             "umlageU3/EMPLOYER_CHARGE=6"
         );
+    }
+
+    @Test
+    void aSpanishRateKeptFromEarlierRunsIsRegularizedWhenTheDataChange() {
+        // The AEAT help's example: 28,500 a year with 1,700 contributions, 15.96%; 2,375 a month.
+        tx.executeWithoutResult(s -> {
+            Employee e = employees.findById(employee.getId()).orElseThrow();
+            e.setCountry(countries.findAll().stream().filter(c -> c.getCode() == CountryCode.ES).findFirst().orElseThrow());
+            e.setBirthDate(LocalDate.of(1980, 2, 1));
+            employees.save(e);
+            setPay("2375.00", CurrencyCode.EUR);
+        });
+        templateService.configure(ES_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of("accidentRate", "0.015")));
+        Map<String, String> profile = new HashMap<>(
+            Map.of(
+                "annualPay",
+                "28500.00",
+                "annualSocialContributions",
+                "1700.00",
+                "familySituation",
+                "3",
+                "withholdingContract",
+                "GENERAL",
+                "contributionGroup",
+                "5",
+                "unemploymentRate",
+                "INDEFINITE",
+                "taxTerritory",
+                "COMMON"
+            )
+        );
+        templateService.saveProfile(ES_TEMPLATE, employee.getId(), profile);
+
+        for (int month = 1; month <= 2; month++) {
+            LocalDate start = LocalDate.of(2026, month, 1);
+            PayrollRunResponse run = calculate(period(start, start.withDayOfMonth(start.lengthOfMonth())));
+            assertThat(run.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+            assertThat(templateLines(run)).contains("incomeTax/INCOME_TAX=379.05");
+            // The determination is kept with the result for the next period.
+            assertThat(resultOf(run.id()).getTemplateMemo().get(ES_TEMPLATE)).containsEntry("appliedRate", new BigDecimal("15.96"));
+            post(run.id());
+        }
+
+        // A raise to 33,000 from March (RIRPF art. 87.2.3.º): the regularized rate spreads the new annual quota less the
+        // 758.10 already withheld over the 28,250 still to be paid, 17.73% (from scratch the data would give 17.48%).
+        profile.put("annualPay", "33000.00");
+        profile.put("annualSocialContributions", "2138.40");
+        templateService.saveProfile(ES_TEMPLATE, employee.getId(), profile);
+        tx.executeWithoutResult(s -> setPay("2750.00", CurrencyCode.EUR));
+        PayrollRunResponse march = calculate(period(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)));
+        assertThat(march.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        assertThat(templateLines(march)).contains("incomeTax/INCOME_TAX=487.58");
+        post(march.id());
+
+        // April: nothing changed, so the regularized rate carries on.
+        PayrollRunResponse april = calculate(period(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30)));
+        assertThat(april.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        assertThat(templateLines(april)).contains("incomeTax/INCOME_TAX=487.58");
+    }
+
+    private void post(UUID runId) {
+        tx.executeWithoutResult(s -> {
+            PayrollRun run = runs.findById(runId).orElseThrow();
+            run.setStatus(RunStatus.POSTED);
+            runs.save(run);
+        });
     }
 
     private List<String> templateLines(PayrollRunResponse run) {

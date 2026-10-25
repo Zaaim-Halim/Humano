@@ -6,9 +6,12 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 /**
  * PayrollResult represents the aggregated payroll outcome for a single employee in a specific payroll run and period.
@@ -144,6 +147,11 @@ public class PayrollResult extends AbstractAuditingEntity<UUID> {
 
     @Column(name = "exchange_rate_date")
     private java.time.LocalDate exchangeRateDate;
+
+    /** What payroll templates kept for the next period ({@code remember} steps): template id → step → value. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "template_memo")
+    private Map<String, Map<String, BigDecimal>> templateMemo;
 
     @Override
     public UUID getId() {
@@ -304,6 +312,14 @@ public class PayrollResult extends AbstractAuditingEntity<UUID> {
 
     public void setExchangeRateDate(java.time.LocalDate exchangeRateDate) {
         this.exchangeRateDate = exchangeRateDate;
+    }
+
+    public Map<String, Map<String, BigDecimal>> getTemplateMemo() {
+        return templateMemo;
+    }
+
+    public void setTemplateMemo(Map<String, Map<String, BigDecimal>> templateMemo) {
+        this.templateMemo = templateMemo;
     }
 
     @Override

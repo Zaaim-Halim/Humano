@@ -10,6 +10,7 @@ import com.humano.domain.enumeration.payroll.TaxType;
 import com.humano.domain.payroll.EmployeeTemplateProfile;
 import com.humano.domain.payroll.PayComponent;
 import com.humano.domain.payroll.PayrollCalendar;
+import com.humano.domain.payroll.PayrollResult;
 import com.humano.domain.payroll.PayrollTemplateAdoption;
 import com.humano.domain.payroll.TaxBracket;
 import com.humano.domain.payroll.TaxWithholding;
@@ -25,6 +26,7 @@ import com.humano.repository.payroll.EmployeeTemplateProfileRepository;
 import com.humano.repository.payroll.PayComponentRepository;
 import com.humano.repository.payroll.PayrollCalendarRepository;
 import com.humano.repository.payroll.PayrollLineRepository;
+import com.humano.repository.payroll.PayrollResultRepository;
 import com.humano.repository.payroll.PayrollTemplateAdoptionRepository;
 import com.humano.repository.payroll.TaxBracketRepository;
 import com.humano.repository.payroll.TaxWithholdingRepository;
@@ -92,6 +94,7 @@ public class PayrollTemplateService {
     private final EmployeeRepository employeeRepository;
     private final PayComponentRepository payComponentRepository;
     private final PayrollLineRepository payrollLineRepository;
+    private final PayrollResultRepository payrollResultRepository;
     private final TaxBracketRepository taxBracketRepository;
     private final TaxWithholdingRepository taxWithholdingRepository;
     private final PayrollCalendarRepository payrollCalendarRepository;
@@ -103,6 +106,7 @@ public class PayrollTemplateService {
         EmployeeRepository employeeRepository,
         PayComponentRepository payComponentRepository,
         PayrollLineRepository payrollLineRepository,
+        PayrollResultRepository payrollResultRepository,
         TaxBracketRepository taxBracketRepository,
         TaxWithholdingRepository taxWithholdingRepository,
         PayrollCalendarRepository payrollCalendarRepository
@@ -113,6 +117,7 @@ public class PayrollTemplateService {
         this.employeeRepository = employeeRepository;
         this.payComponentRepository = payComponentRepository;
         this.payrollLineRepository = payrollLineRepository;
+        this.payrollResultRepository = payrollResultRepository;
         this.taxBracketRepository = taxBracketRepository;
         this.taxWithholdingRepository = taxWithholdingRepository;
         this.payrollCalendarRepository = payrollCalendarRepository;
@@ -434,7 +439,8 @@ public class PayrollTemplateService {
     /**
      * What {@code template} produced for the employee earlier in the tax year, from POSTED runs only,
      * keyed for {@link YtdAccess}. Periods are placed in the tax year by their start date, or by their
-     * payment date for templates on a payment-date basis.
+     * payment date for templates on a payment-date basis. The values its {@code remember} steps kept come
+     * from the latest such period that has them.
      */
     @Transactional(value = "tenantTransactionManager", readOnly = true)
     public Map<String, BigDecimal> yearToDate(UUID employeeId, PayrollTemplate template, LocalDate periodStart, LocalDate paymentDate) {
@@ -457,6 +463,15 @@ public class PayrollTemplateService {
                 BigDecimal::add
             );
         }
+        List<PayrollResult> memos = byPaymentDate
+            ? payrollResultRepository.findPostedWithTemplateMemoByPaymentDate(employeeId, taxYearStart, basis)
+            : payrollResultRepository.findPostedWithTemplateMemo(employeeId, taxYearStart, basis);
+        memos
+            .stream()
+            .map(r -> r.getTemplateMemo().get(template.id()))
+            .filter(Objects::nonNull)
+            .findFirst()
+            .ifPresent(memo -> memo.forEach((step, value) -> sums.put(YtdAccess.lastKey(step), value)));
         return sums;
     }
 

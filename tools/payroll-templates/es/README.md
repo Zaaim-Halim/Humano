@@ -24,9 +24,23 @@ Notes found while researching:
 
 - The withholding rate is annual: the employer computes it from the expected annual pay and the
   employee's modelo 145 data, applies it to every payment, and regularizes it (RIRPF art. 87) when the
-  data change. The template recomputes the rate each run and compares it with the year to date; if they
-  disagree it refuses until the regularized rate is entered (`withholdingRateOverride`, `REGULARIZED`),
-  since regularization depends on what was paid and withheld so far.
+  data change. Each payroll result keeps the determination (`remember` steps, read next period as
+  `#ytd.last`): the rate applied, the rate before overrides, the annual withholding (the algorithm's
+  IMPORTE), the base, the minimum and the data they came from. While none of these change, the kept rate
+  carries on (a regularized rate is not recomputed from scratch). When they change, the new rate is the
+  new annual quota less what was withheld this year, over the pay still to come, truncated to two
+  decimals (art. 87.3), capped at 47 % (19 % in Ceuta and Melilla), with the art. 86.2 minimums.
+- Art. 87.5 limits, as the algorithm applies them to its causes 1 to 4 (base, minimum, spousal pension,
+  child maintenance) but not to cause 5 (situation 2 to 3) or 11 (others): when the change does not raise
+  base minus minimum, the rate may not rise above the one applied before; when it does, the annual
+  withholding may not rise by more than base minus minimum did. The template infers the causes from what
+  changed, as the AEAT service would be told them.
+- Not automated, so refused until the employer enters the rate (`withholdingRateOverride`, `REGULARIZED`,
+  which then carries on): changes while a housing-loan reduction is or was applied (its own
+  regularization, art. 87.3.b), moving into or out of the Ceuta, Melilla and La Palma regime, and a change
+  against months posted before 2026.1.3, which kept no determination. Pay before Humano is brought forward
+  (`broughtForwardYear`, `broughtForwardMonths`, `broughtForwardPay`, `broughtForwardWithheld`); without
+  it a regularization with earlier months missing is refused.
 - Exempt pay and minimum rates: RIRPF art. 81.1 says no withholding applies below the limits, and art.
   86.2 sets minimums of 2 % (contracts under a year, artists) and 15 % (other special relationships).
   The AEAT help (p. 12) settles which wins: the exemption applies "siempre que no se trate de
@@ -53,6 +67,33 @@ Notes found while researching:
   only where retirement is contributed (art. 127 bis). Pay above the maximum base and overtime for them
   are refused, since the texts don't say how the solidarity and overtime contributions apply. Working
   pensioners (art. 153) are refused.
+- Irregular income (LIRPF art. 18.2): income generated over more than two years (for termination pay, the
+  years of service) or notoriously irregular in time (RIRPF art. 12.1, e.g. payments for termination by
+  mutual agreement), imputed in a single year, has a 30% reduction on at most 300,000 EUR a year. The
+  payer subtracts the reduction from the annual pay for the rate's base (RIRPF art. 83.3.a); for the
+  five-year rule it counts only the income it reduced itself. The AEAT algorithm takes the reduction as
+  `IRREGULAR1` (at most 90,000 and 30% of the annual pay) and subtracts it from the net work income
+  before the art. 20 reduction; the "other expenses" cap still uses the pay less contributions. The
+  template asks for the income (`irregularIncomeAmount`, part of `annualPay`) and computes the reduction,
+  cents dropped so it never exceeds 30% of the pay, which the AEAT service refuses. The rate then applies
+  to every payment, the irregular one included. Above 700,000 EUR it is refused: for termination pay the
+  reducible amount shrinks to zero at 1,000,000 EUR, which neither the algorithm nor the template models.
+- Dependants with a disability (LIRPF art. 60.2), counted by grade: 3,000 / 9,000 and 3,000 assistance
+  each, by whole or half like the descendants, shared like the ascendants; ascendants under 65 count
+  only with a disability (art. 59.1). (The algorithm text reads "under 64" there; the AEAT service
+  treats one aged 64 like one aged 63, so the template's "under 65" matches it.)
+- Court-ordered payments: the spousal pension reduces the base (the algorithm's CONYUGE); child
+  maintenance below the base gets the scale separately and 1,980 more minimum (RIRPF art. 85.2).
+- Ceuta, Melilla and La Palma (DA 57ª LIRPF, extended to 2026 by RDL 23/2026): for residents whose work
+  income is obtained there, the quota is multiplied by 0.40 (RIRPF art. 80.2: the rate reduced by 60 %),
+  with minimums of 0.8 % and 6 % (art. 86.2).
+- Training contracts (Orden art. 46): while the common-contingencies base does not exceed the minimum
+  base, fixed monthly quotas (57.72 + 11.51 common, 7.95 professional, 4.38 FOGASA, 2.16 + 0.28
+  vocational training), unemployment on the AT/EP minimum base (art. 33.2.a.1.º) and the MEI on the
+  minimum base. Above it the second rule adds the normal rates on the excess, but the third rule's MEI
+  base ("sobre la base de cotización por contingencias comunes … sobre la base de cotización mínima") can
+  be read two ways, so that case is refused; so are groups 1 to 3, where "base mínima de dicho régimen"
+  (1,424.40) and the group's minimum differ.
 - Not supported, for lack of a rule in the texts used (the Orden, the Reglamento General de Cotización
   and the Social Security's 2026 bases page): part months (bases prorated by days in practice, stated
   in the Orden only for particular groups) and the daily bases of groups 8 to 11 (47.48 and 170.04 a day,
@@ -70,6 +111,27 @@ The withholding rate was compared on 2026-10-24 with the Agencia Tributaria's ow
 - 5,000 random profiles (family situations, up to six descendants by whole or half, children under 3,
   ascendants shared by up to four, every disability level, ages over 65 and 75, mobility, housing loan,
   the 2 % and 15 % minimums, pay up to 400,000 EUR): all identical.
+
+Irregular income was compared on 2026-10-25 (version 2026.1.2) with the same service, sending the
+reduction as `Reducciones/Irregularidad1`:
+
+- the five irregular-income test cases and the live check's profile: all identical;
+- 1,500 random profiles with irregular income from 5% to 100% of the pay (all three family situations,
+  descendants by whole or half, disabilities, mobility, housing loan, the three contract types, pay up
+  to 400,000 EUR; 65 of them above the 90,000 cap, 169 with a zero rate): all identical.
+
+Version 2026.1.3 was compared on 2026-10-25:
+
+- 2,000 random profiles with disabled descendants and ascendants (every grade, by whole and half,
+  shared by up to three), spousal pensions, child maintenance above and below the base, and Ceuta /
+  Melilla / La Palma, on top of the earlier features: all identical;
+- 1,500 random regularizations (a determination, 1 to 10 months paid, then a raise, a cut, a new child,
+  a disability, situation 2 to 3, a spousal pension, child maintenance or a contract change), sent with
+  the causes the template infers and the earlier figures (`RetribSatisfechas`, `RetencionPracticada`,
+  `RetribAnualesIniciales`, `RetencionAnualInicial`, `BaseRetencion`, `TipoRetencion`,
+  `MinimoPersonalFamiliarInicial`): all identical, 25 of them where an art. 87.5 limit binds;
+- the template's group 2 and regularization test cases: all identical. Training contracts are checked
+  against the Orden text only (the service covers withholding).
 
 The service covers only the withholding rate; the contributions are checked against a separate integer
 implementation of the Orden.

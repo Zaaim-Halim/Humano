@@ -2,6 +2,7 @@ package com.humano.repository.payroll;
 
 import com.humano.domain.payroll.PayrollResult;
 import com.humano.repository.payroll.projection.RunTotalsRow;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -38,4 +39,43 @@ public interface PayrollResultRepository extends JpaRepository<PayrollResult, UU
         """
     )
     List<RunTotalsRow> totalsForRuns(@Param("runIds") Collection<UUID> runIds);
+
+    /**
+     * The employee's posted results with template memos for periods starting in [from, before), latest
+     * first (period start, payment date, then when the result was made).
+     */
+    @Query(
+        """
+        SELECT r FROM PayrollResult r JOIN r.run run JOIN r.payrollPeriod p
+        WHERE r.employee.id = :employeeId
+          AND r.templateMemo IS NOT NULL
+          AND run.status = com.humano.domain.enumeration.payroll.RunStatus.POSTED
+          AND p.startDate >= :from
+          AND p.startDate < :before
+        ORDER BY p.startDate DESC, p.paymentDate DESC, r.createdDate DESC
+        """
+    )
+    List<PayrollResult> findPostedWithTemplateMemo(
+        @Param("employeeId") UUID employeeId,
+        @Param("from") LocalDate from,
+        @Param("before") LocalDate before
+    );
+
+    /** As {@link #findPostedWithTemplateMemo}, placing periods in the tax year by their payment date. */
+    @Query(
+        """
+        SELECT r FROM PayrollResult r JOIN r.run run JOIN r.payrollPeriod p
+        WHERE r.employee.id = :employeeId
+          AND r.templateMemo IS NOT NULL
+          AND run.status = com.humano.domain.enumeration.payroll.RunStatus.POSTED
+          AND p.paymentDate >= :from
+          AND p.paymentDate < :before
+        ORDER BY p.paymentDate DESC, p.startDate DESC, r.createdDate DESC
+        """
+    )
+    List<PayrollResult> findPostedWithTemplateMemoByPaymentDate(
+        @Param("employeeId") UUID employeeId,
+        @Param("from") LocalDate from,
+        @Param("before") LocalDate before
+    );
 }

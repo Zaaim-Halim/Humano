@@ -56,6 +56,7 @@ public class PayrollTemplateValidator {
     private static final Pattern YTD_CALL = Pattern.compile("#ytd\\.(\\w+)\\(\\s*'([^']*)'\\s*,\\s*'([^']*)'\\s*\\)");
     private static final Set<String> TABLE_METHODS = Set.of("lookup", "bracketTax", "band");
     private static final Set<String> YTD_METHODS = Set.of("base", "amount", "periods");
+    private static final Pattern YTD_LAST = Pattern.compile("#ytd\\.last\\(\\s*'([^']*)'\\s*\\)");
 
     private final PayrollTemplateExtensionRegistry extensions;
 
@@ -324,6 +325,9 @@ public class PayrollTemplateValidator {
         // #ytd may name any step, including later ones: it reads what that step produced in earlier periods.
         Set<String> allStepIds = new HashSet<>();
         t.steps().forEach(s -> allStepIds.add(s.id()));
+        // #ytd.last reads what a remember step kept in an earlier period.
+        Set<String> remembered = new HashSet<>();
+        t.steps().stream().filter(Step::remember).forEach(s -> remembered.add(s.id()));
         Set<String> employeeKeys = keys(t.inputs() == null ? null : t.inputs().employee());
         Set<String> employerKeys = keys(t.inputs() == null ? null : t.inputs().employer());
         Set<String> parameters = t.parameters() == null ? Set.of() : t.parameters().keySet();
@@ -383,12 +387,13 @@ public class PayrollTemplateValidator {
                     if (s.inputs() != null) before.addAll(s.inputs().values());
                 }
             }
+            if (s.remember() && s.type() != Step.Type.VALUE) problems.add(at + ": only VALUE steps can remember");
             for (String expr : before) {
-                checkExpression(expr, at, defined, allStepIds, employeeKeys, employerKeys, parameters, tables, problems);
+                checkExpression(expr, at, defined, allStepIds, remembered, employeeKeys, employerKeys, parameters, tables, problems);
             }
             if (s.type() == Step.Type.CONTRIBUTION || s.type() == Step.Type.TAX) defined.add(s.id() + "_base");
             for (String expr : after) {
-                checkExpression(expr, at, defined, allStepIds, employeeKeys, employerKeys, parameters, tables, problems);
+                checkExpression(expr, at, defined, allStepIds, remembered, employeeKeys, employerKeys, parameters, tables, problems);
             }
             // Names a step defines become usable by the steps after it.
             switch (s.type()) {
@@ -424,6 +429,7 @@ public class PayrollTemplateValidator {
         String at,
         Set<String> defined,
         Set<String> stepIds,
+        Set<String> remembered,
         Set<String> employeeKeys,
         Set<String> employerKeys,
         Set<String> parameters,
@@ -486,6 +492,13 @@ public class PayrollTemplateValidator {
         }
         Matcher ytd = YTD_CALL.matcher(expr);
         int ytdCalls = 0;
+        Matcher last = YTD_LAST.matcher(expr);
+        while (last.find()) {
+            ytdCalls++;
+            if (!remembered.contains(last.group(1))) problems.add(
+                at + ": #ytd.last refers to '" + last.group(1) + "', which is not a remember step"
+            );
+        }
         while (ytd.find()) {
             ytdCalls++;
             if (!YTD_METHODS.contains(ytd.group(1))) problems.add(at + ": #ytd." + ytd.group(1) + " does not exist");

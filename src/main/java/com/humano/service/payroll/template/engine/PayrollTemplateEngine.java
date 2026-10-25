@@ -15,6 +15,7 @@ import java.time.Period;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +43,7 @@ import org.springframework.stereotype.Component;
  *   period), {@code #employee['key']}.</li>
  *   <li>Employer: {@code #employer['key']}.</li>
  *   <li>Data: {@code #p['parameter']} (the value in force for the period), {@code #table.lookup(...)},
- *   {@code #table.bracketTax(...)}, {@code #ytd.base(step, side)}, {@code #ytd.amount(step, side)}.</li>
+ *   {@code #table.bracketTax(...)}, {@code #ytd.base(step, side)}, {@code #ytd.amount(step, side)}, {@code #ytd.last(step)}.</li>
  *   <li>Running totals: {@code #employeeContributions}, {@code #employerContributions}, {@code #taxes}.</li>
  *   <li>Earlier steps: see {@link Step}.</li>
  * </ul>
@@ -98,6 +99,18 @@ public class PayrollTemplateEngine {
     }
 
     public List<TemplateLine> calculate(PayrollTemplate template, TemplateInput in) {
+        return run(template, in).lines();
+    }
+
+    /**
+     * The lines, and the values of the template's {@code remember} steps for the next period.
+     *
+     * @param lines      the amounts computed
+     * @param remembered {@code remember} step id → value (booleans as 1 / 0); steps without a value are left out
+     */
+    public record Calculation(List<TemplateLine> lines, Map<String, BigDecimal> remembered) {}
+
+    public Calculation run(PayrollTemplate template, TemplateInput in) {
         LocalDate paymentDate = in.paymentDate() != null ? in.paymentDate() : in.periodEnd();
         boolean byPaymentDate = template.effectiveDateBasis() == PayrollTemplate.DateBasis.PAYMENT_DATE;
         // The dates that must fall within the template's validity and select its dated values.
@@ -193,7 +206,18 @@ public class PayrollTemplateEngine {
                 );
             }
         }
-        return lines;
+        Map<String, BigDecimal> remembered = new LinkedHashMap<>();
+        for (Step step : template.steps()) {
+            if (!step.remember()) continue;
+            Object value = vars.get(step.id());
+            if (value instanceof Boolean b) remembered.put(step.id(), b ? BigDecimal.ONE : BigDecimal.ZERO);
+            else if (value instanceof BigDecimal d) remembered.put(step.id(), d);
+            else if (value instanceof Number n) remembered.put(step.id(), new BigDecimal(n.toString()));
+            else if (value != null) {
+                throw new TemplateCalculationException(template.ref() + " step '" + step.id() + "' remembers a value that is not a number");
+            }
+        }
+        return new Calculation(lines, remembered);
     }
 
     private void runStep(PayrollTemplate template, Step step, Map<String, Object> vars, List<TemplateLine> lines) {

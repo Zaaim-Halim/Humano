@@ -12,7 +12,9 @@ import java.util.Map;
  *   {@code detail}, the employee input it asks for, the failure counts as missing details for the
  *   template (so the run can link to them).</li>
  *   <li>{@link Type#VALUE} — binds {@code #<id>} to {@code expr} (an intermediate amount such as
- *   insurable income).</li>
+ *   insurable income). With {@code remember}, the value is kept with the payroll result and the next
+ *   period reads it as {@code #ytd.last('<id>')} (a figure of a determination that carries over, such as
+ *   a withholding rate); numbers only, booleans kept as 1 / 0.</li>
  *   <li>{@link Type#CONTRIBUTION} — applies the {@code employee} and/or {@code employer} side to
  *   {@code base}; binds {@code #<id>_base}, {@code #<id>_employee}, {@code #<id>_employer}.</li>
  *   <li>{@link Type#TAX} — {@code base × rate}, or {@code amount} when the tax isn't a flat rate
@@ -45,6 +47,7 @@ import java.util.Map;
  * @param source    id of the source the step's rule comes from
  * @param recordZero    emit lines even when the amount is zero
  * @param allowNegative accept negative amounts (refunds)
+ * @param remember  VALUE: keep the value for the next period ({@code #ytd.last})
  */
 public record Step(
     String id,
@@ -66,7 +69,8 @@ public record Step(
     String source,
     boolean recordZero,
     boolean allowNegative,
-    String detail
+    String detail,
+    boolean remember
 ) {
     public enum Type {
         REQUIRE,

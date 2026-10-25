@@ -2,9 +2,11 @@ package com.humano.service.payroll.template;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.humano.domain.enumeration.payroll.Frequency;
 import com.humano.service.payroll.template.catalog.PayrollTemplateCatalog;
 import com.humano.service.payroll.template.catalog.PayrollTemplateValidator;
 import com.humano.service.payroll.template.engine.PayrollTemplateEngine;
+import com.humano.service.payroll.template.engine.TemplateInput;
 import com.humano.service.payroll.template.extension.PayrollTemplateExtensionRegistry;
 import com.humano.service.payroll.template.model.PayrollTemplate;
 import com.humano.service.payroll.template.model.Table;
@@ -30,10 +32,63 @@ class ShippedPayrollTemplatesTest {
             new com.humano.service.payroll.template.extension.de.DeLohnsteuerPap2026()
         )
     );
-    private final PayrollTemplateCatalog catalog = new PayrollTemplateCatalog(
-        new PayrollTemplateValidator(extensions),
-        new PayrollTemplateEngine(extensions)
-    );
+    private final PayrollTemplateEngine engine = new PayrollTemplateEngine(extensions);
+    private final PayrollTemplateCatalog catalog = new PayrollTemplateCatalog(new PayrollTemplateValidator(extensions), engine);
+
+    @Test
+    void spainKeepsTheWithholdingDeterminationForTheNextPeriod() {
+        // The AEAT help's example (15.96%): what a later regularization (RIRPF art. 87) starts from.
+        BigDecimal pay = new BigDecimal("2375.00");
+        TemplateInput in = new TemplateInput(
+            LocalDate.of(2026, 3, 1),
+            LocalDate.of(2026, 3, 31),
+            LocalDate.of(2026, 3, 31),
+            Frequency.MONTHLY,
+            "EUR",
+            pay,
+            Map.of("BASIC", pay),
+            pay,
+            null,
+            pay,
+            null,
+            BigDecimal.ZERO,
+            BigDecimal.ZERO,
+            Map.of(),
+            true,
+            BigDecimal.ONE,
+            LocalDate.of(1980, 2, 1),
+            LocalDate.of(2020, 1, 1),
+            true,
+            Map.of("accidentRate", "0.015"),
+            Map.of(
+                "annualPay",
+                "28500.00",
+                "annualSocialContributions",
+                "1700.00",
+                "familySituation",
+                "3",
+                "withholdingContract",
+                "GENERAL",
+                "contributionGroup",
+                "5",
+                "unemploymentRate",
+                "INDEFINITE",
+                "taxTerritory",
+                "COMMON"
+            ),
+            Map.of()
+        );
+
+        Map<String, BigDecimal> kept = engine.run(catalog.find("es-employment").orElseThrow(), in).remembered();
+
+        assertThat(kept)
+            .containsEntry("appliedRate", new BigDecimal("15.96"))
+            .containsEntry("automaticRate", new BigDecimal("15.96"))
+            .containsEntry("annualWithholding", new BigDecimal("4548.60"))
+            .containsEntry("annualPayDetermined", new BigDecimal("28500.00"))
+            .containsEntry("housingLoanFlag", BigDecimal.ZERO)
+            .doesNotContainKeys("dataChanged", "regularizedRate");
+    }
 
     @Test
     void everyShippedTemplateIsAvailable() {
@@ -333,6 +388,23 @@ class ShippedPayrollTemplatesTest {
             .containsEntry("capIncomeLimit", "35200")
             .containsEntry("minimumRateShortContract", "2.00")
             .containsEntry("minimumRateSpecial", "15.00");
+        // RIRPF arts. 80.2, 86.2, 85.2, 87.5: Ceuta/Melilla rate reduced by 60%, minimums 0.8% and 6%; +1 980 with
+        // child maintenance; regularized rates at most 47% (19% in Ceuta and Melilla).
+        assertThat(values)
+            .containsEntry("ceutaQuotaShare", "0.40")
+            .containsEntry("minimumRateShortContractCeuta", "0.80")
+            .containsEntry("minimumRateSpecialCeuta", "6.00")
+            .containsEntry("childMaintenanceMinimumIncrease", "1980")
+            .containsEntry("maximumRegularizedRate", "47.00")
+            .containsEntry("maximumRegularizedRateCeuta", "19.00");
+        // Orden PJC/297/2026 art. 46: training contracts' fixed quotas 57.72 + 11.51, 7.95, 4.38, 2.16 + 0.28.
+        assertThat(values)
+            .containsEntry("trainingCommonEmployer", "57.72")
+            .containsEntry("trainingCommonEmployee", "11.51")
+            .containsEntry("trainingProfessionalEmployer", "7.95")
+            .containsEntry("trainingWageGuaranteeEmployer", "4.38")
+            .containsEntry("trainingVocationalEmployer", "2.16")
+            .containsEntry("trainingVocationalEmployee", "0.28");
         // Orden PJC/297/2026 arts. 2, 4, 16, 33: maximum base 5 101.20; 28.30%, MEI 0.90%, unemployment 7.05% / 8.30%.
         assertThat(values)
             .containsEntry("maximumBase", "5101.20")

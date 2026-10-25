@@ -16,8 +16,16 @@ One JSON file per template; the model is `com.humano.service.payroll.template.mo
   `de.lohnsteuer-pap-2026`, implementing `PayrollTemplateExtension`).
 - **Expressions** are sandboxed SpEL. No decimal literals (put numbers in parameters), no `/` (use
   `#divide(a, b, scale, mode)`), no assignment. Functions: `#min #max #clamp #pos #round #divide
-#coalesce`; helpers `#table.lookup`, `#table.bracketTax`, `#ytd.base`, `#ytd.amount`. See
-  `PayrollTemplateEngine` for every variable.
+#coalesce`; helpers `#table.lookup`, `#table.bracketTax`, `#table.band`, `#ytd.base`, `#ytd.amount`,
+  `#ytd.periods`, `#ytd.last`. See `PayrollTemplateEngine` for every variable.
+- **Carrying a value to the next period.** `#ytd` sums what earlier posted periods produced. For a
+  figure that is determined once and then kept (a withholding rate, the figures a later regularization
+  starts from), mark the VALUE step `"remember": true`: its value is stored with the payroll result
+  (`payroll_result.template_memo`, template id → step → value) and `#ytd.last('<step>')` returns it from
+  the latest earlier posted period of the tax year, or null at the first. Only VALUE steps remember,
+  only numbers (booleans are kept as 1 / 0); test cases give earlier values as `ytd` keys
+  `last:<step>`. Comparing with `#ytd.last` detects a change in the data — a remembered step added in a
+  later version reads null against periods posted before it.
 - **Test cases** are part of the template. The catalog runs them at startup on the deployed engine and
   withholds any template whose cases fail; `ShippedPayrollTemplatesTest` runs them in CI.
 - **Status**: `OFFICIAL_VECTORS` only when the cases reproduce an authority's own worked examples or
@@ -29,7 +37,8 @@ One JSON file per template; the model is `com.humano.service.payroll.template.mo
   an unknown key fails every calculation for that tenant. Add new keys instead, and deprecate in the
   description.
 - **Never rename a step id within a tax year.** Year-to-date sums (`#ytd`) match payroll lines by step
-  id across template versions, so a renamed step restarts its year-to-date mid-year.
+  id across template versions, so a renamed step restarts its year-to-date mid-year; the same holds for
+  `remember` steps read with `#ytd.last`.
 - **Never change values for periods already paid** except to correct an error, and say so in the
   changelog: posted runs keep their results, but recalculations of unposted runs pick up the change.
 

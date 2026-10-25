@@ -7,7 +7,7 @@ import java.util.Map;
 /**
  * Bound as {@code #ytd} while a template runs: what this template's steps produced for the employee
  * earlier in the tax year, from posted payroll runs only (the current run is excluded). A step with
- * no earlier lines sums to zero.
+ * no earlier lines sums to zero. {@link #last} reads the values {@code remember} steps kept.
  */
 public final class YtdAccess {
 
@@ -31,6 +31,18 @@ public final class YtdAccess {
     /** Sum of the amounts of a step's lines on {@code side}. */
     public BigDecimal amount(String step, String side) {
         return sums.getOrDefault(key(step, LineSide.valueOf(side), "amount"), BigDecimal.ZERO);
+    }
+
+    /**
+     * The value a {@code remember} VALUE step had in the latest earlier posted period of the tax year, or
+     * null when no earlier period kept one.
+     */
+    public BigDecimal last(String step) {
+        return sums.get(lastKey(step));
+    }
+
+    public static String lastKey(String step) {
+        return "last:" + step;
     }
 
     public static String key(String step, LineSide side, String measure) {

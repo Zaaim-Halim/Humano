@@ -933,7 +933,16 @@ public class PayrollProcessingService {
                     applied.attributes(),
                     payrollTemplateService.yearToDate(employee.getId(), template, period.getStartDate(), period.getPaymentDate())
                 );
-                for (TemplateLine templateLine : payrollTemplateEngine.calculate(template, input)) {
+                PayrollTemplateEngine.Calculation calculation = payrollTemplateEngine.run(template, input);
+                if (!calculation.remembered().isEmpty()) {
+                    // Kept with the result for the template's next period (#ytd.last), once the run is posted.
+                    Map<String, Map<String, BigDecimal>> memo = result.getTemplateMemo() != null
+                        ? new HashMap<>(result.getTemplateMemo())
+                        : new HashMap<>();
+                    memo.put(template.id(), calculation.remembered());
+                    result.setTemplateMemo(memo);
+                }
+                for (TemplateLine templateLine : calculation.lines()) {
                     boolean employerSide = templateLine.side() == LineSide.EMPLOYER;
                     PayrollLineCategory category =
                         switch (templateLine.side()) {
@@ -1222,6 +1231,7 @@ public class PayrollProcessingService {
                 (Specification<PayrollLine>) (root, query, cb) -> cb.equal(root.get("result").get("id"), resultId)
             );
             payrollLineRepository.deleteAll(existingLines);
+            result.setTemplateMemo(null);
             return result;
         }
         PayrollResult result = new PayrollResult();

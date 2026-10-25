@@ -63,6 +63,8 @@ class PayrollTemplateEngineTest {
                     .anySatisfy(p -> assertThat(p).contains("step literal is declared twice"))
                     .anySatisfy(p -> assertThat(p).contains("step taxes: id is reserved"))
                     .anySatisfy(p -> assertThat(p).contains("step contrib.employee needs exactly one of rate or amount"))
+                    .anySatisfy(p -> assertThat(p).contains("#ytd.last refers to 'divides', which is not a remember step"))
+                    .anySatisfy(p -> assertThat(p).contains("step keptContribution: only VALUE steps can remember"))
                     .anySatisfy(p -> assertThat(p).contains("a non-draft template needs test cases"))
             );
     }
