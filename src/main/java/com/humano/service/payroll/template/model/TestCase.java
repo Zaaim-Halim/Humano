@@ -23,6 +23,9 @@ import java.util.Map;
  * @param taxableEarnings taxable earnings (defaults to gross)
  * @param taxableEarningsByComponent their taxable part per pay-component code (defaults to earningsByComponent)
  * @param reductions      unpaid-leave reductions (defaults to 0)
+ * @param leavePay        the part of the earnings paid for leave days, by leave type (defaults to none)
+ * @param leaveDays       calendar days of that leave in the period, by leave type (defaults to none)
+ * @param unpaidLeaveDays the calendar days among them left wholly unpaid, by leave type (defaults to none)
  * @param preTaxDeductions tenant pre-tax deductions (defaults to the sum by type, else 0)
  * @param preTaxDeductionsByType the same by deduction type (defaults to none)
  * @param fullPeriod      employed full-time for the whole period (defaults to true)
@@ -49,6 +52,9 @@ public record TestCase(
     BigDecimal taxableEarnings,
     Map<String, BigDecimal> taxableEarningsByComponent,
     BigDecimal reductions,
+    Map<String, BigDecimal> leavePay,
+    Map<String, BigDecimal> leaveDays,
+    Map<String, BigDecimal> unpaidLeaveDays,
     BigDecimal preTaxDeductions,
     Map<String, BigDecimal> preTaxDeductionsByType,
     Boolean fullPeriod,

@@ -138,6 +138,17 @@ interface BandErrors {
       font-size: var(--text-xs);
       margin: 0;
     }
+    .hum-lp-origin {
+      display: block;
+      margin-top: 4px;
+    }
+    .hum-lp-note {
+      display: block;
+      margin: 4px 0 0;
+      max-width: 48ch;
+      color: var(--fg-muted);
+      font-size: var(--text-xs);
+    }
     .hum-lp-muted {
       color: var(--fg-muted);
       font-size: var(--text-sm);
@@ -181,11 +192,17 @@ export default class LeavePayRulesComponent {
       return { fromDay, toDay, paid: !isPercentage(b.paid), overlap };
     });
   });
-  /** A rule for this country and leave type exists already (creating only). */
+  /** The workspace has its own rule for this country and leave type already (creating only); a template's rule may be overridden. */
   protected readonly duplicate = computed(() => {
     const d = this.draft();
-    return !!d && d.id === null && (this.rules() ?? []).some(r => r.countryId === d.countryId && r.leaveType === d.leaveType);
+    return (
+      !!d &&
+      d.id === null &&
+      (this.rules() ?? []).some(r => r.origin === 'WORKSPACE' && r.countryId === d.countryId && r.leaveType === d.leaveType)
+    );
   });
+  /** The draft overrides a payroll template's statutory rule (fixed country and leave type). */
+  protected readonly overriding = signal<LeavePayRule | null>(null);
   protected readonly valid = computed(() => {
     const d = this.draft();
     return (
@@ -239,7 +256,13 @@ export default class LeavePayRulesComponent {
     return parts;
   }
 
+  /** Stable row key: template rows have no id. */
+  protected rowKey(rule: LeavePayRule): string {
+    return rule.id ?? `${rule.templateId}/${rule.countryId}/${rule.leaveType}`;
+  }
+
   protected openNew(): void {
+    this.overriding.set(null);
     const countries = new Set((this.rules() ?? []).map(r => r.countryId));
     this.draft.set({
       id: null,
@@ -252,7 +275,21 @@ export default class LeavePayRulesComponent {
     });
   }
 
+  /** A workspace rule starting from a template's statutory rule, replacing it. */
+  protected openOverride(rule: LeavePayRule): void {
+    this.overriding.set(rule);
+    this.draft.set({
+      id: null,
+      countryId: rule.countryId,
+      leaveType: rule.leaveType,
+      bands: rule.payBands.map(b => ({ key: this.nextKey++, fromDay: b.fromDay, toDay: b.toDay, paid: complement(b.deductionPercentage) })),
+      otherwisePaid: complement(rule.deductionPercentage),
+      preTax: rule.affectsTaxableSalary,
+    });
+  }
+
   protected openEdit(rule: LeavePayRule): void {
+    this.overriding.set(null);
     this.draft.set({
       id: rule.id,
       countryId: rule.countryId,
@@ -298,16 +335,13 @@ export default class LeavePayRulesComponent {
         : this.leavePayService.update(d.id, body);
     this.saving.set(true);
     request.subscribe({
-      next: saved => {
-        this.rules.update(rules => {
-          const others = (rules ?? []).filter(r => r.id !== saved.id);
-          return [...others, saved].sort(
-            (a, b) => a.countryName.localeCompare(b.countryName) || LEAVE_TYPES.indexOf(a.leaveType) - LEAVE_TYPES.indexOf(b.leaveType),
-          );
-        });
+      next: () => {
         this.saving.set(false);
         this.draft.set(null);
+        this.overriding.set(null);
         this.toast.success(this.label('humano.leavePay.saved'));
+        // An override hides the template's rule; the server knows which rules apply.
+        this.refresh();
       },
       error: (err: unknown) => {
         this.saving.set(false);
@@ -318,17 +352,26 @@ export default class LeavePayRulesComponent {
 
   protected confirmDelete(): void {
     const rule = this.deleting();
-    if (!rule) return;
+    if (!rule?.id) return;
     this.leavePayService.delete(rule.id).subscribe({
       next: () => {
-        this.rules.update(rules => (rules ?? []).filter(r => r.id !== rule.id));
         this.deleting.set(null);
         this.toast.success(this.label('humano.leavePay.deleted'));
+        // Deleting an override brings the template's rule back.
+        this.refresh();
       },
       error: (err: unknown) => {
         this.deleting.set(null);
         this.toast.danger(normalizeHttpError(err));
       },
+    });
+  }
+
+  /** Reloads the rules without the loading state. */
+  private refresh(): void {
+    this.leavePayService.list().subscribe({
+      next: rules => this.rules.set(rules),
+      error: (err: unknown) => this.toast.danger(normalizeHttpError(err)),
     });
   }
 

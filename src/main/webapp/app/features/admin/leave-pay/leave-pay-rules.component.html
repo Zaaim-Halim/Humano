@@ -45,7 +45,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (r of rules(); track r.id) {
+            @for (r of rules(); track rowKey(r)) {
               <tr>
                 <td>{{ r.countryName }}</td>
                 <td>
@@ -53,6 +53,13 @@
                     <lucide-icon [name]="typeIcon[r.leaveType]" [size]="16" />
                     {{ 'humano.leave.type.' + r.leaveType | translate }}
                   </span>
+                  @if (r.origin === 'TEMPLATE') {
+                    <span class="hum-lp-origin">
+                      <hum-badge tone="info" [label]="'humano.leavePay.fromTemplate' | translate: { name: r.templateName }" />
+                    </span>
+                  } @else if (r.overridesTemplate) {
+                    <span class="hum-lp-origin hum-lp-muted">{{ 'humano.leavePay.overridesTemplate' | translate }}</span>
+                  }
                 </td>
                 <td>
                   <span class="hum-lp-pay tabular-nums">
@@ -60,6 +67,16 @@
                       <span>{{ line }}</span>
                     }
                   </span>
+                  @if (r.origin === 'TEMPLATE') {
+                    @if (r.note) {
+                      <p class="hum-lp-note">{{ r.note }}</p>
+                    }
+                    @if (r.sourceUrl) {
+                      <a class="hum-lp-note" [href]="r.sourceUrl" target="_blank" rel="noopener">{{
+                        'humano.leavePay.source' | translate
+                      }}</a>
+                    }
+                  }
                 </td>
                 <td>
                   @if (r.affectsTaxableSalary) {
@@ -70,8 +87,14 @@
                 </td>
                 <td>
                   <span class="hum-lp-actions">
-                    <hum-icon-button icon="pencil" size="sm" [label]="'humano.leavePay.edit' | translate" (click)="openEdit(r)" />
-                    <hum-icon-button icon="trash-2" size="sm" [label]="'humano.leavePay.delete' | translate" (click)="deleting.set(r)" />
+                    @if (r.origin === 'TEMPLATE') {
+                      <hum-button variant="ghost" size="sm" icon="pencil" (click)="openOverride(r)">{{
+                        'humano.leavePay.override' | translate
+                      }}</hum-button>
+                    } @else {
+                      <hum-icon-button icon="pencil" size="sm" [label]="'humano.leavePay.edit' | translate" (click)="openEdit(r)" />
+                      <hum-icon-button icon="trash-2" size="sm" [label]="'humano.leavePay.delete' | translate" (click)="deleting.set(r)" />
+                    }
                   </span>
                 </td>
               </tr>
@@ -85,19 +108,25 @@
 
 <hum-drawer
   [open]="draft() !== null"
-  [title]="(draft()?.id ? 'humano.leavePay.form.editTitle' : 'humano.leavePay.form.newTitle') | translate"
+  [title]="
+    (overriding() ? 'humano.leavePay.form.overrideTitle' : draft()?.id ? 'humano.leavePay.form.editTitle' : 'humano.leavePay.form.newTitle')
+      | translate
+  "
   width="560px"
   hasFooter
   (closed)="draft.set(null)"
 >
   @if (draft(); as d) {
     <div class="hum-lp-form">
+      @if (overriding(); as o) {
+        <hum-alert tone="info" [title]="'humano.leavePay.form.overrideHint' | translate: { name: o.templateName }">{{ o.note }}</hum-alert>
+      }
       <div class="hum-set-grid hum-set-grid--2">
         <hum-form-field [label]="'humano.leavePay.form.country' | translate" controlId="lp-country" required>
           <hum-select
             [options]="countryOptions()"
             [ngModel]="d.countryId"
-            [disabled]="d.id !== null"
+            [disabled]="d.id !== null || overriding() !== null"
             [ariaLabel]="'humano.leavePay.form.country' | translate"
             (ngModelChange)="patch({ countryId: $event })"
           />
@@ -106,7 +135,7 @@
           <hum-select
             [options]="typeOptions"
             [ngModel]="d.leaveType"
-            [disabled]="d.id !== null"
+            [disabled]="d.id !== null || overriding() !== null"
             [ariaLabel]="'humano.leavePay.form.leaveType' | translate"
             (ngModelChange)="patch({ leaveType: $event })"
           />

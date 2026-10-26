@@ -16,6 +16,8 @@ import com.humano.repository.payroll.LeaveTypeRuleRepository;
 import com.humano.repository.payroll.PayComponentRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.errors.EntityNotFoundException;
+import com.humano.service.payroll.template.PayrollTemplateService;
+import com.humano.service.payroll.template.model.PayrollTemplate;
 import java.math.BigDecimal;
 import java.util.*;
 import org.slf4j.Logger;
@@ -42,15 +44,18 @@ public class LeaveTypeRuleService {
     private final LeaveTypeRuleRepository ruleRepository;
     private final CountryRepository countryRepository;
     private final PayComponentRepository payComponentRepository;
+    private final PayrollTemplateService payrollTemplateService;
 
     public LeaveTypeRuleService(
         LeaveTypeRuleRepository ruleRepository,
         CountryRepository countryRepository,
-        PayComponentRepository payComponentRepository
+        PayComponentRepository payComponentRepository,
+        PayrollTemplateService payrollTemplateService
     ) {
         this.ruleRepository = ruleRepository;
         this.countryRepository = countryRepository;
         this.payComponentRepository = payComponentRepository;
+        this.payrollTemplateService = payrollTemplateService;
     }
 
     /**
@@ -157,19 +162,32 @@ public class LeaveTypeRuleService {
     }
 
     /**
-     * Gets all leave type rules across all countries.
+     * The leave pay rules payroll applies: the workspace's own, and the statutory rules of the enabled payroll
+     * templates for the country and leave types the workspace has no rule for. By country, then leave type.
      */
     @Transactional(value = "tenantTransactionManager", readOnly = true)
     public List<LeaveTypeRuleResponse> getAllRules() {
-        return ruleRepository
-            .findAll()
+        List<LeaveTypeRule> own = ruleRepository.findAll();
+        Map<String, Country> countriesByCode = new HashMap<>();
+        countryRepository.findAll().forEach(c -> countriesByCode.put(c.getCode().name(), c));
+        Set<String> statutoryKeys = new HashSet<>();
+        List<LeaveTypeRuleResponse> rules = new ArrayList<>();
+        for (PayrollTemplateService.StatutoryLeavePay statutory : payrollTemplateService.statutoryLeavePay()) {
+            Country country = countriesByCode.get(statutory.template().jurisdiction().country());
+            if (country == null) continue;
+            String key = country.getId() + "/" + statutory.rule().leaveType();
+            statutoryKeys.add(key);
+            boolean overridden = own
+                .stream()
+                .anyMatch(r -> r.getCountry().getId().equals(country.getId()) && r.getLeaveType() == statutory.rule().leaveType());
+            if (!overridden) rules.add(toResponse(statutory, country));
+        }
+        for (LeaveTypeRule rule : own) {
+            rules.add(toResponse(rule, statutoryKeys.contains(rule.getCountry().getId() + "/" + rule.getLeaveType())));
+        }
+        return rules
             .stream()
-            .sorted(
-                Comparator.comparing((LeaveTypeRule r) -> r.getCountry().getName())
-                    .thenComparing(LeaveTypeRule::getLeaveType)
-                    .thenComparing(LeaveTypeRule::getId)
-            )
-            .map(this::toResponse)
+            .sorted(Comparator.comparing(LeaveTypeRuleResponse::countryName).thenComparing(LeaveTypeRuleResponse::leaveType))
             .toList();
     }
 
@@ -224,17 +242,11 @@ public class LeaveTypeRuleService {
     }
 
     private LeaveTypeRuleResponse toResponse(LeaveTypeRule rule) {
-        Country country = rule.getCountry();
-        List<LeavePayBand> bands = rule.getPayBands();
-        Integer lastBandedDay = bands.isEmpty() ? null : bands.get(bands.size() - 1).toDay();
-        String description = rule.getLeaveType().name().replace("_", " ") + " - ";
-        if (!bands.isEmpty() && lastBandedDay == null) {
-            description += "by pay band";
-        } else {
-            description +=
-                (bands.isEmpty() ? "" : "by pay band to day " + lastBandedDay + ", then ") + describe(rule.getDeductionPercentage());
-        }
+        return toResponse(rule, false);
+    }
 
+    private LeaveTypeRuleResponse toResponse(LeaveTypeRule rule, boolean overridesTemplate) {
+        Country country = rule.getCountry();
         return new LeaveTypeRuleResponse(
             rule.getId(),
             country.getId(),
@@ -243,10 +255,54 @@ public class LeaveTypeRuleService {
             rule.getLeaveType(),
             rule.getLeaveType().name().replace("_", " "),
             rule.getDeductionPercentage(),
-            bands,
+            rule.getPayBands(),
             Boolean.TRUE.equals(rule.getAffectsTaxableSalary()),
-            description
+            describe(rule.getLeaveType(), rule.getPayBands(), rule.getDeductionPercentage()),
+            "WORKSPACE",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            overridesTemplate
         );
+    }
+
+    private static LeaveTypeRuleResponse toResponse(PayrollTemplateService.StatutoryLeavePay statutory, Country country) {
+        PayrollTemplate template = statutory.template();
+        PayrollTemplate.LeavePay rule = statutory.rule();
+        List<LeavePayBand> bands = rule.payBands() == null ? List.of() : rule.payBands();
+        PayrollTemplate.Source source = template.sources() == null ? null : template.sources().get(rule.source());
+        return new LeaveTypeRuleResponse(
+            null,
+            country.getId(),
+            country.getCode().name(),
+            country.getName(),
+            rule.leaveType(),
+            rule.leaveType().name().replace("_", " "),
+            rule.deductionPercentage(),
+            bands,
+            true,
+            describe(rule.leaveType(), bands, rule.deductionPercentage()),
+            "TEMPLATE",
+            template.id(),
+            template.name(),
+            template.version(),
+            rule.note(),
+            source == null ? null : source.title(),
+            source == null ? null : source.url(),
+            false
+        );
+    }
+
+    private static String describe(LeaveType type, List<LeavePayBand> bands, BigDecimal deductionPercentage) {
+        Integer lastBandedDay = bands.isEmpty() ? null : bands.get(bands.size() - 1).toDay();
+        String description = type.name().replace("_", " ") + " - ";
+        if (!bands.isEmpty() && lastBandedDay == null) {
+            return description + "by pay band";
+        }
+        return description + (bands.isEmpty() ? "" : "by pay band to day " + lastBandedDay + ", then ") + describe(deductionPercentage);
     }
 
     private static String describe(BigDecimal deductionPercentage) {

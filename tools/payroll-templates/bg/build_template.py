@@ -17,6 +17,7 @@ import sys
 from decimal import ROUND_HALF_UP, Decimal
 
 RETRIEVED = "2026-10-20"
+LEAVE_RETRIEVED = "2026-10-26"
 VALID_FROM, VALID_TO = "2026-01-01", "2026-12-31"
 H1_TO, H2_FROM = "2026-07-31", "2026-08-01"
 
@@ -56,6 +57,21 @@ SOURCES = {
 }
 for s in SOURCES.values():
     s["retrieved"] = RETRIEVED
+SOURCES["kso-40-5"] = {
+    "title": "Кодекс за социалното осигуряване, чл. 40, ал. 5 (изм. ДВ, бр. 106 от 2023 г., в сила от 01.01.2024 г.): 'Осигурителят изплаща на осигуреното лице за първите два работни дни от временната неработоспособност 70 на сто от среднодневното брутно възнаграждение за месеца, в който е настъпила временната неработоспособност, но не по-малко от 70 на сто от среднодневното уговорено възнаграждение'",
+    "url": "https://lex.bg/laws/ldoc/1597824512",
+    "retrieved": LEAVE_RETRIEVED,
+}
+SOURCES["zddfl-24-2-14"] = {
+    "title": "Закон за данъците върху доходите на физическите лица, чл. 24, ал. 2, т. 14: в облагаемия доход от трудови правоотношения не се включват 'обезщетенията и помощите по част първа от Кодекса за социално осигуряване, включително изплатените на основание чл. 40, ал. 5 от същия кодекс'",
+    "url": "https://lex.bg/laws/ldoc/2135538631",
+    "retrieved": LEAVE_RETRIEVED,
+}
+SOURCES["nevdvpov"] = {
+    "title": "Наредба за елементите на възнаграждението и за доходите, върху които се правят осигурителни вноски, чл. 1: минималният месечен осигурителен доход 'се определя пропорционално на отработените дни и дните по чл. 40, ал. 5 от Кодекса за социално осигуряване през месеца' — the employer's sick days count as insured days with remuneration",
+    "url": "https://lex.bg/laws/ldoc/-549450240",
+    "retrieved": LEAVE_RETRIEVED,
+}
 
 # Rates as fractions. Pension: KSO art. 6(1) items 1-2 (17.8% / 12.8%) + item 4 (2 x 1 point, 0.56 employer /
 # 0.44 employee each); split KSO art. 6(3) items 8-9 (7.9 / 9.9 and 5.7 / 7.1) + the item-4 increases.
@@ -149,7 +165,9 @@ def expected_lines(case, annexes):
     """The amounts the law gives for a test case, computed directly (no engine)."""
     month = case["periodStart"][:7]
     second_half = month >= "2026-08"
-    gross = Decimal(case["grossEarnings"])
+    gross = Decimal(case["grossEarnings"]) - Decimal(case.get("reductions", "0"))
+    # ZDDFL art. 24(2)(14): the employer's pay for the first two sick days (KSO art. 40(5)) is insured, not taxed
+    sick_pay = Decimal(case.get("leavePay", {}).get("SICK", "0"))
     born = int(case["birthDate"][:4])
     kid = case["employer"]["kidCode"]
     etype = case["employer"].get("employerType", "STANDARD")
@@ -191,13 +209,14 @@ def expected_lines(case, annexes):
     accident = {r["codes"]["include"][0]: Decimal(r["rate"]) / 100 for r in annexes["annex2A" if second_half else "annex2"]}[kid[:2]]
     contribution("workAccident", None, accident)
     employee_total = sum(Decimal(l["amount"]) for l in lines if l["side"] == "EMPLOYEE")
-    tax = money(max(gross - employee_total, Decimal(0)) * rate("incomeTaxRate"))
+    tax = money(max(gross - sick_pay - employee_total, Decimal(0)) * rate("incomeTaxRate"))
     if tax != 0:
         lines.append({"step": "incomeTax", "side": "TAX", "amount": str(tax)})
     return lines
 
 
-def case(name, evidence, start, end, gross, employer, employee, born="1985-04-12", full=True, error=None):
+def case(name, evidence, start, end, gross, employer, employee, born="1985-04-12", full=True, error=None, leave_pay=None, leave_days=None,
+         unpaid_days=None):
     c = {
         "name": name,
         "evidence": evidence,
@@ -211,6 +230,12 @@ def case(name, evidence, start, end, gross, employer, employee, born="1985-04-12
     }
     if born is not None:
         c["birthDate"] = born
+    if leave_pay:
+        c["leavePay"] = leave_pay
+    if leave_days:
+        c["leaveDays"] = leave_days
+    if unpaid_days:
+        c["unpaidLeaveDays"] = unpaid_days
     if error:
         c["expectError"] = error
     return c
@@ -243,6 +268,10 @@ def test_cases(annexes):
              "2026-10-01", "2026-10-31", "900.00", {"kidCode": "86.10"}, {"minimumInsurableIncome": "936.00"}),
         case("work-accident rate change on 1 August", "KID 10: 0.7% in annex 2, 0.9% in annex 2A (NOI notice). " + law,
              "2026-08-01", "2026-08-31", "1500.00", {"kidCode": "10.71"}, {"qualificationGroup": "3"}),
+        case("employer sick pay for the first two days is insured, not taxed",
+             "KSO art. 40(5): 70% for the first two working days, paid by the employer; ZDDFL art. 24(2)(14): not taxable; contributions on the whole 2000. " + law,
+             "2026-03-01", "2026-03-31", "2000.00", {"kidCode": "62"}, {"qualificationGroup": "2"}, full=False,
+             leave_pay={"SICK": "140.00"}, leave_days={"SICK": "6"}, unpaid_days={"SICK": "4"}),
     ]
     for c in computed:
         c["expectLines"] = expected_lines(c, annexes)
@@ -255,6 +284,9 @@ def test_cases(annexes):
              "2026-10-01", "2026-10-31", "1500.00", {"kidCode": "86.10"}, {"qualificationGroup": "1"}, error="has more than one value for 86.10 / 1"),
         case("partial month below the minimum refuses", "the minimum must be prorated by Bulgarian working days",
              "2026-10-01", "2026-10-31", "500.00", {"kidCode": "62"}, {"qualificationGroup": "2"}, full=False, error="prorated"),
+        case("sick pay beyond the first two working days refuses", "KSO art. 40(5) covers two working days; a top-up is taxable pay, not modelled",
+             "2026-03-01", "2026-03-31", "2000.00", {"kidCode": "62"}, {"qualificationGroup": "2"}, full=False,
+             leave_pay={"SICK": "600.00"}, leave_days={"SICK": "10"}, unpaid_days={"SICK": "2"}, error="first two working days"),
         case("labour category II refuses", "professional pension fund not supported",
              "2026-03-01", "2026-03-31", "2000.00", {"kidCode": "62"}, {"qualificationGroup": "2", "labourCategory": "2"}, error="Labour categories I and II"),
         case("disability relief refuses", "ZDDFL art. 18 not supported",
@@ -283,7 +315,7 @@ def main():
         "schemaVersion": 1,
         "id": "bg-employment",
         "name": "Bulgaria — employees under a labour contract",
-        "version": "2026.1.0",
+        "version": "2026.1.1",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "BG"},
         "validity": {"from": VALID_FROM, "to": VALID_TO},
@@ -292,6 +324,8 @@ def main():
         "taxYearStart": "--01-01",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.1", "date": LEAVE_RETRIEVED,
+             "summary": "Leave pay rules: pay kept for sick days is the employer's payment for the first two working days (KSO art. 40(5)), insured but not taxed (ZDDFL art. 24(2)(14)); before, it was taxed. Sick pay on more days than two working days can span is refused (a top-up is taxable and not separated)."},
             {"version": "2026.1.0", "date": RETRIEVED,
              "summary": "2026 rates and limits, including the 1 August 2026 changes to the maximum insurable income, the minimum insurable income (annex 1A) and the work-accident rates (annex 2A)."}
         ],
@@ -348,6 +382,9 @@ def main():
              "message": "Pre-tax deductions are not supported by this template: the ZDDFL art. 19 reliefs on the monthly tax base are not modelled"},
             {"id": "calendarMonth", "type": "REQUIRE", "condition": "#isCalendarMonth",
              "message": "Bulgarian contributions are monthly: the pay period must be a whole calendar month"},
+            {"id": "sickPayWithinStatute", "type": "REQUIRE", "source": "kso-40-5",
+             "when": "#leavePay['SICK'] > 0", "condition": "#leaveDays['SICK'] - #unpaidLeaveDays['SICK'] <= 4",
+             "message": "Sick pay on more days than the first two working days of an absence is not supported: the employer's payment under KSO art. 40(5) covers the first two working days and is not taxed (ZDDFL art. 24(2)(14)), while pay beyond it is taxable wage the template does not separate"},
             {"id": "remuneration", "type": "VALUE", "expr": "#pos(#socialEarnings - #reductions)"},
             {"id": "qualificationGroupKnown", "type": "REQUIRE", "when": "#remuneration > 0 and !(" + no_minimum + ")",
              "condition": "#employee['qualificationGroup'] != null",
@@ -359,7 +396,7 @@ def main():
              "source": "zbdoo-2026"},
             {"id": "partialMonthMinimum", "type": "REQUIRE", "when": "#remuneration > 0 and !(" + no_minimum + ")",
              "condition": "#fullPeriod or #remuneration >= #minimum",
-             "message": "Remuneration is below the full-month minimum insurable income in a partial month (or part-time / unpaid leave). The minimum must be prorated by Bulgarian working days; set the prorated amount as the employee's minimumInsurableIncome"},
+             "message": "Remuneration is below the full-month minimum insurable income in a partial month (or part-time, unpaid or sick leave). The minimum is prorated by the days worked and the employer's sick days (KSO art. 40(5)) over Bulgaria's working days; set the prorated amount as the employee's minimumInsurableIncome"},
             {"id": "insurable", "type": "VALUE", "expr": "#remuneration > 0 ? #min(#max(#remuneration, #minimum), #p['maxInsurableIncome']) : 0",
              "source": "zbdoo-2026"},
             {"id": "pension", "type": "CONTRIBUTION", "label": "Pension fund (DOO)", "ledger": "PENSION_CONTRIBUTION", "source": "kso",
@@ -383,12 +420,13 @@ def main():
              "source": "zbdoo-2026", "base": "#insurable",
              "employer": {"rate": "#table.lookup('workAccidentRate', #employer['kidCode'].substring(0, 2))"}},
             {"id": "incomeTax", "type": "TAX", "label": "Personal income tax (advance)", "ledger": "INCOME_TAX", "source": "zddfl",
-             "base": "#pos(#taxableEarnings - #reductions - #employeeContributions)", "rate": "#p['incomeTaxRate']"},
+             "base": "#pos(#taxableEarnings - #reductions - #leavePay['SICK'] - #employeeContributions)", "rate": "#p['incomeTaxRate']"},
         ],
         "limitations": [
             "Monthly payroll calendars whose periods are whole calendar months, paid in EUR.",
             "Labour category III only; categories I and II (professional pension fund) are refused.",
-            "Partial months, part-time work or unpaid leave with pay below the full-month minimum insurable income need a prorated minimumInsurableIncome: working days come from Bulgaria's official calendar, which Humano does not hold.",
+            "Partial months, part-time work, unpaid or sick leave with pay below the full-month minimum insurable income need a prorated minimumInsurableIncome (days worked and the employer's sick days, NEVDVPOV art. 1): working days come from Bulgaria's official calendar, which Humano does not hold.",
+            "Leave pay rules: pay kept for sick days is taken as the employer's payment for the first two working days (KSO art. 40(5): 70% of the month's average daily gross pay), insured but not taxed (ZDDFL art. 24(2)(14)); sick pay on more than four calendar days in a month is refused, and an employer top-up above the statutory 70% is not separated. From the third day the National Social Security Institute pays outside payroll. No statutory leave pay rule is declared: the law counts working days, leave pay rules count calendar days of the absence.",
             "Occupation-specific annex rows (e.g. hospital nurses, professional footballers) need the employee's minimumInsurableIncome.",
             "One payroll run per month: remuneration from other runs in the same month is not added before applying the maximum insurable income.",
             "Monthly tax-base reliefs (ZDDFL art. 18 disability, art. 19 voluntary insurance) and the annual tax recalculation are not applied; employees with tenant pre-tax deductions are refused.",

@@ -26,6 +26,15 @@ One JSON file per template; the model is `com.humano.service.payroll.template.mo
   only numbers (booleans are kept as 1 / 0); test cases give earlier values as `ytd` keys
   `last:<step>`. Comparing with `#ytd.last` detects a change in the data — a remembered step added in a
   later version reads null against periods posted before it.
+- **Statutory leave pay.** `leavePay` declares what the law makes the employer pay for a type of leave, as a
+  leave pay rule: `leaveType`, `deductionPercentage` (share of the daily salary not paid on days no band
+  covers), `payBands` (calendar days of the absence, e.g. `{fromDay: 1, toDay: 42, deductionPercentage: 0}`),
+  a `source` and a `note` on what it leaves out. It applies wherever the workspace has no rule of its own for
+  that country and leave type; declare it only where per-absence bands of a percentage of salary express the
+  law. In the builders it is the module-level `LEAVE_PAY` / `LEAVE_SOURCES` / `LEAVE_CHANGE` literals.
+- **Templates read leave**: `#reductions` (pay not earned), `#leavePay['SICK']` (pay kept for leave days),
+  `#leaveDays['SICK']` and `#unpaidLeaveDays['SICK']` (calendar days, those wholly unpaid), for leave types
+  with a rule (the workspace's or the template's).
 - **Test cases** are part of the template. The catalog runs them at startup on the deployed engine and
   withholds any template whose cases fail; `ShippedPayrollTemplatesTest` runs them in CI.
 - **Status**: `OFFICIAL_VECTORS` only when the cases reproduce an authority's own worked examples or

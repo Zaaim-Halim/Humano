@@ -1,6 +1,9 @@
 package com.humano.service.payroll.template.model;
 
+import com.humano.domain.enumeration.hr.LeaveType;
 import com.humano.domain.enumeration.payroll.Frequency;
+import com.humano.domain.payroll.LeavePayBand;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +36,8 @@ import java.util.Map;
  * @param parameters    effective-dated scalar values, by name
  * @param tables        effective-dated lookup tables, by name
  * @param steps         the calculation, in order
+ * @param leavePay      statutory pay for types of leave (e.g. sick pay), applied as a leave pay rule wherever
+ *                      the workspace has none of its own; null or empty for none
  * @param limitations   cases the template does not handle (shown to tenants)
  * @param testCases     worked examples the template must reproduce
  */
@@ -55,6 +60,7 @@ public record PayrollTemplate(
     Map<String, List<DatedValue>> parameters,
     Map<String, Table> tables,
     List<Step> steps,
+    List<LeavePay> leavePay,
     List<String> limitations,
     List<TestCase> testCases
 ) {
@@ -93,4 +99,21 @@ public record PayrollTemplate(
     public record Rounding(int scale, String mode) {}
 
     public record Inputs(List<InputField> employer, List<InputField> employee) {}
+
+    /**
+     * What the law makes the employer pay for a type of leave, as a leave pay rule: the share of the daily
+     * salary not paid, by stretch of the absence. Always deducted before tax (pay not earned).
+     *
+     * @param leaveType           the leave type it applies to
+     * @param deductionPercentage share not paid on days no band covers, 0 to 100
+     * @param payBands            stretches of the absence deducted at their own percentage
+     * @param source              id of the source the rule comes from
+     * @param note                what the rule leaves out (e.g. waiting periods), shown with it
+     */
+    public record LeavePay(LeaveType leaveType, BigDecimal deductionPercentage, List<LeavePayBand> payBands, String source, String note) {}
+
+    /** The statutory leave pay rules, never null. */
+    public List<LeavePay> effectiveLeavePay() {
+        return leavePay == null ? List.of() : leavePay;
+    }
 }

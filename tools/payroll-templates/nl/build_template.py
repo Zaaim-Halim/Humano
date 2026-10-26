@@ -342,6 +342,31 @@ def p(value, source):
     return [{"from": FROM, "to": TO, "value": str(value), "source": source}]
 
 
+
+# Statutory leave pay (PayrollTemplate.leavePay): applied as a leave pay rule where the workspace has none of its own.
+LEAVE_SOURCES = {'bw-7-629': {'title': 'Burgerlijk Wetboek Boek 7 art. 629 (loondoorbetaling bij ziekte), as explained by the '
+                       "Rijksoverheid, 'Hoeveel loon krijg ik doorbetaald als ik ziek ben?': 'U ontvangt in het 1e "
+                       "ziektejaar minstens 70% van uw loon en minimaal het minimumloon', 'Ook in uw 2e ziektejaar "
+                       "betaalt uw werkgever u minimaal 70% van uw loon', 100% bij ziekte door zwangerschap, bevalling "
+                       'of orgaandonatie',
+              'url': 'https://www.rijksoverheid.nl/vraag-en-antwoord/ziekteverzuim-van-het-werk/hoeveel-loon-krijg-ik-doorbetaald-als-ik-ziek-ben',
+              'retrieved': '2026-10-26'}}
+
+LEAVE_PAY = [{'leaveType': 'SICK',
+  'deductionPercentage': '100',
+  'payBands': [{'fromDay': 1, 'toDay': 728, 'deductionPercentage': '30'}],
+  'source': 'bw-7-629',
+  'note': "The legal minimum: 70% of the wage for up to 104 weeks. Not applied: the first year's floor at the minimum "
+          'wage, and 100% for illness from pregnancy, childbirth or organ donation. Most collective agreements (cao) '
+          'pay more, often 100% in the first year: add a workspace rule.'}]
+
+LEAVE_CHANGE = {'version': '2026.1.2',
+ 'date': '2026-10-26',
+ 'summary': 'Statutory sick pay as a leave pay rule: 70% of the wage for up to 104 weeks (BW 7:629), the legal '
+            'minimum; applied where the workspace has no sick leave rule of its own. Before, sick days were paid in '
+            'full unless a rule was added.'}
+
+
 def main():
     folder, out = sys.argv[1], sys.argv[2]
     paths = {"MAAND": "wit_mnd_nl_std.xlsx", "WEEK": "wit_wk_nl_std.xlsx", "VIERWEKEN": "wit_4wk_nl_std.xlsx", "KWARTAAL": "wit_kw_nl_std.xlsx"}
@@ -379,7 +404,7 @@ def main():
         "schemaVersion": 1,
         "id": "nl-employment",
         "name": "Nederland — loonheffingen (witte tabel), premies werknemersverzekeringen en werkgeversheffing Zvw",
-        "version": "2026.1.1",
+        "version": "2026.1.2",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "NL"},
         "validity": {"from": FROM, "to": TO},
@@ -388,11 +413,12 @@ def main():
         "taxYearStart": "--01-01",
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
-        "changelog": [{"version": "2026.1.1", "date": "2026-10-25",
+        "changelog": [
+            LEAVE_CHANGE,{"version": "2026.1.1", "date": "2026-10-25",
                        "summary": "Bijzondere beloningen (BONUS: vakantiebijslag, 13e maand, gratificaties) are taxed with the 2026 witte tabel bijzondere beloningen on the employee's jaarloon (Handboek §9.3.6), or a percentage from a machtiging; they count in the cumulative wage for the premiums and the Zvw. Before, a period with a BONUS was refused."},
                       {"version": "2026.1.0", "date": RETRIEVED,
                        "summary": "2026: loonbelasting/premie volksverzekeringen per de Rekenvoorschriften 2026 (witte tabel, standaardsituatie, wonen in Nederland); AWf, Aof, opslag Wko, Whk en werkgeversheffing Zvw met voortschrijdend cumulatief rekenen."}],
-        "sources": SOURCES,
+        "sources": {**SOURCES, **LEAVE_SOURCES},
         "inputs": {
             "employer": [
                 {"key": "aofPremium", "type": "ENUM", "required": True, "values": ["LOW", "HIGH"],
@@ -536,6 +562,7 @@ def main():
             {"id": "zvw", "type": "CONTRIBUTION", "label": "Werkgeversheffing Zvw", "ledger": "MEDICARE", "source": H,
              "when": "#zvwBase != 0", "base": "#zvwBase", "recordZero": True, "allowNegative": True, "employer": {"rate": "#p['zvw']"}},
         ],
+        "leavePay": LEAVE_PAY,
         "limitations": [
             "Monthly and weekly pay (Dutch loontijdvakken); four-weekly, quarterly and daily tables are not used by Humano's pay frequencies.",
             "White table, standard situation, employee living in the Netherlands; herleidingssituaties, non-residents and the green table are refused or out of scope.",

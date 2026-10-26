@@ -82,6 +82,8 @@ class LeavePayPayrollRunIT {
 
     private static final String BG_TEMPLATE = "bg-employment";
     private static final String ES_TEMPLATE = "es-employment";
+    private static final String HU_TEMPLATE = "hu-employment";
+    private static final String AL_TEMPLATE = "al-employment";
 
     @Autowired
     private PayrollProcessingService payrollService;
@@ -144,6 +146,9 @@ class LeavePayPayrollRunIT {
     @Autowired
     private EmployeeTemplateProfileRepository profiles;
 
+    @Autowired
+    private com.humano.repository.payroll.OrganizationSettingsRepository organizationSettings;
+
     private TransactionTemplate tx;
     private final List<Runnable> cleanup = new ArrayList<>();
     private Employee employee;
@@ -152,6 +157,24 @@ class LeavePayPayrollRunIT {
     @BeforeEach
     void setUp() {
         tx = new TransactionTemplate(txManager);
+        // Enabling a template sets the workspace's default currency: put it back afterwards.
+        tx.executeWithoutResult(s -> {
+            com.humano.domain.payroll.OrganizationSettings settings = organizationSettings.findAll().stream().findFirst().orElse(null);
+            UUID settingsId = settings == null ? null : settings.getId();
+            UUID currencyId = settings == null || settings.getDefaultCurrency() == null ? null : settings.getDefaultCurrency().getId();
+            cleanup.add(() -> {
+                if (settingsId == null) {
+                    organizationSettings.deleteAll();
+                    return;
+                }
+                organizationSettings
+                    .findById(settingsId)
+                    .ifPresent(o -> {
+                        o.setDefaultCurrency(currencyId == null ? null : currencies.findById(currencyId).orElseThrow());
+                        organizationSettings.save(o);
+                    });
+            });
+        });
         tx.executeWithoutResult(s -> {
             OrganizationalUnit unit = new OrganizationalUnit();
             unit.setName("Leave pay team " + UUID.randomUUID());
@@ -245,7 +268,7 @@ class LeavePayPayrollRunIT {
             compensations.deleteAll(
                 compensations.findAll().stream().filter(c -> c.getEmployee().getId().equals(employee.getId())).toList()
             );
-            for (String templateId : List.of(BG_TEMPLATE, ES_TEMPLATE)) {
+            for (String templateId : List.of(BG_TEMPLATE, ES_TEMPLATE, HU_TEMPLATE, AL_TEMPLATE)) {
                 profiles.findByEmployeeIdAndTemplateId(employee.getId(), templateId).ifPresent(profiles::delete);
                 adoptions.findByTemplateId(templateId).ifPresent(adoptions::delete);
             }
@@ -433,6 +456,36 @@ class LeavePayPayrollRunIT {
 
     @Test
     void aTemplateThatCantHandleLeaveDeductionsRefusesTheEmployee() {
+        spanishEmployee();
+        rule(LeaveType.SICK, "40", List.of());
+        leave(LeaveType.SICK, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 6));
+
+        PayrollRunResponse run = calculate(month(2026, 3));
+
+        // Spanish temporary incapacity contributes on the previous month's base, which the template doesn't model.
+        assertThat(run.validationErrors())
+            .filteredOn(err -> employee.getId().equals(err.employeeId()))
+            .singleElement()
+            .satisfies(err -> assertThat(err.message()).startsWith("Unpaid, sick and birth leave are not supported"));
+    }
+
+    @Test
+    void fullyPaidSickDaysStillReachTheTemplateAsSickPay() {
+        spanishEmployee();
+        // Fully paid for six weeks: nothing is deducted, but the days are still paid sick leave.
+        rule(LeaveType.SICK, "100", List.of(new LeavePayBand(1, 42, BigDecimal.ZERO)));
+        leave(LeaveType.SICK, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 6));
+
+        PayrollRunResponse run = calculate(month(2026, 3));
+
+        assertThat(leaveLines(resultOfOrNull(run.id()))).isEmpty();
+        assertThat(run.validationErrors())
+            .filteredOn(err -> employee.getId().equals(err.employeeId()))
+            .singleElement()
+            .satisfies(err -> assertThat(err.message()).startsWith("Unpaid, sick and birth leave are not supported"));
+    }
+
+    private void spanishEmployee() {
         moveEmployeeTo(CountryCode.ES);
         templateService.configure(ES_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of("accidentRate", "0.015")));
         templateService.saveProfile(
@@ -455,16 +508,139 @@ class LeavePayPayrollRunIT {
                 "COMMON"
             )
         );
-        rule(LeaveType.SICK, "40", List.of());
+    }
+
+    @Test
+    void sickLeaveWithoutARuleCalculatesAsBefore() {
+        moveEmployeeTo(CountryCode.HU);
+        payInHuf("400000");
+        templateService.configure(HU_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of()));
+        PayrollRunResponse before = calculate(month(2026, 3));
+        leave(LeaveType.SICK, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 6));
+
+        PayrollRunResponse after = calculate(month(2026, 3));
+
+        // No leave pay rule: the sick days are paid in full and the template sees an ordinary month.
+        assertThat(after.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        assertThat(templateAmounts(after)).isNotEmpty().isEqualTo(templateAmounts(before));
+        assertThat(resultOf(after.id()).getNet()).isEqualByComparingTo(resultOf(before.id()).getNet());
+    }
+
+    @Test
+    void hungarianSickPayIsTaxedAsWage() {
+        moveEmployeeTo(CountryCode.HU);
+        payInHuf("400000");
+        templateService.configure(HU_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of()));
+        // Betegszabadság: the employer pays 70% (Tbj. 27. § (1) a): part of the contribution base).
+        rule(LeaveType.SICK, "30", List.of());
         leave(LeaveType.SICK, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 6));
 
         PayrollRunResponse run = calculate(month(2026, 3));
 
-        // Spanish temporary incapacity contributes on the previous month's base, which the template doesn't model.
+        assertThat(run.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        PayrollResult result = resultOf(run.id());
+        // 400,000 x 5 x 30% / 22 = 27,272.73 not paid; tb-járulék 18.5% on the rest, 372,727.27 -> 68,955.
+        assertThat(leaveLines(result)).singleElement().satisfies(l -> assertThat(l.getAmount()).isEqualByComparingTo("27272.73"));
+        assertThat(templateAmounts(run)).contains("socialSecurity/WITHHOLDING=68955");
+    }
+
+    @Test
+    void aTemplateThatDoesNotModelParentalPayRefusesIt() {
+        moveEmployeeTo(CountryCode.HU);
+        payInHuf("400000");
+        templateService.configure(HU_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of()));
+        rule(LeaveType.MATERNITY, "30", List.of());
+        leave(LeaveType.MATERNITY, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 6));
+
+        PayrollRunResponse run = calculate(month(2026, 3));
+
         assertThat(run.validationErrors())
             .filteredOn(err -> employee.getId().equals(err.employeeId()))
             .singleElement()
-            .satisfies(err -> assertThat(err.message()).startsWith("Unpaid leave is not supported"));
+            .satisfies(err -> assertThat(err.message()).startsWith("Paid parental leave is not supported"));
+    }
+
+    @Test
+    void anAlbanianTemplatePaysStatutorySickPayWithoutAWorkspaceRule() {
+        albanianEmployee();
+        // Days 1-14 at 80% (employer), from day 15 unpaid (social insurance): Monday 2 to Friday 27 March.
+        leave(LeaveType.SICK, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 27));
+
+        PayrollRunResponse run = calculate(month(2026, 3));
+
+        assertThat(run.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        assertThat(leaveLines(resultOf(run.id())))
+            .extracting(PayrollLine::displayName, l -> l.getAmount().toPlainString())
+            .containsExactly(
+                org.assertj.core.groups.Tuple.tuple("Sick leave: 10 days at 80% pay", "18181.82"),
+                org.assertj.core.groups.Tuple.tuple("Sick leave: 10 days unpaid", "90909.09")
+            );
+        // The page lists the statutory rule as the template's.
+        assertThat(leaveTypeRuleService.getAllRules())
+            .filteredOn(r -> "AL".equals(r.countryCode()))
+            .singleElement()
+            .satisfies(r -> {
+                assertThat(r.origin()).isEqualTo("TEMPLATE");
+                assertThat(r.templateId()).isEqualTo(AL_TEMPLATE);
+                assertThat(r.id()).isNull();
+            });
+    }
+
+    @Test
+    void aWorkspaceRuleOverridesTheTemplatesStatutoryRule() {
+        albanianEmployee();
+        // The collective agreement pays sick days in full.
+        rule(LeaveType.SICK, "0", List.of());
+        leave(LeaveType.SICK, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 27));
+
+        PayrollRunResponse run = calculate(month(2026, 3));
+
+        assertThat(leaveLines(resultOf(run.id()))).isEmpty();
+        assertThat(leaveTypeRuleService.getAllRules())
+            .filteredOn(r -> "AL".equals(r.countryCode()))
+            .singleElement()
+            .satisfies(r -> {
+                assertThat(r.origin()).isEqualTo("WORKSPACE");
+                assertThat(r.overridesTemplate()).isTrue();
+            });
+    }
+
+    @Test
+    void usingATemplateSetsTheWorkspaceCurrency() {
+        // Recorded at sign-up (not enabled yet): the workspace starts in the template's currency.
+        templateService.configure(AL_TEMPLATE, new ConfigurePayrollTemplateRequest(false, Map.of()));
+        assertThat(defaultCurrency()).isEqualTo(CurrencyCode.ALL);
+
+        // An administrator changes it; saving the template's settings again keeps their choice.
+        setDefaultCurrency(CurrencyCode.EUR);
+        templateService.configure(AL_TEMPLATE, new ConfigurePayrollTemplateRequest(false, Map.of()));
+        assertThat(defaultCurrency()).isEqualTo(CurrencyCode.EUR);
+
+        // Switching the template on is using it: its currency again.
+        templateService.configure(AL_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of()));
+        assertThat(defaultCurrency()).isEqualTo(CurrencyCode.ALL);
+        setDefaultCurrency(CurrencyCode.EUR);
+        templateService.configure(AL_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of()));
+        assertThat(defaultCurrency()).isEqualTo(CurrencyCode.EUR);
+    }
+
+    private void albanianEmployee() {
+        moveEmployeeTo(CountryCode.AL);
+        payIn("200000", CurrencyCode.ALL);
+        templateService.configure(AL_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of()));
+        templateService.saveProfile(AL_TEMPLATE, employee.getId(), Map.of("personalStatusDeclaration", "SIGNED_WITH_THIS_EMPLOYER"));
+    }
+
+    private CurrencyCode defaultCurrency() {
+        return tx.execute(s -> organizationSettings.findAll().stream().findFirst().orElseThrow().getDefaultCurrency().getCode());
+    }
+
+    private void setDefaultCurrency(CurrencyCode code) {
+        tx.executeWithoutResult(s -> {
+            com.humano.domain.payroll.OrganizationSettings o = organizationSettings.findAll().stream().findFirst().orElseThrow();
+            o.setDefaultCurrency(currencies.findByCode(code).orElseThrow());
+            organizationSettings.save(o);
+        });
     }
 
     private LeaveTypeRuleResponse rule(LeaveType type, String deductionPercentage, List<LeavePayBand> bands) {
@@ -492,6 +668,34 @@ class LeavePayPayrollRunIT {
             e.setCountry(country(code));
             employees.save(e);
         });
+    }
+
+    private void payInHuf(String amount) {
+        payIn(amount, CurrencyCode.HUF);
+    }
+
+    private void payIn(String amount, CurrencyCode currency) {
+        tx.executeWithoutResult(s ->
+            compensations
+                .findAll()
+                .stream()
+                .filter(c -> c.getEmployee().getId().equals(employee.getId()))
+                .forEach(c -> {
+                    c.setBaseAmount(new BigDecimal(amount));
+                    c.setCurrency(currencies.findByCode(currency).orElseThrow());
+                    compensations.save(c);
+                })
+        );
+    }
+
+    /** The template lines of our employee's result, as step/category=amount. */
+    private List<String> templateAmounts(PayrollRunResponse run) {
+        return linesOf(resultOf(run.id()))
+            .stream()
+            .filter(l -> l.getTemplateRef() != null)
+            .map(l -> l.getTemplateStep() + "/" + l.getLineCategory() + "=" + l.getAmount().stripTrailingZeros().toPlainString())
+            .sorted()
+            .toList();
     }
 
     private UUID employeeCountryId() {
@@ -535,7 +739,22 @@ class LeavePayPayrollRunIT {
         );
     }
 
+    /** Our employee's result in the run, or null when the calculation refused them. */
+    private PayrollResult resultOfOrNull(UUID runId) {
+        return tx.execute(s ->
+            results
+                .findAll(
+                    (Specification<PayrollResult>) (root, q, cb) ->
+                        cb.and(cb.equal(root.get("run").get("id"), runId), cb.equal(root.get("employee").get("id"), employee.getId()))
+                )
+                .stream()
+                .findFirst()
+                .orElse(null)
+        );
+    }
+
     private List<PayrollLine> leaveLines(PayrollResult result) {
+        if (result == null) return List.of();
         return linesOf(result)
             .stream()
             .filter(l -> l.getLineCategory() == PayrollLineCategory.LEAVE_DEDUCTION)

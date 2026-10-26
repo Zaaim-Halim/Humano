@@ -12,6 +12,7 @@ import sys
 from decimal import ROUND_HALF_UP, Decimal
 
 RETRIEVED = "2026-10-20"
+LEAVE_RETRIEVED = "2026-10-25"
 FROM, TO = "2026-01-01", "2026-12-31"
 
 SOURCES = {
@@ -42,6 +43,11 @@ SOURCES = {
 }
 for s in SOURCES.values():
     s["retrieved"] = RETRIEVED
+SOURCES["law-29-2023-art-11"] = {
+    "title": "Ligji nr. 29/2023 “Për tatimin mbi të ardhurat” (as consolidated on Akses Drejtësi) — neni 11 a): 'të ardhurat e përfituara si rezultat i sigurimit në skemën e detyrueshme të sigurimeve shoqërore dhe shëndetësore' nuk janë subjekt i tatimit mbi të ardhurat personale; neni 12 pika 4 c) (kompensimet për punonjësit në rast të sëmundjeve sipas legjislacionit përkatës)",
+    "url": "https://www.aksesdrejtesi.al/dokumenta/1726126897ligj-2023-03-30-29%20-p%C3%ABrdit%C3%ABsuar.pdf",
+    "retrieved": LEAVE_RETRIEVED,
+}
 
 PARAMS = {
     "minimumWage": ("50000", "vkm-776-2025"),
@@ -72,7 +78,7 @@ def p(name):
 
 def expected_lines(c):
     """The amounts the acts give for a test case, computed directly (no engine)."""
-    gross = Decimal(c["grossEarnings"])
+    gross = Decimal(c["grossEarnings"]) - Decimal(c.get("reductions", "0"))
     emp = c.get("employee", {})
     category = emp.get("contractHours", "MORE_THAN_87_HOURS")
     minimum = Decimal(emp["minimumContributionBase"]) if "minimumContributionBase" in emp else p("minimumWage")
@@ -113,7 +119,8 @@ def expected_lines(c):
     return lines
 
 
-def case(name, evidence, gross, employee, full=True, error=None, start="2026-03-01", end="2026-03-31", pre_tax=None):
+def case(name, evidence, gross, employee, full=True, error=None, start="2026-03-01", end="2026-03-31", pre_tax=None,
+         reductions=None, leave_pay=None, leave_days=None):
     c = {
         "name": name,
         "evidence": evidence,
@@ -127,6 +134,12 @@ def case(name, evidence, gross, employee, full=True, error=None, start="2026-03-
     }
     if pre_tax:
         c["preTaxDeductions"] = pre_tax
+    if reductions:
+        c["reductions"] = reductions
+    if leave_pay:
+        c["leavePay"] = leave_pay
+    if leave_days:
+        c["leaveDays"] = leave_days
     if error:
         c["expectError"] = error
     return c
@@ -160,6 +173,10 @@ def test_cases():
              "10000.00", {**SIGNED, "contractHours": "LESS_THAN_ONE_WEEK"}),
         case("partial month with an explicit minimum base", "minimumContributionBase 25,000 set by the tenant for a half month. " + law,
              "25000.00", {**SIGNED, "minimumContributionBase": "25000"}, full=False),
+        case("employer sick pay for the first days is wage", "The employer pays the first 14 days of a medical report (at least 80% of the wage) as wage: contributions and tax on the whole 120,000 paid. " + law,
+             "120000.00", SIGNED, full=False, leave_pay={"SICK": "21818.18"}, leave_days={"SICK": "7"}),
+        case("days paid by social insurance are not pay", "Law 29/2023 art. 11 a): the ISSH sickness benefit is not taxed and is paid outside payroll; the 30,000 left unpaid by the rule leave every base. " + law,
+             "120000.00", SIGNED, full=False, reductions="30000.00", leave_days={"SICK": "10"}),
     ]
     for c in computed:
         c["expectLines"] = expected_lines(c)
@@ -170,6 +187,8 @@ def test_cases():
              "100000.00", {}, error="personalStatusDeclaration"),
         case("partial month below the minimum wage refuses", "VKM 77/2015 does not say how the floor is prorated",
              "25000.00", SIGNED, full=False, error="minimumContributionBase"),
+        case("sick month below the minimum wage refuses", "how the floor applies to days paid by social insurance is not settled",
+             "60000.00", SIGNED, full=False, reductions="30000.00", leave_days={"SICK": "16"}, error="minimumContributionBase"),
         case("pre-tax deductions refuse", "law 29/2023 art. 20 private-pension deduction not modelled",
              "100000.00", SIGNED, pre_tax="5000.00", error="Pre-tax deductions are not supported"),
         case("second job below the minimum wage refuses", "VKM 77/2015 pt 15: contributions across employers",
@@ -184,13 +203,38 @@ def dated(value, source):
     return [{"from": FROM, "to": TO, "value": value, "source": source}]
 
 
+
+# Statutory leave pay (PayrollTemplate.leavePay): applied as a leave pay rule where the workspace has none of its own.
+LEAVE_SOURCES = {'labour-code-art-130': {'title': "Kodi i Punës neni 130 as described by payroll guides (AlProfit Consult, 'Përfitimi "
+                                  "nga raportet mjekësore për paaftësi në punë'): 'The first 14 days are paid by the "
+                                  "employer, at no less than 80% of the wage'; from day 15 social insurance (ISSH) "
+                                  'pays 70% (80% after ten years of coverage) of the net daily average of the last six '
+                                  'months',
+                         'url': 'https://alprofitconsult.al/en/benefit-from-medical-reports-for-work-disability-due-to-illness/',
+                         'retrieved': '2026-10-26'}}
+
+LEAVE_PAY = [{'leaveType': 'SICK',
+  'deductionPercentage': '100',
+  'payBands': [{'fromDay': 1, 'toDay': 14, 'deductionPercentage': '20'}],
+  'source': 'labour-code-art-130',
+  'note': 'The employer pays at least 80% of the wage for the first 14 days of a medical report; from day 15 the '
+          'Social Insurance Institute pays, outside payroll. A contract or collective agreement paying more needs a '
+          'workspace rule.'}]
+
+LEAVE_CHANGE = {'version': '2026.1.2',
+ 'date': '2026-10-26',
+ 'summary': 'Statutory sick pay as a leave pay rule: days 1-14 of a medical report at 80% of the wage, paid by the '
+            'employer (Labour Code art. 130), then unpaid as social insurance pays; applied where the workspace has no '
+            'sick leave rule of its own. Before, sick days were paid in full unless a rule was added.'}
+
+
 def main():
     under_week = "#employee['contractHours'] == 'LESS_THAN_ONE_WEEK'"
     template = {
         "schemaVersion": 1,
         "id": "al-employment",
         "name": "Albania — employment income",
-        "version": "2026.1.0",
+        "version": "2026.1.2",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "AL"},
         "validity": {"from": FROM, "to": TO},
@@ -199,10 +243,13 @@ def main():
         "taxYearStart": "--01-01",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            LEAVE_CHANGE,
+            {"version": "2026.1.1", "date": LEAVE_RETRIEVED,
+             "summary": "Leave pay rules documented, no change in amounts: pay the employer keeps for sick days (the first 14 days of a medical report) is wage; days the rule leaves unpaid, which social insurance pays, are outside every base (law 29/2023 art. 11 a)). A month with leave below the minimum wage still asks for the minimum base, now saying so."},
             {"version": "2026.1.0", "date": RETRIEVED,
              "summary": "2026: minimum wage 50,000 and maximum social-insurance base 186,416 ALL; law 29/2023 employment tax (arts. 22, 24) and VKM 77/2015 contribution rates."}
         ],
-        "sources": SOURCES,
+        "sources": {**SOURCES, **LEAVE_SOURCES},
         "inputs": {
             "employer": [],
             "employee": [
@@ -247,7 +294,7 @@ def main():
             {"id": "partialMonthMinimum", "type": "REQUIRE",
              "when": "#remuneration > 0 and !(" + under_week + ") and #employee['minimumContributionBase'] == null",
              "condition": "#fullPeriod or #remuneration >= #minimumBase",
-             "message": "Pay is below the minimum wage in a partial month (or part-time / unpaid leave); VKM 77/2015 does not say how the floor is prorated, so set the employee's minimumContributionBase"},
+             "message": "Pay is below the minimum wage in a partial month (or part-time, or a month with unpaid or sick leave); VKM 77/2015 does not say how the floor is prorated, so set the employee's minimumContributionBase"},
             {"id": "otherEmploymentAboveMinimum", "type": "REQUIRE",
              "when": "#remuneration > 0 and #employee['otherEmployment']",
              "condition": "#remuneration >= #p['minimumWage']",
@@ -273,10 +320,12 @@ def main():
              "base": "#pos(#monthlyIncome - #personalDeduction)",
              "amount": "#table.bracketTax('monthlyEmploymentTax', #incomeTax_base)"},
         ],
+        "leavePay": LEAVE_PAY,
         "limitations": [
             "Monthly payroll calendars whose periods are whole calendar months, paid in ALL.",
             "Employees with a pay below the minimum wage in a partial month, or below the minimum wage at one of several employers (VKM 77/2015 pt 15), are refused unless a minimumContributionBase is set.",
             "The art. 20 private-pension deduction and the annual-return deductions (children, education) are not applied; employees with tenant pre-tax deductions are refused.",
+            "Leave pay rules: pay kept for sick days is taken as the employer's payment for the first 14 days of a medical report (at least 80% of the wage, Labour Code art. 130), wage for contributions and tax as payroll guides describe it; law 29/2023 art. 12 pt 4 c), which excludes compensation in case of illness from employment income, was not found to apply to it. Days the rule leaves unpaid are paid by social insurance (ISSH) outside payroll and are not taxed (art. 11 a)). Social insurance and maternity benefits are not paid through this template. In a month with leave, pay below the minimum wage needs an explicit minimumContributionBase.",
             "Social insurance across several employers is computed per employer on its own pay (capped at the maximum each); the refund of the excess by the Social Insurance Institute is outside payroll.",
             "The maximum social-insurance base (186,416 ALL) comes from the tax administration's 2026 notice, since removed from its website, and Boga & Associates' alert; not from a gazette text.",
             "Amounts are rounded to 0.01 ALL, half up, line by line; rounding to whole lek on the e-payroll declaration is not modelled.",

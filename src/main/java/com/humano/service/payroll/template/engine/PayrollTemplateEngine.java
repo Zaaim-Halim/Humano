@@ -1,5 +1,6 @@
 package com.humano.service.payroll.template.engine;
 
+import com.humano.domain.enumeration.hr.LeaveType;
 import com.humano.domain.enumeration.payroll.DeductionType;
 import com.humano.domain.enumeration.payroll.PayComponentCode;
 import com.humano.service.payroll.template.extension.PayrollTemplateExtension;
@@ -36,7 +37,10 @@ import org.springframework.stereotype.Component;
  *   {@code #taxableEarningsByComponent['BONUS']} (the taxable part of a component's earnings),
  *   {@code #reductions} (unpaid leave), {@code #preTaxDeductions} (tenant pre-tax deductions; a template
  *   that doesn't model them should REQUIRE them to be zero), {@code #preTaxDeductionsByType['RETIREMENT']}
- *   (the same by deduction type; 0 for a type with none).</li>
+ *   (the same by deduction type; 0 for a type with none), {@code #leavePay['SICK']} (the part of the earnings paid
+ *   for approved leave days of a type with a leave pay rule; 0 for a type with none) and {@code #leaveDays['SICK']}
+ *   (calendar days of that leave within the period), {@code #unpaidLeaveDays['SICK']} (those of them the rule leaves
+ *   wholly unpaid).</li>
  *   <li>Employee: {@code #fullPeriod}, {@code #fte}, {@code #birthDate}, {@code #birthYear}, {@code #ageAtPeriodEnd}
  *   (an expression using any of them fails when the birth date is unknown), {@code #employmentStartDate}
  *   (fails when unknown), {@code #employedThroughout} (employed from the first to the last day of the
@@ -72,6 +76,9 @@ public class PayrollTemplateEngine {
         "reductions",
         "preTaxDeductions",
         "preTaxDeductionsByType",
+        "leavePay",
+        "leaveDays",
+        "unpaidLeaveDays",
         "fullPeriod",
         "fte",
         "birthDate",
@@ -167,6 +174,9 @@ public class PayrollTemplateEngine {
             preTaxByType.put(type.name(), nz(amount));
         }
         vars.put("preTaxDeductionsByType", new StrictMap("pre-tax deduction type", preTaxByType));
+        vars.put("leavePay", byLeaveType(in.leavePay()));
+        vars.put("leaveDays", byLeaveType(in.leaveDays()));
+        vars.put("unpaidLeaveDays", byLeaveType(in.unpaidLeaveDays()));
         vars.put("fullPeriod", in.fullPeriod());
         vars.put("fte", in.fte() != null ? in.fte() : BigDecimal.ONE);
         vars.put("birthDate", in.birthDate());
@@ -457,6 +467,15 @@ public class PayrollTemplateEngine {
     }
 
     /** A map whose missing keys are errors rather than nulls — used for parameters and extension outputs. */
+    /** Every leave type's value (0 for a type with none), refusing an unknown type. */
+    private static StrictMap byLeaveType(Map<String, BigDecimal> values) {
+        Map<String, BigDecimal> all = new HashMap<>();
+        for (LeaveType type : LeaveType.values()) {
+            all.put(type.name(), nz(values == null ? null : values.get(type.name())));
+        }
+        return new StrictMap("leave type", all);
+    }
+
     static final class StrictMap extends HashMap<String, BigDecimal> {
 
         private static final long serialVersionUID = 1L;

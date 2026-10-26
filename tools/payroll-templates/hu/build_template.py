@@ -14,6 +14,7 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 RETRIEVED = "2026-10-23"
+LEAVE_RETRIEVED = "2026-10-25"
 FROM, TO = "2026-01-01", "2026-12-31"
 JOGTAR = "https://net.jogtar.hu/jogszabaly?docid="
 NAV = "https://nav.gov.hu/pfile/file?path=/ugyfeliranytu/nezzen-utana/inf_fuz/2026/"
@@ -24,7 +25,7 @@ SOURCES = {
         "url": JOGTAR + "99500117.tv",
     },
     "tbj": {
-        "title": "2019. évi CXXII. törvény a társadalombiztosítás ellátásaira jogosultakról, valamint ezen ellátások fedezetéről (hatályos 2026.X.1.) — 6. § (1) (a kiegészítő tevékenységet folytató saját jogú nyugdíjas nem biztosított), 22. § (3) (a foglalkoztató fizeti a járulékfizetési alsó határ és a jövedelem különbözete utáni járulékot), 25. § (1) 18,5 %, 27. § (2)-(3) járulékfizetési alsó határ a minimálbér 30 %-a, 34. § családi járulékkedvezmény",
+        "title": "2019. évi CXXII. törvény a társadalombiztosítás ellátásaira jogosultakról, valamint ezen ellátások fedezetéről (hatályos 2026.X.1.) — 6. § (1) (a kiegészítő tevékenységet folytató saját jogú nyugdíjas nem biztosított), 22. § (3) (a foglalkoztató fizeti a járulékfizetési alsó határ és a jövedelem különbözete utáni járulékot), 25. § (1) 18,5 %, 27. § (1) a) (járulékalap: az Szja tv. szerint összevont adóalapba tartozó nem önálló tevékenységből származó bevétel), 27. § (2)-(3) járulékfizetési alsó határ a minimálbér 30 %-a: (2) c) 'az adott hónapban a biztosított táppénzben, baleseti táppénzben részesül' — ezeket a naptári napokat figyelmen kívül kell hagyni, egy-egy naptári napra a járulékalap harmincad részét kell alapul venni; (3) a) nem kell alkalmazni csecsemőgondozási díjban, gyermekgondozási díjban részesülőre, 32. § a) (a foglalkoztató által folyósított társadalombiztosítási ellátás), 34. § családi járulékkedvezmény",
         "url": JOGTAR + "a1900122.tv",
     },
     "szocho": {
@@ -46,6 +47,7 @@ SOURCES = {
 }
 for s in SOURCES.values():
     s["retrieved"] = RETRIEVED
+SOURCES["tbj"]["retrieved"] = LEAVE_RETRIEVED
 
 PARAMS = {
     "taxRate": ("0.15", "szja"),
@@ -69,7 +71,7 @@ def ft(x):
 
 def expected_lines(c):
     """The amounts the texts give for a test case, computed directly (no engine)."""
-    wage = Decimal(c["grossEarnings"])
+    wage = Decimal(c["grossEarnings"]) - Decimal(c.get("reductions", "0"))
     emp = c.get("employee", {})
     start = date.fromisoformat(c["periodStart"])
     lines = []
@@ -80,8 +82,16 @@ def expected_lines(c):
 
     insured = emp.get("ownRightPensioner") != "true"  # Tbj. 6. § (1)
     floor = Decimal(0)
-    if insured and wage > 0 and emp.get("minimumBaseExempt") != "true":
-        floor = Decimal(emp["minimumContributionBase"]) if "minimumContributionBase" in emp else Decimal(96840)
+    parental = int(c.get("leaveDays", {}).get("MATERNITY", "0")) > 0  # Tbj. 27. § (3) a)
+    if insured and wage > 0 and emp.get("minimumBaseExempt") != "true" and not parental:
+        if "minimumContributionBase" in emp:
+            floor = Decimal(emp["minimumContributionBase"])
+        else:
+            # Tbj. 27. § (2) c): days on sickness benefit (the rule leaves them unpaid) are disregarded; each
+            # remaining calendar day counts a thirtieth of the minimum
+            end = date.fromisoformat(c["periodEnd"])
+            days = end.day - int(c.get("unpaidLeaveDays", {}).get("SICK", "0"))
+            floor = Decimal(96840) if days >= 30 else ft(Decimal(96840) * max(days, 0) / 30)
     # allowances in NAV's order (booklet 73, point 1)
     rest = wage
     mothers = rest if emp.get("mothersAllowance", "NONE") != "NONE" else Decimal(0)
@@ -112,11 +122,21 @@ def expected_lines(c):
 
 
 def case(name, evidence, gross, employee, birth="1988-06-15", start="2026-03-01", end="2026-03-31", payment=None,
-         full=True, error=None, pre_tax=None):
+         full=True, error=None, pre_tax=None, throughout=None, reductions=None, leave_pay=None, leave_days=None, unpaid_days=None):
     c = {"name": name, "evidence": evidence, "periodStart": start, "periodEnd": end, "frequency": "MONTHLY"}
     if payment:
         c["paymentDate"] = payment
     c.update({"grossEarnings": gross, "fullPeriod": full})
+    if reductions:
+        c["reductions"] = reductions
+    if leave_pay:
+        c["leavePay"] = leave_pay
+    if leave_days:
+        c["leaveDays"] = leave_days
+    if unpaid_days:
+        c["unpaidLeaveDays"] = unpaid_days
+    if throughout is not None:
+        c["employedThroughout"] = throughout
     if birth:
         c["birthDate"] = birth
     c.update({"employer": {}, "employee": employee})
@@ -159,6 +179,16 @@ def test_cases():
              "1500000", {"dependants": "2", "beneficiaries": "2", "alternateCareBeneficiaries": "1"}),
         case("December 2026 salary paid on 8 January 2027", "Szja tv. 26. § (1): pay for the previous year paid by 10 January belongs to that year. " + law,
              "500000", {}, start="2026-12-01", end="2026-12-31", payment="2027-01-08"),
+        case("sick pay (betegszabadság) is wage", "Tbj. 27. § (1) a): the employer's sick pay is employment income in the contribution base, taxed and insured like the rest of the pay. " + law,
+             "400000", {}, full=False, leave_pay={"SICK": "45000"}, leave_days={"SICK": "7"}),
+        case("sickness benefit days reduce the minimum base", "Tbj. 27. § (2) c): 20 days on táppénz are disregarded, 11 of 31 days x 96,840 / 30 = 35,508 Ft; employer 18.5% on 35,508 - 30,000; szocho on 35,508. " + law,
+             "322800", {}, full=False, reductions="292800", leave_days={"SICK": "20"}, unpaid_days={"SICK": "20"}),
+        case("a whole month on sickness benefit: no minimum", "Tbj. 27. § (2) c): every day disregarded. " + law,
+             "322800", {}, full=False, reductions="322800", leave_days={"SICK": "31"}, unpaid_days={"SICK": "31"}),
+        case("unpaid leave keeps the full minimum base", "Tbj. 27. § (2): unpaid leave (other than for a sick child under 12) is not among the disregarded days. " + law,
+             "322800", {}, full=False, reductions="292800", leave_days={"UNPAID": "20"}, unpaid_days={"UNPAID": "20"}),
+        case("parental leave: no minimum base", "Tbj. 27. § (3) a): the minimum does not apply to a person receiving csecsemőgondozási díj or gyermekgondozási díj. " + law,
+             "322800", {}, full=False, reductions="292800", leave_days={"MATERNITY": "20"}, unpaid_days={"MATERNITY": "20"}),
     ]
     for c in computed:
         c["expectLines"] = expected_lines(c)
@@ -166,8 +196,10 @@ def test_cases():
     zero["expectLines"] = []
     errors = [
         case("no birth date without a mothers' allowance", "the under-25 allowance depends on the age", "400000", {}, birth=None, error="no birth date"),
-        case("partial month below the minimum base", "Tbj. 27. § (2): the minimum base is prorated by calendar days", "60000", {},
-             full=False, error="minimumContributionBase"),
+        case("partial month below the minimum base", "Tbj. 27. § (2) a): the minimum base is prorated by calendar days", "60000", {},
+             full=False, throughout=False, error="minimumContributionBase"),
+        case("paid parental leave refused", "Tbj. 32. § a): benefits paid through the employer have their own contribution rules, not modelled", "400000", {},
+             full=False, leave_pay={"MATERNITY": "100000"}, leave_days={"MATERNITY": "10"}, error="Paid parental leave is not supported"),
         case("more beneficiaries than dependants", "Szja tv. 29/A. §: beneficiaries are among the dependants", "500000",
              {"dependants": "1", "beneficiaries": "2"}, error="beneficiaries"),
         case("December 2026 salary paid on 15 January 2027", "Szja tv. 26. § (1): after 10 January it is income of 2027", "500000", {},
@@ -189,7 +221,7 @@ def main():
         "schemaVersion": 1,
         "id": "hu-employment",
         "name": "Hungary — employment (munkaviszony)",
-        "version": "2026.1.0",
+        "version": "2026.1.1",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "HU"},
         "validity": {"from": FROM, "to": TO},
@@ -199,6 +231,8 @@ def main():
         "dateBasis": "PERIOD",
         "rounding": {"scale": 0, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.1", "date": LEAVE_RETRIEVED,
+             "summary": "Leave pay rules: the employer's sick pay (betegszabadság) is wage (Tbj. 27. § (1) a)); days on sickness benefit, which the rule leaves unpaid, are disregarded for the minimum base, each other day counting a thirtieth (27. § (2) c)); no minimum in a month with parental leave (27. § (3) a)). Before, a month with leave below the minimum was refused until the minimum was entered. Pay kept for parental leave days is refused (benefits paid through the employer, 32. § a))."},
             {"version": "2026.1.0", "date": RETRIEVED,
              "summary": "2026: szja 15 %, tb-járulék 18.5 % with the 96,840 Ft minimum base, szocho 13 %; mothers', under-25, personal, first-married and family allowances (family allowance doubled from 2026) with the family contribution relief."}
         ],
@@ -246,15 +280,19 @@ def main():
             {"id": "familyCounts", "type": "REQUIRE", "source": "szja",
              "condition": "#employee['beneficiaries'] <= #employee['dependants'] and #employee['disabledBeneficiaries'] <= #employee['beneficiaries'] and #employee['alternateCareBeneficiaries'] <= #employee['beneficiaries']",
              "message": "The number of beneficiaries cannot exceed the number of dependants, nor disabled or alternate-care beneficiaries the beneficiaries (Szja tv. 29/A.-29/B. §)"},
+            {"id": "noPaidParentalLeave", "type": "REQUIRE", "source": "tbj", "condition": "#leavePay['MATERNITY'] == 0",
+             "message": "Paid parental leave is not supported by this template: benefits paid through the employer (csecsemőgondozási díj, gyermekgondozási díj) have their own contribution rules (Tbj. 32. § a))"},
             {"id": "wage", "type": "VALUE", "expr": "#pos(#socialEarnings - #reductions)"},
             {"id": "taxableWage", "type": "VALUE", "expr": "#pos(#taxableEarnings - #reductions)"},
             {"id": "partialMonthMinimum", "type": "REQUIRE", "source": "tbj",
              "when": insured + " and !#employee['minimumBaseExempt'] and #employee['minimumContributionBase'] == null and #wage > 0 and #wage < #p['minimumContributionBase']",
-             "condition": "#fullPeriod and #reductions == 0",
+             "condition": "#employedThroughout and #fte >= 1",
              "message": "Pay is below the minimum contribution base in a partial month: the base is prorated by calendar days (Tbj. 27. § (2)), so set the employee's minimumContributionBase"},
+            {"id": "minimumBaseDays", "type": "VALUE", "source": "tbj",
+             "expr": "#periodEnd.getDayOfMonth() - #unpaidLeaveDays['SICK']"},
             {"id": "minimumBase", "type": "VALUE", "source": "tbj",
-             "when": insured + " and !#employee['minimumBaseExempt'] and #wage > 0",
-             "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : #p['minimumContributionBase']"},
+             "when": insured + " and !#employee['minimumBaseExempt'] and #wage > 0 and #leaveDays['MATERNITY'] == 0",
+             "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : (#minimumBaseDays >= 30 ? #p['minimumContributionBase'] : #divide(#p['minimumContributionBase'] * #pos(#minimumBaseDays), 30, 0, 'HALF_UP'))"},
             {"id": "mothersBase", "type": "VALUE", "source": "szja", "when": "#employee['mothersAllowance'] != 'NONE'", "expr": "#taxableWage"},
             {"id": "afterMothers", "type": "VALUE", "expr": "#taxableWage - #mothersBase"},
             {"id": "youthEligible", "type": "VALUE", "source": "nav-73",
@@ -289,7 +327,8 @@ def main():
             "Employment paid monthly in HUF in 2026, for whole calendar months; pay is placed in the month it is accounted for, and previous-year pay paid after 10 January is refused (Szja tv. 26. § (1)).",
             "Allowances follow the employee's tax-advance declaration: mothers' eligibility (including the 2026 birth-year conditions), the split of the under-25, first-married and family allowances between employers or spouses are entered, not checked. The under-25 allowance is applied automatically from the birth date unless limited.",
             "The family contribution relief reduces this employer's tb-járulék on the actual pay, never the employer's contribution on the gap to the minimum base (NAV booklet 73, point 11).",
-            "Not modelled: szocho reliefs (labour-market entrants, career starters and others), the rehabilitation contribution, sick pay and other benefits paid by the employer, tax-exempt income subject to contributions, and pre-tax deductions (refused).",
+            "Leave pay rules: pay kept for sick days is the employer's sick pay (betegszabadság), wage in every base (Tbj. 27. § (1) a)); the days a rule leaves wholly unpaid are taken as days on sickness benefit (táppénz) and disregarded for the minimum base (27. § (2) c)), and a month with parental leave has no minimum (27. § (3) a)). Sickness benefit paid through the employer as a kifizetőhely, and pay kept for parental leave days (refused), are not modelled.",
+            "Not modelled: szocho reliefs (labour-market entrants, career starters and others), the rehabilitation contribution, social insurance benefits paid through the employer, tax-exempt income subject to contributions, and pre-tax deductions (refused).",
             "Amounts are rounded to the forint, half up, per line; no official rounding rule for the monthly advance and contributions was found.",
             "Status LAW_DERIVED: values are cited from the acts and NAV's 2026 booklets; one case reproduces the published minimum-wage net pay and four follow NAV's worked figures.",
         ],

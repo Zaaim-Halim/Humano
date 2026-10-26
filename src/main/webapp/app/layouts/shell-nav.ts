@@ -186,6 +186,15 @@ export const SHELL_NAV: ShellNavGroup[] = [
         feature: PlanFeature.PAYROLL,
       },
       {
+        id: 'leave-pay',
+        labelKey: 'humano.nav.leavePay',
+        icon: 'thermometer',
+        link: '/payroll/leave-pay',
+        keywords: 'sick pay maternity parental unpaid leave absence deduction',
+        permissions: [Permission.MANAGE_PAY_COMPONENTS],
+        feature: PlanFeature.PAYROLL,
+      },
+      {
         id: 'payroll-templates',
         labelKey: 'humano.nav.payrollTemplates',
         icon: 'landmark',

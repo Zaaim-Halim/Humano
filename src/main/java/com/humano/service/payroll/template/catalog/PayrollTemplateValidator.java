@@ -1,8 +1,10 @@
 package com.humano.service.payroll.template.catalog;
 
 import com.humano.domain.enumeration.CountryCode;
+import com.humano.domain.enumeration.hr.LeaveType;
 import com.humano.domain.enumeration.payroll.DeductionType;
 import com.humano.domain.enumeration.payroll.PayComponentCode;
+import com.humano.domain.payroll.LeavePayBand;
 import com.humano.service.payroll.template.engine.PayrollTemplateEngine;
 import com.humano.service.payroll.template.engine.TemplateCalculationException;
 import com.humano.service.payroll.template.engine.TemplateExpressions;
@@ -24,6 +26,7 @@ import java.time.MonthDay;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -101,8 +104,35 @@ public class PayrollTemplateValidator {
         checkParameters(t, sources, problems);
         checkTables(t, sources, problems);
         checkSteps(t, sources, problems);
+        checkLeavePay(t, sources, problems);
         checkTestCases(t, problems);
         return problems;
+    }
+
+    /** One rule per leave type, percentages within 0-100, bands in order and not overlapping, a known source. */
+    private static void checkLeavePay(PayrollTemplate t, Map<String, PayrollTemplate.Source> sources, List<String> problems) {
+        Set<LeaveType> seen = EnumSet.noneOf(LeaveType.class);
+        for (PayrollTemplate.LeavePay rule : t.effectiveLeavePay()) {
+            String at = "leavePay " + (rule.leaveType() == null ? "?" : rule.leaveType());
+            if (rule.leaveType() == null) problems.add("leavePay needs a leaveType");
+            else if (!seen.add(rule.leaveType())) problems.add(at + " is declared twice");
+            if (!percentage(rule.deductionPercentage())) problems.add(at + ": deductionPercentage must be between 0 and 100");
+            if (rule.source() == null || !sources.containsKey(rule.source())) problems.add(at + " cites unknown source " + rule.source());
+            int nextFree = 1;
+            List<LeavePayBand> bands = rule.payBands() == null ? List.of() : rule.payBands();
+            for (int i = 0; i < bands.size(); i++) {
+                LeavePayBand band = bands.get(i);
+                if (band.fromDay() < nextFree) problems.add(at + ": band from day " + band.fromDay() + " overlaps or is out of order");
+                if (band.toDay() != null && band.toDay() < band.fromDay()) problems.add(at + ": band ends before day " + band.fromDay());
+                if (band.toDay() == null && i < bands.size() - 1) problems.add(at + ": only the last band can be open-ended");
+                if (!percentage(band.deductionPercentage())) problems.add(at + ": band percentages must be between 0 and 100");
+                nextFree = band.toDay() == null ? Integer.MAX_VALUE : band.toDay() + 1;
+            }
+        }
+    }
+
+    private static boolean percentage(BigDecimal value) {
+        return value != null && value.signum() >= 0 && value.compareTo(BigDecimal.valueOf(100)) <= 0;
     }
 
     private void checkJurisdiction(PayrollTemplate t, List<String> problems) {

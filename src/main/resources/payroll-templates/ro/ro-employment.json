@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "ro-employment",
   "name": "Romania — salary income",
-  "version": "2026.1.1",
+  "version": "2026.1.2",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "RO"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.2",
+      "date": "2026-10-25",
+      "summary": "Pay kept for sick or maternity leave days (a leave pay rule) is refused: medical-leave indemnities (OUG 158/2005) are computed on the average income of the last 6 months and have their own tax and contribution treatment (e.g. maternity indemnities are not taxable, Cod fiscal art. 62 c)), which the template does not model. Before, they were taxed and insured as ordinary salary."
+    },
     {
       "version": "2026.1.1",
       "date": "2026-10-24",
@@ -482,6 +487,12 @@
       "message": "Romanian salary tax is monthly: the pay period must be a whole calendar month"
     },
     {
+      "id": "noPaidSickOrMaternityLeave",
+      "type": "REQUIRE",
+      "condition": "#leavePay['SICK'] == 0 and #leavePay['MATERNITY'] == 0",
+      "message": "Paid sick or maternity leave is not supported by this template: medical-leave indemnities are computed on the average income of the last 6 months and follow their own tax and contribution rules (OUG 158/2005)"
+    },
+    {
       "id": "noPreTaxDeductions",
       "type": "REQUIRE",
       "condition": "#preTaxDeductions == 0",
@@ -652,6 +663,7 @@
     }
   ],
   "limitations": [
+    "Not modelled: medical-leave indemnities (concediu medical, OUG 158/2005), computed on the average income of the last 6 months with their own tax and contribution treatment; pay kept for sick or maternity leave days is refused.",
     "Monthly salary for whole calendar months in 2026, in RON; values follow the month the salary relates to (minimum wage and tax-free amount change on 1 July). Back pay for earlier periods taxed on the payment-date rules (art. 78 alin. (3)) is not modelled.",
     "The basic deduction band uses the whole gross salary of the month, including the OUG 89/2025 tax-free amount (Norme pct. 14 alin. (1)); no official example settles this.",
     "CAS, CASS, CAM and income tax are rounded to the leu with 50 bani rounded up (reproducing the published minimum-wage net pay); the tax base and the deduction are rounded to the leu with 50 bani and under dropped (Norme pct. 4, art. 66). No official text was found for the rounding of the contributions and of the tax itself.",
@@ -1338,6 +1350,27 @@
       },
       "preTaxDeductions": "50.00",
       "expectError": "Pre-tax deductions are not supported"
+    },
+    {
+      "name": "paid sick leave refused",
+      "evidence": "medical-leave indemnities (OUG 158/2005) are not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "fullPeriod": false,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true"
+      },
+      "expectError": "Paid sick or maternity leave is not supported",
+      "leavePay": {
+        "SICK": "900.00"
+      },
+      "leaveDays": {
+        "SICK": "7"
+      }
     },
     {
       "name": "2027 is not covered",

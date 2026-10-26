@@ -3,6 +3,8 @@ package com.humano.service.multitenancy;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.repository.tenant.TenantRepository;
+import com.humano.service.payroll.template.PayrollTemplateService;
+import com.humano.tenancy.TenantContext;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,15 +39,18 @@ public class StartupTenantMigrator {
     private final TenantRepository tenantRepository;
     private final TenantMigrationService migrationService;
     private final TenantInitializationService initializationService;
+    private final PayrollTemplateService payrollTemplateService;
 
     public StartupTenantMigrator(
         TenantRepository tenantRepository,
         TenantMigrationService migrationService,
-        TenantInitializationService initializationService
+        TenantInitializationService initializationService,
+        PayrollTemplateService payrollTemplateService
     ) {
         this.tenantRepository = tenantRepository;
         this.migrationService = migrationService;
         this.initializationService = initializationService;
+        this.payrollTemplateService = payrollTemplateService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -102,6 +107,20 @@ public class StartupTenantMigrator {
                 initializationService.backfillRolesAndPermissions(tenant);
             } catch (Exception seedEx) {
                 LOG.error("Role/permission backfill failed for tenant '{}' (schema migration succeeded)", subdomain, seedEx);
+            }
+            // A workspace using payroll templates pays in their currency; set it where none is chosen yet.
+            String previous = TenantContext.getCurrentTenant();
+            TenantContext.setCurrentTenant(subdomain);
+            try {
+                payrollTemplateService.backfillDefaultCurrency();
+            } catch (Exception currencyEx) {
+                LOG.error("Default currency backfill failed for tenant '{}'", subdomain, currencyEx);
+            } finally {
+                if (previous != null) {
+                    TenantContext.setCurrentTenant(previous);
+                } else {
+                    TenantContext.clear();
+                }
             }
             ok.incrementAndGet();
             LOG.info("Migrated tenant '{}'", subdomain);

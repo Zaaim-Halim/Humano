@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "ee-employment",
   "name": "Estonia — employment (tööleping)",
-  "version": "2026.1.0",
+  "version": "2026.1.2",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "EE"
@@ -20,6 +20,16 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.2",
+      "date": "2026-10-26",
+      "summary": "Statutory sick pay as a leave pay rule: days 1-3 unpaid, days 4-8 at 70% paid by the employer, from day 9 unpaid as Tervisekassa pays (Health Insurance Act; Labour Inspectorate); applied where the workspace has no sick leave rule of its own. Before, sick days were paid in full unless a rule was added."
+    },
+    {
+      "version": "2026.1.1",
+      "date": "2026-10-25",
+      "summary": "Leave pay rules: pay kept for sick days is the employer's sickness benefit, taxed with income tax only (EMTA, payment type 24); before, it was also charged social tax, unemployment insurance and funded pension. No social tax minimum for a month away on sick leave or leave other than unpaid leave by agreement (EMTA); a month of agreed unpaid leave without pay owes social tax on the minimum, which it did not before."
+    },
     {
       "version": "2026.1.0",
       "date": "2026-10-24",
@@ -66,6 +76,21 @@
       "title": "EMTA, 'Maksumuudatused 2026. aastal' (27.11.2025) and 'Maksuvaba tulu arvestamine' — 22%; 700 eurot kuus (vanaduspensionieas 776); avaldus ainult ühele tööandjale; maksuvaba tulu kuni töötasu väljamakse ulatuses; kuumäär 886 eurot, miinimum 292,38 eurot; töötuskindlustus 1,6% / 0,8%; kogumispension 2%, 4% või 6%; maksustamine on kassapõhine (detsembri 2025 töötasu jaanuaris 2026 väljamaksmisel 2026. aasta määrad)",
       "url": "https://www.emta.ee/uudised/maksumuudatused-2026",
       "retrieved": "2026-10-24"
+    },
+    "emta-sick-pay": {
+      "title": "EMTA, TSD vormi täitmise näide 10 'Tööandja vabatahtlik töövõimetushüvitis 30% keskmisest töötasust (haigusleht)': 'Vabatahtlik töövõimetushüvitis piirmäära ulatuses maksustatakse ainult tulumaksuga', väljamakse liik 24; töötasu 1000 eurot (sotsiaalmaks 330, töötuskindlustus 16 / 8, tulumaks 62,48) ja hüvitis 72 eurot (tulumaks 15,84)",
+      "url": "https://www.emta.ee/en/business-client/taxes-and-payment/income-and-social-taxes/submission-declaration-form-tsd/naide-10-tooandja-vabatahtlik-toovoimetushuvitis-30-keskmisest-tootasust-haigusleht",
+      "retrieved": "2026-10-25"
+    },
+    "emta-social-tax": {
+      "title": "EMTA, 'Social tax' — minimum obligation: the employer does not have to pay the minimum social tax when the 'employee is away from work for a full month' because the 'employee is temporarily incapacitated for work within the meaning of the Health Insurance Act' or 'takes leave (including maternity leave), except unpaid leave by agreement between parties', or is raising a child under three or three or more children under 19, or is in conscript service",
+      "url": "https://www.emta.ee/en/business-client/taxes-and-payment/income-and-social-taxes/social-tax",
+      "retrieved": "2026-10-25"
+    },
+    "tooelu-sick-pay": {
+      "title": "Labour Inspectorate (Tööinspektsioon), tooelu.ee 'Other remuneration and benefits': 'For days 4 to 8 of sickness, sickness benefit is paid by the employer', '70% of the employee's average wages for the last six months'; Tervisekassa (Health Insurance Fund), 'Benefit for temporary incapacity for work': 'EHIF pays from day 9, the benefit rate is 70%'",
+      "url": "https://www.tooelu.ee/en/174/other-remuneration-and-benefits",
+      "retrieved": "2026-10-26"
     }
   },
   "inputs": {
@@ -244,7 +269,8 @@
     {
       "id": "wage",
       "type": "VALUE",
-      "expr": "#pos(#socialEarnings - #reductions)"
+      "source": "emta-sick-pay",
+      "expr": "#pos(#socialEarnings - #reductions - #leavePay['SICK'])"
     },
     {
       "id": "taxablePay",
@@ -279,10 +305,16 @@
       }
     },
     {
+      "id": "awayWholeMonth",
+      "type": "VALUE",
+      "source": "emta-social-tax",
+      "expr": "#leaveDays['SICK'] + #leaveDays['MATERNITY'] + #leaveDays['VACATION'] >= #periodEnd.getDayOfMonth() ? 1 : 0"
+    },
+    {
       "id": "minimumApplies",
       "type": "VALUE",
       "source": "sms",
-      "expr": "!#employee['socialTaxMinimumExempt'] and (!#employee['otherEmployment'] or #employee['taxFreeAmount'] > 0) ? 1 : 0"
+      "expr": "!#employee['socialTaxMinimumExempt'] and #awayWholeMonth == 0 and (!#employee['otherEmployment'] or #employee['taxFreeAmount'] > 0) ? 1 : 0"
     },
     {
       "id": "partialMonthMinimum",
@@ -304,7 +336,7 @@
       "label": "Social tax (sotsiaalmaks)",
       "ledger": "SOCIAL_SECURITY",
       "source": "sms",
-      "when": "#wage > 0",
+      "when": "#wage > 0 or (#minimumApplies == 1 and #employedThroughout and #leaveDays['SICK'] + #leaveDays['MATERNITY'] + #leaveDays['VACATION'] + #leaveDays['UNPAID'] > 0)",
       "base": "#socialTaxBase",
       "employer": {
         "rate": "#p['socialTaxRate']"
@@ -321,11 +353,32 @@
       "rate": "#p['incomeTaxRate']"
     }
   ],
+  "leavePay": [
+    {
+      "leaveType": "SICK",
+      "deductionPercentage": "100",
+      "payBands": [
+        {
+          "fromDay": 1,
+          "toDay": 3,
+          "deductionPercentage": "100"
+        },
+        {
+          "fromDay": 4,
+          "toDay": 8,
+          "deductionPercentage": "30"
+        }
+      ],
+      "source": "tooelu-sick-pay",
+      "note": "Days 1-3 unpaid; days 4-8 the employer pays 70% of the average wage of the last six months (the rule pays 70% of the salary); from day 9 Tervisekassa pays, outside payroll."
+    }
+  ],
   "limitations": [
     "Employment contracts paid monthly in EUR in 2026, one payment per employee per month; taxation follows the payment date (EMTA: kassapõhine), and the tax-free amount and the social tax minimum are applied to this payment. A second run in the same month would apply them again.",
     "The tax-free amount, pension age, the end of employee unemployment insurance, the funded-pension rate, other employment and the social tax minimum exemptions are entered per employee from the employee's application and the registers; they are not checked.",
     "In a month the employee started or left (or refused work under TLS § 19), the prorated social tax minimum base (886 x calendar days / 30, määrus nr 17 § 6) must be entered; unpaid leave agreed by the parties does not reduce the minimum (SMS § 2 lg 3 p 1). The minimum belongs to the month containing the agreed pay day (määrus nr 17 § 2); pay made earlier or later than agreed (§ 3-4) and the final settlement (§ 7) are not reconciled across months.",
-    "Not modelled: the state-paid social tax for employees with partial or no work ability (SMS § 6 lg 1 p 5, refused), fringe benefits (erisoodustused), III pillar contributions paid by the employer, non-residents, seafarers and board members' fees, and payments exempt from social tax (SMS § 3) such as the employer's sick pay for days 1-8.",
+    "Leave pay rules: pay kept for sick days is the employer's sickness benefit, taxed with income tax only (EMTA, payment type 24), assumed within the limit of the average wage; pay kept for other leave is wage. The social tax minimum is not applied for a month away on sick, maternity or other paid leave with a leave pay rule (EMTA), and applies in full for part of a month away and for unpaid leave by agreement (SMS § 2 lg 3). Leave of a type without a leave pay rule is not seen.",
+    "Not modelled: the state-paid social tax for employees with partial or no work ability (SMS § 6 lg 1 p 5, refused), fringe benefits (erisoodustused), III pillar contributions paid by the employer, non-residents, seafarers and board members' fees, and other payments exempt from social tax (SMS § 3).",
     "Contributions and the tax are rounded to the cent, half up, per line (TKindlS § 42 lg 3; EMTA examples).",
     "Status LAW_DERIVED: values are cited from the consolidated acts, the 2026 State Budget Act and Government regulation nr 78/2025; the cases are derived from them."
   ],
@@ -866,6 +919,209 @@
           "step": "incomeTax",
           "side": "TAX",
           "amount": "227.74"
+        }
+      ]
+    },
+    {
+      "name": "EMTA example 10: employer sick pay taxed with income tax only",
+      "evidence": "EMTA TSD example 10: wage 1000 (social tax 330, UI 16 / 8) and sickness benefit 72 taxed only with income tax; 62.48 + 15.84 = 78.32. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1072.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "NONE"
+      },
+      "leavePay": {
+        "SICK": "72.00"
+      },
+      "leaveDays": {
+        "SICK": "16"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "16.00"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "8.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "330.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "78.32"
+        }
+      ]
+    },
+    {
+      "name": "part of the month sick: the minimum applies in full",
+      "evidence": "EMTA: the minimum is excused only for a whole month away; 886 x 33% = 292.38. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "1072.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "NONE"
+      },
+      "reductions": "300.00",
+      "leavePay": {
+        "SICK": "72.00"
+      },
+      "leaveDays": {
+        "SICK": "16"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "11.20"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "5.60"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "292.38"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "13.38"
+        }
+      ]
+    },
+    {
+      "name": "a whole month on sick leave: no minimum",
+      "evidence": "EMTA: no minimum when temporarily incapacitated for work the whole month; the employer's sickness benefit is taxed with income tax only. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "fundedPensionRate": "NONE"
+      },
+      "reductions": "1900.00",
+      "leavePay": {
+        "SICK": "100.00"
+      },
+      "leaveDays": {
+        "SICK": "30"
+      },
+      "expectLines": [
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "22.00"
+        }
+      ]
+    },
+    {
+      "name": "a whole month of agreed unpaid leave owes the minimum",
+      "evidence": "SMS § 2 lg 3; EMTA: unpaid leave by agreement does not excuse the minimum; 886 x 33% = 292.38. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-06-01",
+      "periodEnd": "2026-06-30",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2"
+      },
+      "reductions": "2000.00",
+      "leaveDays": {
+        "UNPAID": "30"
+      },
+      "expectLines": [
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "292.38"
+        }
+      ]
+    },
+    {
+      "name": "a whole month of maternity leave: no minimum",
+      "evidence": "EMTA: leave including maternity leave for the whole month excuses the minimum. TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2"
+      },
+      "reductions": "2000.00",
+      "leaveDays": {
+        "MATERNITY": "31"
+      },
+      "expectLines": []
+    },
+    {
+      "name": "pay kept for maternity leave days is wage",
+      "evidence": "SMS § 2: the employer's pay is subject to social tax unless exempt (SMS § 3). TuMS § 4, 23, 23^5, 42; SMS § 2, 7; 2026 State Budget Act (886); VV määrus nr 78/2025 (1.6% / 0.8%); KoPS § 9; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "taxFreeAmount": "700",
+        "fundedPensionRate": "2"
+      },
+      "leavePay": {
+        "MATERNITY": "500.00"
+      },
+      "leaveDays": {
+        "MATERNITY": "10"
+      },
+      "expectLines": [
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYEE",
+          "amount": "32.00"
+        },
+        {
+          "step": "unemploymentInsurance",
+          "side": "EMPLOYER",
+          "amount": "16.00"
+        },
+        {
+          "step": "fundedPension",
+          "side": "EMPLOYEE",
+          "amount": "40.00"
+        },
+        {
+          "step": "socialTax",
+          "side": "EMPLOYER",
+          "amount": "660.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "270.16"
         }
       ]
     },

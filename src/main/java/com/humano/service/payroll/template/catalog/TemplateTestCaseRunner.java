@@ -77,7 +77,10 @@ public final class TemplateTestCaseRunner {
             c.employedThroughout() == null || c.employedThroughout(),
             c.employer() != null ? c.employer() : Map.of(),
             c.employee() != null ? c.employee() : Map.of(),
-            c.ytd() != null ? c.ytd() : Map.of()
+            c.ytd() != null ? c.ytd() : Map.of(),
+            c.leavePay() != null ? c.leavePay() : Map.of(),
+            c.leaveDays() != null ? c.leaveDays() : Map.of(),
+            c.unpaidLeaveDays() != null ? c.unpaidLeaveDays() : Map.of()
         );
     }
 

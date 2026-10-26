@@ -8,10 +8,10 @@
       "subtitle": "How payroll pays approved sick, parental and unpaid leave in each country.",
       "newRule": "New rule",
       "howTitle": "How leave is paid",
-      "howBody": "Each working day (Monday to Friday) of approved leave is paid at the rule's rate, as a share of the salary for the period's working days, so a whole month away unpaid takes off the whole salary. Pay bands count from the first day of the absence, also when it began in an earlier pay period, and a leave request that starts on the next working day continues the same absence. Leave without a rule is paid in full. Public holidays count as working days, and statutory payments made by an insurer or the state (such as UK Statutory Sick Pay) are not added. Some statutory templates can't calculate a period with reduced pay yet and will list the employee as an issue; see",
+      "howBody": "Each working day (Monday to Friday) of approved leave is paid at the rule's rate, as a share of the salary for the period's working days, so a whole month away unpaid takes off the whole salary. Pay bands count from the first day of the absence, also when it began in an earlier pay period, and a leave request that starts on the next working day continues the same absence. Where your payroll template declares statutory pay for a leave type (sick pay in Germany, the Netherlands, Estonia and Albania), it applies until you add your own rule; other leave without a rule is paid in full. Public holidays count as working days, and statutory payments made by an insurer or the state (such as UK Statutory Sick Pay) are not added. Some statutory templates can't yet calculate sick or maternity pay, or a period with reduced pay, and will list the employee as an issue; see",
       "howTemplates": "Payroll templates",
       "emptyTitle": "No leave pay rules yet",
-      "emptyBody": "All approved leave is paid in full until you add a rule, for example for unpaid leave, or sick pay that ends after six weeks.",
+      "emptyBody": "Approved leave is paid in full, or as your payroll template's statutory rule says where it has one, until you add a rule, for example for unpaid leave, or sick pay that ends after six weeks.",
       "col": {
         "country": "Country",
         "leaveType": "Leave",
@@ -32,7 +32,7 @@
       "edit": "Edit rule",
       "delete": "Delete rule",
       "deleteTitle": "Delete this leave pay rule?",
-      "deleteBody": "Leave of this type is then paid in full. Runs already calculated keep their amounts until they are recalculated.",
+      "deleteBody": "Leave of this type then follows your payroll template's statutory rule where it has one, and is otherwise paid in full. Runs already calculated keep their amounts until they are recalculated.",
       "saved": "Leave pay rule saved",
       "deleted": "Leave pay rule deleted",
       "form": {
@@ -61,8 +61,14 @@
         "preTax": "Deduct before tax",
         "preTaxOn": "The pay not paid also lowers taxable pay and contribution bases, as for pay not earned.",
         "preTaxOff": "Taken from net pay: tax and contributions are still charged on the full salary.",
-        "recalculate": "Applies to runs calculated from now on; recalculate a draft or calculated run to update it."
-      }
+        "recalculate": "Applies to runs calculated from now on; recalculate a draft or calculated run to update it.",
+        "overrideTitle": "Override the statutory rule",
+        "overrideHint": "Starts from the statutory rule of {{ name }}; your rule replaces it for this country and leave type."
+      },
+      "fromTemplate": "Statutory · {{ name }}",
+      "overridesTemplate": "Replaces the payroll template's statutory rule",
+      "override": "Override",
+      "source": "Legal source"
     }
   }
 }

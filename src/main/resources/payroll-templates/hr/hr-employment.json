@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "hr-employment",
   "name": "Croatia — salary (plaća)",
-  "version": "2026.1.0",
+  "version": "2026.1.1",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "HR"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.1",
+      "date": "2026-10-26",
+      "summary": "Leave pay rules documented, no change in amounts: pay kept for sick days is the employer's naknada plaće for the first 42 days, taxed and insured as pay. A month with leave below the minimum base still asks for the prorated base, now saying so."
+    },
     {
       "version": "2026.1.0",
       "date": "2026-10-23",
@@ -56,6 +61,11 @@
       "title": "Porezna uprava — Tablica poreznih stopa godišnjeg poreza na dohodak za 2026. godinu (556 jedinica lokalne samouprave; odluke objavljene u Narodnim novinama, stanje 1. siječnja 2026.); xlsx SHA-256 87733f3eb50a39650813a4ea7a6efbb8c556d4bf9c119ece9ea411f37e6f1592",
       "url": "https://porezna-uprava.gov.hr/hr/porezne-stope-godisnjeg-poreza-na-dohodak/4764",
       "retrieved": "2026-10-23"
+    },
+    "hzzo-naknada": {
+      "title": "HZZO, 'Naknada plaće za vrijeme privremene nesposobnosti za rad': poslodavac obračunava i isplaćuje naknadu plaće; prva 42 dana (sedam dana za radnika invalida rada) iz svojih sredstava, nakon toga HZZO vraća isplaćenu naknadu; na teret HZZO-a 70% osnovice za prvih šest mjeseci (80% nakon toga), najviše 995,45 eura mjesečno",
+      "url": "https://hzzo.hr/obvezno-zdravstveno-osiguranje-0/naknada-place-za-vrijeme-privremene-nesposobnosti-za-rad",
+      "retrieved": "2026-10-26"
     }
   },
   "inputs": {
@@ -3060,7 +3070,7 @@
       "type": "REQUIRE",
       "when": "#remuneration > 0 and #employee['minimumContributionBase'] == null",
       "condition": "#fullPeriod or #remuneration >= #minimumBase",
-      "message": "Pay is below the minimum contribution base in a partial month; the base is prorated by insured days (ZOD čl. 202), so set the employee's minimumContributionBase"
+      "message": "Pay is below the minimum contribution base in a partial month (or a month with unpaid or sick leave); the base is prorated by insured days (ZOD čl. 202), so set the employee's minimumContributionBase"
     },
     {
       "id": "contributionBase",
@@ -3161,6 +3171,7 @@
     "The youth reduction (100 % up to age 25, 50 % from 26 to 30) is granted only in the annual tax calculation (ZPD čl. 46 st. 2), not in the monthly advance, so it is not applied here.",
     "The employee's local unit, allowance coefficient and pension-fund membership come from the tax card and HZMO data and are entered per employee; development group I residence (50 % advance reduction) is entered per employee, not derived from the unit.",
     "The minimum contribution base is prorated by FTE for part-time work; partial months below the minimum, and management-board members (0.65 x average wage), need an explicit minimumContributionBase.",
+    "Leave pay rules: pay kept for sick days is taken as the employer's naknada plaće for the first 42 days (7 for a disabled worker), paid from its own funds and taxed and insured as pay. From day 43 the employer pays on behalf of HZZO (70% of the base, 80% after six months, at most 995.45 EUR a month) and is refunded; that part's tax and contribution treatment was not confirmed from an official source and is treated as pay, and no statutory leave pay rule is declared because the monthly cap can't be expressed as a percentage of salary.",
     "The MO I base reduction for several employers, or for a salary paid in several instalments, must be entered as pensionBaseReduction; the computed reduction assumes one employer and one payment, and is rounded to 0.01 EUR.",
     "The annual pension ceiling (143,496.00 EUR) applied by the Tax Administration in the annual calculation, other contribution exemptions (e.g. employment of persons with disabilities) and increased-length insurance contributions (staž s povećanim trajanjem) are not modelled.",
     "Non-taxable payments (e.g. bonuses within the non-taxable limits) must be excluded from taxable and social earnings by the tenant's pay components; pre-tax deductions are refused.",
@@ -3699,6 +3710,49 @@
           "step": "healthInsurance",
           "side": "EMPLOYER",
           "amount": "112.73"
+        }
+      ]
+    },
+    {
+      "name": "employer sick pay for the first 42 days is pay",
+      "evidence": "HZZO: the first 42 days of sick leave are paid by the employer from its own funds, as naknada plaće: contributions and tax on the whole 2,000. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "leavePay": {
+        "SICK": "254.55"
+      },
+      "leaveDays": {
+        "SICK": "7"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "300.00"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "100.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "330.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "230.00"
         }
       ]
     },

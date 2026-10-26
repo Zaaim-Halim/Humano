@@ -14,6 +14,7 @@ import sys
 from decimal import ROUND_HALF_UP, Decimal as D
 
 RETRIEVED = "2026-10-24"
+LEAVE_RETRIEVED = "2026-10-25"
 FROM, TO = "2026-01-01", "2026-12-31"
 RT = "https://www.riigiteataja.ee/akt/"
 EMTA = "https://www.emta.ee/"
@@ -54,6 +55,16 @@ SOURCES = {
 }
 for s in SOURCES.values():
     s["retrieved"] = RETRIEVED
+SOURCES["emta-sick-pay"] = {
+    "title": "EMTA, TSD vormi täitmise näide 10 'Tööandja vabatahtlik töövõimetushüvitis 30% keskmisest töötasust (haigusleht)': 'Vabatahtlik töövõimetushüvitis piirmäära ulatuses maksustatakse ainult tulumaksuga', väljamakse liik 24; töötasu 1000 eurot (sotsiaalmaks 330, töötuskindlustus 16 / 8, tulumaks 62,48) ja hüvitis 72 eurot (tulumaks 15,84)",
+    "url": EMTA + "en/business-client/taxes-and-payment/income-and-social-taxes/submission-declaration-form-tsd/naide-10-tooandja-vabatahtlik-toovoimetushuvitis-30-keskmisest-tootasust-haigusleht",
+    "retrieved": LEAVE_RETRIEVED,
+}
+SOURCES["emta-social-tax"] = {
+    "title": "EMTA, 'Social tax' — minimum obligation: the employer does not have to pay the minimum social tax when the 'employee is away from work for a full month' because the 'employee is temporarily incapacitated for work within the meaning of the Health Insurance Act' or 'takes leave (including maternity leave), except unpaid leave by agreement between parties', or is raising a child under three or three or more children under 19, or is in conscript service",
+    "url": EMTA + "en/business-client/taxes-and-payment/income-and-social-taxes/social-tax",
+    "retrieved": LEAVE_RETRIEVED,
+}
 
 PARAMS = {
     "incomeTaxRate": ("0.22", "tums"),
@@ -75,8 +86,11 @@ def cent(x):
 
 def expected_lines(c):
     """The amounts the texts give for a test case, computed directly (no engine)."""
-    wage = D(c["grossEarnings"])
+    taxable_pay = D(c["grossEarnings"]) - D(c.get("reductions", "0"))
+    # EMTA TSD example 10: the employer's sickness benefit is taxed with income tax only
+    wage = taxable_pay - D(c.get("leavePay", {}).get("SICK", "0"))
     emp = c.get("employee", {})
+    leave = {k: int(v) for k, v in c.get("leaveDays", {}).items()}
     lines = []
 
     def add(step, side, amount):
@@ -84,28 +98,33 @@ def expected_lines(c):
             lines.append({"step": step, "side": side, "amount": str(amount)})
         return amount
 
-    if wage <= 0:
+    if taxable_pay <= 0 and not leave:
         return lines
+    wage = max(wage, D(0))
     ui_ee = cent(wage * D("0.016")) if emp.get("unemploymentInsuranceEnded") != "true" else D(0)  # TKindlS § 42 lg 1 p 1
     add("unemploymentInsurance", "EMPLOYEE", ui_ee)
     add("unemploymentInsurance", "EMPLOYER", cent(wage * D("0.008")))  # § 40 lg 1: also for pension-age employees
     rate = {"NONE": D(0), "2": D("0.02"), "4": D("0.04"), "6": D("0.06")}[emp["fundedPensionRate"]]
     pension = add("fundedPension", "EMPLOYEE", cent(wage * rate))  # KoPS § 9
-    # SMS § 2 lg 2-4: at least the monthly base, unless exempt or another employer applies the tax-free amount
-    applies = (emp.get("socialTaxMinimumExempt") != "true"
+    # SMS § 2 lg 2-4: at least the monthly base, unless exempt or another employer applies the tax-free amount;
+    # EMTA: not when away the whole month on sick leave or leave other than unpaid leave by agreement
+    month_days = int(c["periodEnd"][8:10])
+    away = leave.get("SICK", 0) + leave.get("MATERNITY", 0) + leave.get("VACATION", 0) >= month_days
+    applies = (emp.get("socialTaxMinimumExempt") != "true" and not away
                and (emp.get("otherEmployment") != "true" or D(emp.get("taxFreeAmount", "0")) > 0))
     floor = D(emp["socialTaxMinimumBase"]) if "socialTaxMinimumBase" in emp else D(886)
     base = max(wage, floor) if applies else wage
-    add("socialTax", "EMPLOYER", cent(base * D("0.33")))
+    if wage > 0 or (applies and c.get("employedThroughout", True) and leave):
+        add("socialTax", "EMPLOYER", cent(base * D("0.33")))
     # TuMS § 42 lg 1, 5, 6: contributions and the tax-free amount (up to the payment) come off before the 22%
-    before = wage - ui_ee - pension
+    before = taxable_pay - ui_ee - pension
     taxable = max(before - D(emp.get("taxFreeAmount", "0")), D(0))
     add("incomeTax", "TAX", cent(taxable * D("0.22")))
     return lines
 
 
 def case(name, evidence, gross, employee, start="2026-03-01", end="2026-03-31", payment=None, whole=True, error=None,
-         pre_tax=None):
+         pre_tax=None, reductions=None, leave_pay=None, leave_days=None):
     c = {"name": name, "evidence": evidence, "periodStart": start, "periodEnd": end, "frequency": "MONTHLY"}
     if payment:
         c["paymentDate"] = payment
@@ -115,6 +134,14 @@ def case(name, evidence, gross, employee, start="2026-03-01", end="2026-03-31", 
     c.update({"employer": {}, "employee": employee})
     if pre_tax:
         c["preTaxDeductions"] = pre_tax
+    if reductions:
+        c["reductions"] = reductions
+        c["fullPeriod"] = False
+    if leave_pay:
+        c["leavePay"] = leave_pay
+        c["fullPeriod"] = False
+    if leave_days:
+        c["leaveDays"] = leave_days
     if error:
         c["expectError"] = error
     return c
@@ -153,6 +180,21 @@ def test_cases():
              "450.00", {**STD, "otherEmployment": "true", "socialTaxMinimumBase": "386.00"}),
         case("December 2025 salary paid in January 2026", "EMTA: taxation follows the payment date, so 2026 rates and the 700 EUR tax-free amount apply. " + law,
              "1800.00", dict(STD), start="2025-12-01", end="2025-12-31", payment="2026-01-09"),
+        case("EMTA example 10: employer sick pay taxed with income tax only", "EMTA TSD example 10: wage 1000 (social tax 330, UI 16 / 8) and sickness benefit 72 taxed only with income tax; 62.48 + 15.84 = 78.32. " + law,
+             "1072.00", {"taxFreeAmount": "700", "fundedPensionRate": "NONE"}, start="2026-06-01", end="2026-06-30",
+             leave_pay={"SICK": "72.00"}, leave_days={"SICK": "16"}),
+        case("part of the month sick: the minimum applies in full", "EMTA: the minimum is excused only for a whole month away; 886 x 33% = 292.38. " + law,
+             "1072.00", {"taxFreeAmount": "700", "fundedPensionRate": "NONE"}, start="2026-06-01", end="2026-06-30",
+             reductions="300.00", leave_pay={"SICK": "72.00"}, leave_days={"SICK": "16"}),
+        case("a whole month on sick leave: no minimum", "EMTA: no minimum when temporarily incapacitated for work the whole month; the employer's sickness benefit is taxed with income tax only. " + law,
+             "2000.00", {"fundedPensionRate": "NONE"}, start="2026-06-01", end="2026-06-30",
+             reductions="1900.00", leave_pay={"SICK": "100.00"}, leave_days={"SICK": "30"}),
+        case("a whole month of agreed unpaid leave owes the minimum", "SMS § 2 lg 3; EMTA: unpaid leave by agreement does not excuse the minimum; 886 x 33% = 292.38. " + law,
+             "2000.00", dict(STD), start="2026-06-01", end="2026-06-30", reductions="2000.00", leave_days={"UNPAID": "30"}),
+        case("a whole month of maternity leave: no minimum", "EMTA: leave including maternity leave for the whole month excuses the minimum. " + law,
+             "2000.00", dict(STD), reductions="2000.00", leave_days={"MATERNITY": "31"}),
+        case("pay kept for maternity leave days is wage", "SMS § 2: the employer's pay is subject to social tax unless exempt (SMS § 3). " + law,
+             "2000.00", dict(STD), leave_pay={"MATERNITY": "500.00"}, leave_days={"MATERNITY": "10"}),
     ]
     for c in computed:
         c["expectLines"] = expected_lines(c)
@@ -179,12 +221,37 @@ def dated(value, source):
     return [{"from": FROM, "to": TO, "value": value, "source": source}]
 
 
+
+# Statutory leave pay (PayrollTemplate.leavePay): applied as a leave pay rule where the workspace has none of its own.
+LEAVE_SOURCES = {'tooelu-sick-pay': {'title': "Labour Inspectorate (Tööinspektsioon), tooelu.ee 'Other remuneration and benefits': "
+                              "'For days 4 to 8 of sickness, sickness benefit is paid by the employer', '70% of the "
+                              "employee's average wages for the last six months'; Tervisekassa (Health Insurance "
+                              "Fund), 'Benefit for temporary incapacity for work': 'EHIF pays from day 9, the benefit "
+                              "rate is 70%'",
+                     'url': 'https://www.tooelu.ee/en/174/other-remuneration-and-benefits',
+                     'retrieved': '2026-10-26'}}
+
+LEAVE_PAY = [{'leaveType': 'SICK',
+  'deductionPercentage': '100',
+  'payBands': [{'fromDay': 1, 'toDay': 3, 'deductionPercentage': '100'},
+               {'fromDay': 4, 'toDay': 8, 'deductionPercentage': '30'}],
+  'source': 'tooelu-sick-pay',
+  'note': 'Days 1-3 unpaid; days 4-8 the employer pays 70% of the average wage of the last six months (the rule pays '
+          '70% of the salary); from day 9 Tervisekassa pays, outside payroll.'}]
+
+LEAVE_CHANGE = {'version': '2026.1.2',
+ 'date': '2026-10-26',
+ 'summary': 'Statutory sick pay as a leave pay rule: days 1-3 unpaid, days 4-8 at 70% paid by the employer, from day 9 '
+            'unpaid as Tervisekassa pays (Health Insurance Act; Labour Inspectorate); applied where the workspace has '
+            'no sick leave rule of its own. Before, sick days were paid in full unless a rule was added.'}
+
+
 def main():
     template = {
         "schemaVersion": 1,
         "id": "ee-employment",
         "name": "Estonia — employment (tööleping)",
-        "version": "2026.1.0",
+        "version": "2026.1.2",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "EE"},
         "validity": {"from": FROM, "to": TO},
@@ -194,10 +261,13 @@ def main():
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            LEAVE_CHANGE,
+            {"version": "2026.1.1", "date": LEAVE_RETRIEVED,
+             "summary": "Leave pay rules: pay kept for sick days is the employer's sickness benefit, taxed with income tax only (EMTA, payment type 24); before, it was also charged social tax, unemployment insurance and funded pension. No social tax minimum for a month away on sick leave or leave other than unpaid leave by agreement (EMTA); a month of agreed unpaid leave without pay owes social tax on the minimum, which it did not before."},
             {"version": "2026.1.0", "date": RETRIEVED,
              "summary": "2026: income tax 22% with the flat 700 EUR monthly tax-free amount (776 EUR at pension age); unemployment insurance 1.6% / 0.8%; funded pension 2%, 4% or 6%; social tax 33% with the 886 EUR monthly minimum."}
         ],
-        "sources": SOURCES,
+        "sources": {**SOURCES, **LEAVE_SOURCES},
         "inputs": {
             "employer": [],
             "employee": [
@@ -231,7 +301,7 @@ def main():
             {"id": "taxFreeLimit", "type": "REQUIRE", "source": "tums",
              "condition": "#employee['taxFreeAmount'] <= (#employee['pensionAge'] ? #p['monthlyTaxFreeAmountPensionAge'] : #p['monthlyTaxFreeAmount'])",
              "message": "The monthly tax-free amount is at most 700 EUR (TuMS § 42 lg 1), or 776 EUR from the year of reaching old-age pension age (§ 23^5)"},
-            {"id": "wage", "type": "VALUE", "expr": "#pos(#socialEarnings - #reductions)"},
+            {"id": "wage", "type": "VALUE", "source": "emta-sick-pay", "expr": "#pos(#socialEarnings - #reductions - #leavePay['SICK'])"},
             {"id": "taxablePay", "type": "VALUE", "expr": "#pos(#taxableEarnings - #reductions)"},
             {"id": "unemploymentInsurance", "type": "CONTRIBUTION", "label": "Unemployment insurance (töötuskindlustusmakse)", "ledger": "UNEMPLOYMENT", "source": "vv-78-2025",
              "when": "#wage > 0", "base": "#wage",
@@ -240,8 +310,10 @@ def main():
             {"id": "fundedPension", "type": "CONTRIBUTION", "label": "Mandatory funded pension (II pillar)", "ledger": "PENSION_CONTRIBUTION", "source": "kops",
              "when": "#wage > 0 and #employee['fundedPensionRate'] != 'NONE'", "base": "#wage",
              "employee": {"rate": "#employee['fundedPensionRate'] == '2' ? #p['fundedPension2'] : (#employee['fundedPensionRate'] == '4' ? #p['fundedPension4'] : #p['fundedPension6'])"}},
+            {"id": "awayWholeMonth", "type": "VALUE", "source": "emta-social-tax",
+             "expr": "#leaveDays['SICK'] + #leaveDays['MATERNITY'] + #leaveDays['VACATION'] >= #periodEnd.getDayOfMonth() ? 1 : 0"},
             {"id": "minimumApplies", "type": "VALUE", "source": "sms",
-             "expr": "!#employee['socialTaxMinimumExempt'] and (!#employee['otherEmployment'] or #employee['taxFreeAmount'] > 0) ? 1 : 0"},
+             "expr": "!#employee['socialTaxMinimumExempt'] and #awayWholeMonth == 0 and (!#employee['otherEmployment'] or #employee['taxFreeAmount'] > 0) ? 1 : 0"},
             {"id": "partialMonthMinimum", "type": "REQUIRE", "source": "rm-17-2013",
              "when": "#minimumApplies == 1 and #employee['socialTaxMinimumBase'] == null and #wage > 0 and #wage < #p['socialTaxMonthlyBase']",
              "condition": "#employedThroughout",
@@ -249,17 +321,20 @@ def main():
             {"id": "socialTaxBase", "type": "VALUE", "source": "rea-2026",
              "expr": "#minimumApplies == 1 ? #max(#wage, #coalesce(#employee['socialTaxMinimumBase'], #p['socialTaxMonthlyBase'])) : #wage"},
             {"id": "socialTax", "type": "CONTRIBUTION", "label": "Social tax (sotsiaalmaks)", "ledger": "SOCIAL_SECURITY", "source": "sms",
-             "when": "#wage > 0", "base": "#socialTaxBase", "employer": {"rate": "#p['socialTaxRate']"}},
+             "when": "#wage > 0 or (#minimumApplies == 1 and #employedThroughout and #leaveDays['SICK'] + #leaveDays['MATERNITY'] + #leaveDays['VACATION'] + #leaveDays['UNPAID'] > 0)",
+             "base": "#socialTaxBase", "employer": {"rate": "#p['socialTaxRate']"}},
             {"id": "incomeTax", "type": "TAX", "label": "Income tax (tulumaks)", "ledger": "INCOME_TAX", "source": "tums",
              "when": "#taxablePay > 0",
              "base": "#pos(#taxablePay - #unemploymentInsurance_employee - #fundedPension_employee - #employee['taxFreeAmount'])",
              "rate": "#p['incomeTaxRate']"},
         ],
+        "leavePay": LEAVE_PAY,
         "limitations": [
             "Employment contracts paid monthly in EUR in 2026, one payment per employee per month; taxation follows the payment date (EMTA: kassapõhine), and the tax-free amount and the social tax minimum are applied to this payment. A second run in the same month would apply them again.",
             "The tax-free amount, pension age, the end of employee unemployment insurance, the funded-pension rate, other employment and the social tax minimum exemptions are entered per employee from the employee's application and the registers; they are not checked.",
             "In a month the employee started or left (or refused work under TLS § 19), the prorated social tax minimum base (886 x calendar days / 30, määrus nr 17 § 6) must be entered; unpaid leave agreed by the parties does not reduce the minimum (SMS § 2 lg 3 p 1). The minimum belongs to the month containing the agreed pay day (määrus nr 17 § 2); pay made earlier or later than agreed (§ 3-4) and the final settlement (§ 7) are not reconciled across months.",
-            "Not modelled: the state-paid social tax for employees with partial or no work ability (SMS § 6 lg 1 p 5, refused), fringe benefits (erisoodustused), III pillar contributions paid by the employer, non-residents, seafarers and board members' fees, and payments exempt from social tax (SMS § 3) such as the employer's sick pay for days 1-8.",
+            "Leave pay rules: pay kept for sick days is the employer's sickness benefit, taxed with income tax only (EMTA, payment type 24), assumed within the limit of the average wage; pay kept for other leave is wage. The social tax minimum is not applied for a month away on sick, maternity or other paid leave with a leave pay rule (EMTA), and applies in full for part of a month away and for unpaid leave by agreement (SMS § 2 lg 3). Leave of a type without a leave pay rule is not seen.",
+            "Not modelled: the state-paid social tax for employees with partial or no work ability (SMS § 6 lg 1 p 5, refused), fringe benefits (erisoodustused), III pillar contributions paid by the employer, non-residents, seafarers and board members' fees, and other payments exempt from social tax (SMS § 3).",
             "Contributions and the tax are rounded to the cent, half up, per line (TKindlS § 42 lg 3; EMTA examples).",
             "Status LAW_DERIVED: values are cited from the consolidated acts, the 2026 State Budget Act and Government regulation nr 78/2025; the cases are derived from them.",
         ],

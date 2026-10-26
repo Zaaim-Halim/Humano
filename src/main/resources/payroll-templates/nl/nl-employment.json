@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "nl-employment",
   "name": "Nederland — loonheffingen (witte tabel), premies werknemersverzekeringen en werkgeversheffing Zvw",
-  "version": "2026.1.1",
+  "version": "2026.1.2",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "NL"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.2",
+      "date": "2026-10-26",
+      "summary": "Statutory sick pay as a leave pay rule: 70% of the wage for up to 104 weeks (BW 7:629), the legal minimum; applied where the workspace has no sick leave rule of its own. Before, sick days were paid in full unless a rule was added."
+    },
     {
       "version": "2026.1.1",
       "date": "2026-10-25",
@@ -51,6 +56,11 @@
       "title": "Belastingdienst, Handboek Loonheffingen 2026, versie maart 2026 — hoofdstuk 6 (VCR), 7.4-7.6 (AWf, Aof, Wko, Whk), 8.2 (werkgeversheffing Zvw), 18.21 (AOW-leeftijd), Bijlage 1 tabellen 9, 11, 12",
       "url": "https://download.belastingdienst.nl/belastingdienst/docs/handboek-loonheffingen-lh0221t61fd.pdf",
       "retrieved": "2026-10-21"
+    },
+    "bw-7-629": {
+      "title": "Burgerlijk Wetboek Boek 7 art. 629 (loondoorbetaling bij ziekte), as explained by the Rijksoverheid, 'Hoeveel loon krijg ik doorbetaald als ik ziek ben?': 'U ontvangt in het 1e ziektejaar minstens 70% van uw loon en minimaal het minimumloon', 'Ook in uw 2e ziektejaar betaalt uw werkgever u minimaal 70% van uw loon', 100% bij ziekte door zwangerschap, bevalling of orgaandonatie",
+      "url": "https://www.rijksoverheid.nl/vraag-en-antwoord/ziekteverzuim-van-het-werk/hoeveel-loon-krijg-ik-doorbetaald-als-ik-ziek-ben",
+      "retrieved": "2026-10-26"
     }
   },
   "inputs": {
@@ -953,6 +963,21 @@
       "employer": {
         "rate": "#p['zvw']"
       }
+    }
+  ],
+  "leavePay": [
+    {
+      "leaveType": "SICK",
+      "deductionPercentage": "100",
+      "payBands": [
+        {
+          "fromDay": 1,
+          "toDay": 728,
+          "deductionPercentage": "30"
+        }
+      ],
+      "source": "bw-7-629",
+      "note": "The legal minimum: 70% of the wage for up to 104 weeks. Not applied: the first year's floor at the minimum wage, and 100% for illness from pregnancy, childbirth or organ donation. Most collective agreements (cao) pay more, often 100% in the first year: add a workspace rule."
     }
   ],
   "limitations": [

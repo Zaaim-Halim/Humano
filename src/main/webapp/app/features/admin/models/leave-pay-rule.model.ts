@@ -13,7 +13,8 @@ export interface LeavePayBand {
 
 /** `GET /api/payroll/leave-pay-rules` row (backend `LeaveTypeRuleResponse`). */
 export interface LeavePayRule {
-  id: string;
+  /** null for a payroll template's statutory rule. */
+  id: string | null;
   countryId: string;
   /** ISO 3166-1 alpha-2. */
   countryCode: string | null;
@@ -25,6 +26,17 @@ export interface LeavePayRule {
   /** Pre-tax: the deduction lowers taxable pay and contribution bases. */
   affectsTaxableSalary: boolean;
   description: string;
+  /** WORKSPACE: the workspace's own rule; TEMPLATE: an enabled payroll template's statutory rule. */
+  origin: 'WORKSPACE' | 'TEMPLATE';
+  templateId: string | null;
+  templateName: string | null;
+  templateVersion: string | null;
+  /** What a statutory rule leaves out. */
+  note: string | null;
+  sourceTitle: string | null;
+  sourceUrl: string | null;
+  /** A workspace rule replacing a template's statutory rule for the same country and leave type. */
+  overridesTemplate: boolean;
 }
 
 /** Body for `POST /api/payroll/leave-pay-rules`. */

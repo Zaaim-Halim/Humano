@@ -22,6 +22,8 @@ interface Screen {
   bandErrors: () => { fromDay: boolean; toDay: boolean; paid: boolean; overlap: boolean }[];
   openNew: () => void;
   openEdit: (rule: LeavePayRule) => void;
+  openOverride: (rule: LeavePayRule) => void;
+  rowKey: (rule: LeavePayRule) => string;
   patch: (patch: object) => void;
   patchBand: (key: number, patch: object) => void;
   addBand: () => void;
@@ -39,6 +41,29 @@ const SICK_DE: LeavePayRule = {
   payBands: [{ fromDay: 1, toDay: 42, deductionPercentage: 0 }],
   affectsTaxableSalary: true,
   description: 'SICK - by pay band to day 42, then Unpaid',
+  origin: 'WORKSPACE',
+  templateId: null,
+  templateName: null,
+  templateVersion: null,
+  note: null,
+  sourceTitle: null,
+  sourceUrl: null,
+  overridesTemplate: false,
+};
+
+const STATUTORY_NL: LeavePayRule = {
+  ...SICK_DE,
+  id: null,
+  countryId: 'nl',
+  countryCode: 'NL',
+  countryName: 'Netherlands',
+  deductionPercentage: 100,
+  payBands: [{ fromDay: 1, toDay: 728, deductionPercentage: 30 }],
+  origin: 'TEMPLATE',
+  templateId: 'nl-employment',
+  templateName: 'Netherlands — employment',
+  templateVersion: '2026.1.2',
+  note: 'The legal minimum',
 };
 
 describe('LeavePayRulesComponent', () => {
@@ -126,6 +151,31 @@ describe('LeavePayRulesComponent', () => {
     screen.patchBand(first.key, { paid: 120 });
     expect(screen.bandErrors()[0].paid).toBe(true);
     expect(screen.valid()).toBe(false);
+  });
+
+  it('overrides a statutory rule with a workspace rule for the same country and leave type', () => {
+    screen.openOverride(STATUTORY_NL);
+
+    expect(screen.draft()!.id).toBeNull();
+    expect(screen.draft()!.countryId).toBe('nl');
+    expect(screen.draft()!.bands.map(b => b.paid)).toEqual([70]);
+    // The statutory rule is not a duplicate: the workspace's rule replaces it.
+    expect(screen.duplicate()).toBe(false);
+    screen.patchBand(screen.draft()!.bands[0].key, { toDay: 364, paid: 100 });
+    screen.save();
+
+    expect(create).toHaveBeenCalledWith({
+      countryId: 'nl',
+      leaveType: LeaveType.SICK,
+      deductionPercentage: 100,
+      payBands: [{ fromDay: 1, toDay: 364, deductionPercentage: 0 }],
+      affectsTaxableSalary: true,
+    });
+  });
+
+  it('keys template rows apart from workspace rows', () => {
+    expect(screen.rowKey(STATUTORY_NL)).toBe('nl-employment/nl/SICK');
+    expect(screen.rowKey(SICK_DE)).toBe('r1');
   });
 
   it('summarizes the bands and the rate after them', () => {

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pl-employment",
   "name": "Poland — employment contract (umowa o pracę)",
-  "version": "2026.1.1",
+  "version": "2026.1.2",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "PL"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.2",
+      "date": "2026-10-25",
+      "summary": "Pay kept for sick or maternity leave days (a leave pay rule) is refused: sick pay (art. 92 KP) and sickness or maternity benefits are not subject to social insurance contributions, and whether the health contribution is due on employer sick pay was not settled from the act. Before, they were charged ZUS contributions as ordinary salary."
+    },
     {
       "version": "2026.1.1",
       "date": "2026-10-24",
@@ -359,6 +364,13 @@
       "type": "REQUIRE",
       "condition": "#isCalendarMonth",
       "message": "Polish payroll is monthly: the pay period must be a whole calendar month"
+    },
+    {
+      "id": "noPaidSickOrMaternityLeave",
+      "type": "REQUIRE",
+      "source": "usus",
+      "condition": "#leavePay['SICK'] == 0 and #leavePay['MATERNITY'] == 0",
+      "message": "Paid sick or maternity leave is not supported by this template: sick pay (wynagrodzenie chorobowe, art. 92 KP) and sickness or maternity benefits are not subject to social insurance contributions, and this template does not separate them from salary"
     },
     {
       "id": "noPreTaxDeductions",
@@ -2036,6 +2048,29 @@
       },
       "preTaxDeductions": "100.00",
       "expectError": "Pre-tax deductions are not supported"
+    },
+    {
+      "name": "paid sick leave refused",
+      "evidence": "sick pay (art. 92 KP) and benefits are not in the social insurance base; the health contribution on employer sick pay is not settled from the act",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "6000.00",
+      "fullPeriod": false,
+      "birthDate": "1985-04-12",
+      "employer": {
+        "accidentRate": "0.0167"
+      },
+      "employee": {
+        "pit2Reduction": "ONE_TWELFTH"
+      },
+      "expectError": "Paid sick or maternity leave is not supported",
+      "leavePay": {
+        "SICK": "1500.00"
+      },
+      "leaveDays": {
+        "SICK": "7"
+      }
     },
     {
       "name": "December 2026 salary paid in January 2027",

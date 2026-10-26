@@ -33,6 +33,10 @@ import java.util.Map;
  * @param employer        the tenant's raw settings for the template
  * @param employee        the employee's raw attributes for the template
  * @param ytd             year-to-date sums before this period ({@link YtdAccess} keys)
+ * @param leavePay        the part of the earnings paid for approved leave days, by leave type (e.g. SICK), for
+ *                        leave types with a leave pay rule; laws that treat sick or maternity pay apart read it
+ * @param leaveDays       calendar days of that leave within the period, by leave type
+ * @param unpaidLeaveDays the calendar days among them the rule leaves wholly unpaid (e.g. days a social insurer pays)
  */
 public record TemplateInput(
     LocalDate periodStart,
@@ -56,5 +60,62 @@ public record TemplateInput(
     boolean employedThroughout,
     Map<String, String> employer,
     Map<String, String> employee,
-    Map<String, BigDecimal> ytd
-) {}
+    Map<String, BigDecimal> ytd,
+    Map<String, BigDecimal> leavePay,
+    Map<String, BigDecimal> leaveDays,
+    Map<String, BigDecimal> unpaidLeaveDays
+) {
+    /** A period without paid leave. */
+    public TemplateInput(
+        LocalDate periodStart,
+        LocalDate periodEnd,
+        LocalDate paymentDate,
+        Frequency frequency,
+        String currency,
+        BigDecimal grossEarnings,
+        Map<String, BigDecimal> earningsByComponent,
+        BigDecimal socialEarnings,
+        Map<String, BigDecimal> socialEarningsByComponent,
+        BigDecimal taxableEarnings,
+        Map<String, BigDecimal> taxableEarningsByComponent,
+        BigDecimal reductions,
+        BigDecimal preTaxDeductions,
+        Map<String, BigDecimal> preTaxDeductionsByType,
+        boolean fullPeriod,
+        BigDecimal fte,
+        LocalDate birthDate,
+        LocalDate employmentStartDate,
+        boolean employedThroughout,
+        Map<String, String> employer,
+        Map<String, String> employee,
+        Map<String, BigDecimal> ytd
+    ) {
+        this(
+            periodStart,
+            periodEnd,
+            paymentDate,
+            frequency,
+            currency,
+            grossEarnings,
+            earningsByComponent,
+            socialEarnings,
+            socialEarningsByComponent,
+            taxableEarnings,
+            taxableEarningsByComponent,
+            reductions,
+            preTaxDeductions,
+            preTaxDeductionsByType,
+            fullPeriod,
+            fte,
+            birthDate,
+            employmentStartDate,
+            employedThroughout,
+            employer,
+            employee,
+            ytd,
+            Map.of(),
+            Map.of(),
+            Map.of()
+        );
+    }
+}

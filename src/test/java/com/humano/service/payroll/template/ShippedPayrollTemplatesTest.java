@@ -97,6 +97,48 @@ class ShippedPayrollTemplatesTest {
     }
 
     @Test
+    void statutorySickPayMatchesTheLaw() {
+        // EntgFG §§ 3, 4: six weeks of full pay; BW 7:629: 70% for 104 weeks; Estonia: days 4-8 at 70%; Albania: days 1-14 at 80%.
+        assertThat(sickPay("de-employment")).isEqualTo("1-42:0, else 100");
+        assertThat(sickPay("nl-employment")).isEqualTo("1-728:30, else 100");
+        assertThat(sickPay("ee-employment")).isEqualTo("1-3:100 4-8:30, else 100");
+        assertThat(sickPay("al-employment")).isEqualTo("1-14:20, else 100");
+        // Sick pay that bands per absence can't express (a yearly allowance, a statutory flat rate) is not declared.
+        for (String id : List.of(
+            "hu-employment",
+            "gb-paye-nic",
+            "ie-paye",
+            "es-employment",
+            "pl-employment",
+            "ro-employment",
+            "bg-employment",
+            "hr-employment"
+        )) {
+            assertThat(catalog.find(id).orElseThrow().effectiveLeavePay()).as(id).isEmpty();
+        }
+    }
+
+    private String sickPay(String templateId) {
+        PayrollTemplate.LeavePay rule = catalog
+            .find(templateId)
+            .orElseThrow()
+            .effectiveLeavePay()
+            .stream()
+            .filter(r -> r.leaveType() == com.humano.domain.enumeration.hr.LeaveType.SICK)
+            .findFirst()
+            .orElseThrow();
+        return (
+            rule
+                .payBands()
+                .stream()
+                .map(b -> b.fromDay() + "-" + b.toDay() + ":" + b.deductionPercentage().stripTrailingZeros().toPlainString())
+                .collect(java.util.stream.Collectors.joining(" ")) +
+            ", else " +
+            rule.deductionPercentage().stripTrailingZeros().toPlainString()
+        );
+    }
+
+    @Test
     void bulgariaWorkAccidentRatesChangeOnlyWhereTheNoiNoticeSays() {
         Table table = catalog.find("bg-employment").orElseThrow().tables().get("workAccidentRate");
         Map<String, BigDecimal> before = rates(table, LocalDate.of(2026, 7, 31));

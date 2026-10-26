@@ -336,6 +336,30 @@ def p(value, source):
     return [{"from": FROM, "to": TO, "value": str(value), "source": source}]
 
 
+
+# Statutory leave pay (PayrollTemplate.leavePay): applied as a leave pay rule where the workspace has none of its own.
+LEAVE_SOURCES = {'efzg': {'title': 'Entgeltfortzahlungsgesetz — § 3 Abs. 1 Satz 1 (Entgeltfortzahlung im Krankheitsfall durch den '
+                   "Arbeitgeber 'bis zur Dauer von sechs Wochen'), § 3 Abs. 3 (Anspruch 'nach vierwöchiger "
+                   "ununterbrochener Dauer des Arbeitsverhältnisses'), § 4 Abs. 1 (das bei regelmäßiger Arbeitszeit "
+                   'zustehende Arbeitsentgelt ist fortzuzahlen)',
+          'url': 'https://www.gesetze-im-internet.de/entgfg/__3.html',
+          'retrieved': '2026-10-26'}}
+
+LEAVE_PAY = [{'leaveType': 'SICK',
+  'deductionPercentage': '100',
+  'payBands': [{'fromDay': 1, 'toDay': 42, 'deductionPercentage': '0'}],
+  'source': 'efzg',
+  'note': 'Six weeks of full pay (§§ 3, 4 EntgFG), then the Krankenkasse pays Krankengeld outside payroll. Not '
+          'applied: no employer pay in the first four weeks of employment (§ 3 Abs. 3), and a renewed absence for the '
+          'same illness counting towards the same six weeks.'}]
+
+LEAVE_CHANGE = {'version': '2026.1.3',
+ 'date': '2026-10-26',
+ 'summary': 'Statutory sick pay as a leave pay rule: six weeks of full pay (EntgFG §§ 3, 4), then unpaid as the '
+            'Krankenkasse pays Krankengeld; applied where the workspace has no sick leave rule of its own. Before, '
+            'sick days were paid in full unless a rule was added.'}
+
+
 def main():
     check_law(sys.argv[1])
     state_church = " or ".join(f"#employer['state'] == '{s}'" for s in ("BY", "BW"))
@@ -347,7 +371,7 @@ def main():
         "schemaVersion": 1,
         "id": "de-employment",
         "name": "Deutschland — Lohnsteuer, Solidaritätszuschlag, Kirchensteuer und Gesamtsozialversicherungsbeitrag",
-        "version": "2026.1.2",
+        "version": "2026.1.3",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "DE"},
         "validity": {"from": FROM, "to": TO},
@@ -356,13 +380,14 @@ def main():
         "taxYearStart": "--01-01",
         "dateBasis": "PERIOD",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
-        "changelog": [{"version": "2026.1.2", "date": "2026-10-25",
+        "changelog": [
+            LEAVE_CHANGE,{"version": "2026.1.2", "date": "2026-10-25",
                        "summary": "Sonstige Bezüge (BONUS: Weihnachts-/Urlaubsgeld, Prämien, 13. Gehalt) are supported: Lohnsteuer, SolZ and Kirchensteuer by the PAP's annual-wage method (§ 39b Abs. 3 EStG) on the voraussichtlicher Jahresarbeitslohn from this year's payrolls, and contributions as einmalig gezahltes Arbeitsentgelt up to the anteilige Beitragsbemessungsgrenze (§ 23a SGB IV); U1 leaves them out (§ 7 Abs. 2 AAG). The Lohnsteuer line is now recorded even at 0, so its base builds the annual wage. Before, a period with a BONUS was refused."},
                       {"version": "2026.1.1", "date": "2026-10-24",
                        "summary": "Corrects silent errors: U1 participation without the employee's U1 rate, and care-insurance children under 25 without the parent flag, are now refused instead of giving no U1 levy or the childless surcharge without the child reductions."},
                       {"version": "2026.1.0", "date": RETRIEVED,
                        "summary": "2026: Lohnsteuer, Solidaritätszuschlag and Maßstabsteuer by the BMF PAP 2026 (generated from the official XML pseudocode); Kirchensteuer; KV, RV, AV, PV contributions and the U1, U2, U3 levies for regular monthly wages."}],
-        "sources": SOURCES,
+        "sources": {**SOURCES, **LEAVE_SOURCES},
         "inputs": {
             "employer": [
                 {"key": "state", "type": "ENUM", "required": True, "values": STATES,
@@ -560,6 +585,7 @@ def main():
             {"id": "umlageU3", "type": "CONTRIBUTION", "label": "Insolvenzgeldumlage", "ledger": "OTHER", "source": "sgb3",
              "when": "!#employer['insolvencyLevyExempt']", "base": "#rvBase", "employer": {"rate": "#p['insolvencyLevy']"}},
         ],
+        "leavePay": LEAVE_PAY,
         "limitations": [
             "Monthly wages for whole calendar months; joining or leaving mid-month and Entgeltumwandlung are refused.",
             "Sonstige Bezüge are the BONUS earnings (Weihnachts-/Urlaubsgeld, Prämien, 13. Gehalt), paid with a period's current wage: Lohnsteuer by the annual-wage method (§ 39b Abs. 3 EStG) on the voraussichtlicher Jahresarbeitslohn = this year's posted current wages and sonstige Bezüge (or brought-forward figures) plus the current monthly wage for the rest of the year and for months at earlier employers without a Lohnsteuerbescheinigung; contributions up to the anteilige Beitragsbemessungsgrenze of the months with contributions (§ 23a SGB IV); U1 leaves them out. Refused: a payment date in another year (§ 38a Abs. 1 Satz 3 EStG), the März-Klausel (January to March above the anteilige BBG, § 23a Abs. 4), an earlier month of employment this year missing from the posted payrolls. Not supported: Entschädigungen and the Fünftelregelung (§ 34 EStG; do not pay redundancy payments as BONUS), one-off payments after leaving (§ 23a Abs. 2), Vermögensbeteiligungen. Months whose current wage paid no Lohnsteuer before version 2026.1.2 recorded no wage and are missing from the annual wage.",

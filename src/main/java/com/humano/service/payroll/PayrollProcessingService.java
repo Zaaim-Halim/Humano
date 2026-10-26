@@ -770,12 +770,22 @@ public class PayrollProcessingService {
         //   that day of the absence (its pay band's, counted from the absence's first day, which may
         //   be in an earlier period) out of the period's working days, so a whole period away at 100%
         //   deducts exactly the base salary. Public holidays are not known and count as working days.
+        //   What is still paid for those days (and their calendar days) goes to payroll templates as
+        //   #leavePay / #leaveDays / #unpaidLeaveDays, for laws that tax or insure sick and maternity pay
+        //   apart from salary or count the days a social insurer pays.
         // ============================================================
         PayComponent leaveDeductionComponent = componentsByCode.get(PayComponentCode.DEDUCTION);
         boolean hadLeaveDeduction = false;
         // Pre-tax leave deductions: remuneration not earned, which payroll templates take off their bases.
         BigDecimal leaveReductions = BigDecimal.ZERO;
-        Map<LeaveType, LeaveTypeRule> leaveRules = employee.getCountry() == null ? Map.of() : leaveRulesFor(employee.getCountry().getId());
+        // Enabled payroll templates covering the employee: their statutory leave pay (step 3) and taxes (step 6b).
+        List<PayrollTemplateService.AppliedTemplate> templates = payrollTemplateService.applicableTo(employee);
+        Map<LeaveType, LeaveTypeRule> leaveRules = employee.getCountry() == null
+            ? Map.of()
+            : leaveRulesFor(employee.getCountry().getId(), templates);
+        Map<String, BigDecimal> leavePayByType = new HashMap<>();
+        Map<String, BigDecimal> leaveDaysByType = new HashMap<>();
+        Map<String, BigDecimal> unpaidLeaveDaysByType = new HashMap<>();
         if (employee.getCountry() == null) {
             log.debug("Step 3 — leave deductions skipped: employee {} has no country", employee.getId());
         } else if (!leaveRules.isEmpty()) {
@@ -783,7 +793,8 @@ public class PayrollProcessingService {
             BigDecimal dailyRate = baseSalary.divide(BigDecimal.valueOf(workDays), RATE_SCALE, MONEY_ROUNDING);
             // Leave days overlapping one another are deducted once, so this only guards rounding.
             BigDecimal leftToDeduct = baseSalary;
-            for (LeaveDeduction leave : leaveDeductions(employee, period, leaveRules)) {
+            List<LeaveDay> leaveDays = approvedLeaveDays(employee, period, leaveRules.keySet());
+            for (LeaveDeduction leave : leaveDeductions(leaveDays, leaveRules)) {
                 BigDecimal deduction = baseSalary
                     .multiply(BigDecimal.valueOf(leave.days()))
                     .multiply(leave.percentage())
@@ -829,6 +840,25 @@ public class PayrollProcessingService {
                     postTaxDeductions = postTaxDeductions.add(deduction);
                 }
                 hadLeaveDeduction = true;
+            }
+            // The share still paid on each working day of leave, and the leave's calendar days.
+            Map<LeaveType, BigDecimal> paidPercentDays = new EnumMap<>(LeaveType.class);
+            for (LeaveDay day : leaveDays) {
+                BigDecimal deducted = nz(leaveRules.get(day.type()).deductionPercentageOnDay(day.dayOfAbsence()));
+                leaveDaysByType.merge(day.type().name(), BigDecimal.ONE, BigDecimal::add);
+                if (deducted.compareTo(BigDecimal.valueOf(100)) >= 0) {
+                    unpaidLeaveDaysByType.merge(day.type().name(), BigDecimal.ONE, BigDecimal::add);
+                }
+                if (!day.workingDay()) continue;
+                paidPercentDays.merge(day.type(), BigDecimal.valueOf(100).subtract(deducted), BigDecimal::add);
+            }
+            for (Map.Entry<LeaveType, BigDecimal> paid : paidPercentDays.entrySet()) {
+                BigDecimal amount = baseSalary
+                    .multiply(paid.getValue())
+                    .divide(BigDecimal.valueOf(workDays * 100L), MONEY_SCALE, MONEY_ROUNDING)
+                    .min(leftToDeduct);
+                leftToDeduct = leftToDeduct.subtract(amount);
+                if (amount.signum() > 0) leavePayByType.put(paid.getKey().name(), amount);
             }
         }
 
@@ -880,7 +910,6 @@ public class PayrollProcessingService {
         //   with the template id@version and step (audit trail; year-to-date sums read them back).
         // ============================================================
         Set<TaxType> templateLedgers = EnumSet.noneOf(TaxType.class);
-        List<PayrollTemplateService.AppliedTemplate> templates = payrollTemplateService.applicableTo(employee);
         if (!templates.isEmpty()) {
             PayComponent templateTaxComponent = componentsByCode.get(PayComponentCode.TAX_PIT);
             PayComponent templateEmployerComponent = componentsByCode.get(PayComponentCode.EMPLOYER_CHARGE);
@@ -920,7 +949,10 @@ public class PayrollProcessingService {
                     employedThroughout(employee, period),
                     applied.settings(),
                     applied.attributes(),
-                    payrollTemplateService.yearToDate(employee.getId(), template, period.getStartDate(), period.getPaymentDate())
+                    payrollTemplateService.yearToDate(employee.getId(), template, period.getStartDate(), period.getPaymentDate()),
+                    leavePayByType,
+                    leaveDaysByType,
+                    unpaidLeaveDaysByType
                 );
                 PayrollTemplateEngine.Calculation calculation = payrollTemplateEngine.run(template, input);
                 if (!calculation.remembered().isEmpty()) {
@@ -2350,30 +2382,45 @@ public class PayrollProcessingService {
             .toList();
     }
 
-    /** The country's leave pay rules by leave type. */
-    private Map<LeaveType, LeaveTypeRule> leaveRulesFor(UUID countryId) {
+    /**
+     * The country's leave pay rules by leave type: the workspace's own, else the statutory rule of an
+     * enabled payroll template covering the employee (pay not earned, so before tax).
+     */
+    private Map<LeaveType, LeaveTypeRule> leaveRulesFor(UUID countryId, List<PayrollTemplateService.AppliedTemplate> templates) {
         Map<LeaveType, LeaveTypeRule> rules = new EnumMap<>(LeaveType.class);
         leaveTypeRuleRepository
             .findAll((Specification<LeaveTypeRule>) (root, query, cb) -> cb.equal(root.get("country").get("id"), countryId))
             .stream()
             .sorted(Comparator.comparing(LeaveTypeRule::getId))
             .forEach(rule -> rules.putIfAbsent(rule.getLeaveType(), rule));
+        for (PayrollTemplateService.AppliedTemplate applied : templates) {
+            for (PayrollTemplate.LeavePay statutory : applied.template().effectiveLeavePay()) {
+                rules.computeIfAbsent(statutory.leaveType(), type ->
+                    new LeaveTypeRule()
+                        .leaveType(type)
+                        .deductionPercentage(statutory.deductionPercentage())
+                        .payBands(statutory.payBands())
+                        .affectsTaxableSalary(true)
+                );
+            }
+        }
         return rules;
     }
 
-    /** One working day of approved leave in a pay period, and which calendar day of its absence it is (1 = the first). */
-    private record LeaveDay(LocalDate date, LeaveType type, int dayOfAbsence) {}
+    /** One day of approved leave in a pay period, and which calendar day of its absence it is (1 = the first). */
+    private record LeaveDay(LocalDate date, LeaveType type, int dayOfAbsence, boolean workingDay) {}
 
     /** Working days of one leave type deducted at one percentage, for a payslip line. */
     private record LeaveDeduction(LeaveType type, BigDecimal percentage, int days, int firstDayOfAbsence, int lastDayOfAbsence) {}
 
     /**
-     * The period's approved leave days of the types with a rule, grouped by leave type and deduction
-     * percentage in date order.
+     * The working days among the leave days deducted, grouped by leave type and deduction percentage in
+     * date order.
      */
-    private List<LeaveDeduction> leaveDeductions(Employee employee, PayrollPeriod period, Map<LeaveType, LeaveTypeRule> rules) {
+    private static List<LeaveDeduction> leaveDeductions(List<LeaveDay> leaveDays, Map<LeaveType, LeaveTypeRule> rules) {
         Map<String, LeaveDeduction> groups = new LinkedHashMap<>();
-        for (LeaveDay day : approvedLeaveDays(employee, period, rules.keySet())) {
+        for (LeaveDay day : leaveDays) {
+            if (!day.workingDay()) continue;
             BigDecimal percentage = rules.get(day.type()).deductionPercentageOnDay(day.dayOfAbsence());
             if (percentage == null || percentage.signum() == 0) continue;
             groups.merge(
@@ -2393,8 +2440,8 @@ public class PayrollProcessingService {
     }
 
     /**
-     * The working days (Mon–Fri) of approved leave of the given types within the period, each
-     * counted once. A request of the same type that starts no later than the next working day
+     * The days of approved leave of the given types within the period, each counted once, working days
+     * (Mon–Fri) flagged. A request of the same type that starts no later than the next working day
      * after the previous one ends (e.g. a sick note extended over a weekend) continues that
      * absence, so the day count runs on from the absence's real first day.
      */
@@ -2428,9 +2475,8 @@ public class PayrollProcessingService {
             LocalDate from = r.getStartDate().isAfter(period.getStartDate()) ? r.getStartDate() : period.getStartDate();
             LocalDate to = r.getEndDate().isBefore(period.getEndDate()) ? r.getEndDate() : period.getEndDate();
             for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
-                if (isWeekend(d)) continue;
                 int dayOfAbsence = (int) java.time.temporal.ChronoUnit.DAYS.between(absenceStart.get(type), d) + 1;
-                days.putIfAbsent(d, new LeaveDay(d, type, dayOfAbsence));
+                days.putIfAbsent(d, new LeaveDay(d, type, dayOfAbsence, !isWeekend(d)));
             }
         }
         return List.copyOf(days.values());

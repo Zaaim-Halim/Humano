@@ -214,6 +214,9 @@ def test_cases():
              emp(), full=False, birth=ADULT, error="minimumContributionBase"),
         case("pre-tax deductions refuse", "union dues, voluntary pension and health insurance (art. 78 (2)(a)(ii)-(iv)) are not modelled",
              "4000.00", emp(), birth=ADULT, pre_tax="50.00", error="Pre-tax deductions are not supported"),
+        dict(case("paid sick leave refused", "medical-leave indemnities (OUG 158/2005) are not modelled", "4000.00", emp(), full=False, birth=ADULT,
+                  error="Paid sick or maternity leave is not supported"),
+             leavePay={"SICK": "900.00"}, leaveDays={"SICK": "7"}),
         case("2027 is not covered", "2027 values not yet published", "4000.00", emp(), birth=ADULT, year=2027,
              error="a newer template version is needed"),
     ]
@@ -235,7 +238,7 @@ def main():
         "schemaVersion": 1,
         "id": "ro-employment",
         "name": "Romania — salary income",
-        "version": "2026.1.1",
+        "version": "2026.1.2",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "RO"},
         "validity": {"from": FROM, "to": TO},
@@ -245,6 +248,8 @@ def main():
         "dateBasis": "PERIOD",
         "rounding": {"scale": 0, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.2", "date": "2026-10-25",
+             "summary": "Pay kept for sick or maternity leave days (a leave pay rule) is refused: medical-leave indemnities (OUG 158/2005) are computed on the average income of the last 6 months and have their own tax and contribution treatment (e.g. maternity indemnities are not taxable, Cod fiscal art. 62 c)), which the template does not model. Before, they were taxed and insured as ordinary salary."},
             {"version": "2026.1.1", "date": "2026-10-24",
              "summary": "Corrects an error: the partial-month tax-free amount (nonTaxableAmountOverride) is capped at the statutory 300 lei (January-June) / 200 lei (July-December), which OUG 89/2025 art. III(4) only allows to be reduced; before, up to 300 lei was accepted in the second half of the year."},
             {"version": "2026.1.0", "date": RETRIEVED,
@@ -290,6 +295,8 @@ def main():
         "steps": [
             {"id": "calendarMonth", "type": "REQUIRE", "condition": "#isCalendarMonth",
              "message": "Romanian salary tax is monthly: the pay period must be a whole calendar month"},
+            {"id": "noPaidSickOrMaternityLeave", "type": "REQUIRE", "condition": "#leavePay['SICK'] == 0 and #leavePay['MATERNITY'] == 0",
+             "message": "Paid sick or maternity leave is not supported by this template: medical-leave indemnities are computed on the average income of the last 6 months and follow their own tax and contribution rules (OUG 158/2005)"},
             {"id": "noPreTaxDeductions", "type": "REQUIRE", "condition": "#preTaxDeductions == 0",
              "message": "Pre-tax deductions are not supported by this template: union dues, voluntary pension and health insurance (art. 78 alin. (2) lit. a)) are not modelled"},
             {"id": "grossIncome", "type": "VALUE", "expr": "#pos(#taxableEarnings - #reductions)"},
@@ -339,6 +346,7 @@ def main():
              "base": "#round(#pos(#taxableNet - #personalDeduction), 0, 'HALF_DOWN')", "rate": "#p['taxRate']"},
         ],
         "limitations": [
+            "Not modelled: medical-leave indemnities (concediu medical, OUG 158/2005), computed on the average income of the last 6 months with their own tax and contribution treatment; pay kept for sick or maternity leave days is refused.",
             "Monthly salary for whole calendar months in 2026, in RON; values follow the month the salary relates to (minimum wage and tax-free amount change on 1 July). Back pay for earlier periods taxed on the payment-date rules (art. 78 alin. (3)) is not modelled.",
             "The basic deduction band uses the whole gross salary of the month, including the OUG 89/2025 tax-free amount (Norme pct. 14 alin. (1)); no official example settles this.",
             "CAS, CASS, CAM and income tax are rounded to the leu with 50 bani rounded up (reproducing the published minimum-wage net pay); the tax base and the deduction are rounded to the leu with 50 bani and under dropped (Norme pct. 4, art. 66). No official text was found for the rounding of the contributions and of the tax itself.",

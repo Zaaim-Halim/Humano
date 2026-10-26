@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "bg-employment",
   "name": "Bulgaria — employees under a labour contract",
-  "version": "2026.1.0",
+  "version": "2026.1.1",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "BG"
@@ -19,6 +19,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.1",
+      "date": "2026-10-26",
+      "summary": "Leave pay rules: pay kept for sick days is the employer's payment for the first two working days (KSO art. 40(5)), insured but not taxed (ZDDFL art. 24(2)(14)); before, it was taxed. Sick pay on more days than two working days can span is refused (a top-up is taxable and not separated)."
+    },
     {
       "version": "2026.1.0",
       "date": "2026-10-20",
@@ -65,6 +70,21 @@
       "title": "НОИ разяснява: вноски за фонд ТЗПБ от 1 август 2026 г. (7 променени кода по КИД-2025)",
       "url": "https://www.noi.bg/tzpb01082026/",
       "retrieved": "2026-10-20"
+    },
+    "kso-40-5": {
+      "title": "Кодекс за социалното осигуряване, чл. 40, ал. 5 (изм. ДВ, бр. 106 от 2023 г., в сила от 01.01.2024 г.): 'Осигурителят изплаща на осигуреното лице за първите два работни дни от временната неработоспособност 70 на сто от среднодневното брутно възнаграждение за месеца, в който е настъпила временната неработоспособност, но не по-малко от 70 на сто от среднодневното уговорено възнаграждение'",
+      "url": "https://lex.bg/laws/ldoc/1597824512",
+      "retrieved": "2026-10-26"
+    },
+    "zddfl-24-2-14": {
+      "title": "Закон за данъците върху доходите на физическите лица, чл. 24, ал. 2, т. 14: в облагаемия доход от трудови правоотношения не се включват 'обезщетенията и помощите по част първа от Кодекса за социално осигуряване, включително изплатените на основание чл. 40, ал. 5 от същия кодекс'",
+      "url": "https://lex.bg/laws/ldoc/2135538631",
+      "retrieved": "2026-10-26"
+    },
+    "nevdvpov": {
+      "title": "Наредба за елементите на възнаграждението и за доходите, върху които се правят осигурителни вноски, чл. 1: минималният месечен осигурителен доход 'се определя пропорционално на отработените дни и дните по чл. 40, ал. 5 от Кодекса за социално осигуряване през месеца' — the employer's sick days count as insured days with remuneration",
+      "url": "https://lex.bg/laws/ldoc/-549450240",
+      "retrieved": "2026-10-26"
     }
   },
   "inputs": {
@@ -2389,6 +2409,14 @@
       "message": "Bulgarian contributions are monthly: the pay period must be a whole calendar month"
     },
     {
+      "id": "sickPayWithinStatute",
+      "type": "REQUIRE",
+      "source": "kso-40-5",
+      "when": "#leavePay['SICK'] > 0",
+      "condition": "#leaveDays['SICK'] - #unpaidLeaveDays['SICK'] <= 4",
+      "message": "Sick pay on more days than the first two working days of an absence is not supported: the employer's payment under KSO art. 40(5) covers the first two working days and is not taxed (ZDDFL art. 24(2)(14)), while pay beyond it is taxable wage the template does not separate"
+    },
+    {
       "id": "remuneration",
       "type": "VALUE",
       "expr": "#pos(#socialEarnings - #reductions)"
@@ -2412,7 +2440,7 @@
       "type": "REQUIRE",
       "when": "#remuneration > 0 and !(#employer['employerType'] == 'BUDGET_ENTERPRISE' or #employee['minimumInsurableIncome'] != null)",
       "condition": "#fullPeriod or #remuneration >= #minimum",
-      "message": "Remuneration is below the full-month minimum insurable income in a partial month (or part-time / unpaid leave). The minimum must be prorated by Bulgarian working days; set the prorated amount as the employee's minimumInsurableIncome"
+      "message": "Remuneration is below the full-month minimum insurable income in a partial month (or part-time, unpaid or sick leave). The minimum is prorated by the days worked and the employer's sick days (KSO art. 40(5)) over Bulgaria's working days; set the prorated amount as the employee's minimumInsurableIncome"
     },
     {
       "id": "insurable",
@@ -2523,14 +2551,15 @@
       "label": "Personal income tax (advance)",
       "ledger": "INCOME_TAX",
       "source": "zddfl",
-      "base": "#pos(#taxableEarnings - #reductions - #employeeContributions)",
+      "base": "#pos(#taxableEarnings - #reductions - #leavePay['SICK'] - #employeeContributions)",
       "rate": "#p['incomeTaxRate']"
     }
   ],
   "limitations": [
     "Monthly payroll calendars whose periods are whole calendar months, paid in EUR.",
     "Labour category III only; categories I and II (professional pension fund) are refused.",
-    "Partial months, part-time work or unpaid leave with pay below the full-month minimum insurable income need a prorated minimumInsurableIncome: working days come from Bulgaria's official calendar, which Humano does not hold.",
+    "Partial months, part-time work, unpaid or sick leave with pay below the full-month minimum insurable income need a prorated minimumInsurableIncome (days worked and the employer's sick days, NEVDVPOV art. 1): working days come from Bulgaria's official calendar, which Humano does not hold.",
+    "Leave pay rules: pay kept for sick days is taken as the employer's payment for the first two working days (KSO art. 40(5): 70% of the month's average daily gross pay), insured but not taxed (ZDDFL art. 24(2)(14)); sick pay on more than four calendar days in a month is refused, and an employer top-up above the statutory 70% is not separated. From the third day the National Social Security Institute pays outside payroll. No statutory leave pay rule is declared: the law counts working days, leave pay rules count calendar days of the absence.",
     "Occupation-specific annex rows (e.g. hospital nurses, professional footballers) need the employee's minimumInsurableIncome.",
     "One payroll run per month: remuneration from other runs in the same month is not added before applying the maximum insurable income.",
     "Monthly tax-base reliefs (ZDDFL art. 18 disability, art. 19 voluntary insurance) and the annual tax recalculation are not applied; employees with tenant pre-tax deductions are refused.",
@@ -3467,6 +3496,93 @@
       ]
     },
     {
+      "name": "employer sick pay for the first two days is insured, not taxed",
+      "evidence": "KSO art. 40(5): 70% for the first two working days, paid by the employer; ZDDFL art. 24(2)(14): not taxable; contributions on the whole 2000. KSO art. 6 & 157, ZZO art. 40, NHIF act art. 2, ZDDFL art. 42, ZBDOO 2026 art. 9 & annexes; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": false,
+      "employer": {
+        "kidCode": "62"
+      },
+      "employee": {
+        "qualificationGroup": "2"
+      },
+      "birthDate": "1985-04-12",
+      "leavePay": {
+        "SICK": "140.00"
+      },
+      "leaveDays": {
+        "SICK": "6"
+      },
+      "unpaidLeaveDays": {
+        "SICK": "4"
+      },
+      "expectLines": [
+        {
+          "step": "pension",
+          "side": "EMPLOYEE",
+          "amount": "131.60"
+        },
+        {
+          "step": "pension",
+          "side": "EMPLOYER",
+          "amount": "164.40"
+        },
+        {
+          "step": "universalFund",
+          "side": "EMPLOYEE",
+          "amount": "44.00"
+        },
+        {
+          "step": "universalFund",
+          "side": "EMPLOYER",
+          "amount": "56.00"
+        },
+        {
+          "step": "sickness",
+          "side": "EMPLOYEE",
+          "amount": "28.00"
+        },
+        {
+          "step": "sickness",
+          "side": "EMPLOYER",
+          "amount": "42.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYEE",
+          "amount": "8.00"
+        },
+        {
+          "step": "unemployment",
+          "side": "EMPLOYER",
+          "amount": "12.00"
+        },
+        {
+          "step": "health",
+          "side": "EMPLOYEE",
+          "amount": "64.00"
+        },
+        {
+          "step": "health",
+          "side": "EMPLOYER",
+          "amount": "96.00"
+        },
+        {
+          "step": "workAccident",
+          "side": "EMPLOYER",
+          "amount": "8.00"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "158.44"
+        }
+      ]
+    },
+    {
       "name": "no earnings, no lines",
       "evidence": "nothing is insured or taxed",
       "periodStart": "2026-03-01",
@@ -3533,6 +3649,32 @@
       },
       "birthDate": "1985-04-12",
       "expectError": "prorated"
+    },
+    {
+      "name": "sick pay beyond the first two working days refuses",
+      "evidence": "KSO art. 40(5) covers two working days; a top-up is taxable pay, not modelled",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "2000.00",
+      "fullPeriod": false,
+      "employer": {
+        "kidCode": "62"
+      },
+      "employee": {
+        "qualificationGroup": "2"
+      },
+      "birthDate": "1985-04-12",
+      "leavePay": {
+        "SICK": "600.00"
+      },
+      "leaveDays": {
+        "SICK": "10"
+      },
+      "unpaidLeaveDays": {
+        "SICK": "2"
+      },
+      "expectError": "first two working days"
     },
     {
       "name": "labour category II refuses",

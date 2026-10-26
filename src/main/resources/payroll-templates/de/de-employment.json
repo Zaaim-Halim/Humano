@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "de-employment",
   "name": "Deutschland — Lohnsteuer, Solidaritätszuschlag, Kirchensteuer und Gesamtsozialversicherungsbeitrag",
-  "version": "2026.1.2",
+  "version": "2026.1.3",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "DE"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.3",
+      "date": "2026-10-26",
+      "summary": "Statutory sick pay as a leave pay rule: six weeks of full pay (EntgFG §§ 3, 4), then unpaid as the Krankenkasse pays Krankengeld; applied where the workspace has no sick leave rule of its own. Before, sick days were paid in full unless a rule was added."
+    },
     {
       "version": "2026.1.2",
       "date": "2026-10-25",
@@ -111,6 +116,11 @@
       "title": "Kirchensteuerbeschluss der Nordkirche § 7 Abs. 2 and the Bavarian KirchStG: fractions of a cent are disregarded",
       "url": "https://www.kirchenrecht-nordkirche.de/document/28498",
       "retrieved": "2026-10-21"
+    },
+    "efzg": {
+      "title": "Entgeltfortzahlungsgesetz — § 3 Abs. 1 Satz 1 (Entgeltfortzahlung im Krankheitsfall durch den Arbeitgeber 'bis zur Dauer von sechs Wochen'), § 3 Abs. 3 (Anspruch 'nach vierwöchiger ununterbrochener Dauer des Arbeitsverhältnisses'), § 4 Abs. 1 (das bei regelmäßiger Arbeitszeit zustehende Arbeitsentgelt ist fortzuzahlen)",
+      "url": "https://www.gesetze-im-internet.de/entgfg/__3.html",
+      "retrieved": "2026-10-26"
     }
   },
   "inputs": {
@@ -860,6 +870,21 @@
       "employer": {
         "rate": "#p['insolvencyLevy']"
       }
+    }
+  ],
+  "leavePay": [
+    {
+      "leaveType": "SICK",
+      "deductionPercentage": "100",
+      "payBands": [
+        {
+          "fromDay": 1,
+          "toDay": 42,
+          "deductionPercentage": "0"
+        }
+      ],
+      "source": "efzg",
+      "note": "Six weeks of full pay (§§ 3, 4 EntgFG), then the Krankenkasse pays Krankengeld outside payroll. Not applied: no employer pay in the first four weeks of employment (§ 3 Abs. 3), and a renewed absence for the same illness counting towards the same six weeks."
     }
   ],
   "limitations": [

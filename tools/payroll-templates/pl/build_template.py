@@ -265,6 +265,9 @@ def test_cases():
              error="accidentRate"),
         case("pre-tax deductions refuse", "PPK and other deductions are not modelled", "6000.00", dict(PIT2), pre_tax="100.00",
              error="Pre-tax deductions are not supported"),
+        dict(case("paid sick leave refused", "sick pay (art. 92 KP) and benefits are not in the social insurance base; the health contribution on employer sick pay is not settled from the act",
+                  "6000.00", dict(PIT2), full=False, error="Paid sick or maternity leave is not supported"),
+             leavePay={"SICK": "1500.00"}, leaveDays={"SICK": "7"}),
         case("December 2026 salary paid in January 2027", "2027 limits not yet published", "8000.00", dict(PIT2),
              start="2026-12-01", end="2026-12-31", payment="2027-01-09", error="a newer template version is needed"),
     ]
@@ -285,7 +288,7 @@ def main():
         "schemaVersion": 1,
         "id": "pl-employment",
         "name": "Poland — employment contract (umowa o pracę)",
-        "version": "2026.1.1",
+        "version": "2026.1.2",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "PL"},
         "validity": {"from": FROM, "to": TO},
@@ -295,6 +298,8 @@ def main():
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.2", "date": "2026-10-25",
+             "summary": "Pay kept for sick or maternity leave days (a leave pay rule) is refused: sick pay (art. 92 KP) and sickness or maternity benefits are not subject to social insurance contributions, and whether the health contribution is due on employer sick pay was not settled from the act. Before, they were charged ZUS contributions as ordinary salary."},
             {"version": "2026.1.1", "date": "2026-10-24",
              "summary": "Corrects an error: the Labour Fund / Solidarity Fund answer for partial months (labourFundPartialMonth) is now ignored in a full month, where the month's pay alone decides (ustawa o rynku pracy art. 259 ust. 1); before, an answer left on NOT_DUE or DUE overrode it."},
             {"version": "2026.1.0", "date": RETRIEVED,
@@ -330,6 +335,8 @@ def main():
         "steps": [
             {"id": "calendarMonth", "type": "REQUIRE", "condition": "#isCalendarMonth",
              "message": "Polish payroll is monthly: the pay period must be a whole calendar month"},
+            {"id": "noPaidSickOrMaternityLeave", "type": "REQUIRE", "source": "usus", "condition": "#leavePay['SICK'] == 0 and #leavePay['MATERNITY'] == 0",
+             "message": "Paid sick or maternity leave is not supported by this template: sick pay (wynagrodzenie chorobowe, art. 92 KP) and sickness or maternity benefits are not subject to social insurance contributions, and this template does not separate them from salary"},
             {"id": "noPreTaxDeductions", "type": "REQUIRE", "condition": "#preTaxDeductions == 0",
              "message": "Pre-tax deductions are not supported by this template (PPK and other deductions are not modelled)"},
             {"id": "revenue", "type": "VALUE", "expr": "#pos(#socialEarnings - #reductions)"},

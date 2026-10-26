@@ -1,13 +1,16 @@
 package com.humano.service.payroll.template;
 
 import com.humano.domain.enumeration.CountryCode;
+import com.humano.domain.enumeration.CurrencyCode;
 import com.humano.domain.enumeration.hr.EmployeeStatus;
 import com.humano.domain.enumeration.payroll.Kind;
 import com.humano.domain.enumeration.payroll.Measurement;
 import com.humano.domain.enumeration.payroll.PayComponentCode;
 import com.humano.domain.enumeration.payroll.PayrollLineCategory;
 import com.humano.domain.enumeration.payroll.TaxType;
+import com.humano.domain.payroll.Currency;
 import com.humano.domain.payroll.EmployeeTemplateProfile;
+import com.humano.domain.payroll.OrganizationSettings;
 import com.humano.domain.payroll.PayComponent;
 import com.humano.domain.payroll.PayrollCalendar;
 import com.humano.domain.payroll.PayrollResult;
@@ -22,7 +25,9 @@ import com.humano.dto.payroll.response.EmployeeTemplateResponse;
 import com.humano.dto.payroll.response.PayrollTemplateAdoptionResponse;
 import com.humano.dto.payroll.response.PayrollTemplateResponse;
 import com.humano.dto.payroll.response.TemplateEmployeeResponse;
+import com.humano.repository.payroll.CurrencyRepository;
 import com.humano.repository.payroll.EmployeeTemplateProfileRepository;
+import com.humano.repository.payroll.OrganizationSettingsRepository;
 import com.humano.repository.payroll.PayComponentRepository;
 import com.humano.repository.payroll.PayrollCalendarRepository;
 import com.humano.repository.payroll.PayrollLineRepository;
@@ -98,6 +103,8 @@ public class PayrollTemplateService {
     private final TaxBracketRepository taxBracketRepository;
     private final TaxWithholdingRepository taxWithholdingRepository;
     private final PayrollCalendarRepository payrollCalendarRepository;
+    private final OrganizationSettingsRepository organizationSettingsRepository;
+    private final CurrencyRepository currencyRepository;
 
     public PayrollTemplateService(
         PayrollTemplateCatalog catalog,
@@ -109,7 +116,9 @@ public class PayrollTemplateService {
         PayrollResultRepository payrollResultRepository,
         TaxBracketRepository taxBracketRepository,
         TaxWithholdingRepository taxWithholdingRepository,
-        PayrollCalendarRepository payrollCalendarRepository
+        PayrollCalendarRepository payrollCalendarRepository,
+        OrganizationSettingsRepository organizationSettingsRepository,
+        CurrencyRepository currencyRepository
     ) {
         this.catalog = catalog;
         this.adoptionRepository = adoptionRepository;
@@ -121,6 +130,8 @@ public class PayrollTemplateService {
         this.taxBracketRepository = taxBracketRepository;
         this.taxWithholdingRepository = taxWithholdingRepository;
         this.payrollCalendarRepository = payrollCalendarRepository;
+        this.organizationSettingsRepository = organizationSettingsRepository;
+        this.currencyRepository = currencyRepository;
     }
 
     // ---------------------------------------------------------------- catalog & adoption
@@ -187,8 +198,13 @@ public class PayrollTemplateService {
                 });
             ensureComponent(PayComponentCode.TAX_PIT, "Personal income tax", Kind.DEDUCTION);
             ensureComponent(PayComponentCode.EMPLOYER_CHARGE, "Employer statutory contributions", Kind.EMPLOYER_CHARGE);
+            if (!template.effectiveLeavePay().isEmpty()) {
+                // Statutory leave pay deducts unpaid leave days on this component.
+                ensureComponent(PayComponentCode.DEDUCTION, "Deductions", Kind.DEDUCTION);
+            }
         }
         PayrollTemplateAdoption adoption = adoptionRepository.findByTemplateId(templateId).orElseGet(PayrollTemplateAdoption::new);
+        boolean firstUse = adoption.getId() == null || (enable && !adoption.isEnabled());
         if (adoption.getId() == null) {
             adoption.setTemplateId(templateId);
             adoption.setAcknowledgedVersion(template.version());
@@ -198,8 +214,89 @@ public class PayrollTemplateService {
         adoption.setEnabled(enable);
         adoption.setSettings(settings);
         adoption = adoptionRepository.save(adoption);
+        if (firstUse) {
+            adoptTemplateCurrency(template);
+        }
         log.info("Payroll template {} {} with settings {}", template.ref(), enable ? "enabled" : "disabled", settings.keySet());
         return new PayrollTemplateAdoptionResponse(toResponse(template, adoption), enable ? warnings(template) : List.of());
+    }
+
+    /**
+     * A workspace that starts using a template pays in its currency: the default currency becomes the
+     * template's, unless another enabled template already pays in a different one.
+     */
+    private void adoptTemplateCurrency(PayrollTemplate template) {
+        boolean otherCurrencyInUse = adoptionRepository
+            .findByEnabledTrue()
+            .stream()
+            .filter(a -> !a.getTemplateId().equals(template.id()))
+            .map(a -> catalog.find(a.getTemplateId()))
+            .flatMap(Optional::stream)
+            .anyMatch(other -> !other.currency().equals(template.currency()));
+        if (otherCurrencyInUse) {
+            log.info("Default currency kept: another enabled template pays in a currency other than {}", template.currency());
+            return;
+        }
+        Optional<Currency> currency;
+        try {
+            currency = currencyRepository.findByCode(CurrencyCode.valueOf(template.currency()));
+        } catch (IllegalArgumentException e) {
+            currency = Optional.empty();
+        }
+        if (currency.isEmpty()) {
+            log.warn("Currency {} of template {} is not known; default currency kept", template.currency(), template.ref());
+            return;
+        }
+        OrganizationSettings settings = organizationSettingsRepository.findAll().stream().findFirst().orElseGet(OrganizationSettings::new);
+        if (settings.getDefaultCurrency() == null || !settings.getDefaultCurrency().getId().equals(currency.orElseThrow().getId())) {
+            settings.setDefaultCurrency(currency.orElseThrow());
+            organizationSettingsRepository.save(settings);
+            log.info("Default currency set to {} for template {}", template.currency(), template.ref());
+        }
+    }
+
+    /**
+     * For workspaces that used templates before a template set the default currency: sets it where none is
+     * chosen yet and the enabled templates pay in one currency; a different choice already made is kept.
+     */
+    public void backfillDefaultCurrency() {
+        List<PayrollTemplate> enabled = adoptionRepository
+            .findByEnabledTrue()
+            .stream()
+            .map(a -> catalog.find(a.getTemplateId()))
+            .flatMap(Optional::stream)
+            .toList();
+        Set<String> currencies = enabled.stream().map(PayrollTemplate::currency).collect(java.util.stream.Collectors.toSet());
+        if (currencies.size() != 1) return;
+        String code = currencies.iterator().next();
+        OrganizationSettings settings = organizationSettingsRepository.findAll().stream().findFirst().orElse(null);
+        if (settings != null && settings.getDefaultCurrency() != null) {
+            if (!String.valueOf(settings.getDefaultCurrency().getCode()).equals(code)) {
+                log.warn(
+                    "Default currency {} kept although the enabled payroll templates pay in {}",
+                    settings.getDefaultCurrency().getCode(),
+                    code
+                );
+            }
+            return;
+        }
+        adoptTemplateCurrency(enabled.get(0));
+    }
+
+    /** A statutory leave pay rule of an enabled template. */
+    public record StatutoryLeavePay(PayrollTemplate template, PayrollTemplate.LeavePay rule) {}
+
+    /** The statutory leave pay rules of the enabled country-level templates. */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public List<StatutoryLeavePay> statutoryLeavePay() {
+        List<StatutoryLeavePay> rules = new ArrayList<>();
+        for (PayrollTemplateAdoption adoption : adoptionRepository.findByEnabledTrue()) {
+            if (adoption.getSubdivision() != null) continue;
+            catalog
+                .find(adoption.getTemplateId())
+                .ifPresent(template -> template.effectiveLeavePay().forEach(rule -> rules.add(new StatutoryLeavePay(template, rule))));
+        }
+        return rules;
     }
 
     /** Records that an administrator has reviewed the currently shipped version (clears "update available"). */
