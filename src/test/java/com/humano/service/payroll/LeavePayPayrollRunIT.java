@@ -84,6 +84,9 @@ class LeavePayPayrollRunIT {
     private static final String ES_TEMPLATE = "es-employment";
     private static final String HU_TEMPLATE = "hu-employment";
     private static final String AL_TEMPLATE = "al-employment";
+    private static final String EE_TEMPLATE = "ee-employment";
+    private static final String HR_TEMPLATE = "hr-employment";
+    private static final String PL_TEMPLATE = "pl-employment";
 
     @Autowired
     private PayrollProcessingService payrollService;
@@ -268,7 +271,7 @@ class LeavePayPayrollRunIT {
             compensations.deleteAll(
                 compensations.findAll().stream().filter(c -> c.getEmployee().getId().equals(employee.getId())).toList()
             );
-            for (String templateId : List.of(BG_TEMPLATE, ES_TEMPLATE, HU_TEMPLATE, AL_TEMPLATE)) {
+            for (String templateId : List.of(BG_TEMPLATE, ES_TEMPLATE, HU_TEMPLATE, AL_TEMPLATE, EE_TEMPLATE, HR_TEMPLATE, PL_TEMPLATE)) {
                 profiles.findByEmployeeIdAndTemplateId(employee.getId(), templateId).ifPresent(profiles::delete);
                 adoptions.findByTemplateId(templateId).ifPresent(adoptions::delete);
             }
@@ -599,6 +602,63 @@ class LeavePayPayrollRunIT {
         assertThat(run.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
         // 100,000 - 9,090.91 - 45,454.55 = 45,454.54 paid; 9.5% = 4,318.18.
         assertThat(templateAmounts(run)).contains("socialInsurance/WITHHOLDING=4318.18");
+    }
+
+    @Test
+    void anEstonianLeavingMonthProratesTheSocialTaxMinimum() {
+        moveEmployeeTo(CountryCode.EE);
+        payIn("500", CurrencyCode.EUR);
+        tx.executeWithoutResult(s -> {
+            Employee e = employees.findById(employee.getId()).orElseThrow();
+            e.setEndDate(LocalDate.of(2026, 6, 12));
+            employees.save(e);
+        });
+        templateService.configure(EE_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of()));
+        templateService.saveProfile(EE_TEMPLATE, employee.getId(), Map.of("fundedPensionRate", "NONE", "taxFreeAmount", "700"));
+
+        PayrollRunResponse run = calculate(month(2026, 6));
+
+        // määrus nr 17 § 6 lg 2: 12 days / 30 x 886 = 354.40 < 500 paid, so social tax on the pay; before, refused.
+        assertThat(run.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        assertThat(templateAmounts(run)).contains("socialTax/EMPLOYER_CHARGE=165");
+    }
+
+    @Test
+    void croatianSickLeavePastDay42IsRefused() {
+        moveEmployeeTo(CountryCode.HR);
+        payIn("2000", CurrencyCode.EUR);
+        templateService.configure(HR_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of()));
+        templateService.saveProfile(
+            HR_TEMPLATE,
+            employee.getId(),
+            Map.of("municipalityCode", "1333", "personalAllowanceCoefficient", "1", "secondPillarMember", "true")
+        );
+        rule(LeaveType.SICK, "30", List.of());
+        // From 19 January: day 42 is 1 March, so March reaches HZZO's days.
+        leave(LeaveType.SICK, LocalDate.of(2026, 1, 19), LocalDate.of(2026, 3, 13));
+
+        PayrollRunResponse run = calculate(month(2026, 3));
+
+        assertThat(run.validationErrors())
+            .filteredOn(err -> employee.getId().equals(err.employeeId()))
+            .singleElement()
+            .satisfies(err -> assertThat(err.message()).startsWith("Sick leave past day 42 is paid on HZZO's account"));
+    }
+
+    @Test
+    void polishSickPayIsOutsideZusButInHealthAndTax() {
+        moveEmployeeTo(CountryCode.PL);
+        payIn("6000", CurrencyCode.PLN);
+        templateService.configure(PL_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of("accidentRate", "0.0167")));
+        templateService.saveProfile(PL_TEMPLATE, employee.getId(), Map.of("pit2Reduction", "ONE_TWELFTH", "labourFundPartialMonth", "DUE"));
+        rule(LeaveType.SICK, "20", List.of());
+        leave(LeaveType.SICK, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 6));
+
+        PayrollRunResponse run = calculate(month(2026, 3));
+
+        assertThat(run.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        // 6,000 - 272.73 unpaid - 1,090.91 sick pay = 4,636.36 for ZUS; pension 9.76% = 452.51.
+        assertThat(templateAmounts(run)).contains("pension/WITHHOLDING=452.51");
     }
 
     @Test

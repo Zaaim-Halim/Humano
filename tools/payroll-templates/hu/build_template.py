@@ -90,7 +90,11 @@ def expected_lines(c):
             # Tbj. 27. § (2) c): days on sickness benefit (the rule leaves them unpaid) are disregarded; each
             # remaining calendar day counts a thirtieth of the minimum
             end = date.fromisoformat(c["periodEnd"])
-            days = end.day - int(c.get("unpaidLeaveDays", {}).get("SICK", "0"))
+            # 27. § (2) a): days of the month outside the employment are disregarded too
+            first = date.fromisoformat(c.get("employmentStartDate", c["periodStart"]))
+            last = date.fromisoformat(c["employmentEndDate"]) if "employmentEndDate" in c else end
+            outside = max((first - start).days, 0) + max((end - last).days, 0)
+            days = end.day - outside - int(c.get("unpaidLeaveDays", {}).get("SICK", "0"))
             floor = Decimal(96840) if days >= 30 else ft(Decimal(96840) * max(days, 0) / 30)
     # allowances in NAV's order (booklet 73, point 1)
     rest = wage
@@ -122,7 +126,8 @@ def expected_lines(c):
 
 
 def case(name, evidence, gross, employee, birth="1988-06-15", start="2026-03-01", end="2026-03-31", payment=None,
-         full=True, error=None, pre_tax=None, throughout=None, reductions=None, leave_pay=None, leave_days=None, unpaid_days=None):
+         full=True, error=None, pre_tax=None, throughout=None, reductions=None, leave_pay=None, leave_days=None, unpaid_days=None,
+         joined=None, left=None):
     c = {"name": name, "evidence": evidence, "periodStart": start, "periodEnd": end, "frequency": "MONTHLY"}
     if payment:
         c["paymentDate"] = payment
@@ -137,6 +142,10 @@ def case(name, evidence, gross, employee, birth="1988-06-15", start="2026-03-01"
         c["unpaidLeaveDays"] = unpaid_days
     if throughout is not None:
         c["employedThroughout"] = throughout
+    if joined:
+        c["employmentStartDate"] = joined
+    if left:
+        c["employmentEndDate"] = left
     if birth:
         c["birthDate"] = birth
     c.update({"employer": {}, "employee": employee})
@@ -189,6 +198,10 @@ def test_cases():
              "322800", {}, full=False, reductions="292800", leave_days={"UNPAID": "20"}, unpaid_days={"UNPAID": "20"}),
         case("parental leave: no minimum base", "Tbj. 27. § (3) a): the minimum does not apply to a person receiving csecsemőgondozási díj or gyermekgondozási díj. " + law,
              "322800", {}, full=False, reductions="292800", leave_days={"MATERNITY": "20"}, unpaid_days={"MATERNITY": "20"}),
+        case("joined on 11 March: the minimum base for 21 days", "Tbj. 27. § (2) a): the 10 days before the employment are disregarded, 21 x 96,840 / 30 = 67,788 Ft; employer 18.5% on 67,788 - 60,000. " + law,
+             "60000", {}, full=False, throughout=False, joined="2026-03-11"),
+        case("left on 20 March: the minimum base for 20 days", "Tbj. 27. § (2) a): 11 days after the employment ended are disregarded, 20 x 96,840 / 30 = 64,560 Ft. " + law,
+             "50000", {}, full=False, throughout=False, left="2026-03-20"),
     ]
     for c in computed:
         c["expectLines"] = expected_lines(c)
@@ -196,8 +209,6 @@ def test_cases():
     zero["expectLines"] = []
     errors = [
         case("no birth date without a mothers' allowance", "the under-25 allowance depends on the age", "400000", {}, birth=None, error="no birth date"),
-        case("partial month below the minimum base", "Tbj. 27. § (2) a): the minimum base is prorated by calendar days", "60000", {},
-             full=False, throughout=False, error="minimumContributionBase"),
         case("paid parental leave refused", "Tbj. 32. § a): benefits paid through the employer have their own contribution rules, not modelled", "400000", {},
              full=False, leave_pay={"MATERNITY": "100000"}, leave_days={"MATERNITY": "10"}, error="Paid parental leave is not supported"),
         case("more beneficiaries than dependants", "Szja tv. 29/A. §: beneficiaries are among the dependants", "500000",
@@ -221,7 +232,7 @@ def main():
         "schemaVersion": 1,
         "id": "hu-employment",
         "name": "Hungary — employment (munkaviszony)",
-        "version": "2026.1.1",
+        "version": "2026.1.2",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "HU"},
         "validity": {"from": FROM, "to": TO},
@@ -231,6 +242,8 @@ def main():
         "dateBasis": "PERIOD",
         "rounding": {"scale": 0, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.2", "date": "2026-10-26",
+             "summary": "A month the employment starts or ends: the minimum base leaves out the days outside the employment, each other day a thirtieth (Tbj. 27. § (2) a)); before, pay below the minimum was refused until the prorated base was entered. Part-time pay below the minimum is still refused."},
             {"version": "2026.1.1", "date": LEAVE_RETRIEVED,
              "summary": "Leave pay rules: the employer's sick pay (betegszabadság) is wage (Tbj. 27. § (1) a)); days on sickness benefit, which the rule leaves unpaid, are disregarded for the minimum base, each other day counting a thirtieth (27. § (2) c)); no minimum in a month with parental leave (27. § (3) a)). Before, a month with leave below the minimum was refused until the minimum was entered. Pay kept for parental leave days is refused (benefits paid through the employer, 32. § a))."},
             {"version": "2026.1.0", "date": RETRIEVED,
@@ -286,10 +299,12 @@ def main():
             {"id": "taxableWage", "type": "VALUE", "expr": "#pos(#taxableEarnings - #reductions)"},
             {"id": "partialMonthMinimum", "type": "REQUIRE", "source": "tbj",
              "when": insured + " and !#employee['minimumBaseExempt'] and #employee['minimumContributionBase'] == null and #wage > 0 and #wage < #p['minimumContributionBase']",
-             "condition": "#employedThroughout and #fte >= 1",
-             "message": "Pay is below the minimum contribution base in a partial month: the base is prorated by calendar days (Tbj. 27. § (2)), so set the employee's minimumContributionBase"},
+             "condition": "#fte >= 1",
+             "message": "A part-time employee is paid below the minimum contribution base: set the employee's minimumContributionBase (Tbj. 27. § (2))"},
+            {"id": "daysOutsideEmployment", "type": "VALUE", "source": "tbj", "when": "!#employedThroughout",
+             "expr": "(#employmentStartDate > #periodStart ? #employmentStartDate.getDayOfMonth() - 1 : 0) + (#employmentEndDate != null and #employmentEndDate < #periodEnd ? #periodEnd.getDayOfMonth() - #employmentEndDate.getDayOfMonth() : 0)"},
             {"id": "minimumBaseDays", "type": "VALUE", "source": "tbj",
-             "expr": "#periodEnd.getDayOfMonth() - #unpaidLeaveDays['SICK']"},
+             "expr": "#periodEnd.getDayOfMonth() - #daysOutsideEmployment - #unpaidLeaveDays['SICK']"},
             {"id": "minimumBase", "type": "VALUE", "source": "tbj",
              "when": insured + " and !#employee['minimumBaseExempt'] and #wage > 0 and #leaveDays['MATERNITY'] == 0",
              "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : (#minimumBaseDays >= 30 ? #p['minimumContributionBase'] : #divide(#p['minimumContributionBase'] * #pos(#minimumBaseDays), 30, 0, 'HALF_UP'))"},

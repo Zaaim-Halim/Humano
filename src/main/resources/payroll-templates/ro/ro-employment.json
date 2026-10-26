@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "ro-employment",
   "name": "Romania — salary income",
-  "version": "2026.1.2",
+  "version": "2026.1.3",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "RO"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.3",
+      "date": "2026-10-26",
+      "summary": "Pay kept for sick days is the sick-leave indemnity: taxed with CAS and CASS as salary (Cod fiscal art. 76 (1), 139 (1) o), 155 (1) i)) and outside the CAM base (art. 220^4 (1)); before, it was refused. A month with leave keeps the full minimum CAS/CASS (art. 146 (5^6): the contract was active), so it is no longer refused; a month the contract starts or ends still is. Paid maternity leave is still refused."
+    },
     {
       "version": "2026.1.2",
       "date": "2026-10-25",
@@ -487,10 +492,10 @@
       "message": "Romanian salary tax is monthly: the pay period must be a whole calendar month"
     },
     {
-      "id": "noPaidSickOrMaternityLeave",
+      "id": "noPaidMaternityLeave",
       "type": "REQUIRE",
-      "condition": "#leavePay['SICK'] == 0 and #leavePay['MATERNITY'] == 0",
-      "message": "Paid sick or maternity leave is not supported by this template: medical-leave indemnities are computed on the average income of the last 6 months and follow their own tax and contribution rules (OUG 158/2005)"
+      "condition": "#leavePay['MATERNITY'] == 0",
+      "message": "Paid maternity leave is not supported by this template: the maternity indemnity (code 08) is not taxed (Cod fiscal art. 62 c)) and has no CASS, and its CAS treatment is not modelled"
     },
     {
       "id": "noPreTaxDeductions",
@@ -560,9 +565,9 @@
       "id": "partialMonthMinimum",
       "type": "REQUIRE",
       "when": "#socialIncome > 0 and #employee['minimumContributionException'] == 'NONE' and #employee['minimumContributionBase'] == null and #contributionBase < #p['minimumWage'] - #p['nonTaxableAmount']",
-      "condition": "#fullPeriod and #reductions == 0",
+      "condition": "#employedThroughout",
       "source": "anaf-ghid-cas-minim",
-      "message": "Pay is below the minimum wage in a partial month: the minimum CAS/CASS base is prorated by working days (art. 146 alin. (5^6)), so set the employee's minimumContributionBase"
+      "message": "Pay is below the minimum wage in a month the contract started or ended: the minimum CAS/CASS base is prorated by the working days the contract was active (art. 146 alin. (5^6)), so set the employee's minimumContributionBase"
     },
     {
       "id": "minimumBase",
@@ -601,7 +606,7 @@
       "label": "Work insurance contribution (CAM)",
       "ledger": "OTHER",
       "source": "cod-fiscal",
-      "base": "#contributionBase",
+      "base": "#pos(#contributionBase - #leavePay['SICK'])",
       "employer": {
         "rate": "#p['camRate']"
       }
@@ -663,7 +668,7 @@
     }
   ],
   "limitations": [
-    "Not modelled: medical-leave indemnities (concediu medical, OUG 158/2005), computed on the average income of the last 6 months with their own tax and contribution treatment; pay kept for sick or maternity leave days is refused.",
+    "Leave pay rules: pay kept for sick days is the sick-leave indemnity (concediu medical, code 01, OUG 158/2005): taxed, with CAS and CASS, as salary (Cod fiscal art. 76 (1), 139 (1) o), 155 (1) i)), and left out of the CAM base, which lists salary income without it (art. 220^4 (1)) — read from that list, not stated outright. The statutory indemnity is 75% of the average of the last 6 months' income; a rule pays a percentage of salary, so the amount may differ. Paid maternity leave (code 08) is refused. The minimum CAS/CASS applies in full in a month the contract was active throughout (art. 146 (5^6)); a month the contract started or ended needs the prorated base. The tax-free amount in a month with leave at the minimum wage still asks for nonTaxableAmountOverride: whether art. III (4) c) prorates it for a month with an indemnity is not settled.",
     "Monthly salary for whole calendar months in 2026, in RON; values follow the month the salary relates to (minimum wage and tax-free amount change on 1 July). Back pay for earlier periods taxed on the payment-date rules (art. 78 alin. (3)) is not modelled.",
     "The basic deduction band uses the whole gross salary of the month, including the OUG 89/2025 tax-free amount (Norme pct. 14 alin. (1)); no official example settles this.",
     "CAS, CASS, CAM and income tax are rounded to the leu with 50 bani rounded up (reproducing the published minimum-wage net pay); the tax base and the deduction are rounded to the leu with 50 bani and under dropped (Norme pct. 4, art. 66). No official text was found for the rounding of the contributions and of the tax itself.",
@@ -1263,6 +1268,98 @@
       ]
     },
     {
+      "name": "sick-leave indemnity: tax, CAS and CASS as salary, no CAM",
+      "evidence": "Cod fiscal art. 76 (1), 139 (1) o), 155 (1) i) (code 01); art. 220^4 (1): CAM on the 5,100 other pay. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "6000.00",
+      "fullPeriod": false,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true"
+      },
+      "leavePay": {
+        "SICK": "900.00"
+      },
+      "leaveDays": {
+        "SICK": "7"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "1500"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "600"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "115"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "388"
+        }
+      ]
+    },
+    {
+      "name": "a month with leave keeps the full minimum CAS",
+      "evidence": "art. 146 (5^6): the contract was active the whole month, so CAS and CASS on at least 4,050 - 300 = 3,750. Codul fiscal art. 77, 78, 138, 146, 156, 168, 220^3; OUG 89/2025 art. III; HG 1506/2024, HG 146/2026; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "4000.00",
+      "fullPeriod": false,
+      "birthDate": "1980-05-10",
+      "employer": {},
+      "employee": {
+        "mainEmployer": "true"
+      },
+      "reductions": "1000.00",
+      "leaveDays": {
+        "UNPAID": "10"
+      },
+      "expectLines": [
+        {
+          "step": "cas",
+          "side": "EMPLOYEE",
+          "amount": "750"
+        },
+        {
+          "step": "cass",
+          "side": "EMPLOYEE",
+          "amount": "300"
+        },
+        {
+          "step": "casMinimum",
+          "side": "EMPLOYER",
+          "amount": "188"
+        },
+        {
+          "step": "cassMinimum",
+          "side": "EMPLOYER",
+          "amount": "75"
+        },
+        {
+          "step": "cam",
+          "side": "EMPLOYER",
+          "amount": "68"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "114"
+        }
+      ]
+    },
+    {
       "name": "no earnings, no lines",
       "evidence": "nothing is insured or taxed",
       "periodStart": "2026-03-01",
@@ -1322,7 +1419,7 @@
     },
     {
       "name": "partial month below the minimum base",
-      "evidence": "art. 146 (5^6): the floor is prorated by working days",
+      "evidence": "art. 146 (5^6): the floor is prorated by the working days the contract was active",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -1333,6 +1430,7 @@
       "employee": {
         "mainEmployer": "true"
       },
+      "employedThroughout": false,
       "expectError": "minimumContributionBase"
     },
     {
@@ -1352,8 +1450,8 @@
       "expectError": "Pre-tax deductions are not supported"
     },
     {
-      "name": "paid sick leave refused",
-      "evidence": "medical-leave indemnities (OUG 158/2005) are not modelled",
+      "name": "paid maternity leave refused",
+      "evidence": "the maternity indemnity (code 08) is untaxed (art. 62 c)) and without CASS; its CAS treatment is not modelled",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
@@ -1364,13 +1462,13 @@
       "employee": {
         "mainEmployer": "true"
       },
-      "expectError": "Paid sick or maternity leave is not supported",
       "leavePay": {
-        "SICK": "900.00"
+        "MATERNITY": "900.00"
       },
       "leaveDays": {
-        "SICK": "7"
-      }
+        "MATERNITY": "7"
+      },
+      "expectError": "Paid maternity leave is not supported"
     },
     {
       "name": "2027 is not covered",

@@ -45,6 +45,11 @@ SOURCES = {
 }
 for s in SOURCES.values():
     s["retrieved"] = RETRIEVED
+SOURCES["zod-179-213"] = {
+    "title": "Zakon o doprinosima (pročišćeni tekst, zakon.hr) — čl. 179 st. 1 (naknada plaće za privremenu nesposobnost na teret HZZO-a: obveznik doprinosa je HZZO), čl. 200 st. 1 (najniža mjesečna osnovica za razdoblje u osiguranju u trajanju od mjesec dana), čl. 202 ('a razdoblje u osiguranju kraće je od mjesec dana, iznos osnovice za taj mjesec razmjeran je broju dana u osiguranju u odnosu na ukupan broj dana toga mjeseca'), čl. 213 (poslodavac koji umjesto HZZO-a isplaćuje naknadu plaće 'ne obračunava doprinose prema isplaćenoj naknadi plaće')",
+    "url": "https://www.zakon.hr/z/365/Zakon-o-doprinosima",
+    "retrieved": LEAVE_RETRIEVED,
+}
 SOURCES["hzzo-naknada"] = {
     "title": "HZZO, 'Naknada plaće za vrijeme privremene nesposobnosti za rad': poslodavac obračunava i isplaćuje naknadu plaće; prva 42 dana (sedam dana za radnika invalida rada) iz svojih sredstava, nakon toga HZZO vraća isplaćenu naknadu; na teret HZZO-a 70% osnovice za prvih šest mjeseci (80% nakon toga), najviše 995,45 eura mjesečno",
     "url": "https://hzzo.hr/obvezno-zdravstveno-osiguranje-0/naknada-place-za-vrijeme-privremene-nesposobnosti-za-rad",
@@ -109,7 +114,16 @@ def expected_lines(c):
 
     employee_contributions = Decimal(0)
     if gross > 0:
-        floor = Decimal(emp["minimumContributionBase"]) if "minimumContributionBase" in emp else minimum
+        if "minimumContributionBase" in emp:
+            floor = Decimal(emp["minimumContributionBase"])
+        else:
+            # ZOD čl. 202: shorter insurance in the month (start or end of employment) prorates the minimum by days
+            from datetime import date
+            first_day, last_day = date.fromisoformat(c["periodStart"]), date.fromisoformat(c["periodEnd"])
+            joined = date.fromisoformat(c.get("employmentStartDate", c["periodStart"]))
+            left = date.fromisoformat(c["employmentEndDate"]) if "employmentEndDate" in c else last_day
+            insured = (min(left, last_day) - max(joined, first_day)).days + 1
+            floor = money(minimum * insured / last_day.day)
         base = max(gross, floor)  # ZOD čl. 21, 200
         pension_base = min(base, maximum)  # čl. 204
         if "pensionBaseReduction" in emp:
@@ -138,7 +152,7 @@ def expected_lines(c):
 
 
 def case(name, evidence, gross, employee, full=True, error=None, start="2026-03-01", end="2026-03-31",
-         payment=None, pre_tax=None, leave_pay=None, leave_days=None):
+         payment=None, pre_tax=None, leave_pay=None, leave_days=None, joined=None, left=None, absence_day=None):
     c = {
         "name": name,
         "evidence": evidence,
@@ -155,6 +169,14 @@ def case(name, evidence, gross, employee, full=True, error=None, start="2026-03-
         c["leavePay"] = leave_pay
     if leave_days:
         c["leaveDays"] = leave_days
+    if joined or left:
+        c["employedThroughout"] = False
+    if joined:
+        c["employmentStartDate"] = joined
+    if left:
+        c["employmentEndDate"] = left
+    if absence_day:
+        c["leaveAbsenceDay"] = absence_day
     if error:
         c["expectError"] = error
     return c
@@ -200,6 +222,10 @@ def test_cases():
              "650.00", emp(ZAGREB), start="2025-12-01", end="2025-12-31", payment="2026-01-15"),
         case("employer sick pay for the first 42 days is pay", "HZZO: the first 42 days of sick leave are paid by the employer from its own funds, as naknada plaće: contributions and tax on the whole 2,000. " + law,
              "2000.00", emp(ZAGREB), full=False, leave_pay={"SICK": "254.55"}, leave_days={"SICK": "7"}),
+        case("joined on 11 March: the minimum for 21 days in insurance", "ZOD čl. 202: 757.34 x 21 / 31 = 513.04. " + law,
+             "500.00", emp(ZAGREB), full=False, joined="2026-03-11"),
+        case("a month with sick leave keeps the full minimum", "ZOD čl. 200 st. 1: insured the whole month (the employer's first 42 days), so contributions on at least 757.34. " + law,
+             "600.00", emp(ZAGREB), full=False, leave_pay={"SICK": "200.00"}, leave_days={"SICK": "10"}, absence_day={"SICK": "10"}),
     ]
     for c in computed:
         c["expectLines"] = expected_lines(c)
@@ -210,8 +236,9 @@ def test_cases():
              "2000.00", emp(9999), error="No value for 9999"),
         case("missing allowance coefficient", "the coefficient comes from the porezna kartica",
              "2000.00", {"municipalityCode": str(ZAGREB), "secondPillarMember": "true"}, error="personalAllowanceCoefficient"),
-        case("partial month below the minimum base refuses", "ZOD čl. 200, 202: the floor is prorated by insured days",
-             "500.00", emp(ZAGREB), full=False, error="minimumContributionBase"),
+        case("sick leave on HZZO's account refuses", "ZOD čl. 179, 213: from day 43 the employer pays on HZZO's account and calculates no contributions on it; not separated",
+             "1500.00", emp(ZAGREB), full=False, leave_pay={"SICK": "600.00"}, leave_days={"SICK": "20"}, absence_day={"SICK": "60"},
+             error="HZZO"),
         case("second job at 1,300 or less needs the reduction share", "ZOD čl. 21.a st. 5: the reduction is shared by declaration",
              "900.00", emp(ZAGREB, otherEmployment="true"), error="pensionBaseReduction"),
         case("pre-tax deductions refuse", "voluntary pension and similar deductions are not modelled",
@@ -234,7 +261,7 @@ def main():
         "schemaVersion": 1,
         "id": "hr-employment",
         "name": "Croatia — salary (plaća)",
-        "version": "2026.1.1",
+        "version": "2026.1.2",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "HR"},
         "validity": {"from": FROM, "to": TO},
@@ -244,6 +271,8 @@ def main():
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.2", "date": "2026-10-26",
+             "summary": "A month employment starts or ends: the minimum base is prorated by the days in insurance (Zakon o doprinosima čl. 202); a month with sick leave keeps the full minimum (čl. 200 st. 1). Before, pay below the minimum in such months was refused until the base was entered. Sick leave past day 42, paid on HZZO's account without contributions (čl. 179, 213), is refused."},
             {"version": "2026.1.1", "date": LEAVE_RETRIEVED,
              "summary": "Leave pay rules documented, no change in amounts: pay kept for sick days is the employer's naknada plaće for the first 42 days, taxed and insured as pay. A month with leave below the minimum base still asks for the prorated base, now saying so."},
             {"version": "2026.1.0", "date": RETRIEVED,
@@ -300,13 +329,14 @@ def main():
             {"id": "noPreTaxDeductions", "type": "REQUIRE", "condition": "#preTaxDeductions == 0",
              "message": "Pre-tax deductions are not supported by this template"},
             {"id": "remuneration", "type": "VALUE", "expr": "#pos(#socialEarnings - #reductions)"},
+            {"id": "noHzzoSickPay", "type": "REQUIRE", "source": "zod-179-213",
+             "when": "#leaveDays['SICK'] > 0", "condition": "#leaveAbsenceDay['SICK'] <= 42",
+             "message": "Sick leave past day 42 is paid on HZZO's account, on which the employer calculates no contributions (Zakon o doprinosima čl. 179, 213); this template does not separate it from pay"},
+            {"id": "daysOutsideInsurance", "type": "VALUE", "source": "zod-179-213", "when": "!#employedThroughout",
+             "expr": "(#employmentStartDate > #periodStart ? #employmentStartDate.getDayOfMonth() - 1 : 0) + (#employmentEndDate != null and #employmentEndDate < #periodEnd ? #periodEnd.getDayOfMonth() - #employmentEndDate.getDayOfMonth() : 0)"},
             {"id": "minimumBase", "type": "VALUE",
-             "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : #round(#table.lookup('contributionBases', #periodStart.getYear(), 'minimum') * #fte, 2, 'HALF_UP')",
+             "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : #divide(#table.lookup('contributionBases', #periodStart.getYear(), 'minimum') * #fte * (#periodEnd.getDayOfMonth() - #daysOutsideInsurance), #periodEnd.getDayOfMonth(), 2, 'HALF_UP')",
              "source": "naredba-2026"},
-            {"id": "partialMonthMinimum", "type": "REQUIRE",
-             "when": "#remuneration > 0 and #employee['minimumContributionBase'] == null",
-             "condition": "#fullPeriod or #remuneration >= #minimumBase",
-             "message": "Pay is below the minimum contribution base in a partial month (or a month with unpaid or sick leave); the base is prorated by insured days (ZOD čl. 202), so set the employee's minimumContributionBase"},
             {"id": "contributionBase", "type": "VALUE", "expr": "#remuneration == 0 ? 0 : #max(#remuneration, #minimumBase)",
              "source": "zod"},
             {"id": "pensionBase", "type": "VALUE", "expr": "#min(#contributionBase, #table.lookup('contributionBases', #periodStart.getYear(), 'maximum'))", "source": "naredba-2026"},
@@ -340,8 +370,8 @@ def main():
             "Monthly salary for whole calendar months, paid in EUR in 2026. Income tax uses the rules in force on the payment date (ZPD čl. 24 st. 1); contributions use the bases of the year the salary month belongs to (2025 and 2026 held). A salary paid in 2027 needs the 2027 version.",
             "The youth reduction (100 % up to age 25, 50 % from 26 to 30) is granted only in the annual tax calculation (ZPD čl. 46 st. 2), not in the monthly advance, so it is not applied here.",
             "The employee's local unit, allowance coefficient and pension-fund membership come from the tax card and HZMO data and are entered per employee; development group I residence (50 % advance reduction) is entered per employee, not derived from the unit.",
-            "The minimum contribution base is prorated by FTE for part-time work; partial months below the minimum, and management-board members (0.65 x average wage), need an explicit minimumContributionBase.",
-            "Leave pay rules: pay kept for sick days is taken as the employer's naknada plaće for the first 42 days (7 for a disabled worker), paid from its own funds and taxed and insured as pay. From day 43 the employer pays on behalf of HZZO (70% of the base, 80% after six months, at most 995.45 EUR a month) and is refunded; that part's tax and contribution treatment was not confirmed from an official source and is treated as pay, and no statutory leave pay rule is declared because the monthly cap can't be expressed as a percentage of salary.",
+            "The minimum contribution base is prorated by FTE for part-time work and by days in insurance in a month employment starts or ends (ZOD čl. 202); management-board members (0.65 x average wage) need an explicit minimumContributionBase.",
+            "Leave pay rules: pay kept for sick days is taken as the employer's naknada plaće for the first 42 days (7 for a disabled worker), paid from its own funds and taxed and insured as pay. From day 43 the employer pays on behalf of HZZO (70% of the base, 80% after six months, at most 995.45 EUR a month), without contributions (Zakon o doprinosima čl. 213), and is refunded; a month with sick leave past day 42 is refused, since that part is not separated from pay. No statutory leave pay rule is declared: the monthly cap can't be expressed as a percentage of salary. A disabled worker's 7 employer days are not modelled.",
             "The MO I base reduction for several employers, or for a salary paid in several instalments, must be entered as pensionBaseReduction; the computed reduction assumes one employer and one payment, and is rounded to 0.01 EUR.",
             "The annual pension ceiling (143,496.00 EUR) applied by the Tax Administration in the annual calculation, other contribution exemptions (e.g. employment of persons with disabilities) and increased-length insurance contributions (staž s povećanim trajanjem) are not modelled.",
             "Non-taxable payments (e.g. bonuses within the non-taxable limits) must be excluded from taxable and social earnings by the tenant's pay components; pre-tax deductions are refused.",

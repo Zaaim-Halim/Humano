@@ -83,6 +83,11 @@ SOURCES = {
 }
 for s in SOURCES.values():
     s["retrieved"] = RETRIEVED
+SOURCES["uswiadczenia-81-5"] = {
+    "title": "Ustawa o świadczeniach opieki zdrowotnej finansowanych ze środków publicznych (t.j. Dz.U. 2024 poz. 146), art. 81 ust. 1 (podstawa jak dla ubezpieczeń emerytalnego i rentowego, z zastrzeżeniem ust. 5, 6 i 10), ust. 5: 'Przy ustalaniu podstawy wymiaru składki na ubezpieczenie zdrowotne osób, o których mowa w ust. 1, nie stosuje się wyłączeń wynagrodzeń za czas niezdolności do pracy wskutek choroby lub odosobnienia w związku z chorobą zakaźną', ust. 6 (pomniejszenie o składki emerytalne, rentowe i chorobowe ubezpieczonego)",
+    "url": "https://api.sejm.gov.pl/eli/acts/DU/2024/146/text.pdf",
+    "retrieved": "2026-10-26",
+}
 
 PARAMS = {
     "minimumWage": ("4806", "rm-2025-1242"),
@@ -135,7 +140,11 @@ def expected_lines(c):
             lines.append({"step": step, "side": side, "amount": str(amount)})
         return amount
 
-    revenue = gross  # no reductions in the cases
+    tax_revenue = gross - Decimal(c.get("reductions", "0"))
+    # Employer sick pay (art. 92 KP) is outside the social insurance base, but in the health base
+    # (uswiadczenia art. 81 ust. 5) and taxed
+    sick_pay = Decimal(c.get("leavePay", {}).get("SICK", "0"))
+    revenue = tax_revenue - sick_pay
     # usus art. 19: pension and disability stop at 282 600 zł a year
     pension_base = min(revenue, max(Decimal(282600) - ytd.get("pension.EMPLOYEE.base", Decimal(0)), Decimal(0)))
     pe = add("pension", "EMPLOYEE", gr(pension_base * Decimal("0.0976")))
@@ -157,14 +166,14 @@ def expected_lines(c):
     social = pe + de + se
     # updof art. 21 ust. 1 pkt 148 (to the 26th birthday inclusive, MF explanations) and 152-154, joint limit ust. 44
     category = emp.get("taxExemption", "NONE") != "NONE"
-    if not category and emp.get("youthReliefWaived") != "true" and revenue > 0:
+    if not category and emp.get("youthReliefWaived") != "true" and tax_revenue > 0:
         b = date.fromisoformat(c["birthDate"])
         category = pay <= b.replace(year=b.year + 26)
-    exempt = min(revenue, max(Decimal(85528) - ytd.get("exemptRevenue.TAX.base", Decimal(0)), Decimal(0))) if category else Decimal(0)
+    exempt = min(tax_revenue, max(Decimal(85528) - ytd.get("exemptRevenue.TAX.base", Decimal(0)), Decimal(0))) if category else Decimal(0)
     if exempt > 0:
         add("exemptRevenue", "TAX", Decimal("0.00"), record_zero=True)
-    taxable = revenue - exempt
-    deductible = gr(social * taxable / revenue) if revenue > 0 else Decimal(0)  # art. 26 ust. 1 pkt 2 lit. b; MF example 16
+    taxable = tax_revenue - exempt
+    deductible = gr(social * taxable / tax_revenue) if tax_revenue > 0 else Decimal(0)  # art. 26 ust. 1 pkt 2 lit. b; MF example 16
     costs_full = {"BASIC": Decimal(250), "COMMUTER": Decimal(300), "NONE": Decimal(0)}[emp.get("workCosts", "BASIC")]
     costs = min(costs_full, taxable)  # art. 22 ust. 3b
     base = zl(max(taxable - deductible - costs, Decimal(0)))  # Ordynacja art. 63
@@ -174,9 +183,9 @@ def expected_lines(c):
         tax = zl(max(lower * Decimal("0.12") + (base - lower) * Decimal("0.32") - reduction, Decimal(0)))
         add("incomeTax", "TAX", tax, record_zero=True)
     # uswiadczenia art. 81 ust. 6, art. 83 ust. 1, 2a, 2b: capped at the advance on the 31.12.2021 rules, as if not exempt
-    health_base = max(revenue - social, Decimal(0))
+    health_base = max(revenue + sick_pay - social, Decimal(0))
     health = gr(health_base * Decimal("0.09"))
-    income2021 = zl(max(revenue - social - costs_full, Decimal(0)))
+    income2021 = zl(max(tax_revenue - social - costs_full, Decimal(0)))
     lower2021 = min(income2021, max(Decimal(85528) - ytd.get("incomeTax.TAX.base", Decimal(0)), Decimal(0)))
     cap = max(lower2021 * Decimal("0.17") + (income2021 - lower2021) * Decimal("0.32")
               - (Decimal("43.76") if emp["pit2Reduction"] != "NONE" else 0), Decimal(0))
@@ -188,14 +197,18 @@ def expected_lines(c):
 
 
 def case(name, evidence, gross, employee, birth="1985-04-12", accident="0.0167", ytd=None, payment=None,
-         start="2026-03-01", end="2026-03-31", full=True, error=None, pre_tax=None):
+         start="2026-03-01", end="2026-03-31", full=True, error=None, pre_tax=None, leave_pay=None, leave_days=None, employer=None):
     c = {"name": name, "evidence": evidence, "periodStart": start, "periodEnd": end, "frequency": "MONTHLY"}
     if payment:
         c["paymentDate"] = payment
     c.update({"grossEarnings": gross, "fullPeriod": full})
     if birth:
         c["birthDate"] = birth
-    c.update({"employer": {"accidentRate": accident}, "employee": employee})
+    c.update({"employer": {"accidentRate": accident, **(employer or {})}, "employee": employee})
+    if leave_pay:
+        c["leavePay"] = leave_pay
+    if leave_days:
+        c["leaveDays"] = leave_days
     if ytd:
         c["ytd"] = ytd
     if pre_tax:
@@ -251,6 +264,8 @@ def test_cases():
              "3000.00", {"pit2Reduction": "ONE_TWELFTH", "labourFundPartialMonth": "DUE"}),
         case("December 2025 salary paid in January 2026", "Payment-date basis: 2026 rules and limits apply (updof art. 11, usus art. 18). " + law,
              "8000.00", dict(PIT2), start="2025-12-01", end="2025-12-31", payment="2026-01-09"),
+        case("employer sick pay: outside ZUS, in health and tax", "Sick pay (art. 92 KP) 800 of 6,000: ZUS contributions on 5,200; health base 6,000 less employee ZUS (uswiadczenia art. 81 ust. 5, 6); PIT on 6,000. " + law,
+             "6000.00", dict(PIT2), full=False, leave_pay={"SICK": "800.00"}, leave_days={"SICK": "7"}),
     ]
     for c in computed:
         c["expectLines"] = expected_lines(c)
@@ -265,9 +280,12 @@ def test_cases():
              error="accidentRate"),
         case("pre-tax deductions refuse", "PPK and other deductions are not modelled", "6000.00", dict(PIT2), pre_tax="100.00",
              error="Pre-tax deductions are not supported"),
-        dict(case("paid sick leave refused", "sick pay (art. 92 KP) and benefits are not in the social insurance base; the health contribution on employer sick pay is not settled from the act",
-                  "6000.00", dict(PIT2), full=False, error="Paid sick or maternity leave is not supported"),
-             leavePay={"SICK": "1500.00"}, leaveDays={"SICK": "7"}),
+        case("paid maternity leave refused", "zasiłek macierzyński paid by the employer as płatnik is not modelled",
+             "6000.00", dict(PIT2), full=False, leave_pay={"MATERNITY": "1500.00"}, leave_days={"MATERNITY": "7"},
+             error="Paid maternity leave is not supported"),
+        case("sick pay at an employer paying ZUS benefits refused", "a ZUS sickness benefit paid through payroll (from day 34) has no health contribution and can't be told apart from sick pay",
+             "6000.00", dict(PIT2), full=False, leave_pay={"SICK": "800.00"}, leave_days={"SICK": "7"}, employer={"paysZusBenefits": "true"},
+             error="pays ZUS benefits"),
         case("December 2026 salary paid in January 2027", "2027 limits not yet published", "8000.00", dict(PIT2),
              start="2026-12-01", end="2026-12-31", payment="2027-01-09", error="a newer template version is needed"),
     ]
@@ -288,7 +306,7 @@ def main():
         "schemaVersion": 1,
         "id": "pl-employment",
         "name": "Poland — employment contract (umowa o pracę)",
-        "version": "2026.1.2",
+        "version": "2026.1.3",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "PL"},
         "validity": {"from": FROM, "to": TO},
@@ -298,6 +316,8 @@ def main():
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.3", "date": "2026-10-26",
+             "summary": "Pay kept for sick days is the employer's sick pay (art. 92 KP): outside the ZUS contribution bases, in the health contribution base (uswiadczenia art. 81 ust. 5) and taxed; before, it was refused. Refused: sick pay at an employer that pays ZUS benefits itself (paysZusBenefits), whose payroll benefit from day 34 is not separated, and paid maternity leave."},
             {"version": "2026.1.2", "date": "2026-10-25",
              "summary": "Pay kept for sick or maternity leave days (a leave pay rule) is refused: sick pay (art. 92 KP) and sickness or maternity benefits are not subject to social insurance contributions, and whether the health contribution is due on employer sick pay was not settled from the act. Before, they were charged ZUS contributions as ordinary salary."},
             {"version": "2026.1.1", "date": "2026-10-24",
@@ -308,6 +328,8 @@ def main():
         "sources": SOURCES,
         "inputs": {
             "employer": [
+                {"key": "paysZusBenefits", "type": "BOOLEAN", "required": False, "defaultValue": "false",
+                 "description": "The employer pays ZUS sickness and maternity benefits itself as płatnik zasiłków (more than 20 insured): its payroll then pays ZUS benefits from day 34 of sickness, which this template does not separate from sick pay, so paid sick leave is refused"},
                 {"key": "accidentRate", "type": "DECIMAL", "required": True, "min": 0.004, "max": 0.0812,
                  "description": "Accident insurance rate notified by ZUS, as a fraction (e.g. 0.0167 for 1.67 %); payers reporting up to 9 insured pay 50 % of the year's highest group rate (ustawa wypadkowa art. 28; range 0.40-8.12 %, usus art. 22 ust. 1 pkt 4)"},
             ],
@@ -335,11 +357,14 @@ def main():
         "steps": [
             {"id": "calendarMonth", "type": "REQUIRE", "condition": "#isCalendarMonth",
              "message": "Polish payroll is monthly: the pay period must be a whole calendar month"},
-            {"id": "noPaidSickOrMaternityLeave", "type": "REQUIRE", "source": "usus", "condition": "#leavePay['SICK'] == 0 and #leavePay['MATERNITY'] == 0",
-             "message": "Paid sick or maternity leave is not supported by this template: sick pay (wynagrodzenie chorobowe, art. 92 KP) and sickness or maternity benefits are not subject to social insurance contributions, and this template does not separate them from salary"},
+            {"id": "noPaidMaternityLeave", "type": "REQUIRE", "condition": "#leavePay['MATERNITY'] == 0",
+             "message": "Paid maternity leave is not supported by this template: the maternity benefit (zasiłek macierzyński) paid through payroll is not modelled"},
+            {"id": "noZusBenefitsThroughPayroll", "type": "REQUIRE", "when": "#leavePay['SICK'] > 0",
+             "condition": "!#employer['paysZusBenefits']",
+             "message": "Sick pay is not supported for an employer that pays ZUS benefits itself: from day 34 its payroll pays the ZUS sickness benefit, which has no health contribution and is not separated from sick pay"},
             {"id": "noPreTaxDeductions", "type": "REQUIRE", "condition": "#preTaxDeductions == 0",
              "message": "Pre-tax deductions are not supported by this template (PPK and other deductions are not modelled)"},
-            {"id": "revenue", "type": "VALUE", "expr": "#pos(#socialEarnings - #reductions)"},
+            {"id": "revenue", "type": "VALUE", "source": "uswiadczenia-81-5", "expr": "#pos(#socialEarnings - #reductions - #leavePay['SICK'])"},
             {"id": "taxRevenue", "type": "VALUE", "expr": "#pos(#taxableEarnings - #reductions)"},
             {"id": "pensionBase", "type": "VALUE", "source": "mp-2025-1206",
              "expr": "#min(#revenue, #pos(#p['annualPensionBaseLimit'] - #ytd.base('pension', 'EMPLOYEE')))"},
@@ -382,7 +407,7 @@ def main():
             {"id": "incomeTax", "type": "TAX", "label": "Income tax advance (zaliczka na PIT)", "ledger": "INCOME_TAX", "source": "updof",
              "when": "#taxBase > 0", "base": "#taxBase", "recordZero": True, "rounding": {"scale": 0, "mode": "HALF_UP"},
              "amount": "#pos(#lowerRatePart * #p['lowerRate'] + (#taxBase - #lowerRatePart) * #p['higherRate'] - #advanceReduction)"},
-            {"id": "healthBase", "type": "VALUE", "source": "uswiadczenia", "expr": "#pos(#revenue - #employeeSocial)"},
+            {"id": "healthBase", "type": "VALUE", "source": "uswiadczenia-81-5", "expr": "#pos(#revenue + #leavePay['SICK'] - #employeeSocial)"},
             {"id": "income2021", "type": "VALUE", "source": "updof-2021",
              "expr": "#round(#pos(#taxRevenue - #employeeSocial - " + costs + "), 0, 'HALF_UP')"},
             {"id": "lowerRatePart2021", "type": "VALUE", "source": "updof-2021",
@@ -397,7 +422,8 @@ def main():
             "The 282,600 zł pension/disability limit, the 120,000 zł threshold and the 85,528 zł exemption limit are tracked per payer from this template's posted runs; amounts from other payers or from before adopting the template are not known.",
             "The 2021-rules cap on the health contribution uses this payer's taxable income since the start of the year for the 85,528 zł threshold of the 2021 scale; for employees with exempt revenue this understates the 2021 income (it only matters in low-pay months after high earlier income). With a 1/24 or 1/36 statement the 2021 reduction of 43.76 zł is still applied.",
             "Sex is not recorded, so the 55/60 age exemptions from the Labour Fund, Solidarity Fund and FGŚP are entered per employee; whether a partial month reaches the minimum wage for the Labour Fund is entered per employee.",
-            "Not modelled: PPK, 50 % author's costs, the bridging-pension fund (FEP), the higher costs for several employment relationships (art. 22 ust. 2 pkt 2 and 4, settled in the annual return), the joint/single-parent statements (art. 32 ust. 3), work abroad (art. 32 ust. 9), sickness and maternity benefits paid by the employer, and benefits in kind spread over several months; employees with pre-tax deductions are refused.",
+            "Not modelled: PPK, 50 % author's costs, the bridging-pension fund (FEP), the higher costs for several employment relationships (art. 22 ust. 2 pkt 2 and 4, settled in the annual return), the joint/single-parent statements (art. 32 ust. 3), work abroad (art. 32 ust. 9), ZUS sickness and maternity benefits paid by the employer as płatnik (refused), and benefits in kind spread over several months; employees with pre-tax deductions are refused.",
+            "Leave pay rules: pay kept for sick days is the employer's sick pay (wynagrodzenie chorobowe, art. 92 KP), outside the ZUS bases, in the health base (uswiadczenia art. 81 ust. 5) and taxed. The rule pays a percentage of salary; the statutory 80% is of the average pay of the last 12 months less 13.71%, so the amount may differ.",
             "Contributions are rounded to the grosz, half up, per line; the tax base and the advance to the whole złoty (Ordynacja art. 63); the 2021-rules cap is not rounded (ZUS example 37).",
             "Status LAW_DERIVED: values are cited from the acts; one case reproduces ZUS's worked example of the health cap and two the net pay published for 2026.",
         ],

@@ -94,6 +94,9 @@ def check_law(folder):
                              "der der Dauer aller Beschäftigungsverhältnisse bei demselben Arbeitgeber im laufenden Kalenderjahr bis zum Ablauf des Entgeltabrechnungszeitraumes entspricht",
                              "In der Zeit vom 1. Januar bis zum 31. März einmalig gezahltes Arbeitsentgelt ist dem letzten Entgeltabrechnungszeitraum des vergangenen Kalenderjahres zuzuordnen",
                              "allein die Beitragsbemessungsgrenze der gesetzlichen Krankenversicherung maßgebend"],
+        "sgb_4___7.html": ["Eine Beschäftigung gegen Arbeitsentgelt gilt als fortbestehend, solange das Beschäftigungsverhältnis ohne Anspruch auf Arbeitsentgelt fortdauert, jedoch nicht länger als einen Monat",
+                           "Satz 1 gilt nicht, wenn Krankengeld"],
+        "sgb_5___224.html": ["Beitragsfrei ist ein Mitglied für die Dauer des Anspruchs auf Krankengeld oder Mutterschaftsgeld"],
     }
     for name, texts in needles.items():
         t = law_text(folder, name)
@@ -124,8 +127,12 @@ def expected_lines(c):
     start = date.fromisoformat(c["periodStart"])
     by = c.get("earningsByComponent", {"BASIC": c["grossEarnings"]})
     one_off = D(by.get("BONUS", "0"))
-    wage = D(c["grossEarnings"]) - one_off
-    sv = D(c.get("socialEarnings", c["grossEarnings"])) - one_off
+    reductions = D(c.get("reductions", "0"))
+    wage = D(c["grossEarnings"]) - one_off - reductions
+    sv = D(c.get("socialEarnings", c["grossEarnings"])) - one_off - reductions
+    # BVV § 1 Abs. 1; SGB IV § 7 Abs. 3; SGB V § 224: Krankengeld and maternity days are no Sozialversicherungstage
+    excluded = int(c.get("unpaidLeaveDays", {}).get("SICK", "0")) + int(c.get("leaveDays", {}).get("MATERNITY", "0"))
+    sv_days = 30 if excluded == 0 else max(int(c["periodEnd"][8:10]) - excluded, 0)
     stkl = int(emp["taxClass"])
     kvz = D(emp["healthFundAdditionalRate"])
     pvs = 1 if er["state"] == "SN" else 0
@@ -147,7 +154,7 @@ def expected_lines(c):
         kist = (bk * church_rate).quantize(D("0.01"), rounding=ROUND_FLOOR)
         if kist:
             lines.append({"step": "kirchensteuer", "side": "TAX", "amount": str(kist)})
-    kv_base, rv_base = min(sv, KV_BBG), min(sv, RV_BBG)
+    kv_base, rv_base = min(sv, KV_BBG * sv_days / 30), min(sv, RV_BBG * sv_days / 30)
     u1_base = rv_base
     if one_off:
         # § 23a SGB IV: up to the anteilige Beitragsbemessungsgrenze for the months with contributions this year.
@@ -293,6 +300,9 @@ def test_cases():
         case("public employer without Insolvenzgeldumlage", "4100.00", employee(), employer={"state": "BE", "u1Participation": "false", "insolvencyLevyExempt": "true"}),
         case("December 2026 wages paid on 8 January 2027 use the 2026 rules", "4400.00", employee(churchMember="true"),
              period=("2026-12-01", "2026-12-31", "2027-01-08")),
+        case("Krankengeld for 10 days of March: ceilings prorated by 21 Sozialversicherungstage", "8000.00", employee(),
+             period=("2026-03-01", "2026-03-31", "2026-03-31"), reductions="2545.45", fullPeriod=False,
+             leaveDays={"SICK": "10"}, unpaidLeaveDays={"SICK": "10"}, leaveAbsenceDay={"SICK": "52"}),
     ] + other_payment_cases()
     for c in cases:
         c["expectLines"] = expected_lines(c)
@@ -300,6 +310,10 @@ def test_cases():
         case("a pay period that is not a calendar month is refused", "4000.00", employee(), period=("2026-06-15", "2026-07-14", "2026-07-14"),
              expectError="calendar month"),
         case("joining or leaving during the month is refused", "2000.00", employee(), employedThroughout=False, expectError="whole calendar month"),
+        case("unpaid leave beyond a month is refused", "4000.00", employee(), reductions="4000.00", fullPeriod=False,
+             leaveDays={"UNPAID": "31"}, unpaidLeaveDays={"UNPAID": "31"}, leaveAbsenceDay={"UNPAID": "45"}, expectError="longer than a month"),
+        case("pay kept for maternity days is refused", "4000.00", employee(), fullPeriod=False,
+             leavePay={"MATERNITY": "800.00"}, leaveDays={"MATERNITY": "10"}, expectError="Zuschuss zum Mutterschaftsgeld"),
         case("a sonstiger Bezug paid in the next year is refused", "6500.00", employee(), period=("2026-12-01", "2026-12-31", "2027-01-08"),
              earningsByComponent={"BASIC": "4500.00", "BONUS": "2000.00"}, ytd=ytd_months(11, "4500.00"), expectError="§ 38a"),
         case("a sonstiger Bezug with earlier months missing from the payrolls is refused", "6000.00", employee(), period=OCTOBER,
@@ -353,6 +367,14 @@ LEAVE_PAY = [{'leaveType': 'SICK',
           'applied: no employer pay in the first four weeks of employment (§ 3 Abs. 3), and a renewed absence for the '
           'same illness counting towards the same six weeks.'}]
 
+SV_DAYS_SOURCE = {
+    "sv-tage": {"title": "Beitragsverfahrensverordnung § 1 Abs. 1: Gesamtsozialversicherungsbeitrag und Beitragsbemessungsgrenzen 'werden je Kalendermonat für die Kalendertage berechnet, an denen eine versicherungspflichtige Beschäftigung besteht (Sozialversicherungstage); ein voller Kalendermonat wird mit 30 Sozialversicherungstagen angesetzt'; SGB IV § 7 Abs. 3: eine Beschäftigung ohne Arbeitsentgelt gilt bis zu einem Monat als fortbestehend, 'Satz 1 gilt nicht, wenn Krankengeld, … Mutterschaftsgeld oder … Elterngeld bezogen oder Elternzeit in Anspruch genommen … wird'; SGB V § 224 Abs. 1: 'Beitragsfrei ist ein Mitglied für die Dauer des Anspruchs auf Krankengeld oder Mutterschaftsgeld'",
+                "url": "https://www.gesetze-im-internet.de/beitrvv/__1.html", "retrieved": "2026-10-26"},
+}
+
+SV_DAYS_CHANGE = {"version": "2026.1.4", "date": "2026-10-26",
+                  "summary": "Months with Krankengeld days (sick days a leave pay rule leaves unpaid) or maternity days: the KV/PV and RV/AV ceilings are prorated by the Sozialversicherungstage (BVV § 1 Abs. 1; SGB IV § 7 Abs. 3; SGB V § 224); before, the full monthly ceiling applied, overcharging pay above the prorated ceiling. Refused: unpaid leave beyond a month (the employment ends for social insurance, § 7 Abs. 3) and pay kept for maternity days (Zuschuss zum Mutterschaftsgeld, not modelled)."}
+
 LEAVE_CHANGE = {'version': '2026.1.3',
  'date': '2026-10-26',
  'summary': 'Statutory sick pay as a leave pay rule: six weeks of full pay (EntgFG §§ 3, 4), then unpaid as the '
@@ -371,7 +393,7 @@ def main():
         "schemaVersion": 1,
         "id": "de-employment",
         "name": "Deutschland — Lohnsteuer, Solidaritätszuschlag, Kirchensteuer und Gesamtsozialversicherungsbeitrag",
-        "version": "2026.1.3",
+        "version": "2026.1.4",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "DE"},
         "validity": {"from": FROM, "to": TO},
@@ -381,13 +403,14 @@ def main():
         "dateBasis": "PERIOD",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            SV_DAYS_CHANGE,
             LEAVE_CHANGE,{"version": "2026.1.2", "date": "2026-10-25",
                        "summary": "Sonstige Bezüge (BONUS: Weihnachts-/Urlaubsgeld, Prämien, 13. Gehalt) are supported: Lohnsteuer, SolZ and Kirchensteuer by the PAP's annual-wage method (§ 39b Abs. 3 EStG) on the voraussichtlicher Jahresarbeitslohn from this year's payrolls, and contributions as einmalig gezahltes Arbeitsentgelt up to the anteilige Beitragsbemessungsgrenze (§ 23a SGB IV); U1 leaves them out (§ 7 Abs. 2 AAG). The Lohnsteuer line is now recorded even at 0, so its base builds the annual wage. Before, a period with a BONUS was refused."},
                       {"version": "2026.1.1", "date": "2026-10-24",
                        "summary": "Corrects silent errors: U1 participation without the employee's U1 rate, and care-insurance children under 25 without the parent flag, are now refused instead of giving no U1 levy or the childless surcharge without the child reductions."},
                       {"version": "2026.1.0", "date": RETRIEVED,
                        "summary": "2026: Lohnsteuer, Solidaritätszuschlag and Maßstabsteuer by the BMF PAP 2026 (generated from the official XML pseudocode); Kirchensteuer; KV, RV, AV, PV contributions and the U1, U2, U3 levies for regular monthly wages."}],
-        "sources": {**SOURCES, **LEAVE_SOURCES},
+        "sources": {**SOURCES, **LEAVE_SOURCES, **SV_DAYS_SOURCE},
         "inputs": {
             "employer": [
                 {"key": "state", "type": "ENUM", "required": True, "values": STATES,
@@ -515,8 +538,16 @@ def main():
             {"id": "earlierMonthsKnown", "type": "REQUIRE", "source": "sgb4-23a", "when": bonus,
              "condition": "#monthsRecorded == #monthsEarlier", "detail": "broughtForwardYear",
              "message": "A sonstiger Bezug needs this year's earlier pay with you (annual wage, § 39b Abs. 3 EStG; anteilige Beitragsbemessungsgrenze, § 23a SGB IV), and not every earlier month of employment this year is in a posted payroll: post the earlier runs, or set broughtForwardYear and the brought-forward figures for the months before Humano"},
-            {"id": "regularKvBase", "type": "VALUE", "expr": f"#min({sv}, #p['kvBbgMonth'])"},
-            {"id": "regularRvBase", "type": "VALUE", "expr": f"#min({sv}, #p['rvBbgMonth'])"},
+            {"id": "noMaternityTopUp", "type": "REQUIRE", "condition": "#leavePay['MATERNITY'] == 0",
+             "message": "Pay kept for maternity days is not supported: the Zuschuss zum Mutterschaftsgeld is free of tax and contributions and is not modelled"},
+            {"id": "unpaidLeaveWithinAMonth", "type": "REQUIRE", "source": "sv-tage", "when": "#leaveDays['UNPAID'] > 0",
+             "condition": "#leaveAbsenceDay['UNPAID'] <= 31",
+             "message": "Unpaid leave longer than a month is not supported: after a month the employment ends for social insurance (SGB IV § 7 Abs. 3), which this template does not prorate"},
+            {"id": "svDaysExcluded", "type": "VALUE", "source": "sv-tage", "expr": "#unpaidLeaveDays['SICK'] + #leaveDays['MATERNITY']"},
+            {"id": "svDays", "type": "VALUE", "source": "sv-tage",
+             "expr": "#svDaysExcluded == 0 ? 30 : #pos(#periodEnd.getDayOfMonth() - #svDaysExcluded)"},
+            {"id": "regularKvBase", "type": "VALUE", "source": "sv-tage", "expr": f"#min({sv}, #divide(#p['kvBbgMonth'] * #svDays, 30, 10, 'HALF_UP'))"},
+            {"id": "regularRvBase", "type": "VALUE", "source": "sv-tage", "expr": f"#min({sv}, #divide(#p['rvBbgMonth'] * #svDays, 30, 10, 'HALF_UP'))"},
             {"id": "oneOffSocial", "type": "VALUE", "expr": "#socialEarningsByComponent['BONUS']"},
             {"id": "priorKvBase", "type": "VALUE", "when": bonus,
              "expr": "#ytd.base('krankenversicherung', 'EMPLOYEE') + " + bf.format("broughtForwardKvBase")},
@@ -587,6 +618,7 @@ def main():
         ],
         "leavePay": LEAVE_PAY,
         "limitations": [
+            "Leave: sick days a leave pay rule leaves unpaid are taken as Krankengeld days and maternity days as Mutterschaftsgeld days, and both are left out of the Sozialversicherungstage that prorate the KV/PV and RV/AV ceilings (BVV § 1; SGB IV § 7 Abs. 3; SGB V § 224). Unpaid leave counts for up to a month; beyond it is refused. Not modelled: the Zuschuss zum Mutterschaftsgeld (refused), a Krankengeldzuschuss (§ 23c SGB IV), and the anteilige Beitragsbemessungsgrenze for a later sonstiger Bezug counting months with fewer Sozialversicherungstage in full.",
             "Monthly wages for whole calendar months; joining or leaving mid-month and Entgeltumwandlung are refused.",
             "Sonstige Bezüge are the BONUS earnings (Weihnachts-/Urlaubsgeld, Prämien, 13. Gehalt), paid with a period's current wage: Lohnsteuer by the annual-wage method (§ 39b Abs. 3 EStG) on the voraussichtlicher Jahresarbeitslohn = this year's posted current wages and sonstige Bezüge (or brought-forward figures) plus the current monthly wage for the rest of the year and for months at earlier employers without a Lohnsteuerbescheinigung; contributions up to the anteilige Beitragsbemessungsgrenze of the months with contributions (§ 23a SGB IV); U1 leaves them out. Refused: a payment date in another year (§ 38a Abs. 1 Satz 3 EStG), the März-Klausel (January to March above the anteilige BBG, § 23a Abs. 4), an earlier month of employment this year missing from the posted payrolls. Not supported: Entschädigungen and the Fünftelregelung (§ 34 EStG; do not pay redundancy payments as BONUS), one-off payments after leaving (§ 23a Abs. 2), Vermögensbeteiligungen. Months whose current wage paid no Lohnsteuer before version 2026.1.2 recorded no wage and are missing from the annual wage.",
             "Beitragsgruppe 1111 (KV general rate, RV, AV, PV all statutory); Midijobs (Übergangsbereich), Minijobs, private health insurance, old-age pensioners, employees exempt from pension insurance, employees aged 66 or over (Regelaltersgrenze), Werkstudenten, apprentices below 2 000 EUR and other Personengruppen are refused or out of scope.",

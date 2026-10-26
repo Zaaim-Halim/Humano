@@ -37,6 +37,8 @@ import java.util.Map;
  *                        leave types with a leave pay rule; laws that treat sick or maternity pay apart read it
  * @param leaveDays       calendar days of that leave within the period, by leave type
  * @param unpaidLeaveDays the calendar days among them the rule leaves wholly unpaid (e.g. days a social insurer pays)
+ * @param employmentEndDate last day of employment, or null when none is recorded
+ * @param leaveAbsenceDay the furthest day of an absence reached in the period, by leave type (1 = an absence's first day)
  */
 public record TemplateInput(
     LocalDate periodStart,
@@ -63,7 +65,9 @@ public record TemplateInput(
     Map<String, BigDecimal> ytd,
     Map<String, BigDecimal> leavePay,
     Map<String, BigDecimal> leaveDays,
-    Map<String, BigDecimal> unpaidLeaveDays
+    Map<String, BigDecimal> unpaidLeaveDays,
+    LocalDate employmentEndDate,
+    Map<String, BigDecimal> leaveAbsenceDay
 ) {
     /** A period without paid leave. */
     public TemplateInput(
@@ -115,6 +119,8 @@ public record TemplateInput(
             ytd,
             Map.of(),
             Map.of(),
+            Map.of(),
+            null,
             Map.of()
         );
     }

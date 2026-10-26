@@ -87,7 +87,10 @@ def age_at(birth, end):
 
 def expected_lines(c):
     """The amounts the acts give for a test case, computed directly (no engine)."""
-    gross = Decimal(c["grossEarnings"])
+    gross = Decimal(c["grossEarnings"]) - Decimal(c.get("reductions", "0"))
+    # Cod fiscal art. 76 (1), 139 (1) o), 155 (1) i): a sick-leave indemnity is salary income for tax, CAS and
+    # CASS; it is not in the CAM base (art. 220^4 (1) lists salary income without it)
+    sick_pay = Decimal(c.get("leavePay", {}).get("SICK", "0"))
     emp = c.get("employee", {})
     end = date.fromisoformat(c["periodEnd"])
     year, month = int(c["periodStart"][:4]), int(c["periodStart"][5:7])
@@ -117,7 +120,7 @@ def expected_lines(c):
         floor = Decimal(emp["minimumContributionBase"]) if "minimumContributionBase" in emp else minimum - tax_free
         add("casMinimum", "EMPLOYER", max(lei(floor * Decimal("0.25")) - cas, Decimal(0)))
         add("cassMinimum", "EMPLOYER", max(lei(floor * Decimal("0.10")) - cass, Decimal(0)))
-    add("cam", "EMPLOYER", lei(base * Decimal("0.0225")))
+    add("cam", "EMPLOYER", lei(max(base - sick_pay, Decimal(0)) * Decimal("0.0225")))
     taxable_net = max(gross - non_taxable - cas - cass, Decimal(0))
     deduction = Decimal(0)
     if main and gross > 0:
@@ -134,7 +137,8 @@ def expected_lines(c):
     return lines
 
 
-def case(name, evidence, gross, employee, month=3, full=True, error=None, birth=None, pre_tax=None, year=2026):
+def case(name, evidence, gross, employee, month=3, full=True, error=None, birth=None, pre_tax=None, year=2026,
+         reductions=None, leave_pay=None, leave_days=None, throughout=None):
     last = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
     c = {
         "name": name,
@@ -150,6 +154,14 @@ def case(name, evidence, gross, employee, month=3, full=True, error=None, birth=
     c.update({"employer": {}, "employee": employee})
     if pre_tax:
         c["preTaxDeductions"] = pre_tax
+    if reductions:
+        c["reductions"] = reductions
+    if leave_pay:
+        c["leavePay"] = leave_pay
+    if leave_days:
+        c["leaveDays"] = leave_days
+    if throughout is not None:
+        c["employedThroughout"] = throughout
     if error:
         c["expectError"] = error
     return c
@@ -199,6 +211,10 @@ def test_cases():
              "4325.00", emp(**AT_MINIMUM, nonTaxableAmountOverride="300"), month=8, birth=ADULT),
         case("partial month with both overrides", "OUG 89 art. III(4) and art. 146 (5^6): tax-free amount and floor prorated by the tenant. " + law,
              "2025.00", emp(**AT_MINIMUM, nonTaxableAmountOverride="150", minimumContributionBase="1875"), full=False, birth=ADULT),
+        case("sick-leave indemnity: tax, CAS and CASS as salary, no CAM", "Cod fiscal art. 76 (1), 139 (1) o), 155 (1) i) (code 01); art. 220^4 (1): CAM on the 5,100 other pay. " + law,
+             "6000.00", emp(), full=False, birth=ADULT, leave_pay={"SICK": "900.00"}, leave_days={"SICK": "7"}),
+        case("a month with leave keeps the full minimum CAS", "art. 146 (5^6): the contract was active the whole month, so CAS and CASS on at least 4,050 - 300 = 3,750. " + law,
+             "4000.00", emp(), full=False, birth=ADULT, reductions="1000.00", leave_days={"UNPAID": "10"}),
     ]
     for c in computed:
         c["expectLines"] = expected_lines(c)
@@ -210,13 +226,13 @@ def test_cases():
         case("main job without a birth date", "art. 77 (10)(a) needs the age", "4000.00", emp(), error="no birth date"),
         case("partial month eligible for the tax-free amount", "OUG 89 art. III(4): the amount is prorated", "2025.00",
              emp(**AT_MINIMUM), full=False, birth=ADULT, error="nonTaxableAmountOverride"),
-        case("partial month below the minimum base", "art. 146 (5^6): the floor is prorated by working days", "1500.00",
-             emp(), full=False, birth=ADULT, error="minimumContributionBase"),
+        case("partial month below the minimum base", "art. 146 (5^6): the floor is prorated by the working days the contract was active", "1500.00",
+             emp(), full=False, birth=ADULT, throughout=False, error="minimumContributionBase"),
         case("pre-tax deductions refuse", "union dues, voluntary pension and health insurance (art. 78 (2)(a)(ii)-(iv)) are not modelled",
              "4000.00", emp(), birth=ADULT, pre_tax="50.00", error="Pre-tax deductions are not supported"),
-        dict(case("paid sick leave refused", "medical-leave indemnities (OUG 158/2005) are not modelled", "4000.00", emp(), full=False, birth=ADULT,
-                  error="Paid sick or maternity leave is not supported"),
-             leavePay={"SICK": "900.00"}, leaveDays={"SICK": "7"}),
+        case("paid maternity leave refused", "the maternity indemnity (code 08) is untaxed (art. 62 c)) and without CASS; its CAS treatment is not modelled",
+             "4000.00", emp(), full=False, birth=ADULT, leave_pay={"MATERNITY": "900.00"}, leave_days={"MATERNITY": "7"},
+             error="Paid maternity leave is not supported"),
         case("2027 is not covered", "2027 values not yet published", "4000.00", emp(), birth=ADULT, year=2027,
              error="a newer template version is needed"),
     ]
@@ -238,7 +254,7 @@ def main():
         "schemaVersion": 1,
         "id": "ro-employment",
         "name": "Romania — salary income",
-        "version": "2026.1.2",
+        "version": "2026.1.3",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "RO"},
         "validity": {"from": FROM, "to": TO},
@@ -248,6 +264,8 @@ def main():
         "dateBasis": "PERIOD",
         "rounding": {"scale": 0, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.3", "date": "2026-10-26",
+             "summary": "Pay kept for sick days is the sick-leave indemnity: taxed with CAS and CASS as salary (Cod fiscal art. 76 (1), 139 (1) o), 155 (1) i)) and outside the CAM base (art. 220^4 (1)); before, it was refused. A month with leave keeps the full minimum CAS/CASS (art. 146 (5^6): the contract was active), so it is no longer refused; a month the contract starts or ends still is. Paid maternity leave is still refused."},
             {"version": "2026.1.2", "date": "2026-10-25",
              "summary": "Pay kept for sick or maternity leave days (a leave pay rule) is refused: medical-leave indemnities (OUG 158/2005) are computed on the average income of the last 6 months and have their own tax and contribution treatment (e.g. maternity indemnities are not taxable, Cod fiscal art. 62 c)), which the template does not model. Before, they were taxed and insured as ordinary salary."},
             {"version": "2026.1.1", "date": "2026-10-24",
@@ -295,8 +313,8 @@ def main():
         "steps": [
             {"id": "calendarMonth", "type": "REQUIRE", "condition": "#isCalendarMonth",
              "message": "Romanian salary tax is monthly: the pay period must be a whole calendar month"},
-            {"id": "noPaidSickOrMaternityLeave", "type": "REQUIRE", "condition": "#leavePay['SICK'] == 0 and #leavePay['MATERNITY'] == 0",
-             "message": "Paid sick or maternity leave is not supported by this template: medical-leave indemnities are computed on the average income of the last 6 months and follow their own tax and contribution rules (OUG 158/2005)"},
+            {"id": "noPaidMaternityLeave", "type": "REQUIRE", "condition": "#leavePay['MATERNITY'] == 0",
+             "message": "Paid maternity leave is not supported by this template: the maternity indemnity (code 08) is not taxed (Cod fiscal art. 62 c)) and has no CASS, and its CAS treatment is not modelled"},
             {"id": "noPreTaxDeductions", "type": "REQUIRE", "condition": "#preTaxDeductions == 0",
              "message": "Pre-tax deductions are not supported by this template: union dues, voluntary pension and health insurance (art. 78 alin. (2) lit. a)) are not modelled"},
             {"id": "grossIncome", "type": "VALUE", "expr": "#pos(#taxableEarnings - #reductions)"},
@@ -316,8 +334,8 @@ def main():
              "base": "#contributionBase", "employee": {"rate": "#p['cassRate']"}},
             {"id": "partialMonthMinimum", "type": "REQUIRE",
              "when": "#socialIncome > 0 and " + no_exception + " and #employee['minimumContributionBase'] == null and #contributionBase < " + floor_default,
-             "condition": "#fullPeriod and #reductions == 0", "source": "anaf-ghid-cas-minim",
-             "message": "Pay is below the minimum wage in a partial month: the minimum CAS/CASS base is prorated by working days (art. 146 alin. (5^6)), so set the employee's minimumContributionBase"},
+             "condition": "#employedThroughout", "source": "anaf-ghid-cas-minim",
+             "message": "Pay is below the minimum wage in a month the contract started or ended: the minimum CAS/CASS base is prorated by the working days the contract was active (art. 146 alin. (5^6)), so set the employee's minimumContributionBase"},
             {"id": "minimumBase", "type": "VALUE", "when": "#socialIncome > 0 and " + no_exception, "source": "oug-89-2025",
              "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : " + floor_default},
             {"id": "casMinimum", "type": "CONTRIBUTION", "label": "CAS up to the minimum wage, paid by the employer", "ledger": "PENSION_CONTRIBUTION", "source": "cod-fiscal",
@@ -327,7 +345,7 @@ def main():
              "when": "#minimumBase > 0", "base": "#minimumBase",
              "employer": {"amount": "#pos(#round(#minimumBase * #p['cassRate'], 0, 'HALF_UP') - #cass_employee)"}},
             {"id": "cam", "type": "CONTRIBUTION", "label": "Work insurance contribution (CAM)", "ledger": "OTHER", "source": "cod-fiscal",
-             "base": "#contributionBase", "employer": {"rate": "#p['camRate']"}},
+             "base": "#pos(#contributionBase - #leavePay['SICK'])", "employer": {"rate": "#p['camRate']"}},
             {"id": "taxableNet", "type": "VALUE", "expr": "#pos(#grossIncome - #nonTaxable - #cas_employee - #cass_employee)"},
             {"id": "deductionBand", "type": "VALUE", "when": main_job + " and #grossIncome > 0", "source": "cod-fiscal",
              "expr": "#grossIncome <= #p['minimumWage'] ? 0 : #divide(#grossIncome - #p['minimumWage'], #p['deductionBandWidth'], 0, 'CEILING')"},
@@ -346,7 +364,7 @@ def main():
              "base": "#round(#pos(#taxableNet - #personalDeduction), 0, 'HALF_DOWN')", "rate": "#p['taxRate']"},
         ],
         "limitations": [
-            "Not modelled: medical-leave indemnities (concediu medical, OUG 158/2005), computed on the average income of the last 6 months with their own tax and contribution treatment; pay kept for sick or maternity leave days is refused.",
+            "Leave pay rules: pay kept for sick days is the sick-leave indemnity (concediu medical, code 01, OUG 158/2005): taxed, with CAS and CASS, as salary (Cod fiscal art. 76 (1), 139 (1) o), 155 (1) i)), and left out of the CAM base, which lists salary income without it (art. 220^4 (1)) — read from that list, not stated outright. The statutory indemnity is 75% of the average of the last 6 months' income; a rule pays a percentage of salary, so the amount may differ. Paid maternity leave (code 08) is refused. The minimum CAS/CASS applies in full in a month the contract was active throughout (art. 146 (5^6)); a month the contract started or ended needs the prorated base. The tax-free amount in a month with leave at the minimum wage still asks for nonTaxableAmountOverride: whether art. III (4) c) prorates it for a month with an indemnity is not settled.",
             "Monthly salary for whole calendar months in 2026, in RON; values follow the month the salary relates to (minimum wage and tax-free amount change on 1 July). Back pay for earlier periods taxed on the payment-date rules (art. 78 alin. (3)) is not modelled.",
             "The basic deduction band uses the whole gross salary of the month, including the OUG 89/2025 tax-free amount (Norme pct. 14 alin. (1)); no official example settles this.",
             "CAS, CASS, CAM and income tax are rounded to the leu with 50 bani rounded up (reproducing the published minimum-wage net pay); the tax base and the deduction are rounded to the leu with 50 bani and under dropped (Norme pct. 4, art. 66). No official text was found for the rounding of the contributions and of the tax itself.",

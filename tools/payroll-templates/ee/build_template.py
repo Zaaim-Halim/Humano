@@ -112,7 +112,18 @@ def expected_lines(c):
     away = leave.get("SICK", 0) + leave.get("MATERNITY", 0) + leave.get("VACATION", 0) >= month_days
     applies = (emp.get("socialTaxMinimumExempt") != "true" and not away
                and (emp.get("otherEmployment") != "true" or D(emp.get("taxFreeAmount", "0")) > 0))
-    floor = D(emp["socialTaxMinimumBase"]) if "socialTaxMinimumBase" in emp else D(886)
+    if "socialTaxMinimumBase" in emp:
+        floor = D(emp["socialTaxMinimumBase"])
+    elif c.get("employedThroughout", True) is False:
+        # määrus nr 17 § 6 lg 2: 886 x calendar days employed / 30 in a month employment starts or ends
+        from datetime import date
+        first_day, last_day = date.fromisoformat(c["periodStart"]), date.fromisoformat(c["periodEnd"])
+        joined = date.fromisoformat(c.get("employmentStartDate", c["periodStart"]))
+        left = date.fromisoformat(c["employmentEndDate"]) if "employmentEndDate" in c else last_day
+        employed = (min(left, last_day) - max(joined, first_day)).days + 1
+        floor = min(D(886), cent(D(886) * employed / 30))
+    else:
+        floor = D(886)
     base = max(wage, floor) if applies else wage
     if wage > 0 or (applies and c.get("employedThroughout", True) and leave):
         add("socialTax", "EMPLOYER", cent(base * D("0.33")))
@@ -124,7 +135,7 @@ def expected_lines(c):
 
 
 def case(name, evidence, gross, employee, start="2026-03-01", end="2026-03-31", payment=None, whole=True, error=None,
-         pre_tax=None, reductions=None, leave_pay=None, leave_days=None):
+         pre_tax=None, reductions=None, leave_pay=None, leave_days=None, joined=None, left=None):
     c = {"name": name, "evidence": evidence, "periodStart": start, "periodEnd": end, "frequency": "MONTHLY"}
     if payment:
         c["paymentDate"] = payment
@@ -142,6 +153,10 @@ def case(name, evidence, gross, employee, start="2026-03-01", end="2026-03-31", 
         c["fullPeriod"] = False
     if leave_days:
         c["leaveDays"] = leave_days
+    if joined:
+        c["employmentStartDate"] = joined
+    if left:
+        c["employmentEndDate"] = left
     if error:
         c["expectError"] = error
     return c
@@ -193,6 +208,10 @@ def test_cases():
              "2000.00", dict(STD), start="2026-06-01", end="2026-06-30", reductions="2000.00", leave_days={"UNPAID": "30"}),
         case("a whole month of maternity leave: no minimum", "EMTA: leave including maternity leave for the whole month excuses the minimum. " + law,
              "2000.00", dict(STD), reductions="2000.00", leave_days={"MATERNITY": "31"}),
+        case("joined on 10 January: the minimum prorated by calendar days", "SMS § 2 lg 3; määrus nr 17 § 6 lg 2: 22 calendar days / 30 x 886 = 649.73; 649.73 x 33% = 214.41. " + law,
+             "400.00", dict(STD), start="2026-01-01", end="2026-01-31", whole=False, joined="2026-01-10"),
+        case("left on 12 June: the minimum prorated by calendar days", "määrus nr 17 § 6 lg 2: 12 calendar days / 30 x 886 = 354.40, below the 500 paid, so social tax on the pay. " + law,
+             "500.00", dict(STD), start="2026-06-01", end="2026-06-30", whole=False, left="2026-06-12"),
         case("pay kept for maternity leave days is wage", "SMS § 2: the employer's pay is subject to social tax unless exempt (SMS § 3). " + law,
              "2000.00", dict(STD), leave_pay={"MATERNITY": "500.00"}, leave_days={"MATERNITY": "10"}),
     ]
@@ -205,8 +224,6 @@ def test_cases():
              error="fundedPensionRate"),
         case("776 EUR tax-free amount before pension age", "TuMS § 42 lg 1: at most 1/12 of 8400 = 700 EUR", "2000.00", {"taxFreeAmount": "776", "fundedPensionRate": "2"},
              error="700"),
-        case("partial month below the minimum without a prorated base", "SMS § 2 lg 3: the minimum is prorated by the time worked", "400.00", dict(STD),
-             start="2026-01-01", end="2026-01-31", whole=False, error="socialTaxMinimumBase"),
         case("state-paid social tax is refused", "SMS § 6 lg 1 p 5 relief not modelled", "1000.00", {**STD, "stateSocialTaxRelief": "true"},
              error="not supported"),
         case("pre-tax deductions are refused", "III pillar and other deductions not modelled", "2000.00", dict(STD), pre_tax="50.00",
@@ -251,7 +268,7 @@ def main():
         "schemaVersion": 1,
         "id": "ee-employment",
         "name": "Estonia — employment (tööleping)",
-        "version": "2026.1.2",
+        "version": "2026.1.3",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "EE"},
         "validity": {"from": FROM, "to": TO},
@@ -261,6 +278,8 @@ def main():
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.3", "date": "2026-10-26",
+             "summary": "A month employment starts or ends: the social tax minimum is 886 x calendar days employed / 30 (SMS § 2 lg 3; määrus nr 17 § 6 lg 2); before, pay below the minimum was refused until the prorated base was entered. A refusal of work under TLS § 19, and pay certified by another employer, still need socialTaxMinimumBase."},
             LEAVE_CHANGE,
             {"version": "2026.1.1", "date": LEAVE_RETRIEVED,
              "summary": "Leave pay rules: pay kept for sick days is the employer's sickness benefit, taxed with income tax only (EMTA, payment type 24); before, it was also charged social tax, unemployment insurance and funded pension. No social tax minimum for a month away on sick leave or leave other than unpaid leave by agreement (EMTA); a month of agreed unpaid leave without pay owes social tax on the minimum, which it did not before."},
@@ -314,12 +333,13 @@ def main():
              "expr": "#leaveDays['SICK'] + #leaveDays['MATERNITY'] + #leaveDays['VACATION'] >= #periodEnd.getDayOfMonth() ? 1 : 0"},
             {"id": "minimumApplies", "type": "VALUE", "source": "sms",
              "expr": "!#employee['socialTaxMinimumExempt'] and #awayWholeMonth == 0 and (!#employee['otherEmployment'] or #employee['taxFreeAmount'] > 0) ? 1 : 0"},
-            {"id": "partialMonthMinimum", "type": "REQUIRE", "source": "rm-17-2013",
-             "when": "#minimumApplies == 1 and #employee['socialTaxMinimumBase'] == null and #wage > 0 and #wage < #p['socialTaxMonthlyBase']",
-             "condition": "#employedThroughout",
-             "message": "The employee started or left during the month: the social tax minimum is prorated by calendar days worked / 30 (SMS § 2 lg 3; määrus nr 17 § 6), so set the employee's socialTaxMinimumBase"},
+            {"id": "daysOutsideEmployment", "type": "VALUE", "source": "rm-17-2013", "when": "!#employedThroughout",
+             "expr": "(#employmentStartDate > #periodStart ? #employmentStartDate.getDayOfMonth() - 1 : 0) + (#employmentEndDate != null and #employmentEndDate < #periodEnd ? #periodEnd.getDayOfMonth() - #employmentEndDate.getDayOfMonth() : 0)"},
+            {"id": "daysEmployed", "type": "VALUE", "source": "rm-17-2013", "expr": "#periodEnd.getDayOfMonth() - #daysOutsideEmployment"},
+            {"id": "monthlyMinimum", "type": "VALUE", "source": "rm-17-2013",
+             "expr": "#employee['socialTaxMinimumBase'] != null ? #employee['socialTaxMinimumBase'] : (#employedThroughout ? #p['socialTaxMonthlyBase'] : #min(#p['socialTaxMonthlyBase'], #divide(#p['socialTaxMonthlyBase'] * #daysEmployed, 30, 2, 'HALF_UP')))"},
             {"id": "socialTaxBase", "type": "VALUE", "source": "rea-2026",
-             "expr": "#minimumApplies == 1 ? #max(#wage, #coalesce(#employee['socialTaxMinimumBase'], #p['socialTaxMonthlyBase'])) : #wage"},
+             "expr": "#minimumApplies == 1 ? #max(#wage, #monthlyMinimum) : #wage"},
             {"id": "socialTax", "type": "CONTRIBUTION", "label": "Social tax (sotsiaalmaks)", "ledger": "SOCIAL_SECURITY", "source": "sms",
              "when": "#wage > 0 or (#minimumApplies == 1 and #employedThroughout and #leaveDays['SICK'] + #leaveDays['MATERNITY'] + #leaveDays['VACATION'] + #leaveDays['UNPAID'] > 0)",
              "base": "#socialTaxBase", "employer": {"rate": "#p['socialTaxRate']"}},
@@ -332,7 +352,7 @@ def main():
         "limitations": [
             "Employment contracts paid monthly in EUR in 2026, one payment per employee per month; taxation follows the payment date (EMTA: kassapõhine), and the tax-free amount and the social tax minimum are applied to this payment. A second run in the same month would apply them again.",
             "The tax-free amount, pension age, the end of employee unemployment insurance, the funded-pension rate, other employment and the social tax minimum exemptions are entered per employee from the employee's application and the registers; they are not checked.",
-            "In a month the employee started or left (or refused work under TLS § 19), the prorated social tax minimum base (886 x calendar days / 30, määrus nr 17 § 6) must be entered; unpaid leave agreed by the parties does not reduce the minimum (SMS § 2 lg 3 p 1). The minimum belongs to the month containing the agreed pay day (määrus nr 17 § 2); pay made earlier or later than agreed (§ 3-4) and the final settlement (§ 7) are not reconciled across months.",
+            "In a month the employee started or left, the social tax minimum is prorated (886 x calendar days employed / 30, määrus nr 17 § 6); for a refusal of work under TLS § 19 the prorated base must be entered; unpaid leave agreed by the parties does not reduce the minimum (SMS § 2 lg 3 p 1). The minimum belongs to the month containing the agreed pay day (määrus nr 17 § 2); pay made earlier or later than agreed (§ 3-4) and the final settlement (§ 7) are not reconciled across months.",
             "Leave pay rules: pay kept for sick days is the employer's sickness benefit, taxed with income tax only (EMTA, payment type 24), assumed within the limit of the average wage; pay kept for other leave is wage. The social tax minimum is not applied for a month away on sick, maternity or other paid leave with a leave pay rule (EMTA), and applies in full for part of a month away and for unpaid leave by agreement (SMS § 2 lg 3). Leave of a type without a leave pay rule is not seen.",
             "Not modelled: the state-paid social tax for employees with partial or no work ability (SMS § 6 lg 1 p 5, refused), fringe benefits (erisoodustused), III pillar contributions paid by the employer, non-residents, seafarers and board members' fees, and other payments exempt from social tax (SMS § 3).",
             "Contributions and the tax are rounded to the cent, half up, per line (TKindlS § 42 lg 3; EMTA examples).",

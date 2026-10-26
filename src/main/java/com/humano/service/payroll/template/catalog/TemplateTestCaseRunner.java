@@ -80,7 +80,9 @@ public final class TemplateTestCaseRunner {
             c.ytd() != null ? c.ytd() : Map.of(),
             c.leavePay() != null ? c.leavePay() : Map.of(),
             c.leaveDays() != null ? c.leaveDays() : Map.of(),
-            c.unpaidLeaveDays() != null ? c.unpaidLeaveDays() : Map.of()
+            c.unpaidLeaveDays() != null ? c.unpaidLeaveDays() : Map.of(),
+            c.employmentEndDate(),
+            c.leaveAbsenceDay() != null ? c.leaveAbsenceDay() : Map.of()
         );
     }
 

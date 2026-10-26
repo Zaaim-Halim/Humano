@@ -40,10 +40,10 @@ import org.springframework.stereotype.Component;
  *   (the same by deduction type; 0 for a type with none), {@code #leavePay['SICK']} (the part of the earnings paid
  *   for approved leave days of a type with a leave pay rule; 0 for a type with none) and {@code #leaveDays['SICK']}
  *   (calendar days of that leave within the period), {@code #unpaidLeaveDays['SICK']} (those of them the rule leaves
- *   wholly unpaid).</li>
+ *   wholly unpaid), {@code #leaveAbsenceDay['SICK']} (the furthest day of an absence reached in the period).</li>
  *   <li>Employee: {@code #fullPeriod}, {@code #fte}, {@code #birthDate}, {@code #birthYear}, {@code #ageAtPeriodEnd}
  *   (an expression using any of them fails when the birth date is unknown), {@code #employmentStartDate}
- *   (fails when unknown), {@code #employedThroughout} (employed from the first to the last day of the
+ *   (fails when unknown), {@code #employmentEndDate} (null when none is recorded), {@code #employedThroughout} (employed from the first to the last day of the
  *   period), {@code #employee['key']}.</li>
  *   <li>Employer: {@code #employer['key']}.</li>
  *   <li>Data: {@code #p['parameter']} (the value in force for the period), {@code #table.lookup(...)},
@@ -79,12 +79,14 @@ public class PayrollTemplateEngine {
         "leavePay",
         "leaveDays",
         "unpaidLeaveDays",
+        "leaveAbsenceDay",
         "fullPeriod",
         "fte",
         "birthDate",
         "birthYear",
         "ageAtPeriodEnd",
         "employmentStartDate",
+        "employmentEndDate",
         "employedThroughout",
         "currency",
         "employee",
@@ -177,12 +179,14 @@ public class PayrollTemplateEngine {
         vars.put("leavePay", byLeaveType(in.leavePay()));
         vars.put("leaveDays", byLeaveType(in.leaveDays()));
         vars.put("unpaidLeaveDays", byLeaveType(in.unpaidLeaveDays()));
+        vars.put("leaveAbsenceDay", byLeaveType(in.leaveAbsenceDay()));
         vars.put("fullPeriod", in.fullPeriod());
         vars.put("fte", in.fte() != null ? in.fte() : BigDecimal.ONE);
         vars.put("birthDate", in.birthDate());
         vars.put("birthYear", in.birthDate() != null ? in.birthDate().getYear() : null);
         vars.put("ageAtPeriodEnd", in.birthDate() != null ? Period.between(in.birthDate(), in.periodEnd()).getYears() : null);
         vars.put("employmentStartDate", in.employmentStartDate());
+        vars.put("employmentEndDate", in.employmentEndDate());
         vars.put("employedThroughout", in.employedThroughout());
         vars.put("currency", in.currency());
         vars.put("employer", TemplateInputs.coerce(template.inputs().employer(), in.employer(), "employer setting", true));
@@ -443,10 +447,13 @@ public class PayrollTemplateEngine {
         return TemplateExpressions.bool(expr, vars, what);
     }
 
+    /** Variables that are null in the ordinary case, which expressions test for instead of failing on. */
+    private static final Set<String> NULLABLE_VARIABLES = Set.of("employmentEndDate");
+
     /** An expression may not use a variable that has no value (e.g. #birthYear without a birth date). */
     private static void checkBound(String expr, Map<String, Object> vars, String what) {
         for (String name : TemplateExpressions.variablesIn(expr)) {
-            if (TemplateExpressions.functionNames().contains(name)) continue;
+            if (TemplateExpressions.functionNames().contains(name) || NULLABLE_VARIABLES.contains(name)) continue;
             if (!vars.containsKey(name)) {
                 throw new TemplateCalculationException(what + " uses #" + name + ", which is not defined at this point");
             }

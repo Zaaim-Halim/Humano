@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "hr-employment",
   "name": "Croatia — salary (plaća)",
-  "version": "2026.1.1",
+  "version": "2026.1.2",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "HR"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.2",
+      "date": "2026-10-26",
+      "summary": "A month employment starts or ends: the minimum base is prorated by the days in insurance (Zakon o doprinosima čl. 202); a month with sick leave keeps the full minimum (čl. 200 st. 1). Before, pay below the minimum in such months was refused until the base was entered. Sick leave past day 42, paid on HZZO's account without contributions (čl. 179, 213), is refused."
+    },
     {
       "version": "2026.1.1",
       "date": "2026-10-26",
@@ -61,6 +66,11 @@
       "title": "Porezna uprava — Tablica poreznih stopa godišnjeg poreza na dohodak za 2026. godinu (556 jedinica lokalne samouprave; odluke objavljene u Narodnim novinama, stanje 1. siječnja 2026.); xlsx SHA-256 87733f3eb50a39650813a4ea7a6efbb8c556d4bf9c119ece9ea411f37e6f1592",
       "url": "https://porezna-uprava.gov.hr/hr/porezne-stope-godisnjeg-poreza-na-dohodak/4764",
       "retrieved": "2026-10-23"
+    },
+    "zod-179-213": {
+      "title": "Zakon o doprinosima (pročišćeni tekst, zakon.hr) — čl. 179 st. 1 (naknada plaće za privremenu nesposobnost na teret HZZO-a: obveznik doprinosa je HZZO), čl. 200 st. 1 (najniža mjesečna osnovica za razdoblje u osiguranju u trajanju od mjesec dana), čl. 202 ('a razdoblje u osiguranju kraće je od mjesec dana, iznos osnovice za taj mjesec razmjeran je broju dana u osiguranju u odnosu na ukupan broj dana toga mjeseca'), čl. 213 (poslodavac koji umjesto HZZO-a isplaćuje naknadu plaće 'ne obračunava doprinose prema isplaćenoj naknadi plaće')",
+      "url": "https://www.zakon.hr/z/365/Zakon-o-doprinosima",
+      "retrieved": "2026-10-26"
     },
     "hzzo-naknada": {
       "title": "HZZO, 'Naknada plaće za vrijeme privremene nesposobnosti za rad': poslodavac obračunava i isplaćuje naknadu plaće; prva 42 dana (sedam dana za radnika invalida rada) iz svojih sredstava, nakon toga HZZO vraća isplaćenu naknadu; na teret HZZO-a 70% osnovice za prvih šest mjeseci (80% nakon toga), najviše 995,45 eura mjesečno",
@@ -3060,17 +3070,25 @@
       "expr": "#pos(#socialEarnings - #reductions)"
     },
     {
-      "id": "minimumBase",
-      "type": "VALUE",
-      "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : #round(#table.lookup('contributionBases', #periodStart.getYear(), 'minimum') * #fte, 2, 'HALF_UP')",
-      "source": "naredba-2026"
+      "id": "noHzzoSickPay",
+      "type": "REQUIRE",
+      "source": "zod-179-213",
+      "when": "#leaveDays['SICK'] > 0",
+      "condition": "#leaveAbsenceDay['SICK'] <= 42",
+      "message": "Sick leave past day 42 is paid on HZZO's account, on which the employer calculates no contributions (Zakon o doprinosima čl. 179, 213); this template does not separate it from pay"
     },
     {
-      "id": "partialMonthMinimum",
-      "type": "REQUIRE",
-      "when": "#remuneration > 0 and #employee['minimumContributionBase'] == null",
-      "condition": "#fullPeriod or #remuneration >= #minimumBase",
-      "message": "Pay is below the minimum contribution base in a partial month (or a month with unpaid or sick leave); the base is prorated by insured days (ZOD čl. 202), so set the employee's minimumContributionBase"
+      "id": "daysOutsideInsurance",
+      "type": "VALUE",
+      "source": "zod-179-213",
+      "when": "!#employedThroughout",
+      "expr": "(#employmentStartDate > #periodStart ? #employmentStartDate.getDayOfMonth() - 1 : 0) + (#employmentEndDate != null and #employmentEndDate < #periodEnd ? #periodEnd.getDayOfMonth() - #employmentEndDate.getDayOfMonth() : 0)"
+    },
+    {
+      "id": "minimumBase",
+      "type": "VALUE",
+      "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : #divide(#table.lookup('contributionBases', #periodStart.getYear(), 'minimum') * #fte * (#periodEnd.getDayOfMonth() - #daysOutsideInsurance), #periodEnd.getDayOfMonth(), 2, 'HALF_UP')",
+      "source": "naredba-2026"
     },
     {
       "id": "contributionBase",
@@ -3170,8 +3188,8 @@
     "Monthly salary for whole calendar months, paid in EUR in 2026. Income tax uses the rules in force on the payment date (ZPD čl. 24 st. 1); contributions use the bases of the year the salary month belongs to (2025 and 2026 held). A salary paid in 2027 needs the 2027 version.",
     "The youth reduction (100 % up to age 25, 50 % from 26 to 30) is granted only in the annual tax calculation (ZPD čl. 46 st. 2), not in the monthly advance, so it is not applied here.",
     "The employee's local unit, allowance coefficient and pension-fund membership come from the tax card and HZMO data and are entered per employee; development group I residence (50 % advance reduction) is entered per employee, not derived from the unit.",
-    "The minimum contribution base is prorated by FTE for part-time work; partial months below the minimum, and management-board members (0.65 x average wage), need an explicit minimumContributionBase.",
-    "Leave pay rules: pay kept for sick days is taken as the employer's naknada plaće for the first 42 days (7 for a disabled worker), paid from its own funds and taxed and insured as pay. From day 43 the employer pays on behalf of HZZO (70% of the base, 80% after six months, at most 995.45 EUR a month) and is refunded; that part's tax and contribution treatment was not confirmed from an official source and is treated as pay, and no statutory leave pay rule is declared because the monthly cap can't be expressed as a percentage of salary.",
+    "The minimum contribution base is prorated by FTE for part-time work and by days in insurance in a month employment starts or ends (ZOD čl. 202); management-board members (0.65 x average wage) need an explicit minimumContributionBase.",
+    "Leave pay rules: pay kept for sick days is taken as the employer's naknada plaće for the first 42 days (7 for a disabled worker), paid from its own funds and taxed and insured as pay. From day 43 the employer pays on behalf of HZZO (70% of the base, 80% after six months, at most 995.45 EUR a month), without contributions (Zakon o doprinosima čl. 213), and is refunded; a month with sick leave past day 42 is refused, since that part is not separated from pay. No statutory leave pay rule is declared: the monthly cap can't be expressed as a percentage of salary. A disabled worker's 7 employer days are not modelled.",
     "The MO I base reduction for several employers, or for a salary paid in several instalments, must be entered as pensionBaseReduction; the computed reduction assumes one employer and one payment, and is rounded to 0.01 EUR.",
     "The annual pension ceiling (143,496.00 EUR) applied by the Tax Administration in the annual calculation, other contribution exemptions (e.g. employment of persons with disabilities) and increased-length insurance contributions (staž s povećanim trajanjem) are not modelled.",
     "Non-taxable payments (e.g. bonuses within the non-taxable limits) must be excluded from taxable and social earnings by the tenant's pay components; pre-tax deductions are refused.",
@@ -3757,6 +3775,81 @@
       ]
     },
     {
+      "name": "joined on 11 March: the minimum for 21 days in insurance",
+      "evidence": "ZOD čl. 202: 757.34 x 21 / 31 = 513.04. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "500.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "employedThroughout": false,
+      "employmentStartDate": "2026-03-11",
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "31.96"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "25.65"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "84.65"
+        }
+      ]
+    },
+    {
+      "name": "a month with sick leave keeps the full minimum",
+      "evidence": "ZOD čl. 200 st. 1: insured the whole month (the employer's first 42 days), so contributions on at least 757.34. ZOD čl. 13, 14, 17, 21, 21.a, 200, 204; Naredba NN 150/25; ZPD čl. 14, 24; Porezna uprava 2026 rate table; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "600.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "municipalityCode": "1333",
+        "personalAllowanceCoefficient": "1",
+        "secondPillarMember": "true"
+      },
+      "leavePay": {
+        "SICK": "200.00"
+      },
+      "leaveDays": {
+        "SICK": "10"
+      },
+      "leaveAbsenceDay": {
+        "SICK": "10"
+      },
+      "expectLines": [
+        {
+          "step": "pensionFirstPillar",
+          "side": "EMPLOYEE",
+          "amount": "68.60"
+        },
+        {
+          "step": "pensionSecondPillar",
+          "side": "EMPLOYEE",
+          "amount": "37.87"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "124.96"
+        }
+      ]
+    },
+    {
       "name": "no earnings, no lines",
       "evidence": "nothing is insured or taxed",
       "periodStart": "2026-03-01",
@@ -3804,12 +3897,12 @@
       "expectError": "personalAllowanceCoefficient"
     },
     {
-      "name": "partial month below the minimum base refuses",
-      "evidence": "ZOD čl. 200, 202: the floor is prorated by insured days",
+      "name": "sick leave on HZZO's account refuses",
+      "evidence": "ZOD čl. 179, 213: from day 43 the employer pays on HZZO's account and calculates no contributions on it; not separated",
       "periodStart": "2026-03-01",
       "periodEnd": "2026-03-31",
       "frequency": "MONTHLY",
-      "grossEarnings": "500.00",
+      "grossEarnings": "1500.00",
       "fullPeriod": false,
       "employer": {},
       "employee": {
@@ -3817,7 +3910,16 @@
         "personalAllowanceCoefficient": "1",
         "secondPillarMember": "true"
       },
-      "expectError": "minimumContributionBase"
+      "leavePay": {
+        "SICK": "600.00"
+      },
+      "leaveDays": {
+        "SICK": "20"
+      },
+      "leaveAbsenceDay": {
+        "SICK": "60"
+      },
+      "expectError": "HZZO"
     },
     {
       "name": "second job at 1,300 or less needs the reduction share",

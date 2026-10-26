@@ -26,11 +26,13 @@ import java.util.Map;
  * @param leavePay        the part of the earnings paid for leave days, by leave type (defaults to none)
  * @param leaveDays       calendar days of that leave in the period, by leave type (defaults to none)
  * @param unpaidLeaveDays the calendar days among them left wholly unpaid, by leave type (defaults to none)
+ * @param leaveAbsenceDay the furthest day of an absence reached in the period, by leave type (defaults to none)
  * @param preTaxDeductions tenant pre-tax deductions (defaults to the sum by type, else 0)
  * @param preTaxDeductionsByType the same by deduction type (defaults to none)
  * @param fullPeriod      employed full-time for the whole period (defaults to true)
  * @param birthDate       employee's birth date
  * @param employmentStartDate first day of employment (defaults to the period start)
+ * @param employmentEndDate last day of employment (defaults to none)
  * @param employedThroughout employed for the whole period (defaults to true)
  * @param employer        employer settings
  * @param employee        employee attributes
@@ -55,11 +57,13 @@ public record TestCase(
     Map<String, BigDecimal> leavePay,
     Map<String, BigDecimal> leaveDays,
     Map<String, BigDecimal> unpaidLeaveDays,
+    Map<String, BigDecimal> leaveAbsenceDay,
     BigDecimal preTaxDeductions,
     Map<String, BigDecimal> preTaxDeductionsByType,
     Boolean fullPeriod,
     LocalDate birthDate,
     LocalDate employmentStartDate,
+    LocalDate employmentEndDate,
     Boolean employedThroughout,
     Map<String, String> employer,
     Map<String, String> employee,

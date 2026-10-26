@@ -45,7 +45,8 @@ The PAP XML is from `bmf-steuerrechner.de`. The final Anlage 1 PDF (12 November 
 input definitions) is the IHK München copy, because bundesfinanzministerium.de blocks automated
 access. Statutes are from `gesetze-im-internet.de`: EStG §§ 9a, 10c, 24a, 24b, 32, 32a, 39b, 39f, 51a;
 SolzG §§ 3–4; SVBezGrV 2026 §§ 2, 4; SGB V § 241; BSV 2018 § 1 (no later Beitragssatzverordnung);
-SGB III §§ 341, 358, 360; SGB XI §§ 55, 58 with PBAV 2025 § 1; AAG §§ 1, 7; BVV §§ 1, 2; SGB IV § 20.
+SGB III §§ 341, 358, 360; SGB XI §§ 55, 58 with PBAV 2025 § 1; AAG §§ 1, 7; BVV §§ 1, 2; SGB IV § 20;
+and, retrieved 2026-10-26 for months with leave, SGB IV § 7 and SGB V § 224.
 Kirchensteuer rates come from the EKD statistics page, and the cent rule from the Nordkirche
 Kirchensteuerbeschluss § 7 Abs. 2 and the Bavarian KirchStG. `build_template.py` checks each rate and
 ceiling against the downloaded statute texts.
@@ -94,7 +95,9 @@ Midijobs (Übergangsbereich), Minijobs, apprentices below € 2.000, private hea
 old-age pensioners, employees exempt from pension insurance, employees aged 66 or over
 (Regelaltersgrenze), Selbstzahler with a § 257 SGB V subsidy,
 Werkstudenten and other Personengruppen, Versorgungsbezüge, Mindestkirchensteuer and Kappung, weekly or
-other pay periods.
+other pay periods. Leave: pay kept for maternity days (Zuschuss zum Mutterschaftsgeld) and unpaid leave
+longer than a month are refused; sick days a leave pay rule leaves unpaid and maternity days are left out
+of the Sozialversicherungstage that prorate the contribution ceilings (BVV § 1 Abs. 1).
 
 ## Rebuilding
 

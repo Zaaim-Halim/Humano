@@ -786,6 +786,7 @@ public class PayrollProcessingService {
         Map<String, BigDecimal> leavePayByType = new HashMap<>();
         Map<String, BigDecimal> leaveDaysByType = new HashMap<>();
         Map<String, BigDecimal> unpaidLeaveDaysByType = new HashMap<>();
+        Map<String, BigDecimal> leaveAbsenceDayByType = new HashMap<>();
         if (employee.getCountry() == null) {
             log.debug("Step 3 — leave deductions skipped: employee {} has no country", employee.getId());
         } else if (!leaveRules.isEmpty()) {
@@ -846,6 +847,7 @@ public class PayrollProcessingService {
             for (LeaveDay day : leaveDays) {
                 BigDecimal deducted = nz(leaveRules.get(day.type()).deductionPercentageOnDay(day.dayOfAbsence()));
                 leaveDaysByType.merge(day.type().name(), BigDecimal.ONE, BigDecimal::add);
+                leaveAbsenceDayByType.merge(day.type().name(), BigDecimal.valueOf(day.dayOfAbsence()), BigDecimal::max);
                 if (deducted.compareTo(BigDecimal.valueOf(100)) >= 0) {
                     unpaidLeaveDaysByType.merge(day.type().name(), BigDecimal.ONE, BigDecimal::add);
                 }
@@ -952,7 +954,9 @@ public class PayrollProcessingService {
                     payrollTemplateService.yearToDate(employee.getId(), template, period.getStartDate(), period.getPaymentDate()),
                     leavePayByType,
                     leaveDaysByType,
-                    unpaidLeaveDaysByType
+                    unpaidLeaveDaysByType,
+                    employee.getEndDate(),
+                    leaveAbsenceDayByType
                 );
                 PayrollTemplateEngine.Calculation calculation = payrollTemplateEngine.run(template, input);
                 if (!calculation.remembered().isEmpty()) {

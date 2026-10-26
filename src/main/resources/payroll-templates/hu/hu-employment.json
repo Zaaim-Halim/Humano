@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "hu-employment",
   "name": "Hungary — employment (munkaviszony)",
-  "version": "2026.1.1",
+  "version": "2026.1.2",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "HU"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.2",
+      "date": "2026-10-26",
+      "summary": "A month the employment starts or ends: the minimum base leaves out the days outside the employment, each other day a thirtieth (Tbj. 27. § (2) a)); before, pay below the minimum was refused until the prorated base was entered. Part-time pay below the minimum is still refused."
+    },
     {
       "version": "2026.1.1",
       "date": "2026-10-25",
@@ -314,14 +319,21 @@
       "type": "REQUIRE",
       "source": "tbj",
       "when": "!#employee['ownRightPensioner'] and !#employee['minimumBaseExempt'] and #employee['minimumContributionBase'] == null and #wage > 0 and #wage < #p['minimumContributionBase']",
-      "condition": "#employedThroughout and #fte >= 1",
-      "message": "Pay is below the minimum contribution base in a partial month: the base is prorated by calendar days (Tbj. 27. § (2)), so set the employee's minimumContributionBase"
+      "condition": "#fte >= 1",
+      "message": "A part-time employee is paid below the minimum contribution base: set the employee's minimumContributionBase (Tbj. 27. § (2))"
+    },
+    {
+      "id": "daysOutsideEmployment",
+      "type": "VALUE",
+      "source": "tbj",
+      "when": "!#employedThroughout",
+      "expr": "(#employmentStartDate > #periodStart ? #employmentStartDate.getDayOfMonth() - 1 : 0) + (#employmentEndDate != null and #employmentEndDate < #periodEnd ? #periodEnd.getDayOfMonth() - #employmentEndDate.getDayOfMonth() : 0)"
     },
     {
       "id": "minimumBaseDays",
       "type": "VALUE",
       "source": "tbj",
-      "expr": "#periodEnd.getDayOfMonth() - #unpaidLeaveDays['SICK']"
+      "expr": "#periodEnd.getDayOfMonth() - #daysOutsideEmployment - #unpaidLeaveDays['SICK']"
     },
     {
       "id": "minimumBase",
@@ -1085,6 +1097,78 @@
       ]
     },
     {
+      "name": "joined on 11 March: the minimum base for 21 days",
+      "evidence": "Tbj. 27. § (2) a): the 10 days before the employment are disregarded, 21 x 96,840 / 30 = 67,788 Ft; employer 18.5% on 67,788 - 60,000. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "60000",
+      "fullPeriod": false,
+      "employedThroughout": false,
+      "employmentStartDate": "2026-03-11",
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {},
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "11100"
+        },
+        {
+          "step": "socialSecurityMinimum",
+          "side": "EMPLOYER",
+          "amount": "1441"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "8812"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "9000"
+        }
+      ]
+    },
+    {
+      "name": "left on 20 March: the minimum base for 20 days",
+      "evidence": "Tbj. 27. § (2) a): 11 days after the employment ended are disregarded, 20 x 96,840 / 30 = 64,560 Ft. Szja tv. 8. §, 29/A-29/F. §; Tbj. 22. § (3), 25. §, 27. § (2), 34. §; Szocho tv.; NAV booklets 49 and 73; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "50000",
+      "fullPeriod": false,
+      "employedThroughout": false,
+      "employmentEndDate": "2026-03-20",
+      "birthDate": "1988-06-15",
+      "employer": {},
+      "employee": {},
+      "expectLines": [
+        {
+          "step": "socialSecurity",
+          "side": "EMPLOYEE",
+          "amount": "9250"
+        },
+        {
+          "step": "socialSecurityMinimum",
+          "side": "EMPLOYER",
+          "amount": "2694"
+        },
+        {
+          "step": "socialContributionTax",
+          "side": "EMPLOYER",
+          "amount": "8393"
+        },
+        {
+          "step": "incomeTax",
+          "side": "TAX",
+          "amount": "7500"
+        }
+      ]
+    },
+    {
       "name": "no earnings, no lines",
       "evidence": "nothing is insured or taxed",
       "periodStart": "2026-03-01",
@@ -1108,20 +1192,6 @@
       "employer": {},
       "employee": {},
       "expectError": "no birth date"
-    },
-    {
-      "name": "partial month below the minimum base",
-      "evidence": "Tbj. 27. § (2) a): the minimum base is prorated by calendar days",
-      "periodStart": "2026-03-01",
-      "periodEnd": "2026-03-31",
-      "frequency": "MONTHLY",
-      "grossEarnings": "60000",
-      "fullPeriod": false,
-      "employedThroughout": false,
-      "birthDate": "1988-06-15",
-      "employer": {},
-      "employee": {},
-      "expectError": "minimumContributionBase"
     },
     {
       "name": "paid parental leave refused",
