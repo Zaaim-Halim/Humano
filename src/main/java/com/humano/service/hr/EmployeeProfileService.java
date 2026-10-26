@@ -223,6 +223,8 @@ public class EmployeeProfileService {
                 if (oldPath != null && !oldPath.equals(newPath)) {
                     int rewritten = employeeRepository.rewriteDescendantPaths(oldPath, newPath);
                     log.info("Rewrote {} descendant path(s) after reparenting employee {}", rewritten, id);
+                    // The bulk update cleared the persistence context: reload so the response's lazy associations resolve.
+                    saved = employeeRepository.findById(id).orElseThrow();
                 }
 
                 return mapToEmployeeProfileResponse(saved);
