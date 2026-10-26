@@ -43,6 +43,11 @@ SOURCES = {
 }
 for s in SOURCES.values():
     s["retrieved"] = RETRIEVED
+SOURCES["vkm-77-2015-issh"] = {
+    "title": "VKM nr. 77, datë 28.1.2015 (i përditësuar, ISSH 2026) — I.1 i): të punësuarit mbi 87 orë në muaj në rast sëmundjeje 'me raport mjekësor për deri në 14 ditët e para' — 'Përllogaritja e kontributeve të sigurimeve shoqërore, të sigurimit të kujdesit shëndetësor, si dhe tatimi mbi të ardhurat nga punësimi, zbatohet njëlloj, ashtu si për të ardhurat nga puna'; II.3 a) paga bruto mujore për kontributet 'jo më pak se sa paga minimale mujore'; IV.6: 'Kur fillimi dhe ndërprerja përfundimtare e marrëdhënieve të punës bëhen gjatë muajit, si dhe kur gjatë muajit ka ndërprerje të përkohshme, për shkak të përfitimeve afatshkurtra nga skema e sigurimeve shoqërore, kontributet llogariten e paguhen në bazë të pagës së realizuar gjatë ditëve të punës'",
+    "url": "https://www.issh.gov.al/wp-content/uploads/2026/08/VENDIM-NR.-77-DATE-28.1.2015-PER-KONTRIBUTET-E-DETYRUESHME-DHE-PERFITIMET-NGA-SISTEMI-I-SIGURIMEVE-SHOQERORE-DHE-SIGURIMI-I-KUJDESIT-SHENDETESOR-i-perditesuar.pdf",
+    "retrieved": "2026-10-26",
+}
 SOURCES["law-29-2023-art-11"] = {
     "title": "Ligji nr. 29/2023 “Për tatimin mbi të ardhurat” (as consolidated on Akses Drejtësi) — neni 11 a): 'të ardhurat e përfituara si rezultat i sigurimit në skemën e detyrueshme të sigurimeve shoqërore dhe shëndetësore' nuk janë subjekt i tatimit mbi të ardhurat personale; neni 12 pika 4 c) (kompensimet për punonjësit në rast të sëmundjeve sipas legjislacionit përkatës)",
     "url": "https://www.aksesdrejtesi.al/dokumenta/1726126897ligj-2023-03-30-29%20-p%C3%ABrdit%C3%ABsuar.pdf",
@@ -81,7 +86,13 @@ def expected_lines(c):
     gross = Decimal(c["grossEarnings"]) - Decimal(c.get("reductions", "0"))
     emp = c.get("employee", {})
     category = emp.get("contractHours", "MORE_THAN_87_HOURS")
-    minimum = Decimal(emp["minimumContributionBase"]) if "minimumContributionBase" in emp else p("minimumWage")
+    # VKM 77/2015 IV.6: in a month employment starts or ends, or interrupted by short-term social insurance
+    # benefits (sickness from day 15, maternity), contributions are on the pay for the days worked
+    worked_days = (c.get("employedThroughout", True) is False
+                   or int(c.get("unpaidLeaveDays", {}).get("SICK", "0")) > 0
+                   or int(c.get("leaveDays", {}).get("MATERNITY", "0")) > 0)
+    minimum = (Decimal(emp["minimumContributionBase"]) if "minimumContributionBase" in emp
+               else Decimal(0) if worked_days else p("minimumWage"))
     lines = []
 
     def add(step, side, amount):
@@ -120,7 +131,7 @@ def expected_lines(c):
 
 
 def case(name, evidence, gross, employee, full=True, error=None, start="2026-03-01", end="2026-03-31", pre_tax=None,
-         reductions=None, leave_pay=None, leave_days=None):
+         reductions=None, leave_pay=None, leave_days=None, unpaid_days=None, throughout=None):
     c = {
         "name": name,
         "evidence": evidence,
@@ -140,6 +151,10 @@ def case(name, evidence, gross, employee, full=True, error=None, start="2026-03-
         c["leavePay"] = leave_pay
     if leave_days:
         c["leaveDays"] = leave_days
+    if unpaid_days:
+        c["unpaidLeaveDays"] = unpaid_days
+    if throughout is not None:
+        c["employedThroughout"] = throughout
     if error:
         c["expectError"] = error
     return c
@@ -176,7 +191,15 @@ def test_cases():
         case("employer sick pay for the first days is wage", "The employer pays the first 14 days of a medical report (at least 80% of the wage) as wage: contributions and tax on the whole 120,000 paid. " + law,
              "120000.00", SIGNED, full=False, leave_pay={"SICK": "21818.18"}, leave_days={"SICK": "7"}),
         case("days paid by social insurance are not pay", "Law 29/2023 art. 11 a): the ISSH sickness benefit is not taxed and is paid outside payroll; the 30,000 left unpaid by the rule leave every base. " + law,
-             "120000.00", SIGNED, full=False, reductions="30000.00", leave_days={"SICK": "10"}),
+             "120000.00", SIGNED, full=False, reductions="30000.00", leave_days={"SICK": "16"}, unpaid_days={"SICK": "2"}),
+        case("joined mid-month: contributions on the pay for the days worked", "VKM 77/2015 IV.6: when employment starts during the month, contributions on the pay realized; 25,000 below the minimum wage. " + law,
+             "25000.00", SIGNED, full=False, throughout=False),
+        case("a month with sickness benefit days: contributions on the pay for the days worked", "VKM 77/2015 IV.6: social insurance paid from day 15, so contributions on the 30,000 paid, below the minimum wage. " + law,
+             "60000.00", SIGNED, full=False, reductions="30000.00", leave_days={"SICK": "16"}, unpaid_days={"SICK": "2"}),
+        case("a month with maternity benefit: contributions on the pay for the days worked", "VKM 77/2015 IV.6: the maternity benefit is a short-term benefit of the scheme. " + law,
+             "60000.00", SIGNED, full=False, reductions="40000.00", leave_days={"MATERNITY": "20"}, unpaid_days={"MATERNITY": "20"}),
+        case("unpaid leave keeps the minimum wage floor", "VKM 77/2015 II.3 a): not less than the minimum wage; unpaid leave by agreement is not a social insurance benefit. " + law,
+             "60000.00", SIGNED, full=False, reductions="30000.00", leave_days={"UNPAID": "10"}, unpaid_days={"UNPAID": "10"}),
     ]
     for c in computed:
         c["expectLines"] = expected_lines(c)
@@ -185,10 +208,7 @@ def test_cases():
     errors = [
         case("missing personal-status declaration answer", "whether the deduction applies must be stated per employee",
              "100000.00", {}, error="personalStatusDeclaration"),
-        case("partial month below the minimum wage refuses", "VKM 77/2015 does not say how the floor is prorated",
-             "25000.00", SIGNED, full=False, error="minimumContributionBase"),
-        case("sick month below the minimum wage refuses", "how the floor applies to days paid by social insurance is not settled",
-             "60000.00", SIGNED, full=False, reductions="30000.00", leave_days={"SICK": "16"}, error="minimumContributionBase"),
+
         case("pre-tax deductions refuse", "law 29/2023 art. 20 private-pension deduction not modelled",
              "100000.00", SIGNED, pre_tax="5000.00", error="Pre-tax deductions are not supported"),
         case("second job below the minimum wage refuses", "VKM 77/2015 pt 15: contributions across employers",
@@ -234,7 +254,7 @@ def main():
         "schemaVersion": 1,
         "id": "al-employment",
         "name": "Albania — employment income",
-        "version": "2026.1.2",
+        "version": "2026.1.3",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "AL"},
         "validity": {"from": FROM, "to": TO},
@@ -243,6 +263,8 @@ def main():
         "taxYearStart": "--01-01",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.3", "date": "2026-10-26",
+             "summary": "Months with leave and partial months: contributions are on the pay for the days worked in a month employment starts or ends, or with sickness (from day 15) or maternity benefit (VKM 77/2015 IV.6); other months, including agreed unpaid leave, keep the minimum-wage floor (II.3). Before, a month below the minimum wage with leave or a start or end was refused until a minimum base was entered. The employer's first 14 sick days are confirmed as taxed and insured like pay (I.1 i))."},
             LEAVE_CHANGE,
             {"version": "2026.1.1", "date": LEAVE_RETRIEVED,
              "summary": "Leave pay rules documented, no change in amounts: pay the employer keeps for sick days (the first 14 days of a medical report) is wage; days the rule leaves unpaid, which social insurance pays, are outside every base (law 29/2023 art. 11 a)). A month with leave below the minimum wage still asks for the minimum base, now saying so."},
@@ -288,13 +310,11 @@ def main():
              "condition": "#employee['contractHours'] != 'MORE_THAN_87_HOURS' or #fte * 2 >= 1",
              "message": "The employee works under half time (under 87 hours a month) but contractHours says MORE_THAN_87_HOURS; set contractHours"},
             {"id": "remuneration", "type": "VALUE", "expr": "#pos(#socialEarnings - #reductions)"},
+            {"id": "workedDaysBasis", "type": "VALUE", "source": "vkm-77-2015-issh",
+             "expr": "!#employedThroughout or #unpaidLeaveDays['SICK'] > 0 or #leaveDays['MATERNITY'] > 0 ? 1 : 0"},
             {"id": "minimumBase", "type": "VALUE",
-             "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : #p['minimumWage']",
+             "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : (#workedDaysBasis == 1 ? 0 : #p['minimumWage'])",
              "source": "vkm-776-2025"},
-            {"id": "partialMonthMinimum", "type": "REQUIRE",
-             "when": "#remuneration > 0 and !(" + under_week + ") and #employee['minimumContributionBase'] == null",
-             "condition": "#fullPeriod or #remuneration >= #minimumBase",
-             "message": "Pay is below the minimum wage in a partial month (or part-time, or a month with unpaid or sick leave); VKM 77/2015 does not say how the floor is prorated, so set the employee's minimumContributionBase"},
             {"id": "otherEmploymentAboveMinimum", "type": "REQUIRE",
              "when": "#remuneration > 0 and #employee['otherEmployment']",
              "condition": "#remuneration >= #p['minimumWage']",
@@ -323,9 +343,9 @@ def main():
         "leavePay": LEAVE_PAY,
         "limitations": [
             "Monthly payroll calendars whose periods are whole calendar months, paid in ALL.",
-            "Employees with a pay below the minimum wage in a partial month, or below the minimum wage at one of several employers (VKM 77/2015 pt 15), are refused unless a minimumContributionBase is set.",
+            "Contributions are on at least the minimum wage (VKM 77/2015 II.3), except in a month employment starts or ends, or with sickness benefit (days a leave pay rule leaves unpaid) or maternity leave, where they are on the pay for the days worked (IV.6). Employees below the minimum wage at one of several employers (pt 15) are refused unless a minimumContributionBase is set.",
             "The art. 20 private-pension deduction and the annual-return deductions (children, education) are not applied; employees with tenant pre-tax deductions are refused.",
-            "Leave pay rules: pay kept for sick days is taken as the employer's payment for the first 14 days of a medical report (at least 80% of the wage, Labour Code art. 130), wage for contributions and tax as payroll guides describe it; law 29/2023 art. 12 pt 4 c), which excludes compensation in case of illness from employment income, was not found to apply to it. Days the rule leaves unpaid are paid by social insurance (ISSH) outside payroll and are not taxed (art. 11 a)). Social insurance and maternity benefits are not paid through this template. In a month with leave, pay below the minimum wage needs an explicit minimumContributionBase.",
+            "Leave pay rules: pay kept for sick days is the employer's payment for the first 14 days of a medical report (at least 80% of the wage, Labour Code art. 130), with contributions and tax as on pay (VKM 77/2015 I.1 i)). Days the rule leaves unpaid are paid by social insurance (ISSH) outside payroll and are not taxed (law 29/2023 art. 11 a)); social insurance and maternity benefits are not paid through this template.",
             "Social insurance across several employers is computed per employer on its own pay (capped at the maximum each); the refund of the excess by the Social Insurance Institute is outside payroll.",
             "The maximum social-insurance base (186,416 ALL) comes from the tax administration's 2026 notice, since removed from its website, and Boga & Associates' alert; not from a gazette text.",
             "Amounts are rounded to 0.01 ALL, half up, line by line; rounding to whole lek on the e-payroll declaration is not modelled.",

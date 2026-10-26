@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "al-employment",
   "name": "Albania — employment income",
-  "version": "2026.1.2",
+  "version": "2026.1.3",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "AL"
@@ -19,6 +19,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.3",
+      "date": "2026-10-26",
+      "summary": "Months with leave and partial months: contributions are on the pay for the days worked in a month employment starts or ends, or with sickness (from day 15) or maternity benefit (VKM 77/2015 IV.6); other months, including agreed unpaid leave, keep the minimum-wage floor (II.3). Before, a month below the minimum wage with leave or a start or end was refused until a minimum base was entered. The employer's first 14 sick days are confirmed as taxed and insured like pay (I.1 i))."
+    },
     {
       "version": "2026.1.2",
       "date": "2026-10-26",
@@ -65,6 +70,11 @@
       "title": "Paga maksimale për kontributet shoqërore 186 416 lekë nga 1.1.2026 (DPT notice “Nga 1 janari 2026, rritet paga minimale dhe maksimale”, since removed from tatime.gov.al; confirmed by Boga & Associates Tax Alert on VKM 776/2025, which also states health contributions stay on gross salary)",
       "url": "https://www.bogalaw.com/pdf/2025%20-%204%20-%20Tax%20Alert%20-%20On%20Determining%20the%20National%20Minimum%20Wage.pdf",
       "retrieved": "2026-10-20"
+    },
+    "vkm-77-2015-issh": {
+      "title": "VKM nr. 77, datë 28.1.2015 (i përditësuar, ISSH 2026) — I.1 i): të punësuarit mbi 87 orë në muaj në rast sëmundjeje 'me raport mjekësor për deri në 14 ditët e para' — 'Përllogaritja e kontributeve të sigurimeve shoqërore, të sigurimit të kujdesit shëndetësor, si dhe tatimi mbi të ardhurat nga punësimi, zbatohet njëlloj, ashtu si për të ardhurat nga puna'; II.3 a) paga bruto mujore për kontributet 'jo më pak se sa paga minimale mujore'; IV.6: 'Kur fillimi dhe ndërprerja përfundimtare e marrëdhënieve të punës bëhen gjatë muajit, si dhe kur gjatë muajit ka ndërprerje të përkohshme, për shkak të përfitimeve afatshkurtra nga skema e sigurimeve shoqërore, kontributet llogariten e paguhen në bazë të pagës së realizuar gjatë ditëve të punës'",
+      "url": "https://www.issh.gov.al/wp-content/uploads/2026/08/VENDIM-NR.-77-DATE-28.1.2015-PER-KONTRIBUTET-E-DETYRUESHME-DHE-PERFITIMET-NGA-SISTEMI-I-SIGURIMEVE-SHOQERORE-DHE-SIGURIMI-I-KUJDESIT-SHENDETESOR-i-perditesuar.pdf",
+      "retrieved": "2026-10-26"
     },
     "law-29-2023-art-11": {
       "title": "Ligji nr. 29/2023 “Për tatimin mbi të ardhurat” (as consolidated on Akses Drejtësi) — neni 11 a): 'të ardhurat e përfituara si rezultat i sigurimit në skemën e detyrueshme të sigurimeve shoqërore dhe shëndetësore' nuk janë subjekt i tatimit mbi të ardhurat personale; neni 12 pika 4 c) (kompensimet për punonjësit në rast të sëmundjeve sipas legjislacionit përkatës)",
@@ -275,17 +285,16 @@
       "expr": "#pos(#socialEarnings - #reductions)"
     },
     {
-      "id": "minimumBase",
+      "id": "workedDaysBasis",
       "type": "VALUE",
-      "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : #p['minimumWage']",
-      "source": "vkm-776-2025"
+      "source": "vkm-77-2015-issh",
+      "expr": "!#employedThroughout or #unpaidLeaveDays['SICK'] > 0 or #leaveDays['MATERNITY'] > 0 ? 1 : 0"
     },
     {
-      "id": "partialMonthMinimum",
-      "type": "REQUIRE",
-      "when": "#remuneration > 0 and !(#employee['contractHours'] == 'LESS_THAN_ONE_WEEK') and #employee['minimumContributionBase'] == null",
-      "condition": "#fullPeriod or #remuneration >= #minimumBase",
-      "message": "Pay is below the minimum wage in a partial month (or part-time, or a month with unpaid or sick leave); VKM 77/2015 does not say how the floor is prorated, so set the employee's minimumContributionBase"
+      "id": "minimumBase",
+      "type": "VALUE",
+      "expr": "#employee['minimumContributionBase'] != null ? #employee['minimumContributionBase'] : (#workedDaysBasis == 1 ? 0 : #p['minimumWage'])",
+      "source": "vkm-776-2025"
     },
     {
       "id": "otherEmploymentAboveMinimum",
@@ -373,9 +382,9 @@
   ],
   "limitations": [
     "Monthly payroll calendars whose periods are whole calendar months, paid in ALL.",
-    "Employees with a pay below the minimum wage in a partial month, or below the minimum wage at one of several employers (VKM 77/2015 pt 15), are refused unless a minimumContributionBase is set.",
+    "Contributions are on at least the minimum wage (VKM 77/2015 II.3), except in a month employment starts or ends, or with sickness benefit (days a leave pay rule leaves unpaid) or maternity leave, where they are on the pay for the days worked (IV.6). Employees below the minimum wage at one of several employers (pt 15) are refused unless a minimumContributionBase is set.",
     "The art. 20 private-pension deduction and the annual-return deductions (children, education) are not applied; employees with tenant pre-tax deductions are refused.",
-    "Leave pay rules: pay kept for sick days is taken as the employer's payment for the first 14 days of a medical report (at least 80% of the wage, Labour Code art. 130), wage for contributions and tax as payroll guides describe it; law 29/2023 art. 12 pt 4 c), which excludes compensation in case of illness from employment income, was not found to apply to it. Days the rule leaves unpaid are paid by social insurance (ISSH) outside payroll and are not taxed (art. 11 a)). Social insurance and maternity benefits are not paid through this template. In a month with leave, pay below the minimum wage needs an explicit minimumContributionBase.",
+    "Leave pay rules: pay kept for sick days is the employer's payment for the first 14 days of a medical report (at least 80% of the wage, Labour Code art. 130), with contributions and tax as on pay (VKM 77/2015 I.1 i)). Days the rule leaves unpaid are paid by social insurance (ISSH) outside payroll and are not taxed (law 29/2023 art. 11 a)); social insurance and maternity benefits are not paid through this template.",
     "Social insurance across several employers is computed per employer on its own pay (capped at the maximum each); the refund of the excess by the Social Insurance Institute is outside payroll.",
     "The maximum social-insurance base (186,416 ALL) comes from the tax administration's 2026 notice, since removed from its website, and Boga & Associates' alert; not from a gazette text.",
     "Amounts are rounded to 0.01 ALL, half up, line by line; rounding to whole lek on the e-payroll declaration is not modelled.",
@@ -820,7 +829,10 @@
       },
       "reductions": "30000.00",
       "leaveDays": {
-        "SICK": "10"
+        "SICK": "16"
+      },
+      "unpaidLeaveDays": {
+        "SICK": "2"
       },
       "expectLines": [
         {
@@ -851,6 +863,168 @@
       ]
     },
     {
+      "name": "joined mid-month: contributions on the pay for the days worked",
+      "evidence": "VKM 77/2015 IV.6: when employment starts during the month, contributions on the pay realized; 25,000 below the minimum wage. law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "25000.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "employedThroughout": false,
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "2375.00"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "3750.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "425.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "425.00"
+        }
+      ]
+    },
+    {
+      "name": "a month with sickness benefit days: contributions on the pay for the days worked",
+      "evidence": "VKM 77/2015 IV.6: social insurance paid from day 15, so contributions on the 30,000 paid, below the minimum wage. law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "60000.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "reductions": "30000.00",
+      "leaveDays": {
+        "SICK": "16"
+      },
+      "unpaidLeaveDays": {
+        "SICK": "2"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "2850.00"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "4500.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "510.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "510.00"
+        }
+      ]
+    },
+    {
+      "name": "a month with maternity benefit: contributions on the pay for the days worked",
+      "evidence": "VKM 77/2015 IV.6: the maternity benefit is a short-term benefit of the scheme. law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "60000.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "reductions": "40000.00",
+      "leaveDays": {
+        "MATERNITY": "20"
+      },
+      "unpaidLeaveDays": {
+        "MATERNITY": "20"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "1900.00"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "3000.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "340.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "340.00"
+        }
+      ]
+    },
+    {
+      "name": "unpaid leave keeps the minimum wage floor",
+      "evidence": "VKM 77/2015 II.3 a): not less than the minimum wage; unpaid leave by agreement is not a social insurance benefit. law 29/2023 arts. 22, 24, 65; VKM 77/2015 pts 3-5; VKM 776/2025; law 10383 arts. 7-8; amounts from build_template.py expected_lines()",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-31",
+      "frequency": "MONTHLY",
+      "grossEarnings": "60000.00",
+      "fullPeriod": false,
+      "employer": {},
+      "employee": {
+        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
+      },
+      "reductions": "30000.00",
+      "leaveDays": {
+        "UNPAID": "10"
+      },
+      "unpaidLeaveDays": {
+        "UNPAID": "10"
+      },
+      "expectLines": [
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYEE",
+          "amount": "4750.00"
+        },
+        {
+          "step": "socialInsurance",
+          "side": "EMPLOYER",
+          "amount": "7500.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYEE",
+          "amount": "850.00"
+        },
+        {
+          "step": "healthInsurance",
+          "side": "EMPLOYER",
+          "amount": "850.00"
+        }
+      ]
+    },
+    {
       "name": "no earnings, no lines",
       "evidence": "nothing is insured or taxed",
       "periodStart": "2026-03-01",
@@ -875,38 +1049,6 @@
       "employer": {},
       "employee": {},
       "expectError": "personalStatusDeclaration"
-    },
-    {
-      "name": "partial month below the minimum wage refuses",
-      "evidence": "VKM 77/2015 does not say how the floor is prorated",
-      "periodStart": "2026-03-01",
-      "periodEnd": "2026-03-31",
-      "frequency": "MONTHLY",
-      "grossEarnings": "25000.00",
-      "fullPeriod": false,
-      "employer": {},
-      "employee": {
-        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
-      },
-      "expectError": "minimumContributionBase"
-    },
-    {
-      "name": "sick month below the minimum wage refuses",
-      "evidence": "how the floor applies to days paid by social insurance is not settled",
-      "periodStart": "2026-03-01",
-      "periodEnd": "2026-03-31",
-      "frequency": "MONTHLY",
-      "grossEarnings": "60000.00",
-      "fullPeriod": false,
-      "employer": {},
-      "employee": {
-        "personalStatusDeclaration": "SIGNED_WITH_THIS_EMPLOYER"
-      },
-      "reductions": "30000.00",
-      "leaveDays": {
-        "SICK": "16"
-      },
-      "expectError": "minimumContributionBase"
     },
     {
       "name": "pre-tax deductions refuse",

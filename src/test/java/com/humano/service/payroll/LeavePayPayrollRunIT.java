@@ -587,6 +587,21 @@ class LeavePayPayrollRunIT {
     }
 
     @Test
+    void anAlbanianMonthWithSicknessBenefitIsInsuredOnThePayForTheDaysWorked() {
+        albanianEmployee();
+        payIn("100000", CurrencyCode.ALL);
+        // From day 15 social insurance pays: the month's pay falls below the 50,000 minimum wage, and VKM 77/2015 IV.6
+        // puts contributions on the pay for the days worked instead of refusing the month.
+        leave(LeaveType.SICK, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 27));
+
+        PayrollRunResponse run = calculate(month(2026, 3));
+
+        assertThat(run.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        // 100,000 - 9,090.91 - 45,454.55 = 45,454.54 paid; 9.5% = 4,318.18.
+        assertThat(templateAmounts(run)).contains("socialInsurance/WITHHOLDING=4318.18");
+    }
+
+    @Test
     void aWorkspaceRuleOverridesTheTemplatesStatutoryRule() {
         albanianEmployee();
         // The collective agreement pays sick days in full.
