@@ -1,0 +1,393 @@
+<div class="hum-page">
+  <a class="hum-onb-back" routerLink="/review-cycles"
+    ><lucide-icon name="arrow-left" [size]="14" />{{ 'humano.performance.cycle.backToList' | translate }}</a
+  >
+
+  <header class="hum-onbc-head">
+    <div>
+      <h1 class="hum-onbc-head__title">{{ 'humano.performance.framework.title' | translate }}</h1>
+      <p class="hum-onbc-head__lead">{{ 'humano.performance.framework.lead' | translate }}</p>
+    </div>
+    @if (canManage) {
+      <div class="hum-onbc-head__actions">
+        @if (view() === 'templates') {
+          <hum-button variant="primary" size="sm" icon="plus" (click)="newTemplate()">{{
+            'humano.performance.framework.template.new' | translate
+          }}</hum-button>
+        } @else {
+          <hum-button variant="primary" size="sm" icon="plus" (click)="newCompetency()">{{
+            'humano.performance.framework.competency.new' | translate
+          }}</hum-button>
+        }
+      </div>
+    }
+  </header>
+
+  <hum-tabs [items]="tabs()" [value]="view()" (valueChange)="setView($event)" />
+
+  <div style="margin-top: var(--space-4)">
+    @if (error(); as e) {
+      <hum-alert tone="danger" [title]="e">
+        <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+      </hum-alert>
+    } @else if (templates() === null || competencies() === null) {
+      <hum-skeleton [height]="96" />
+      <hum-skeleton [height]="96" style="margin-top: var(--space-3)" />
+    } @else if (view() === 'templates') {
+      @if (!templates()!.length) {
+        <hum-empty-state
+          icon="clipboard-list"
+          [title]="'humano.performance.framework.template.emptyTitle' | translate"
+          [description]="'humano.performance.framework.template.emptyBody' | translate"
+        />
+      } @else {
+        <ul class="hum-perf-fw-list">
+          @for (t of templates(); track t.id) {
+            <li class="hum-perf-fw-item" [class.is-retired]="!t.active">
+              <div class="hum-perf-fw-item__main">
+                <p class="hum-perf-fw-item__name">
+                  {{ t.name }}
+                  @if (!t.active) {
+                    <hum-badge tone="neutral" [label]="'humano.performance.framework.retired' | translate" />
+                  }
+                </p>
+                @if (t.description) {
+                  <p class="hum-perf-fw-item__desc">{{ t.description }}</p>
+                }
+                <p class="hum-perf-fw-item__meta">
+                  <span
+                    ><lucide-icon name="layers" [size]="12" />{{
+                      'humano.performance.framework.template.competencies' | translate: { count: t.competencies.length }
+                    }}</span
+                  >
+                  <span
+                    ><lucide-icon name="user" [size]="12" />{{
+                      'humano.performance.framework.template.employeeQuestions' | translate: { count: count(t, 'EMPLOYEE') }
+                    }}</span
+                  >
+                  <span
+                    ><lucide-icon name="pen-line" [size]="12" />{{
+                      'humano.performance.framework.template.reviewerQuestions' | translate: { count: count(t, 'REVIEWER') }
+                    }}</span
+                  >
+                  <span
+                    ><lucide-icon name="refresh-ccw" [size]="12" />{{
+                      'humano.performance.framework.template.cycles' | translate: { count: t.cycles }
+                    }}</span
+                  >
+                </p>
+              </div>
+              @if (canManage) {
+                <div class="hum-perf-fw-item__actions">
+                  <hum-button variant="ghost" size="sm" icon="pencil" (click)="editTemplate(t)">{{
+                    'humano.action.edit' | translate
+                  }}</hum-button>
+                  @if (t.cycles) {
+                    <hum-button
+                      variant="ghost"
+                      size="sm"
+                      [icon]="t.active ? 'archive' : 'rotate-ccw'"
+                      [disabled]="saving()"
+                      (click)="toggleTemplate(t)"
+                      >{{
+                        (t.active ? 'humano.performance.framework.retire' : 'humano.performance.framework.restore') | translate
+                      }}</hum-button
+                    >
+                  } @else {
+                    <hum-icon-button
+                      icon="trash-2"
+                      size="sm"
+                      [label]="'humano.action.delete' | translate"
+                      (click)="deleting.set({ kind: 'template', id: t.id, name: t.name })"
+                    />
+                  }
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      }
+    } @else {
+      @if (!groups().length) {
+        <hum-empty-state
+          icon="layers"
+          [title]="'humano.performance.framework.competency.emptyTitle' | translate"
+          [description]="'humano.performance.framework.competency.emptyBody' | translate"
+        />
+      } @else {
+        @for (g of groups(); track g.category) {
+          <section class="hum-perf-fw-group">
+            <h2 class="hum-onb-h2">{{ 'humano.performance.framework.category.' + g.category | translate }}</h2>
+            <p class="hum-onb-muted">{{ 'humano.performance.framework.categoryHint.' + g.category | translate }}</p>
+            <ul class="hum-perf-fw-list">
+              @for (c of g.items; track c.id) {
+                <li class="hum-perf-fw-item" [class.is-retired]="!c.active">
+                  <div class="hum-perf-fw-item__main">
+                    <p class="hum-perf-fw-item__name">
+                      {{ c.name }}
+                      @if (!c.active) {
+                        <hum-badge tone="neutral" [label]="'humano.performance.framework.retired' | translate" />
+                      }
+                    </p>
+                    @if (c.description) {
+                      <p class="hum-perf-fw-item__desc">{{ c.description }}</p>
+                    }
+                    <ol class="hum-perf-fw-anchors">
+                      @for (n of levels; track n; let i = $index) {
+                        @if (c.anchors[i]; as a) {
+                          <li>
+                            <strong class="tabular-nums">{{ n }}</strong> {{ a }}
+                          </li>
+                        }
+                      }
+                    </ol>
+                    @if (c.usedBy.length) {
+                      <p class="hum-perf-fw-item__meta">
+                        <span
+                          ><lucide-icon name="clipboard-list" [size]="12" />{{
+                            'humano.performance.framework.competency.usedBy' | translate: { names: c.usedBy.join(', ') }
+                          }}</span
+                        >
+                      </p>
+                    }
+                  </div>
+                  @if (canManage) {
+                    <div class="hum-perf-fw-item__actions">
+                      <hum-button variant="ghost" size="sm" icon="pencil" (click)="editCompetency(c)">{{
+                        'humano.action.edit' | translate
+                      }}</hum-button>
+                      @if (c.usedBy.length) {
+                        <hum-button
+                          variant="ghost"
+                          size="sm"
+                          [icon]="c.active ? 'archive' : 'rotate-ccw'"
+                          [disabled]="saving()"
+                          (click)="toggleCompetency(c)"
+                          >{{
+                            (c.active ? 'humano.performance.framework.retire' : 'humano.performance.framework.restore') | translate
+                          }}</hum-button
+                        >
+                      } @else {
+                        <hum-icon-button
+                          icon="trash-2"
+                          size="sm"
+                          [label]="'humano.action.delete' | translate"
+                          (click)="deleting.set({ kind: 'competency', id: c.id, name: c.name })"
+                        />
+                      }
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
+    }
+  </div>
+</div>
+
+<!-- Competency -->
+<hum-drawer
+  [open]="competencyDraft() !== null"
+  [title]="
+    (competencyDraft()?.id ? 'humano.performance.framework.competency.edit' : 'humano.performance.framework.competency.new') | translate
+  "
+  width="520px"
+  hasFooter
+  (closed)="competencyDraft.set(null)"
+>
+  @if (competencyDraft(); as d) {
+    <div class="hum-perf-form">
+      <hum-form-field
+        [label]="'humano.performance.framework.name' | translate"
+        controlId="fw-c-name"
+        required
+        [error]="tried() && competencyNameMissing(d) ? ('humano.employeeForm.required' | translate) : undefined"
+      >
+        <hum-input inputId="fw-c-name" [(ngModel)]="d.name" [invalid]="tried() && competencyNameMissing(d)" />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.performance.framework.competency.category' | translate">
+        <hum-select
+          [options]="categoryOptions"
+          [ariaLabel]="'humano.performance.framework.competency.category' | translate"
+          [(ngModel)]="d.category"
+        />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.performance.framework.description' | translate">
+        <hum-textarea [rows]="2" [(ngModel)]="d.description" />
+      </hum-form-field>
+      <fieldset class="hum-perf-fieldset">
+        <legend>{{ 'humano.performance.framework.competency.anchors' | translate }}</legend>
+        <p class="hum-onb-muted">{{ 'humano.performance.framework.competency.anchorsHint' | translate }}</p>
+        @for (n of levels; track n; let i = $index) {
+          <hum-form-field [label]="n + ' — ' + ('humano.performance.rating.' + n | translate)">
+            <hum-textarea [rows]="2" [(ngModel)]="d.anchors[i]" />
+          </hum-form-field>
+        }
+      </fieldset>
+      @if (d.id) {
+        <hum-switch [(ngModel)]="d.active" [label]="'humano.performance.framework.activeLabel' | translate" />
+        <p class="hum-onb-muted" style="margin: 0">{{ 'humano.performance.framework.competency.activeHint' | translate }}</p>
+      }
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="competencyDraft.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" (click)="saveCompetency()">{{
+      'humano.action.save' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Template -->
+<hum-drawer
+  [open]="templateDraft() !== null"
+  [title]="(templateDraft()?.id ? 'humano.performance.framework.template.edit' : 'humano.performance.framework.template.new') | translate"
+  width="600px"
+  hasFooter
+  (closed)="templateDraft.set(null)"
+>
+  @if (templateDraft(); as d) {
+    <div class="hum-perf-form">
+      @if (d.id) {
+        <p class="hum-onb-muted" style="margin: 0">{{ 'humano.performance.framework.template.editHint' | translate }}</p>
+      }
+      <hum-form-field [label]="'humano.performance.framework.name' | translate" controlId="fw-t-name" required>
+        <hum-input inputId="fw-t-name" [(ngModel)]="d.name" [invalid]="tried() && !d.name.trim()" />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.performance.framework.description' | translate">
+        <hum-textarea [rows]="2" [(ngModel)]="d.description" />
+      </hum-form-field>
+
+      <fieldset class="hum-perf-fieldset">
+        <legend>{{ 'humano.performance.framework.template.competenciesTitle' | translate }}</legend>
+        <p class="hum-onb-muted">{{ 'humano.performance.framework.template.competenciesHint' | translate }}</p>
+        @if (d.competencyIds.length) {
+          <ol class="hum-perf-fw-order">
+            @for (id of d.competencyIds; track id; let i = $index, first = $first, last = $last) {
+              <li>
+                <span class="hum-perf-fw-order__name"
+                  >{{ competencyName(id) }}
+                  @if (isRetired(id)) {
+                    <hum-badge tone="neutral" [label]="'humano.performance.framework.retired' | translate" />
+                  }
+                </span>
+                <hum-icon-button
+                  icon="chevron-up"
+                  size="sm"
+                  [label]="'humano.performance.framework.moveUp' | translate"
+                  [disabled]="first"
+                  (click)="d.competencyIds = move(d.competencyIds, i, -1)"
+                />
+                <hum-icon-button
+                  icon="chevron-down"
+                  size="sm"
+                  [label]="'humano.performance.framework.moveDown' | translate"
+                  [disabled]="last"
+                  (click)="d.competencyIds = move(d.competencyIds, i, 1)"
+                />
+                <hum-icon-button
+                  icon="x"
+                  size="sm"
+                  [label]="'humano.performance.framework.remove' | translate"
+                  (click)="d.competencyIds = without(d.competencyIds, i)"
+                />
+              </li>
+            }
+          </ol>
+        }
+        @if (d.competencyIds.length < maxItems) {
+          <hum-select
+            [options]="addOptions(d)"
+            [ariaLabel]="'humano.performance.framework.template.pickCompetency' | translate"
+            [ngModel]="toAdd()"
+            (ngModelChange)="addCompetency(d, $event)"
+          />
+        }
+      </fieldset>
+
+      <fieldset class="hum-perf-fieldset">
+        <legend>{{ 'humano.performance.framework.template.questionsTitle' | translate }}</legend>
+        <p class="hum-onb-muted">{{ 'humano.performance.framework.template.questionsHint' | translate }}</p>
+        @for (q of d.questions; track $index; let i = $index, first = $first, last = $last) {
+          <div class="hum-perf-fw-question">
+            <div class="hum-perf-fw-question__head">
+              <hum-select
+                [options]="audienceOptions"
+                [ariaLabel]="'humano.performance.framework.template.audience' | translate"
+                [(ngModel)]="q.audience"
+              />
+              <hum-icon-button
+                icon="chevron-up"
+                size="sm"
+                [label]="'humano.performance.framework.moveUp' | translate"
+                [disabled]="first"
+                (click)="d.questions = move(d.questions, i, -1)"
+              />
+              <hum-icon-button
+                icon="chevron-down"
+                size="sm"
+                [label]="'humano.performance.framework.moveDown' | translate"
+                [disabled]="last"
+                (click)="d.questions = move(d.questions, i, 1)"
+              />
+              <hum-icon-button
+                icon="x"
+                size="sm"
+                [label]="'humano.performance.framework.remove' | translate"
+                (click)="d.questions = without(d.questions, i)"
+              />
+            </div>
+            <hum-form-field [label]="'humano.performance.framework.template.question' | translate" required>
+              <hum-input [(ngModel)]="q.text" [invalid]="tried() && !q.text.trim()" />
+            </hum-form-field>
+            <hum-form-field [label]="'humano.performance.framework.template.help' | translate">
+              <hum-input [(ngModel)]="q.helpText" />
+            </hum-form-field>
+            <hum-checkbox [(ngModel)]="q.required" [label]="'humano.performance.framework.template.required' | translate" />
+          </div>
+        }
+        @if (d.questions.length < maxItems) {
+          <div style="display: flex; gap: var(--space-2); flex-wrap: wrap">
+            <hum-button variant="secondary" size="sm" icon="plus" (click)="addQuestion(d, 'EMPLOYEE')">{{
+              'humano.performance.framework.template.addEmployeeQuestion' | translate
+            }}</hum-button>
+            <hum-button variant="secondary" size="sm" icon="plus" (click)="addQuestion(d, 'REVIEWER')">{{
+              'humano.performance.framework.template.addReviewerQuestion' | translate
+            }}</hum-button>
+          </div>
+        }
+      </fieldset>
+
+      @if (d.id) {
+        <hum-switch [(ngModel)]="d.active" [label]="'humano.performance.framework.activeLabel' | translate" />
+        <p class="hum-onb-muted" style="margin: 0">{{ 'humano.performance.framework.template.activeHint' | translate }}</p>
+      }
+      @if (tried() && templateProblem(d); as problem) {
+        <p class="hum-perf-error">{{ problem | translate }}</p>
+      }
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="templateDraft.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" (click)="saveTemplate()">{{
+      'humano.action.save' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<hum-dialog
+  [open]="deleting() !== null"
+  [title]="'humano.performance.framework.deleteTitle' | translate: { name: deleting()?.name }"
+  [description]="'humano.performance.framework.deleteBody' | translate"
+  hasFooter
+  (closed)="deleting.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="deleting.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" icon="trash-2" [loading]="saving()" (click)="confirmDelete()">{{
+      'humano.action.delete' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>

@@ -1,0 +1,656 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Competency framework and review templates. Competencies (values, core, leadership,
+         functional) describe what each rating level looks like. A template picks competencies for
+         the reviewer to rate and questions for the employee and the reviewer. A cycle picks a
+         template while it is a draft and copies it when it opens (review_cycle_competency,
+         review_cycle_question), so a later edit never changes a running or closed cycle. Answers
+         and ratings are kept per review. Existing cycles have no template: the standard form. -->
+    <changeSet id="20261027-review-templates" author="halimzaaim">
+        <createTable tableName="competency">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_competency"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(1000)"/>
+            <column name="category" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="anchor_1" type="VARCHAR(500)"/>
+            <column name="anchor_2" type="VARCHAR(500)"/>
+            <column name="anchor_3" type="VARCHAR(500)"/>
+            <column name="anchor_4" type="VARCHAR(500)"/>
+            <column name="anchor_5" type="VARCHAR(500)"/>
+            <column name="active" type="${booleanType}" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+
+        <createTable tableName="review_template">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_review_template"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(1000)"/>
+            <column name="active" type="${booleanType}" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+
+        <createTable tableName="review_template_competency">
+            <column name="template_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="competency_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sort_order" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="review_template_competency" columnNames="template_id, sort_order"
+                       constraintName="pk_review_template_competency"/>
+        <addForeignKeyConstraint baseTableName="review_template_competency" baseColumnNames="template_id"
+                                 constraintName="fk_review_template_competency_template"
+                                 referencedTableName="review_template" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="review_template_competency" baseColumnNames="competency_id"
+                                 constraintName="fk_review_template_competency_competency"
+                                 referencedTableName="competency" referencedColumnNames="id"/>
+
+        <createTable tableName="review_template_question">
+            <column name="template_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sort_order" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="audience" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="question_text" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="help_text" type="VARCHAR(1000)"/>
+            <column name="required" type="${booleanType}" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="review_template_question" columnNames="template_id, sort_order"
+                       constraintName="pk_review_template_question"/>
+        <addForeignKeyConstraint baseTableName="review_template_question" baseColumnNames="template_id"
+                                 constraintName="fk_review_template_question_template"
+                                 referencedTableName="review_template" referencedColumnNames="id"/>
+
+        <addColumn tableName="review_cycle">
+            <column name="template_id" type="${uuidType}"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="review_cycle" baseColumnNames="template_id"
+                                 constraintName="fk_review_cycle_template"
+                                 referencedTableName="review_template" referencedColumnNames="id"/>
+
+        <createTable tableName="review_cycle_competency">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_review_cycle_competency"/>
+            </column>
+            <column name="cycle_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sort_order" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(1000)"/>
+            <column name="category" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="anchor_1" type="VARCHAR(500)"/>
+            <column name="anchor_2" type="VARCHAR(500)"/>
+            <column name="anchor_3" type="VARCHAR(500)"/>
+            <column name="anchor_4" type="VARCHAR(500)"/>
+            <column name="anchor_5" type="VARCHAR(500)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="review_cycle_competency" indexName="idx_review_cycle_competency_cycle">
+            <column name="cycle_id"/>
+            <column name="sort_order"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="review_cycle_competency" baseColumnNames="cycle_id"
+                                 constraintName="fk_review_cycle_competency_cycle"
+                                 referencedTableName="review_cycle" referencedColumnNames="id"/>
+
+        <createTable tableName="review_cycle_question">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_review_cycle_question"/>
+            </column>
+            <column name="cycle_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sort_order" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="audience" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="question_text" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="help_text" type="VARCHAR(1000)"/>
+            <column name="required" type="${booleanType}" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="review_cycle_question" indexName="idx_review_cycle_question_cycle">
+            <column name="cycle_id"/>
+            <column name="sort_order"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="review_cycle_question" baseColumnNames="cycle_id"
+                                 constraintName="fk_review_cycle_question_cycle"
+                                 referencedTableName="review_cycle" referencedColumnNames="id"/>
+
+        <createTable tableName="review_competency_rating">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_review_competency_rating"/>
+            </column>
+            <column name="review_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="competency_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rating" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="comment" type="VARCHAR(2000)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addUniqueConstraint tableName="review_competency_rating" columnNames="review_id, competency_id"
+                             constraintName="ux_review_competency_rating"/>
+        <addForeignKeyConstraint baseTableName="review_competency_rating" baseColumnNames="review_id"
+                                 constraintName="fk_review_competency_rating_review"
+                                 referencedTableName="performance_review" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="review_competency_rating" baseColumnNames="competency_id"
+                                 constraintName="fk_review_competency_rating_competency"
+                                 referencedTableName="review_cycle_competency" referencedColumnNames="id"/>
+
+        <createTable tableName="review_question_answer">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_review_question_answer"/>
+            </column>
+            <column name="review_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="question_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="answer" type="${clobType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addUniqueConstraint tableName="review_question_answer" columnNames="review_id, question_id"
+                             constraintName="ux_review_question_answer"/>
+        <addForeignKeyConstraint baseTableName="review_question_answer" baseColumnNames="review_id"
+                                 constraintName="fk_review_question_answer_review"
+                                 referencedTableName="performance_review" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="review_question_answer" baseColumnNames="question_id"
+                                 constraintName="fk_review_question_answer_question"
+                                 referencedTableName="review_cycle_question" referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- Goals: an employee's objectives with weight, measure of success, due date and progress
+         check-ins. The employee proposes (DRAFT) and the manager agrees (ACTIVE); the review whose
+         period covers the due date rates each goal on its own achievement scale, keeping the goal's
+         title and weight as they were (review_goal_rating). Also keeps the template's name on the
+         cycle when the cycle copies it. -->
+    <changeSet id="20261027-goals" author="halimzaaim">
+        <createTable tableName="goal">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_goal"/>
+            </column>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(2000)"/>
+            <column name="success_measure" type="VARCHAR(1000)"/>
+            <column name="weight" type="INT"/>
+            <column name="start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="due_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="progress" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="agreed_at" type="DATETIME"/>
+            <column name="agreed_by_id" type="${uuidType}"/>
+            <column name="completed_at" type="DATETIME"/>
+            <column name="cancel_reason" type="VARCHAR(500)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="goal" indexName="idx_goal_employee_due">
+            <column name="employee_id"/>
+            <column name="due_date"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="goal" baseColumnNames="employee_id"
+                                 constraintName="fk_goal_employee"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="goal" baseColumnNames="agreed_by_id"
+                                 constraintName="fk_goal_agreed_by"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+
+        <createTable tableName="goal_check_in">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_goal_check_in"/>
+            </column>
+            <column name="goal_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="author_id" type="${uuidType}"/>
+            <column name="progress" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="comment" type="VARCHAR(2000)"/>
+            <column name="checked_in_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="goal_check_in" indexName="idx_goal_check_in_goal">
+            <column name="goal_id"/>
+            <column name="checked_in_at"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="goal_check_in" baseColumnNames="goal_id"
+                                 constraintName="fk_goal_check_in_goal"
+                                 referencedTableName="goal" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="goal_check_in" baseColumnNames="author_id"
+                                 constraintName="fk_goal_check_in_author"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+
+        <createTable tableName="review_goal_rating">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_review_goal_rating"/>
+            </column>
+            <column name="review_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="goal_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="goal_title" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="goal_weight" type="INT"/>
+            <column name="achievement" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="comment" type="VARCHAR(2000)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addUniqueConstraint tableName="review_goal_rating" columnNames="review_id, goal_id"
+                             constraintName="ux_review_goal_rating"/>
+        <createIndex tableName="review_goal_rating" indexName="idx_review_goal_rating_goal">
+            <column name="goal_id"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="review_goal_rating" baseColumnNames="review_id"
+                                 constraintName="fk_review_goal_rating_review"
+                                 referencedTableName="performance_review" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="review_goal_rating" baseColumnNames="goal_id"
+                                 constraintName="fk_review_goal_rating_goal"
+                                 referencedTableName="goal" referencedColumnNames="id"/>
+
+        <addColumn tableName="review_cycle">
+            <column name="template_name" type="VARCHAR(100)"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- Performance improvement plans, started from a shared review rated 2 or lower. -->
+    <changeSet id="20261027-improvement-plans" author="halimzaaim">
+        <createTable tableName="improvement_plan">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_improvement_plan"/>
+            </column>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_id" type="${uuidType}"/>
+            <column name="review_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="DRAFT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="concerns" type="${clobType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="support" type="${clobType}"/>
+            <column name="meeting_cadence" type="VARCHAR(200)"/>
+            <column name="start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="original_end_date" type="DATE"/>
+            <column name="extension_reason" type="VARCHAR(500)"/>
+            <column name="activated_at" type="DATETIME"/>
+            <column name="acknowledged_at" type="DATETIME"/>
+            <column name="employee_comment" type="VARCHAR(2000)"/>
+            <column name="outcome" type="VARCHAR(20)"/>
+            <column name="outcome_note" type="${clobType}"/>
+            <column name="closed_at" type="DATETIME"/>
+            <column name="closed_by_id" type="${uuidType}"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="improvement_plan" indexName="idx_improvement_plan_employee">
+            <column name="employee_id"/>
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="improvement_plan" indexName="idx_improvement_plan_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="improvement_plan" indexName="idx_improvement_plan_review">
+            <column name="review_id"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="improvement_plan" baseColumnNames="employee_id"
+                                 constraintName="fk_improvement_plan_employee"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="improvement_plan" baseColumnNames="owner_id"
+                                 constraintName="fk_improvement_plan_owner"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="improvement_plan" baseColumnNames="review_id"
+                                 constraintName="fk_improvement_plan_review"
+                                 referencedTableName="performance_review" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="improvement_plan" baseColumnNames="closed_by_id"
+                                 constraintName="fk_improvement_plan_closed_by"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+
+        <createTable tableName="improvement_plan_objective">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_improvement_plan_objective"/>
+            </column>
+            <column name="plan_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sort_order" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(1000)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="success_measure" type="VARCHAR(1000)"/>
+            <column name="due_date" type="DATE"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="improvement_plan_objective" indexName="idx_improvement_plan_objective_plan">
+            <column name="plan_id"/>
+            <column name="sort_order"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="improvement_plan_objective" baseColumnNames="plan_id"
+                                 constraintName="fk_improvement_plan_objective_plan"
+                                 referencedTableName="improvement_plan" referencedColumnNames="id"/>
+
+        <createTable tableName="improvement_plan_check_in">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_improvement_plan_check_in"/>
+            </column>
+            <column name="plan_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="author_id" type="${uuidType}"/>
+            <column name="progress" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="note" type="${clobType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="checked_in_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <createIndex tableName="improvement_plan_check_in" indexName="idx_improvement_plan_check_in_plan">
+            <column name="plan_id"/>
+            <column name="checked_in_at"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="improvement_plan_check_in" baseColumnNames="plan_id"
+                                 constraintName="fk_improvement_plan_check_in_plan"
+                                 referencedTableName="improvement_plan" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="improvement_plan_check_in" baseColumnNames="author_id"
+                                 constraintName="fk_improvement_plan_check_in_author"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+    </changeSet>
+    <!--
+        Slice 4: merit guidance and compensation proposals. The merit matrix is a singleton; a proposal is
+        one per review (unique review_id) and changes pay only when applied.
+    -->
+    <changeSet id="20261027-compensation-proposals" author="halimzaaim">
+        <createTable tableName="merit_guidelines">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_merit_guidelines"/>
+            </column>
+            <column name="rating_1_min" type="decimal(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rating_1_max" type="decimal(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rating_2_min" type="decimal(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rating_2_max" type="decimal(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rating_3_min" type="decimal(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rating_3_max" type="decimal(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rating_4_min" type="decimal(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rating_4_max" type="decimal(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rating_5_min" type="decimal(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rating_5_max" type="decimal(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+
+        <createTable tableName="compensation_proposal">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_compensation_proposal"/>
+            </column>
+            <column name="cycle_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="review_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rating" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="promotion_recommended" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="DRAFT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="effective_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_salary" type="decimal(21,2)"/>
+            <column name="currency_id" type="${uuidType}"/>
+            <column name="basis" type="VARCHAR(20)"/>
+            <column name="current_position_id" type="${uuidType}"/>
+            <column name="new_salary" type="decimal(21,2)"/>
+            <column name="new_position_id" type="${uuidType}"/>
+            <column name="bonus_amount" type="decimal(21,2)"/>
+            <column name="justification" type="VARCHAR(1000)"/>
+            <column name="return_comment" type="VARCHAR(500)"/>
+            <column name="submitted_by_id" type="${uuidType}"/>
+            <column name="submitted_by_name" type="VARCHAR(100)"/>
+            <column name="submitted_at" type="DATETIME"/>
+            <column name="approved_by_id" type="${uuidType}"/>
+            <column name="approved_by_name" type="VARCHAR(100)"/>
+            <column name="approved_at" type="DATETIME"/>
+            <column name="applied_by_name" type="VARCHAR(100)"/>
+            <column name="applied_at" type="DATETIME"/>
+            <column name="position_change_id" type="${uuidType}"/>
+            <column name="bonus_id" type="${uuidType}"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addUniqueConstraint tableName="compensation_proposal" columnNames="review_id"
+                             constraintName="ux_compensation_proposal_review"/>
+        <createIndex tableName="compensation_proposal" indexName="idx_compensation_proposal_cycle">
+            <column name="cycle_id"/>
+            <column name="status"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="compensation_proposal" baseColumnNames="cycle_id"
+                                 constraintName="fk_compensation_proposal_cycle"
+                                 referencedTableName="review_cycle" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="compensation_proposal" baseColumnNames="review_id"
+                                 constraintName="fk_compensation_proposal_review"
+                                 referencedTableName="performance_review" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="compensation_proposal" baseColumnNames="employee_id"
+                                 constraintName="fk_compensation_proposal_employee"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="compensation_proposal" baseColumnNames="currency_id"
+                                 constraintName="fk_compensation_proposal_currency"
+                                 referencedTableName="currency" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="compensation_proposal" baseColumnNames="current_position_id"
+                                 constraintName="fk_compensation_proposal_current_position"
+                                 referencedTableName="position" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="compensation_proposal" baseColumnNames="new_position_id"
+                                 constraintName="fk_compensation_proposal_new_position"
+                                 referencedTableName="position" referencedColumnNames="id"/>
+    </changeSet>
+    <!-- Who last set a proposal's content: they don't approve it (four eyes covers the maker, not only the submitter). -->
+    <changeSet id="20261027-compensation-proposals-preparer" author="halimzaaim">
+        <addColumn tableName="compensation_proposal">
+            <column name="prepared_by_id" type="${uuidType}"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- How long review records are kept: one row per tenant, created on the first save. A cycle is
+         due for deletion once archived and its review period ended more than retain_years ago; the
+         daily job deletes due cycles only when enabled. -->
+    <changeSet id="20261027-review-retention" author="halimzaaim">
+        <createTable tableName="review_retention_settings">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_review_retention_settings"/>
+            </column>
+            <column name="enabled" type="${booleanType}" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="retain_years" type="INT" defaultValueNumeric="6">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

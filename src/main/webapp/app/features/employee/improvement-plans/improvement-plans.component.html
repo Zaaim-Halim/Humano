@@ -1,0 +1,93 @@
+<div class="hum-page">
+  <a class="hum-onb-back" routerLink="/reviews"
+    ><lucide-icon name="arrow-left" [size]="14" />{{ 'humano.improvementPlans.backToReviews' | translate }}</a
+  >
+
+  <header class="hum-onbc-head">
+    <div>
+      <h1 class="hum-onbc-head__title">{{ 'humano.improvementPlans.title' | translate }}</h1>
+      <p class="hum-onbc-head__lead">{{ 'humano.improvementPlans.lead' | translate }}</p>
+    </div>
+  </header>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (managed() === null) {
+    <hum-skeleton [height]="72" />
+    <hum-skeleton [height]="72" style="margin-top: var(--space-3)" />
+  } @else {
+    @for (p of mine(); track p.id) {
+      <hum-alert
+        [tone]="p.status === 'ACTIVE' ? 'warning' : 'info'"
+        [title]="'humano.improvementPlans.yourPlan' | translate"
+        style="margin-bottom: var(--space-4)"
+      >
+        {{ p.startDate | date: 'mediumDate' }} – {{ p.endDate | date: 'mediumDate' }}
+        <div style="margin-top: var(--space-2)">
+          <hum-button variant="outline" size="sm" [routerLink]="['/improvement-plans', p.id]">{{
+            'humano.improvementPlans.open' | translate
+          }}</hum-button>
+        </div>
+      </hum-alert>
+    }
+
+    @if (closedCount()) {
+      <div class="hum-goal-toolbar">
+        <span></span>
+        <hum-switch
+          [ngModel]="showClosed()"
+          (ngModelChange)="showClosed.set($event)"
+          [label]="'humano.improvementPlans.showClosed' | translate: { count: closedCount() }"
+        />
+      </div>
+    }
+
+    @if (!visible().length) {
+      <hum-empty-state
+        icon="clipboard-list"
+        [title]="'humano.improvementPlans.emptyTitle' | translate"
+        [description]="'humano.improvementPlans.emptyBody' | translate"
+      />
+    } @else {
+      <div class="hum-run-list">
+        @for (p of visible(); track p.id) {
+          <a class="hum-run hum-pip-row" [routerLink]="['/improvement-plans', p.id]">
+            <hum-avatar [name]="p.employeeName" size="sm" />
+            <div class="hum-pip-row__who">
+              <span class="hum-pip-row__name">{{ p.employeeName }}</span>
+              <span class="hum-pip-row__meta">
+                @if (p.employeeJobTitle) {
+                  {{ p.employeeJobTitle }} ·
+                }
+                {{ p.cycleName }}
+              </span>
+            </div>
+            <span class="hum-pip-row__dates tabular-nums"
+              >{{ p.startDate | date: 'mediumDate' }} – {{ p.endDate | date: 'mediumDate' }}</span
+            >
+            <span class="hum-pip-row__state">
+              @if (p.outcome) {
+                <hum-badge [tone]="outcomeTone(p.outcome)" [label]="'humano.improvementPlans.outcome.' + p.outcome | translate" />
+              } @else {
+                <hum-badge [tone]="statusTone(p.status)" [label]="'humano.improvementPlans.status.' + p.status | translate" />
+              }
+              @let d = daysLeft(p);
+              @if (d !== null) {
+                <span class="hum-pip-row__left tabular-nums" [class.is-late]="d < 0">{{
+                  d < 0
+                    ? ('humano.improvementPlans.endedAgo' | translate: { count: -d })
+                    : ('humano.improvementPlans.daysLeft' | translate: { count: d })
+                }}</span>
+              }
+              @if (p.status === 'ACTIVE' && !p.acknowledgedAt) {
+                <span class="hum-pip-row__left">{{ 'humano.improvementPlans.notAcknowledged' | translate }}</span>
+              }
+            </span>
+          </a>
+        }
+      </div>
+    }
+  }
+</div>

@@ -38,4 +38,9 @@ public enum ApprovalType {
      * Timesheet approval.
      */
     TIMESHEET_APPROVAL,
+
+    /**
+     * Second-level sign-off of a performance review the reviewer wrote (one-over-one).
+     */
+    PERFORMANCE_REVIEW,
 }

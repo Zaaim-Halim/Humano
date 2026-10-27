@@ -1,5 +1,6 @@
 package com.humano.dto.hr.requests;
 
+import com.humano.domain.enumeration.hr.PerformanceReviewStatus;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -17,5 +18,25 @@ public record PerformanceReviewSearchRequest(
     String comments,
     String createdBy,
     LocalDate createdDateFrom,
-    LocalDate createdDateTo
-) {}
+    LocalDate createdDateTo,
+    UUID cycleId,
+    PerformanceReviewStatus status
+) {
+    /** The reviews of one employee that they may see: written outside a cycle, or shared with them. */
+    public static PerformanceReviewSearchRequest sharedWith(UUID employeeId) {
+        return new PerformanceReviewSearchRequest(
+            employeeId,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            PerformanceReviewStatus.SHARED
+        );
+    }
+}

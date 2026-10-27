@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Review cycles own their reviews: one performance_review per employee per cycle, created when
+         the self-assessment phase starts. The employee's self-assessment and the reviewer's
+         assessment are stored in their own columns instead of being appended to `comments`, which
+         was tinytext (255 bytes on MySQL). Existing reviews were written directly by HR and are
+         already visible to the employee, so they become SHARED. -->
+    <changeSet id="20261026-performance-review-cycle-columns" author="halimzaaim">
+        <addColumn tableName="performance_review">
+            <column name="cycle_id" type="${uuidType}"/>
+            <column name="status" type="VARCHAR(30)" defaultValue="SHARED">
+                <constraints nullable="false"/>
+            </column>
+            <column name="self_achievements" type="${clobType}"/>
+            <column name="self_challenges" type="${clobType}"/>
+            <column name="self_development_goals" type="${clobType}"/>
+            <column name="self_comments" type="${clobType}"/>
+            <column name="self_submitted_at" type="DATETIME"/>
+            <column name="manager_rating" type="INT"/>
+            <column name="strengths" type="${clobType}"/>
+            <column name="areas_for_improvement" type="${clobType}"/>
+            <column name="development_recommendations" type="${clobType}"/>
+            <column name="recommend_for_promotion" type="${booleanType}" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="promotion_justification" type="${clobType}"/>
+            <column name="manager_submitted_at" type="DATETIME"/>
+            <column name="calibration_note" type="VARCHAR(1000)"/>
+            <column name="feedback_notes" type="${clobType}"/>
+            <column name="shared_at" type="DATETIME"/>
+        </addColumn>
+        <modifyDataType tableName="performance_review" columnName="comments" newDataType="${clobType}"/>
+        <!-- A cycle review of someone with no manager has no reviewer until HR assigns one. -->
+        <dropNotNullConstraint tableName="performance_review" columnName="reviewer_id" columnDataType="${uuidType}"/>
+        <addForeignKeyConstraint baseTableName="performance_review" baseColumnNames="cycle_id"
+                                 constraintName="fk_performance_review_cycle"
+                                 referencedTableName="review_cycle" referencedColumnNames="id"/>
+        <addUniqueConstraint tableName="performance_review" columnNames="cycle_id, employee_id"
+                             constraintName="uk_performance_review_cycle_employee"/>
+        <createIndex tableName="performance_review" indexName="idx_performance_review_cycle_status">
+            <column name="cycle_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- The company's review calendar (a singleton row, created lazily on the first save; reads fall
+         back to the defaults below): cadence, the month the review year starts, when a cycle opens
+         before its period ends, and each phase's length. New cycles are proposed from it. -->
+    <changeSet id="20261026-review-calendar-settings" author="halimzaaim">
+        <createTable tableName="review_calendar_settings">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_review_calendar_settings"/>
+            </column>
+            <column name="cadence" type="VARCHAR(20)" defaultValue="ANNUAL">
+                <constraints nullable="false"/>
+            </column>
+            <column name="year_start_month" type="INT" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="opens_days_before_period_end" type="INT" defaultValueNumeric="14">
+                <constraints nullable="false"/>
+            </column>
+            <column name="self_assessment_days" type="INT" defaultValueNumeric="14">
+                <constraints nullable="false"/>
+            </column>
+            <column name="manager_review_days" type="INT" defaultValueNumeric="14">
+                <constraints nullable="false"/>
+            </column>
+            <column name="calibration_days" type="INT" defaultValueNumeric="7">
+                <constraints nullable="false"/>
+            </column>
+            <column name="feedback_days" type="INT" defaultValueNumeric="14">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

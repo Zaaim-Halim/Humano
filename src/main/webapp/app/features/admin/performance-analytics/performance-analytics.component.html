@@ -1,0 +1,271 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.performanceAnalytics.title' | translate" [subtitle]="'humano.performanceAnalytics.lead' | translate" />
+
+  <div class="hum-pa-filters">
+    <hum-form-field [label]="'humano.performanceAnalytics.type' | translate">
+      <hum-select
+        [options]="typeOptions()"
+        [ariaLabel]="'humano.performanceAnalytics.type' | translate"
+        [ngModel]="type()"
+        (ngModelChange)="type.set($event)"
+      />
+    </hum-form-field>
+    <hum-form-field [label]="'humano.performanceAnalytics.range' | translate">
+      <hum-select
+        [options]="limitOptions()"
+        [ariaLabel]="'humano.performanceAnalytics.range' | translate"
+        [ngModel]="'' + limit()"
+        (ngModelChange)="limit.set(+$event)"
+      />
+    </hum-form-field>
+    @if (cycleOptions().length) {
+      <hum-form-field [label]="'humano.performanceAnalytics.cycle' | translate">
+        <hum-select
+          [options]="cycleOptions()"
+          [ariaLabel]="'humano.performanceAnalytics.cycle' | translate"
+          [ngModel]="selected()?.cycleId ?? ''"
+          (ngModelChange)="selectedId.set($event)"
+        />
+      </hum-form-field>
+    }
+  </div>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (data() === null) {
+    <hum-skeleton [height]="96" />
+    <hum-skeleton [height]="240" style="margin-top: var(--space-4)" />
+  } @else if (!selected()) {
+    <hum-empty-state
+      icon="bar-chart-3"
+      [title]="'humano.performanceAnalytics.emptyTitle' | translate"
+      [description]="'humano.performanceAnalytics.emptyBody' | translate"
+    />
+  } @else {
+    @let c = selected()!;
+    @let s = c.overall;
+
+    <p class="hum-onb-muted hum-pa-period">
+      {{ c.reviewPeriodStart | date: 'mediumDate' }} – {{ c.reviewPeriodEnd | date: 'mediumDate' }} ·
+      {{ 'humano.performanceAnalytics.reviews' | translate: { count: s.reviews } }} ·
+      <a [routerLink]="['/review-cycles', c.cycleId]">{{ 'humano.performanceAnalytics.openCycle' | translate }}</a>
+    </p>
+
+    <!-- Completion -->
+    <div class="hum-pa-tiles">
+      <hum-stat-tile
+        icon="user-check"
+        [label]="'humano.performanceAnalytics.tile.self' | translate"
+        [value]="tile(s.selfSubmitted, s.reviews)"
+        ><span class="hum-pa-of">{{ of(s.selfSubmitted, s.reviews) }}</span></hum-stat-tile
+      >
+      <hum-stat-tile
+        icon="clipboard-list"
+        [label]="'humano.performanceAnalytics.tile.written' | translate"
+        [value]="tile(s.managerSubmitted, s.reviews)"
+        ><span class="hum-pa-of">{{ of(s.managerSubmitted, s.reviews) }}</span></hum-stat-tile
+      >
+      <hum-stat-tile icon="send" [label]="'humano.performanceAnalytics.tile.shared' | translate" [value]="tile(s.shared, s.reviews)"
+        ><span class="hum-pa-of">{{ of(s.shared, s.reviews) }}</span></hum-stat-tile
+      >
+      <hum-stat-tile
+        icon="check"
+        [label]="'humano.performanceAnalytics.tile.acknowledged' | translate"
+        [value]="tile(s.acknowledged, s.shared)"
+        ><span class="hum-pa-of">{{ of(s.acknowledged, s.shared) }}</span></hum-stat-tile
+      >
+    </div>
+
+    <div class="hum-pa-grid">
+      <!-- Distribution -->
+      <section class="hum-perf-card">
+        <header class="hum-perf-card__head">
+          <div>
+            <h2 class="hum-onb-h2">{{ 'humano.performanceAnalytics.distribution' | translate }}</h2>
+            <p class="hum-onb-muted">
+              {{ 'humano.performanceAnalytics.distributionLead' | translate: { count: s.rated } }}
+              @if (s.averageRating !== null) {
+                · {{ 'humano.performanceAnalytics.average' | translate: { value: (s.averageRating | number: '1.2-2') } }}
+              }
+            </p>
+          </div>
+        </header>
+        @if (!s.rated) {
+          <p class="hum-onb-muted">{{ 'humano.performanceAnalytics.noneRated' | translate }}</p>
+        } @else {
+          @let share = shares(s);
+          <ul class="hum-perf-calib-dist">
+            @for (r of ratings; track r; let i = $index) {
+              <li [title]="barTitle(r, s.distribution[i], s)">
+                <span class="hum-perf-calib-dist__label">
+                  <strong class="tabular-nums">{{ r }}</strong> {{ 'humano.performance.rating.' + r | translate }}
+                </span>
+                <span class="hum-perf-calib-dist__track">
+                  <span class="hum-perf-calib-dist__final" [style.width.%]="share[i]"></span>
+                </span>
+                <span class="hum-perf-calib-dist__count tabular-nums">{{ s.distribution[i] }} · {{ share[i] | number: '1.0-0' }}%</span>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      <!-- Outcomes -->
+      <section class="hum-perf-card">
+        <header class="hum-perf-card__head">
+          <div>
+            <h2 class="hum-onb-h2">{{ 'humano.performanceAnalytics.outcomes' | translate }}</h2>
+            <p class="hum-onb-muted">{{ 'humano.performanceAnalytics.outcomesLead' | translate }}</p>
+          </div>
+        </header>
+        <dl class="hum-pa-facts">
+          <div>
+            <dt>{{ 'humano.performanceAnalytics.calibration' | translate }}</dt>
+            <dd class="tabular-nums">
+              {{ 'humano.performanceAnalytics.movement' | translate: { raised: s.raised, lowered: s.lowered } }}
+              <span class="hum-onb-muted">{{
+                'humano.performanceAnalytics.changedShare' | translate: { share: pct(s.raised + s.lowered, s.rated) ?? 0 }
+              }}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>{{ 'humano.performanceAnalytics.promotion' | translate }}</dt>
+            <dd class="tabular-nums">
+              {{ tile(s.promotionRecommended, s.rated) }} <span class="hum-onb-muted">{{ of(s.promotionRecommended, s.rated) }}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>{{ 'humano.performanceAnalytics.plans' | translate }}</dt>
+            <dd class="tabular-nums">
+              {{ tile(s.withImprovementPlan, s.rated) }} <span class="hum-onb-muted">{{ of(s.withImprovementPlan, s.rated) }}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>{{ 'humano.performanceAnalytics.disputes' | translate }}</dt>
+            <dd class="tabular-nums">
+              {{ tile(s.disputed, s.shared) }} <span class="hum-onb-muted">{{ of(s.disputed, s.shared) }}</span>
+            </dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+
+    <!-- Trend -->
+    <section class="hum-perf-card hum-pa-section">
+      <header class="hum-perf-card__head">
+        <div>
+          <h2 class="hum-onb-h2">{{ 'humano.performanceAnalytics.trend' | translate }}</h2>
+          <p class="hum-onb-muted">{{ 'humano.performanceAnalytics.trendLead' | translate }}</p>
+        </div>
+      </header>
+      <div class="hum-table-wrap">
+        <table class="hum-table hum-perf-table">
+          <thead>
+            <tr>
+              <th>{{ 'humano.performanceAnalytics.col.cycle' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.reviews' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.shared' | translate }}</th>
+              <th>{{ 'humano.performanceAnalytics.col.distribution' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.average' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.above' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.below' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.changed' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.promotion' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.plans' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of trend(); track t.cycleId) {
+              @let ts = t.overall;
+              <tr [class.hum-pa-current]="t.cycleId === c.cycleId">
+                <td>
+                  <button type="button" class="hum-perf-table__name hum-pa-link" (click)="selectedId.set(t.cycleId)">{{ t.name }}</button>
+                  <span class="hum-perf-table__sub">{{ t.reviewPeriodEnd | date: 'MMM yyyy' }}</span>
+                </td>
+                <td class="hum-table__num tabular-nums">{{ ts.reviews }}</td>
+                <td class="hum-table__num tabular-nums">{{ tile(ts.shared, ts.reviews) }}</td>
+                <td>
+                  <ng-container *ngTemplateOutlet="histogram; context: { $implicit: ts }" />
+                </td>
+                <td class="hum-table__num tabular-nums">{{ ts.averageRating === null ? '—' : (ts.averageRating | number: '1.2-2') }}</td>
+                <td class="hum-table__num tabular-nums">{{ tile(ts.distribution[3] + ts.distribution[4], ts.rated) }}</td>
+                <td class="hum-table__num tabular-nums">{{ tile(ts.distribution[0] + ts.distribution[1], ts.rated) }}</td>
+                <td class="hum-table__num tabular-nums">{{ tile(ts.raised + ts.lowered, ts.rated) }}</td>
+                <td class="hum-table__num tabular-nums">{{ tile(ts.promotionRecommended, ts.rated) }}</td>
+                <td class="hum-table__num tabular-nums">{{ tile(ts.withImprovementPlan, ts.rated) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Departments -->
+    <section class="hum-perf-card hum-pa-section">
+      <header class="hum-perf-card__head">
+        <div>
+          <h2 class="hum-onb-h2">{{ 'humano.performanceAnalytics.departments' | translate }}</h2>
+          <p class="hum-onb-muted">{{ 'humano.performanceAnalytics.departmentsLead' | translate: { cycle: c.name } }}</p>
+        </div>
+      </header>
+      <div class="hum-table-wrap">
+        <table class="hum-table hum-perf-table">
+          <thead>
+            <tr>
+              <th>{{ 'humano.performanceAnalytics.col.department' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.reviews' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.written' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.shared' | translate }}</th>
+              <th>{{ 'humano.performanceAnalytics.col.distribution' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.average' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.promotion' | translate }}</th>
+              <th class="hum-table__num">{{ 'humano.performanceAnalytics.col.plans' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of c.departments; track d.departmentId) {
+              @let ds = d.stats;
+              <tr>
+                <td>{{ d.name ?? ('humano.performanceAnalytics.noDepartment' | translate) }}</td>
+                <td class="hum-table__num tabular-nums">{{ ds.reviews }}</td>
+                <td class="hum-table__num tabular-nums">{{ tile(ds.managerSubmitted, ds.reviews) }}</td>
+                <td class="hum-table__num tabular-nums">{{ tile(ds.shared, ds.reviews) }}</td>
+                <td>
+                  <ng-container *ngTemplateOutlet="histogram; context: { $implicit: ds }" />
+                </td>
+                <td class="hum-table__num tabular-nums">{{ ds.averageRating === null ? '—' : (ds.averageRating | number: '1.2-2') }}</td>
+                <td class="hum-table__num tabular-nums">{{ tile(ds.promotionRecommended, ds.rated) }}</td>
+                <td class="hum-table__num tabular-nums">{{ tile(ds.withImprovementPlan, ds.rated) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <p class="hum-onb-muted hum-pa-definitions">
+      <lucide-icon name="info" [size]="14" />
+      {{ 'humano.performanceAnalytics.definitions' | translate }}
+    </p>
+  }
+</div>
+
+<!-- A cycle's or department's distribution: five bars in one hue, rating 1 to 5. -->
+<ng-template #histogram let-st>
+  @if (st.rated) {
+    @let h = heights(st);
+    <span
+      class="hum-pa-hist"
+      role="img"
+      [attr.aria-label]="'humano.performanceAnalytics.histLabel' | translate: { counts: st.distribution.join(', ') }"
+    >
+      @for (r of ratings; track r; let i = $index) {
+        <span class="hum-pa-hist__bar" [style.height.%]="h[i]" [title]="barTitle(r, st.distribution[i], st)"></span>
+      }
+    </span>
+  } @else {
+    <span class="hum-onb-muted">—</span>
+  }
+</ng-template>

@@ -1,0 +1,178 @@
+<div class="hum-page">
+  <a class="hum-onb-back" routerLink="/review-cycles"
+    ><lucide-icon name="arrow-left" [size]="14" />{{ 'humano.performance.cycle.backToList' | translate }}</a
+  >
+
+  <header class="hum-onbc-head">
+    <div>
+      <h1 class="hum-onbc-head__title">{{ 'humano.performance.calendar.title' | translate }}</h1>
+      <p class="hum-onbc-head__lead">{{ 'humano.performance.calendar.lead' | translate }}</p>
+    </div>
+    <div class="hum-onbc-head__actions">
+      @if (dirty()) {
+        <hum-button variant="ghost" size="sm" icon="rotate-ccw" (click)="discard()">{{
+          'humano.performance.calendar.discard' | translate
+        }}</hum-button>
+      }
+      <hum-button variant="primary" size="sm" icon="save" [loading]="saving()" [disabled]="!dirty() || !valid()" (click)="save()">{{
+        'humano.performance.calendar.save' | translate
+      }}</hum-button>
+    </div>
+  </header>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (!draft()) {
+    <hum-skeleton [height]="160" />
+    <hum-skeleton [height]="220" style="margin-top: var(--space-4)" />
+  } @else {
+    @let d = draft()!;
+    @if (!loaded()!.customized) {
+      <hum-alert tone="info" [title]="'humano.performance.calendar.defaultsTitle' | translate">{{
+        'humano.performance.calendar.defaultsBody' | translate
+      }}</hum-alert>
+    }
+
+    <div class="hum-onb-layout">
+      <div class="hum-perf-sections">
+        <!-- When -->
+        <section class="hum-perf-card">
+          <h2 class="hum-onb-h2">{{ 'humano.performance.calendar.when' | translate }}</h2>
+          <div class="hum-perf-setting">
+            <div>
+              <p class="hum-perf-setting__label">{{ 'humano.performance.calendar.cadence' | translate }}</p>
+              <p class="hum-onb-muted">{{ 'humano.performance.calendar.cadenceHint' | translate }}</p>
+            </div>
+            <div class="hum-chips" style="margin: 0">
+              @for (c of cadences; track c) {
+                <button type="button" class="hum-chip" [class.is-active]="d.cadence === c" (click)="set('cadence', c)">
+                  {{ 'humano.performance.calendar.cadenceOption.' + c | translate }}
+                </button>
+              }
+            </div>
+          </div>
+          <div class="hum-perf-setting">
+            <div>
+              <p class="hum-perf-setting__label">{{ 'humano.performance.calendar.yearStart' | translate }}</p>
+              <p class="hum-onb-muted">{{ 'humano.performance.calendar.yearStartHint' | translate }}</p>
+            </div>
+            <div class="hum-perf-setting__control">
+              <hum-select
+                [options]="monthOptions"
+                [ariaLabel]="'humano.performance.calendar.yearStart' | translate"
+                [ngModel]="'' + d.yearStartMonth"
+                (ngModelChange)="set('yearStartMonth', +$event)"
+              />
+            </div>
+          </div>
+          <div class="hum-perf-setting">
+            <div>
+              <p class="hum-perf-setting__label">{{ 'humano.performance.calendar.opens' | translate }}</p>
+              <p class="hum-onb-muted">{{ 'humano.performance.calendar.opensHint' | translate }}</p>
+            </div>
+            <div class="hum-perf-setting__control">
+              <hum-input
+                type="number"
+                inputId="rcal-opens"
+                [ngModel]="d.opensDaysBeforePeriodEnd"
+                (ngModelChange)="set('opensDaysBeforePeriodEnd', +$event)"
+                [invalid]="errors()['opensDaysBeforePeriodEnd']"
+                [suffix]="'humano.performance.calendar.daysBefore' | translate"
+              />
+            </div>
+          </div>
+        </section>
+
+        <!-- How long -->
+        <section class="hum-perf-card">
+          <h2 class="hum-onb-h2">{{ 'humano.performance.calendar.howLong' | translate }}</h2>
+          @for (p of phases; track p.key) {
+            <div class="hum-perf-setting">
+              <div>
+                <p class="hum-perf-setting__label">{{ 'humano.performance.form.deadline.' + p.label | translate }}</p>
+                <p class="hum-onb-muted">{{ 'humano.performance.calendar.phaseHint.' + p.label | translate }}</p>
+              </div>
+              <div class="hum-perf-setting__control">
+                @if (p.key === 'calibrationDays') {
+                  <hum-switch
+                    [label]="'humano.performance.calendar.calibrate' | translate"
+                    [checked]="calibrates()"
+                    (checkedChange)="setCalibration($event)"
+                  />
+                }
+                @if (p.key !== 'calibrationDays' || calibrates()) {
+                  <hum-input
+                    type="number"
+                    [inputId]="'rcal-' + p.label"
+                    [ngModel]="d[p.key]"
+                    (ngModelChange)="set(p.key, +$event)"
+                    [invalid]="errors()[p.key]"
+                    [suffix]="'humano.performance.calendar.days' | translate"
+                  />
+                }
+              </div>
+            </div>
+          }
+          @if (!valid()) {
+            <p class="hum-perf-error">{{ 'humano.performance.calendar.invalid' | translate }}</p>
+          }
+
+          <div
+            class="hum-perf-plan"
+            role="img"
+            [attr.aria-label]="'humano.performance.calendar.planLabel' | translate: { days: plan().total }"
+          >
+            @for (s of plan().segments; track s.label) {
+              <span class="hum-perf-plan__seg" [attr.data-phase]="s.label" [style.flex-grow]="s.pct || 1">
+                <span class="hum-perf-plan__name">{{ 'humano.performance.phaseShort.' + s.label | translate }}</span>
+                <span class="hum-perf-plan__days tabular-nums">{{
+                  'humano.performance.calendar.nDays' | translate: { count: s.days }
+                }}</span>
+              </span>
+            }
+          </div>
+          <p class="hum-onb-muted">
+            {{ 'humano.performance.calendar.planTotal' | translate: { days: plan().total, weeks: (plan().total / 7).toFixed(0) } }}
+          </p>
+        </section>
+      </div>
+
+      <aside class="hum-onb-aside">
+        <section class="hum-onb-panel">
+          <h3 class="hum-onb-panel__title">
+            <lucide-icon name="calendar-plus" [size]="15" />{{ 'humano.performance.calendar.next' | translate }}
+          </h3>
+          @let n = loaded()!.nextCycle;
+          <p class="hum-perf-next-name">{{ n.name }}</p>
+          <dl class="hum-onb-dates">
+            <dt>{{ 'humano.performance.calendar.reviews' | translate }}</dt>
+            <dd class="tabular-nums">{{ n.reviewPeriodStart | date: 'MMM d, y' }} – {{ n.reviewPeriodEnd | date: 'MMM d, y' }}</dd>
+            <dt>{{ 'humano.performance.form.opens' | translate }}</dt>
+            <dd class="tabular-nums">{{ n.startDate | date: 'mediumDate' }}</dd>
+            <dt>{{ 'humano.performance.form.deadline.self' | translate }}</dt>
+            <dd class="tabular-nums">{{ n.selfAssessmentDeadline | date: 'mediumDate' }}</dd>
+            <dt>{{ 'humano.performance.form.deadline.manager' | translate }}</dt>
+            <dd class="tabular-nums">{{ n.managerReviewDeadline | date: 'mediumDate' }}</dd>
+            @if (n.calibrationDeadline) {
+              <dt>{{ 'humano.performance.form.deadline.calibration' | translate }}</dt>
+              <dd class="tabular-nums">{{ n.calibrationDeadline | date: 'mediumDate' }}</dd>
+            }
+            <dt>{{ 'humano.performance.form.deadline.feedback' | translate }}</dt>
+            <dd class="tabular-nums">{{ n.feedbackDeadline | date: 'mediumDate' }}</dd>
+          </dl>
+          <p class="hum-onb-muted" style="margin-top: var(--space-3)">
+            {{ (dirty() ? 'humano.performance.calendar.nextAfterSave' : 'humano.performance.calendar.nextHint') | translate }}
+          </p>
+        </section>
+        <section class="hum-onb-panel hum-perf-note">
+          <h3 class="hum-onb-panel__title">
+            <lucide-icon name="info" [size]="15" />{{ 'humano.performance.calendar.manualTitle' | translate }}
+          </h3>
+          <p class="hum-onb-muted">{{ 'humano.performance.calendar.manualBody' | translate }}</p>
+        </section>
+      </aside>
+    </div>
+  }
+</div>

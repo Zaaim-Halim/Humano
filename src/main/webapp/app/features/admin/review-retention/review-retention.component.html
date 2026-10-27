@@ -1,0 +1,212 @@
+<div class="hum-page">
+  <a class="hum-onb-back" routerLink="/review-cycles"
+    ><lucide-icon name="arrow-left" [size]="14" />{{ 'humano.performance.cycle.backToList' | translate }}</a
+  >
+
+  <header class="hum-onbc-head">
+    <div>
+      <h1 class="hum-onbc-head__title">{{ 'humano.performance.retention.title' | translate }}</h1>
+      <p class="hum-onbc-head__lead">{{ 'humano.performance.retention.lead' | translate }}</p>
+    </div>
+    <div class="hum-onbc-head__actions">
+      @if (dirty()) {
+        <hum-button variant="ghost" size="sm" icon="rotate-ccw" (click)="discard()">{{
+          'humano.performance.calendar.discard' | translate
+        }}</hum-button>
+      }
+      <hum-button variant="primary" size="sm" icon="save" [loading]="saving()" [disabled]="!dirty() || yearsInvalid()" (click)="save()">{{
+        'humano.performance.calendar.save' | translate
+      }}</hum-button>
+    </div>
+  </header>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (!loaded()) {
+    <hum-skeleton [height]="160" />
+    <hum-skeleton [height]="220" style="margin-top: var(--space-4)" />
+  } @else {
+    @let r = loaded()!;
+    @if (!r.customized) {
+      <hum-alert tone="info" [title]="'humano.performance.retention.defaultsTitle' | translate">{{
+        'humano.performance.retention.defaultsBody' | translate
+      }}</hum-alert>
+    }
+
+    <div class="hum-onb-layout">
+      <div class="hum-perf-sections">
+        <!-- Period -->
+        <section class="hum-perf-card">
+          <h2 class="hum-onb-h2">{{ 'humano.performance.retention.period' | translate }}</h2>
+          <div class="hum-perf-setting">
+            <div>
+              <p class="hum-perf-setting__label">{{ 'humano.performance.retention.keep' | translate }}</p>
+              <p class="hum-onb-muted">{{ 'humano.performance.retention.keepHint' | translate }}</p>
+            </div>
+            <div class="hum-perf-setting__control">
+              <hum-input
+                type="number"
+                inputId="ret-years"
+                [ngModel]="years()"
+                (ngModelChange)="years.set($event)"
+                [invalid]="yearsInvalid()"
+                [suffix]="'humano.performance.retention.years' | translate"
+              />
+            </div>
+          </div>
+          @if (yearsInvalid()) {
+            <p class="hum-perf-error">{{ 'humano.performance.retention.yearsInvalid' | translate: { min: minYears, max: maxYears } }}</p>
+          }
+          <div class="hum-perf-setting">
+            <div>
+              <p class="hum-perf-setting__label">{{ 'humano.performance.retention.auto' | translate }}</p>
+              <p class="hum-onb-muted">{{ 'humano.performance.retention.autoHint' | translate }}</p>
+            </div>
+            <div class="hum-perf-setting__control">
+              <hum-switch
+                [label]="'humano.performance.retention.autoLabel' | translate"
+                [checked]="enabled()"
+                (checkedChange)="enabled.set($event)"
+              />
+            </div>
+          </div>
+        </section>
+
+        @if (dirty()) {
+          <hum-alert tone="warning" [title]="'humano.performance.retention.unsavedTitle' | translate">{{
+            'humano.performance.retention.unsavedBody' | translate
+          }}</hum-alert>
+        }
+
+        <!-- Due -->
+        <section class="hum-perf-card">
+          <div class="hum-ret-head">
+            <div>
+              <h2 class="hum-onb-h2">{{ 'humano.performance.retention.dueTitle' | translate: { count: r.due.length } }}</h2>
+              <p class="hum-onb-muted">
+                {{ 'humano.performance.retention.dueHint' | translate: { date: (r.cutoff | date: 'mediumDate') } }}
+              </p>
+            </div>
+            @if (r.due.length) {
+              <hum-button variant="destructive" size="sm" icon="trash-2" [disabled]="dirty()" (click)="openConfirm()">{{
+                'humano.performance.retention.delete' | translate: { count: r.due.length }
+              }}</hum-button>
+            }
+          </div>
+          @if (!r.due.length) {
+            <hum-empty-state
+              icon="shield-check"
+              [title]="'humano.performance.retention.noneDueTitle' | translate"
+              [description]="(r.enabled ? 'humano.performance.retention.noneDueOn' : 'humano.performance.retention.noneDueOff') | translate"
+            />
+          } @else {
+            <div class="hum-table-wrap">
+              <table class="hum-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'humano.performance.retention.cycle' | translate }}</th>
+                    <th>{{ 'humano.performance.retention.reviewPeriod' | translate }}</th>
+                    <th class="hum-table__num">{{ 'humano.performance.retention.reviews' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of r.due; track c.id) {
+                    <tr>
+                      <td>
+                        <a class="hum-linkbtn" [routerLink]="['/review-cycles', c.id]">{{ c.name }}</a>
+                      </td>
+                      <td class="tabular-nums">{{ c.periodStart | date: 'mediumDate' }} – {{ c.periodEnd | date: 'mediumDate' }}</td>
+                      <td class="hum-table__num tabular-nums">{{ c.reviews }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <p class="hum-onb-muted hum-ret-next">
+              {{ (r.enabled ? 'humano.performance.retention.nextRunOn' : 'humano.performance.retention.nextRunOff') | translate }}
+            </p>
+          }
+        </section>
+
+        <!-- Held -->
+        @if (r.held.length) {
+          <section class="hum-perf-card">
+            <h2 class="hum-onb-h2">{{ 'humano.performance.retention.heldTitle' | translate: { count: r.held.length } }}</h2>
+            <p class="hum-onb-muted">{{ 'humano.performance.retention.heldHint' | translate }}</p>
+            <div class="hum-table-wrap">
+              <table class="hum-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'humano.performance.retention.cycle' | translate }}</th>
+                    <th>{{ 'humano.performance.retention.reviewPeriod' | translate }}</th>
+                    <th>{{ 'humano.performance.retention.phase' | translate }}</th>
+                    <th>{{ 'humano.performance.retention.heldBy' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of r.held; track c.id) {
+                    <tr>
+                      <td>
+                        <a class="hum-linkbtn" [routerLink]="['/review-cycles', c.id]">{{ c.name }}</a>
+                      </td>
+                      <td class="tabular-nums">{{ c.periodStart | date: 'mediumDate' }} – {{ c.periodEnd | date: 'mediumDate' }}</td>
+                      <td><hum-badge [status]="c.phase" /></td>
+                      <td>
+                        <ul class="hum-ret-reasons">
+                          @for (reason of reasons(c); track reason) {
+                            <li>{{ reason }}</li>
+                          }
+                        </ul>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+      </div>
+
+      <aside class="hum-onb-aside">
+        <section class="hum-onb-panel">
+          <h3 class="hum-onb-panel__title">
+            <lucide-icon name="trash-2" [size]="15" />{{ 'humano.performance.retention.deletedTitle' | translate }}
+          </h3>
+          <p class="hum-onb-muted">{{ 'humano.performance.retention.deletedBody' | translate }}</p>
+        </section>
+        <section class="hum-onb-panel">
+          <h3 class="hum-onb-panel__title">
+            <lucide-icon name="shield-check" [size]="15" />{{ 'humano.performance.retention.keptTitle' | translate }}
+          </h3>
+          <p class="hum-onb-muted">{{ 'humano.performance.retention.keptBody' | translate }}</p>
+        </section>
+        <section class="hum-onb-panel hum-perf-note">
+          <h3 class="hum-onb-panel__title">
+            <lucide-icon name="info" [size]="15" />{{ 'humano.performance.retention.policyTitle' | translate }}
+          </h3>
+          <p class="hum-onb-muted">{{ 'humano.performance.retention.policyBody' | translate }}</p>
+        </section>
+      </aside>
+    </div>
+
+    <hum-dialog
+      [open]="confirming()"
+      [title]="'humano.performance.retention.confirm.title' | translate"
+      [description]="'humano.performance.retention.confirm.body' | translate: { cycles: r.due.length, reviews: dueReviews() }"
+      hasFooter
+      (closed)="confirming.set(false)"
+    >
+      <hum-form-field [label]="'humano.performance.retention.confirm.type' | translate: { word: confirmWord() }" controlId="ret-confirm">
+        <hum-input inputId="ret-confirm" autocomplete="off" [ngModel]="confirmText()" (ngModelChange)="confirmText.set($event)" />
+      </hum-form-field>
+      <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="ghost" (click)="confirming.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+        <hum-button variant="destructive" [loading]="purging()" [disabled]="!confirmed()" (click)="purge()">{{
+          'humano.performance.retention.confirm.action' | translate: { count: r.due.length }
+        }}</hum-button>
+      </div>
+    </hum-dialog>
+  }
+</div>

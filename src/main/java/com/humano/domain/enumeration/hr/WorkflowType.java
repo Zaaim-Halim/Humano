@@ -48,4 +48,6 @@ public enum WorkflowType {
      * Timesheet approval workflow.
      */
     TIMESHEET_APPROVAL,
+
+    PERFORMANCE_REVIEW_SIGN_OFF,
 }

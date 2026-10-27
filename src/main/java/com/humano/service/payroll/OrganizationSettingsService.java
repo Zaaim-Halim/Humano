@@ -7,6 +7,8 @@ import com.humano.repository.payroll.CurrencyRepository;
 import com.humano.repository.payroll.OrganizationSettingsRepository;
 import com.humano.repository.payroll.PayrollCalendarRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.time.DateTimeException;
+import java.time.ZoneId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +42,17 @@ public class OrganizationSettingsService {
     @Transactional(value = "tenantTransactionManager", readOnly = true)
     public OrganizationSettingsResponse get() {
         return repository.findAll().stream().findFirst().map(this::toResponse).orElseGet(() -> toResponse(new OrganizationSettings()));
+    }
+
+    /** The company's timezone; UTC when unset or not a valid zone id. */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public ZoneId zone() {
+        String tz = get().timezone();
+        try {
+            return ZoneId.of(tz == null || tz.isBlank() ? "UTC" : tz);
+        } catch (DateTimeException e) {
+            return ZoneId.of("UTC");
+        }
     }
 
     /** Replace the single settings row, creating it on first save. */

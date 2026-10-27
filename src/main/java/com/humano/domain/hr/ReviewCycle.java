@@ -1,6 +1,8 @@
 package com.humano.domain.hr;
 
+import com.humano.domain.enumeration.hr.FeedbackVisibility;
 import com.humano.domain.enumeration.hr.ReviewCyclePhase;
+import com.humano.domain.enumeration.hr.ReviewCycleType;
 import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -76,6 +78,15 @@ public class ReviewCycle extends AbstractAuditingEntity<UUID> {
     private ReviewCyclePhase phase = ReviewCyclePhase.DRAFT;
 
     /**
+     * What the cycle is for: regular, probation or ad hoc — who it reviews, and whether it may
+     * overlap other cycles.
+     */
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cycle_type", nullable = false, length = 20)
+    private ReviewCycleType type = ReviewCycleType.REGULAR;
+
+    /**
      * Deadline for self-assessment phase.
      */
     @Column(name = "self_assessment_deadline")
@@ -108,13 +119,21 @@ public class ReviewCycle extends AbstractAuditingEntity<UUID> {
     private Set<UUID> departmentIds = new HashSet<>();
 
     /**
-     * Total number of employees in this cycle.
+     * The employees an ad hoc cycle reviews; empty for the other types.
+     */
+    @ElementCollection
+    @CollectionTable(name = "review_cycle_employees", joinColumns = @JoinColumn(name = "cycle_id"))
+    @Column(name = "employee_id")
+    private Set<UUID> employeeIds = new HashSet<>();
+
+    /**
+     * Employees in the cycle: those in scope while it is a draft, then the number of its reviews.
      */
     @Column(name = "total_employees")
     private Integer totalEmployees = 0;
 
     /**
-     * Number of completed self-assessments.
+     * Number of completed self-assessments (recounted from the reviews).
      */
     @Column(name = "completed_self_assessments")
     private Integer completedSelfAssessments = 0;
@@ -139,6 +158,45 @@ public class ReviewCycle extends AbstractAuditingEntity<UUID> {
     private Boolean active = true;
 
     /**
+     * Whether the reviewed employees see the feedback their contributors gave, once their review is shared.
+     */
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "feedback_visibility", nullable = false, length = 30)
+    private FeedbackVisibility feedbackVisibility = FeedbackVisibility.MANAGER_ONLY;
+
+    /**
+     * Whether employees may nominate their own contributors (the reviewer approves each nomination).
+     */
+    @Column(name = "allow_feedback_nominations", nullable = false)
+    private boolean allowFeedbackNominations = true;
+
+    /**
+     * Most contributors on one review; 0 turns additional feedback off for the cycle.
+     */
+    @Column(name = "max_contributors", nullable = false)
+    private int maxContributors = 8;
+
+    /**
+     * Whether each written review needs a second-level sign-off (the reviewer's manager, or the
+     * PERFORMANCE_REVIEW approval chain) before it can be calibrated or shared.
+     */
+    @Column(name = "requires_sign_off", nullable = false)
+    private boolean requiresSignOff;
+
+    /**
+     * What reviews ask beyond the standard form; empty for the standard form. Picked while the
+     * cycle is a draft and copied when it opens, so a later edit to the template changes nothing here.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "template_id")
+    private ReviewTemplate template;
+
+    /** The template's name when the cycle copied it, so renaming the template later doesn't relabel the cycle. */
+    @Column(name = "template_name", length = 100)
+    private String templateName;
+
+    /**
      * Associated workflow instance.
      */
     @OneToOne(fetch = FetchType.LAZY)
@@ -146,22 +204,29 @@ public class ReviewCycle extends AbstractAuditingEntity<UUID> {
     private WorkflowInstance workflowInstance;
 
     /**
-     * Calculate completion percentage based on current phase.
+     * Share of the current phase's work done: self-assessments, then manager reviews (also during
+     * calibration), then reviews shared with their employee.
      */
     @Transient
     public int getCompletionPercentage() {
+        if (phase == ReviewCyclePhase.COMPLETED || phase == ReviewCyclePhase.ARCHIVED) {
+            return 100;
+        }
         if (totalEmployees == null || totalEmployees == 0) {
             return 0;
         }
-        return switch (phase) {
-            case DRAFT -> 0;
-            case SELF_ASSESSMENT -> (completedSelfAssessments * 100) / totalEmployees;
-            case MANAGER_REVIEW -> (completedManagerReviews * 100) / totalEmployees;
-            case CALIBRATION -> 75;
-            case FEEDBACK_DELIVERY -> (deliveredFeedbacks * 100) / totalEmployees;
-            case GOAL_SETTING -> 90;
-            case COMPLETED, ARCHIVED -> 100;
-        };
+        int done =
+            switch (phase) {
+                case DRAFT -> 0;
+                case SELF_ASSESSMENT -> nullToZero(completedSelfAssessments);
+                case MANAGER_REVIEW, CALIBRATION -> nullToZero(completedManagerReviews);
+                case FEEDBACK_DELIVERY, GOAL_SETTING, COMPLETED, ARCHIVED -> nullToZero(deliveredFeedbacks);
+            };
+        return (done * 100) / totalEmployees;
+    }
+
+    private static int nullToZero(Integer value) {
+        return value != null ? value : 0;
     }
 
     /**
@@ -323,6 +388,70 @@ public class ReviewCycle extends AbstractAuditingEntity<UUID> {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public FeedbackVisibility getFeedbackVisibility() {
+        return feedbackVisibility;
+    }
+
+    public void setFeedbackVisibility(FeedbackVisibility feedbackVisibility) {
+        this.feedbackVisibility = feedbackVisibility;
+    }
+
+    public boolean isAllowFeedbackNominations() {
+        return allowFeedbackNominations;
+    }
+
+    public void setAllowFeedbackNominations(boolean allowFeedbackNominations) {
+        this.allowFeedbackNominations = allowFeedbackNominations;
+    }
+
+    public int getMaxContributors() {
+        return maxContributors;
+    }
+
+    public void setMaxContributors(int maxContributors) {
+        this.maxContributors = maxContributors;
+    }
+
+    public ReviewCycleType getType() {
+        return type;
+    }
+
+    public void setType(ReviewCycleType type) {
+        this.type = type;
+    }
+
+    public Set<UUID> getEmployeeIds() {
+        return employeeIds;
+    }
+
+    public void setEmployeeIds(Set<UUID> employeeIds) {
+        this.employeeIds = employeeIds;
+    }
+
+    public boolean isRequiresSignOff() {
+        return requiresSignOff;
+    }
+
+    public void setRequiresSignOff(boolean requiresSignOff) {
+        this.requiresSignOff = requiresSignOff;
+    }
+
+    public ReviewTemplate getTemplate() {
+        return template;
+    }
+
+    public void setTemplate(ReviewTemplate template) {
+        this.template = template;
+    }
+
+    public String getTemplateName() {
+        return templateName;
+    }
+
+    public void setTemplateName(String templateName) {
+        this.templateName = templateName;
     }
 
     public WorkflowInstance getWorkflowInstance() {

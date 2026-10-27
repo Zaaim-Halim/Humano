@@ -115,6 +115,14 @@
     <section class="hum-profile-section">
       <h3 class="hum-section-title">{{ 'humano.approvals.request' | translate }}</h3>
       <p style="margin: 0 0 var(--space-2)">{{ i.entityDescription }}</p>
+      @if (i.approvalType === types.PERFORMANCE_REVIEW) {
+        <p style="margin: 0 0 var(--space-2)">
+          <a class="hum-perf-link" [routerLink]="['/reviews', i.entityId]"
+            >{{ 'humano.approvals.openReview' | translate }}<lucide-icon name="arrow-right" [size]="13"
+          /></a>
+        </p>
+        <p class="hum-onb-muted" style="margin: 0 0 var(--space-2)">{{ 'humano.approvals.reviewHint' | translate }}</p>
+      }
       <dl class="hum-dl">
         @if (i.amount !== null) {
           <dt>{{ 'humano.approvals.amount' | translate }}</dt>

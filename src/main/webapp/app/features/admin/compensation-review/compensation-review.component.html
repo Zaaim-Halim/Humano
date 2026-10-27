@@ -1,0 +1,522 @@
+<div class="hum-page">
+  <hum-page-header
+    [title]="'humano.compensationReview.title' | translate"
+    [subtitle]="'humano.compensationReview.lead' | translate"
+    hasActions
+  >
+    <hum-button hum-page-actions variant="secondary" icon="sliders-horizontal" (click)="openGuidelines()">{{
+      'humano.compensationReview.guidelines.open' | translate
+    }}</hum-button>
+  </hum-page-header>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (cycles() === null) {
+    <hum-skeleton [height]="96" />
+    <hum-skeleton-row /><hum-skeleton-row />
+  } @else if (!cycles()!.length) {
+    <hum-empty-state
+      icon="refresh-ccw"
+      [title]="'humano.compensationReview.noCyclesTitle' | translate"
+      [description]="'humano.compensationReview.noCyclesBody' | translate"
+    />
+  } @else {
+    <div class="hum-comp-toolbar">
+      <hum-form-field [label]="'humano.compensationReview.cycle' | translate">
+        <hum-select
+          [options]="cycleOptions()"
+          [ariaLabel]="'humano.compensationReview.cycle' | translate"
+          [ngModel]="selectedCycle()?.id ?? ''"
+          (ngModelChange)="selectCycle($event)"
+        />
+      </hum-form-field>
+      @if (review(); as r) {
+        <p class="hum-onb-muted">
+          {{ 'humano.compensationReview.period' | translate }}
+          {{ r.reviewPeriodStart | date: 'mediumDate' }} – {{ r.reviewPeriodEnd | date: 'mediumDate' }} ·
+          <a [routerLink]="['/review-cycles', r.cycleId]">{{ 'humano.compensationReview.openCycle' | translate }}</a>
+        </p>
+      }
+    </div>
+
+    <hum-alert tone="info" [title]="'humano.compensationReview.principleTitle' | translate" style="margin-bottom: var(--space-4)">{{
+      'humano.compensationReview.principle' | translate
+    }}</hum-alert>
+
+    @if (review(); as r) {
+      @if (r.eligible) {
+        <section class="hum-perf-card hum-comp-draft">
+          <div>
+            <h2 class="hum-onb-h2">{{ 'humano.compensationReview.readyTitle' | translate: { count: r.eligible } }}</h2>
+            <p class="hum-onb-muted">{{ 'humano.compensationReview.readyBody' | translate }}</p>
+          </div>
+          <div class="hum-comp-draft__form">
+            <hum-form-field [label]="'humano.compensationReview.effectiveDate' | translate">
+              <hum-input type="date" [ngModel]="generateDate()" (ngModelChange)="generateDate.set($event)" />
+            </hum-form-field>
+            <hum-button variant="primary" icon="plus" [loading]="busy()" [disabled]="!generateDate()" (click)="generate()">{{
+              'humano.compensationReview.draft' | translate: { count: r.eligible }
+            }}</hum-button>
+          </div>
+        </section>
+      }
+      @if (r.waiting || r.disputed) {
+        <p class="hum-onb-muted hum-comp-note">
+          @if (r.waiting) {
+            {{ 'humano.compensationReview.waiting' | translate: { count: r.waiting } }}
+          }
+          @if (r.disputed) {
+            {{ 'humano.compensationReview.disputed' | translate: { count: r.disputed } }}
+          }
+        </p>
+      }
+
+      @if (!r.proposals.length) {
+        @if (!r.eligible) {
+          <hum-empty-state
+            icon="banknote"
+            [title]="'humano.compensationReview.emptyTitle' | translate"
+            [description]="'humano.compensationReview.emptyBody' | translate"
+          />
+        }
+      } @else {
+        <!-- Totals -->
+        <section class="hum-perf-card hum-comp-totals">
+          <header class="hum-perf-card__head">
+            <div>
+              <h2 class="hum-onb-h2">{{ 'humano.compensationReview.totals.title' | translate }}</h2>
+              <p class="hum-onb-muted">{{ 'humano.compensationReview.totals.lead' | translate }}</p>
+            </div>
+          </header>
+          @if (!r.totals.length) {
+            <p class="hum-onb-muted">{{ 'humano.compensationReview.totals.none' | translate }}</p>
+          } @else {
+            <div class="hum-table-wrap">
+              <table class="hum-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'humano.compensationReview.totals.pay' | translate }}</th>
+                    <th class="hum-table__num">{{ 'humano.compensationReview.totals.people' | translate }}</th>
+                    <th class="hum-table__num">{{ 'humano.compensationReview.totals.current' | translate }}</th>
+                    <th class="hum-table__num">{{ 'humano.compensationReview.totals.proposed' | translate }}</th>
+                    <th class="hum-table__num">{{ 'humano.compensationReview.totals.increase' | translate }}</th>
+                    <th class="hum-table__num">{{ 'humano.compensationReview.totals.bonuses' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (t of r.totals; track t.currencyCode + t.basis) {
+                    <tr>
+                      <td>{{ t.currencyCode }} · {{ 'humano.compensationReview.basis.' + t.basis | translate }}</td>
+                      <td class="hum-table__num tabular-nums">{{ t.count }}</td>
+                      <td class="hum-table__num tabular-nums">{{ t.current | money: t.currencyCode }}</td>
+                      <td class="hum-table__num tabular-nums">{{ t.proposed | money: t.currencyCode }}</td>
+                      <td class="hum-table__num tabular-nums">
+                        {{ t.increasePercent === null ? '—' : (t.increasePercent | number: '1.0-2') + '%' }}
+                      </td>
+                      <td class="hum-table__num tabular-nums">{{ t.bonuses | money: t.currencyCode }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+
+        <!-- Proposals -->
+        <section style="margin-top: var(--space-6)">
+          <div class="hum-onb-filter">
+            <div class="hum-chips">
+              <button type="button" class="hum-chip" [class.is-active]="statusFilter() === ''" (click)="statusFilter.set('')">
+                {{ 'humano.compensationReview.filter.all' | translate
+                }}<span class="hum-chip__count tabular-nums">{{ r.proposals.length }}</span>
+              </button>
+              @for (s of statuses; track s) {
+                @if (counts()[s]) {
+                  <button type="button" class="hum-chip" [class.is-active]="statusFilter() === s" (click)="statusFilter.set(s)">
+                    {{ 'humano.compensationReview.status.' + s | translate
+                    }}<span class="hum-chip__count tabular-nums">{{ counts()[s] }}</span>
+                  </button>
+                }
+              }
+            </div>
+            <div class="hum-comp-bulk">
+              @if (bulk().guidance) {
+                <hum-button variant="ghost" size="sm" icon="target" [disabled]="busy()" (click)="confirmBulk('guidance')">{{
+                  'humano.compensationReview.bulk.guidance' | translate: { count: bulk().guidance }
+                }}</hum-button>
+              }
+              @if (bulk().submit) {
+                <hum-button variant="outline" size="sm" icon="send" [disabled]="busy()" (click)="confirmBulk('submitAll')">{{
+                  'humano.compensationReview.bulk.submit' | translate: { count: bulk().submit }
+                }}</hum-button>
+              }
+              @if (bulk().approve) {
+                <hum-button variant="outline" size="sm" icon="check" [disabled]="busy()" (click)="confirmBulk('approveAll')">{{
+                  'humano.compensationReview.bulk.approve' | translate: { count: bulk().approve }
+                }}</hum-button>
+              }
+            </div>
+          </div>
+
+          <div class="hum-table-wrap">
+            <table class="hum-table hum-perf-table hum-comp-table">
+              <thead>
+                <tr>
+                  <th>{{ 'humano.compensationReview.col.employee' | translate }}</th>
+                  <th class="hum-table__num">{{ 'humano.compensationReview.col.rating' | translate }}</th>
+                  <th class="hum-table__num">{{ 'humano.compensationReview.col.current' | translate }}</th>
+                  <th class="hum-table__num">{{ 'humano.compensationReview.col.proposed' | translate }}</th>
+                  <th>{{ 'humano.compensationReview.col.position' | translate }}</th>
+                  <th class="hum-table__num">{{ 'humano.compensationReview.col.bonus' | translate }}</th>
+                  <th>{{ 'humano.compensationReview.col.status' | translate }}</th>
+                  <th>
+                    <span class="sr-only">{{ 'humano.compensationReview.col.actions' | translate }}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of visible(); track p.id) {
+                  <tr>
+                    <td>
+                      <span class="hum-perf-table__name">{{ p.employeeName }}</span>
+                      <span class="hum-perf-table__sub">{{ p.jobTitle ?? p.currentPositionName ?? '' }}</span>
+                      @if (p.promotionRecommended) {
+                        <span class="hum-perf-table__sub"
+                          ><lucide-icon name="trending-up" [size]="12" />
+                          {{ 'humano.compensationReview.promotionRecommended' | translate }}</span
+                        >
+                      }
+                    </td>
+                    <td class="hum-table__num">
+                      <strong class="tabular-nums">{{ p.rating }}</strong>
+                      <span class="hum-perf-table__sub">{{ 'humano.performance.rating.' + p.rating | translate }}</span>
+                    </td>
+                    <td class="hum-table__num tabular-nums">
+                      @if (p.currentSalary !== null) {
+                        {{ p.currentSalary | money: p.currencyCode }}
+                        <span class="hum-perf-table__sub">{{ 'humano.compensationReview.basis.' + p.basis | translate }}</span>
+                      } @else {
+                        <span class="hum-onb-overdue">{{ 'humano.compensationReview.noSalary' | translate }}</span>
+                      }
+                    </td>
+                    <td class="hum-table__num tabular-nums">
+                      @if (p.newSalary !== null) {
+                        {{ p.newSalary | money: p.currencyCode }}
+                      } @else {
+                        <span class="hum-onb-muted">{{ 'humano.compensationReview.noChange' | translate }}</span>
+                      }
+                      @if (p.currentSalary !== null) {
+                        <span class="hum-perf-table__sub" [class.hum-comp-outside]="p.outsideGuidance">
+                          @if (p.outsideGuidance) {
+                            <lucide-icon name="triangle-alert" [size]="12" />
+                          }
+                          {{ (p.increasePercent ?? 0 | number: '1.0-2') + '%' }} ·
+                          {{ 'humano.compensationReview.guide' | translate: { min: p.guidanceMin, max: p.guidanceMax } }}
+                        </span>
+                      }
+                    </td>
+                    <td>
+                      @if (p.newPositionName) {
+                        <span class="hum-perf-table__name">{{ p.newPositionName }}</span>
+                        <span class="hum-perf-table__sub">{{
+                          'humano.compensationReview.from' | translate: { name: p.currentPositionName ?? '—' }
+                        }}</span>
+                      } @else {
+                        <span class="hum-onb-muted">—</span>
+                      }
+                    </td>
+                    <td class="hum-table__num tabular-nums">{{ p.bonusAmount | money: p.currencyCode }}</td>
+                    <td>
+                      <hum-badge [tone]="statusTone(p.status)" [label]="'humano.compensationReview.status.' + p.status | translate" />
+                      <span class="hum-perf-table__sub">{{
+                        'humano.compensationReview.effective' | translate: { date: (p.effectiveDate | date: 'mediumDate') }
+                      }}</span>
+                      @if (p.status === 'APPLIED') {
+                        <span class="hum-perf-table__sub">{{
+                          'humano.compensationReview.appliedBy' | translate: { name: p.appliedByName ?? '—' }
+                        }}</span>
+                      } @else if (p.status === 'APPROVED') {
+                        <span class="hum-perf-table__sub">{{
+                          'humano.compensationReview.approvedBy' | translate: { name: p.approvedByName ?? '—' }
+                        }}</span>
+                      } @else if (p.status === 'SUBMITTED') {
+                        <span class="hum-perf-table__sub">{{
+                          'humano.compensationReview.submittedBy' | translate: { name: p.submittedByName ?? '—' }
+                        }}</span>
+                      }
+                      @if (p.payChanged) {
+                        <span class="hum-perf-table__sub hum-comp-outside"
+                          ><lucide-icon name="triangle-alert" [size]="12" /> {{ 'humano.compensationReview.payChanged' | translate }}</span
+                        >
+                      }
+                      @if (p.status === 'DRAFT' && p.returnComment) {
+                        <span class="hum-perf-table__sub" [title]="p.returnComment"
+                          ><lucide-icon name="message-square" [size]="12" />
+                          {{ 'humano.compensationReview.returnedNote' | translate }}</span
+                        >
+                      }
+                      @if (p.status === 'APPROVED' && !p.actions.apply && !p.payChanged && p.bonusAmount !== null && !canAwardBonuses) {
+                        <span class="hum-perf-table__sub">{{ 'humano.compensationReview.bonusRights' | translate }}</span>
+                      }
+                    </td>
+                    <td>
+                      <div class="hum-comp-actions">
+                        @if (p.actions.edit) {
+                          <hum-button variant="ghost" size="sm" icon="pencil" (click)="edit(p)">{{
+                            'humano.action.edit' | translate
+                          }}</hum-button>
+                        }
+                        @if (p.actions.submit) {
+                          <hum-button variant="outline" size="sm" [disabled]="busy()" (click)="submit(p)">{{
+                            'humano.compensationReview.submit' | translate
+                          }}</hum-button>
+                        }
+                        @if (p.actions.approve) {
+                          <hum-button variant="outline" size="sm" [disabled]="busy()" (click)="approve(p)">{{
+                            'humano.compensationReview.approve' | translate
+                          }}</hum-button>
+                        }
+                        @if (p.actions.apply) {
+                          <hum-button
+                            variant="primary"
+                            size="sm"
+                            [disabled]="busy()"
+                            (click)="pending.set({ kind: 'apply', proposal: p })"
+                            >{{ 'humano.compensationReview.apply' | translate }}</hum-button
+                          >
+                        }
+                        @if (p.actions.returnToDraft) {
+                          <hum-button variant="ghost" size="sm" [disabled]="busy()" (click)="openReturn(p)">{{
+                            'humano.compensationReview.return' | translate
+                          }}</hum-button>
+                        }
+                        @if (p.actions.delete) {
+                          <hum-icon-button
+                            icon="trash-2"
+                            size="sm"
+                            [label]="'humano.action.delete' | translate"
+                            [disabled]="busy()"
+                            (click)="pending.set({ kind: 'delete', proposal: p })"
+                          />
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      }
+    } @else {
+      <hum-skeleton [height]="96" />
+      <hum-skeleton-row /><hum-skeleton-row />
+    }
+  }
+</div>
+
+<!-- Edit a draft -->
+<hum-drawer
+  [open]="editing() !== null"
+  [title]="'humano.compensationReview.edit.title' | translate: { name: editing()?.employeeName }"
+  width="560px"
+  hasFooter
+  (closed)="editing.set(null)"
+>
+  @if (editing(); as p) {
+    <div class="hum-comp-edit">
+      <dl class="hum-comp-facts">
+        <div>
+          <dt>{{ 'humano.compensationReview.col.rating' | translate }}</dt>
+          <dd>{{ p.rating }} · {{ 'humano.performance.rating.' + p.rating | translate }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'humano.compensationReview.col.current' | translate }}</dt>
+          <dd>
+            @if (p.currentSalary !== null) {
+              {{ p.currentSalary | money: p.currencyCode }} · {{ 'humano.compensationReview.basis.' + p.basis | translate }}
+            } @else {
+              {{ 'humano.compensationReview.noSalary' | translate }}
+            }
+          </dd>
+        </div>
+        <div>
+          <dt>{{ 'humano.compensationReview.edit.guidance' | translate }}</dt>
+          <dd>{{ 'humano.compensationReview.guide' | translate: { min: p.guidanceMin, max: p.guidanceMax } }}</dd>
+        </div>
+      </dl>
+      @if (p.returnComment) {
+        <hum-alert tone="warning" [title]="'humano.compensationReview.edit.returned' | translate">{{ p.returnComment }}</hum-alert>
+      }
+
+      <hum-form-field [label]="'humano.compensationReview.effectiveDate' | translate" required>
+        <hum-input type="date" [ngModel]="effectiveDate()" (ngModelChange)="effectiveDate.set($event)" />
+      </hum-form-field>
+
+      <hum-form-field
+        [label]="'humano.compensationReview.edit.newSalary' | translate"
+        [hint]="
+          p.currentSalary === null
+            ? ('humano.compensationReview.edit.noSalaryHint' | translate)
+            : ('humano.compensationReview.edit.newSalaryHint' | translate)
+        "
+        [error]="salaryInvalid() ? ('humano.compensationReview.edit.amountInvalid' | translate) : undefined"
+      >
+        <hum-input
+          type="number"
+          [suffix]="p.currencyCode ?? ''"
+          [disabled]="p.currentSalary === null"
+          [ngModel]="newSalary()"
+          (ngModelChange)="newSalary.set($event)"
+        />
+      </hum-form-field>
+      @if (p.currentSalary !== null) {
+        <div class="hum-comp-increase" [class.hum-comp-outside]="editOutside()">
+          @if (editIncrease(); as inc) {
+            {{ 'humano.compensationReview.edit.increase' | translate: { value: (inc | number: '1.0-2') } }}
+          } @else {
+            {{ 'humano.compensationReview.edit.noIncrease' | translate }}
+          }
+          @if (editOutside()) {
+            · {{ 'humano.compensationReview.edit.outside' | translate }}
+          }
+          <button type="button" class="hum-perf-link" (click)="useMidpoint()">
+            {{ 'humano.compensationReview.edit.useMidpoint' | translate }}
+          </button>
+        </div>
+      }
+
+      <hum-form-field
+        [label]="'humano.compensationReview.edit.position' | translate"
+        [hint]="p.promotionRecommended ? ('humano.compensationReview.edit.promotionHint' | translate) : undefined"
+      >
+        <hum-select
+          [options]="positionOptions()"
+          [ariaLabel]="'humano.compensationReview.edit.position' | translate"
+          [ngModel]="newPositionId()"
+          (ngModelChange)="newPositionId.set($event)"
+        />
+      </hum-form-field>
+
+      <hum-form-field
+        [label]="'humano.compensationReview.edit.bonus' | translate"
+        [hint]="'humano.compensationReview.edit.bonusHint' | translate"
+        [error]="bonusInvalid() ? ('humano.compensationReview.edit.amountInvalid' | translate) : undefined"
+      >
+        <hum-input
+          type="number"
+          [suffix]="p.currencyCode ?? ''"
+          [disabled]="p.currentSalary === null"
+          [ngModel]="bonusAmount()"
+          (ngModelChange)="bonusAmount.set($event)"
+        />
+      </hum-form-field>
+
+      <hum-form-field [label]="'humano.compensationReview.edit.justification' | translate">
+        <hum-textarea [rows]="3" [ngModel]="justification()" (ngModelChange)="justification.set($event)" />
+      </hum-form-field>
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="editing.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="busy()" [disabled]="editInvalid()" (click)="save()">{{
+      'humano.action.save' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Merit matrix -->
+<hum-drawer
+  [open]="guidelinesOpen()"
+  [title]="'humano.compensationReview.guidelines.title' | translate"
+  width="520px"
+  hasFooter
+  (closed)="guidelinesOpen.set(false)"
+>
+  <p class="hum-onb-muted" style="margin-top: 0">{{ 'humano.compensationReview.guidelines.lead' | translate }}</p>
+  <div class="hum-comp-matrix">
+    <span class="hum-comp-matrix__head">{{ 'humano.compensationReview.col.rating' | translate }}</span>
+    <span class="hum-comp-matrix__head">{{ 'humano.compensationReview.guidelines.min' | translate }}</span>
+    <span class="hum-comp-matrix__head">{{ 'humano.compensationReview.guidelines.max' | translate }}</span>
+    @for (b of bands(); track b.rating) {
+      <span class="hum-comp-matrix__rating"
+        ><strong class="tabular-nums">{{ b.rating }}</strong> {{ 'humano.performance.rating.' + b.rating | translate }}</span
+      >
+      <hum-input type="number" suffix="%" [ngModel]="bandText(b.minPercent)" (ngModelChange)="setBand(b.rating, 'minPercent', $event)" />
+      <hum-input type="number" suffix="%" [ngModel]="bandText(b.maxPercent)" (ngModelChange)="setBand(b.rating, 'maxPercent', $event)" />
+    }
+  </div>
+  @if (bandsInvalid()) {
+    <p class="hum-comp-outside">{{ 'humano.compensationReview.guidelines.invalid' | translate }}</p>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="guidelinesOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="busy()" [disabled]="bandsInvalid()" (click)="saveGuidelines()">{{
+      'humano.action.save' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Return to draft -->
+<hum-dialog
+  [open]="returning() !== null"
+  [title]="'humano.compensationReview.returnDialog.title' | translate"
+  [description]="'humano.compensationReview.returnDialog.body' | translate: { name: returning()?.employeeName }"
+  hasFooter
+  (closed)="returning.set(null)"
+>
+  <hum-form-field [label]="'humano.compensationReview.returnDialog.comment' | translate" required>
+    <hum-textarea [rows]="3" [ngModel]="returnComment()" (ngModelChange)="returnComment.set($event)" />
+  </hum-form-field>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="returning.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" [loading]="busy()" [disabled]="!returnComment().trim()" (click)="sendBack()">{{
+      'humano.compensationReview.return' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>
+
+<!-- Confirmations -->
+@let pend = pending();
+<hum-dialog
+  [open]="pend !== null"
+  [title]="pend ? ('humano.compensationReview.confirm.' + pend.kind + '.title' | translate) : ''"
+  [description]="pendingDescription()"
+  hasFooter
+  (closed)="pending.set(null)"
+>
+  @if (pend && pend.kind === 'apply') {
+    @if (pend.proposal; as p) {
+      <ul class="hum-comp-summary">
+        <li>{{ 'humano.compensationReview.effective' | translate: { date: (p.effectiveDate | date: 'mediumDate') } }}</li>
+        @if (p.newSalary !== null) {
+          <li>
+            {{
+              'humano.compensationReview.confirm.salary'
+                | translate: { from: (p.currentSalary | money: p.currencyCode), to: (p.newSalary | money: p.currencyCode) }
+            }}
+          </li>
+        }
+        @if (p.newPositionName) {
+          <li>
+            {{ 'humano.compensationReview.confirm.position' | translate: { from: p.currentPositionName ?? '—', to: p.newPositionName } }}
+          </li>
+        }
+        @if (p.bonusAmount !== null) {
+          <li>{{ 'humano.compensationReview.confirm.bonus' | translate: { amount: (p.bonusAmount | money: p.currencyCode) } }}</li>
+        }
+        @if (p.newSalary === null && !p.newPositionName && p.bonusAmount === null) {
+          <li>{{ 'humano.compensationReview.confirm.nothing' | translate }}</li>
+        }
+      </ul>
+    }
+  }
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="pending.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button [variant]="pend?.kind === 'delete' ? 'destructive' : 'primary'" [loading]="busy()" (click)="confirm()">{{
+      pend ? ('humano.compensationReview.confirm.' + pend.kind + '.action' | translate) : ''
+    }}</hum-button>
+  </div>
+</hum-dialog>

@@ -1,11 +1,13 @@
 package com.humano.web.rest.hr.workflow;
 
+import com.humano.domain.enumeration.hr.ApprovalType;
 import com.humano.dto.hr.workflow.requests.ApprovalDecisionRequest;
 import com.humano.dto.hr.workflow.requests.SubmitApprovalRequest;
 import com.humano.dto.hr.workflow.responses.ApprovalWorkflowResponse;
 import com.humano.dto.hr.workflow.responses.PendingApprovalSummary;
 import com.humano.security.annotation.RequireHrManager;
 import com.humano.security.annotation.RequireHrStaffOrEmployee;
+import com.humano.service.errors.BadRequestAlertException;
 import com.humano.service.hr.workflow.ApprovalWorkflowOrchestratorService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -45,6 +47,10 @@ public class ApprovalWorkflowResource {
     public ResponseEntity<ApprovalWorkflowResponse> submitForApproval(@Valid @RequestBody SubmitApprovalRequest request) {
         LOG.debug("REST request to submit for approval: {}", request);
         access.requireSelf(request.requestorId());
+        if (request.approvalType() == ApprovalType.PERFORMANCE_REVIEW) {
+            // Sent by the review cycle when the reviewer submits the review, never by hand.
+            throw new BadRequestAlertException("A review is sent for sign-off by submitting it", "approval", "reviewsignoff");
+        }
         ApprovalWorkflowResponse result = approvalService.submitForApproval(request);
         return ResponseEntity.ok(result);
     }

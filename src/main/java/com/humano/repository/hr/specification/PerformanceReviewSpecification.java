@@ -1,5 +1,6 @@
 package com.humano.repository.hr.specification;
 
+import com.humano.domain.enumeration.hr.PerformanceReviewStatus;
 import com.humano.domain.hr.PerformanceReview;
 import com.humano.domain.shared.Employee;
 import jakarta.persistence.criteria.Join;
@@ -33,6 +34,8 @@ public class PerformanceReviewSpecification {
      * @param createdBy Created by user filter
      * @param createdDateFrom Created date from filter
      * @param createdDateTo Created date to filter
+     * @param cycleId Review cycle filter
+     * @param status Review status filter
      * @return Specification for the given criteria
      */
     public static Specification<PerformanceReview> withCriteria(
@@ -45,7 +48,9 @@ public class PerformanceReviewSpecification {
         String comments,
         String createdBy,
         LocalDate createdDateFrom,
-        LocalDate createdDateTo
+        LocalDate createdDateTo,
+        UUID cycleId,
+        PerformanceReviewStatus status
     ) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -104,6 +109,16 @@ public class PerformanceReviewSpecification {
                         createdDateTo
                     )
                 );
+            }
+
+            // Filter by review cycle
+            if (cycleId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("cycle").get("id"), cycleId));
+            }
+
+            // Filter by status
+            if (status != null) {
+                predicates.add(criteriaBuilder.equal(root.get("status"), status));
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

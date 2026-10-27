@@ -144,6 +144,75 @@ export const SHELL_NAV: ShellNavGroup[] = [
     ],
   },
   {
+    headingKey: 'humano.nav.groups.performance',
+    items: [
+      // Everyone: their own review and the ones they write.
+      {
+        id: 'reviews',
+        labelKey: 'humano.nav.reviews',
+        icon: 'star',
+        link: '/reviews',
+        keywords: 'performance appraisal self-assessment feedback rating evaluation',
+        feature: PlanFeature.PERFORMANCE,
+      },
+      {
+        id: 'goals',
+        labelKey: 'humano.nav.goals',
+        icon: 'target',
+        link: '/goals',
+        keywords: 'objectives okr targets kpi progress check-in',
+        feature: PlanFeature.PERFORMANCE,
+      },
+      {
+        id: 'review-cycles',
+        labelKey: 'humano.nav.reviewCycles',
+        icon: 'refresh-ccw',
+        link: '/review-cycles',
+        keywords: 'performance cycle calibration annual mid-year review calendar',
+        permissions: [Permission.VIEW_PERFORMANCE_REVIEWS],
+        feature: PlanFeature.PERFORMANCE,
+      },
+      {
+        id: 'performance-analytics',
+        labelKey: 'humano.nav.performanceAnalytics',
+        icon: 'bar-chart-3',
+        link: '/performance-analytics',
+        keywords: 'performance statistics completion rating distribution trend calibration report',
+        permissions: [Permission.VIEW_PERFORMANCE_REVIEWS],
+        feature: PlanFeature.PERFORMANCE,
+      },
+      // Managers reach their plans from /reviews; HR sees them all here.
+      {
+        id: 'improvement-plans',
+        labelKey: 'humano.nav.improvementPlans',
+        icon: 'clipboard-list',
+        link: '/improvement-plans',
+        keywords: 'pip performance improvement plan underperformance',
+        permissions: [Permission.MANAGE_PERFORMANCE_REVIEWS],
+        feature: PlanFeature.PERFORMANCE,
+      },
+      // Pay decisions follow the regular cycles; they show pay, so the compensation team only.
+      {
+        id: 'compensation-review',
+        labelKey: 'humano.nav.compensationReview',
+        icon: 'banknote',
+        link: '/compensation-reviews',
+        keywords: 'merit increase raise salary review promotion bonus pay matrix',
+        permissions: [Permission.MANAGE_COMPENSATION],
+        feature: PlanFeature.PERFORMANCE,
+      },
+      {
+        id: 'performance-frameworks',
+        labelKey: 'humano.nav.performanceFrameworks',
+        icon: 'layers',
+        link: '/performance-frameworks',
+        keywords: 'competencies values review template questions framework',
+        permissions: [Permission.MANAGE_PERFORMANCE_FRAMEWORKS],
+        feature: PlanFeature.PERFORMANCE,
+      },
+    ],
+  },
+  {
     headingKey: 'humano.nav.groups.timeLeave',
     items: [
       { id: 'leave', labelKey: 'humano.nav.leave', icon: 'palmtree', link: '/leave', keywords: 'holiday vacation pto absence' },

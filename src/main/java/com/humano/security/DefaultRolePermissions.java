@@ -226,7 +226,7 @@ public final class DefaultRolePermissions {
 
         // ---- Performance management ----
         grant(PermissionsConstants.CONFIGURE_PERFORMANCE_CYCLES, AuthoritiesConstants.PERFORMANCE_ADMIN, AuthoritiesConstants.HR_MANAGER);
-        grant(PermissionsConstants.MANAGE_PERFORMANCE_FRAMEWORKS, AuthoritiesConstants.PERFORMANCE_ADMIN);
+        grant(PermissionsConstants.MANAGE_PERFORMANCE_FRAMEWORKS, AuthoritiesConstants.PERFORMANCE_ADMIN, AuthoritiesConstants.HR_MANAGER);
         grant(PermissionsConstants.SUBMIT_PERFORMANCE_REVIEW, AuthoritiesConstants.MANAGER, AuthoritiesConstants.PERFORMANCE_REVIEWER);
         grant(
             PermissionsConstants.VIEW_PERFORMANCE_REVIEWS,

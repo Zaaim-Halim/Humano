@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Additional reviewers: feedback on a review from peers, direct reports, project leads... One
+         row per contributor per review. The cycle decides whether employees may nominate their own
+         contributors, how many a review may have, and whether the employee sees the feedback once
+         the review is shared (MANAGER_ONLY keeps it with the reviewer). Existing cycles get the
+         defaults. -->
+    <changeSet id="20261027-review-feedback-requests" author="halimzaaim">
+        <addColumn tableName="review_cycle">
+            <column name="feedback_visibility" type="VARCHAR(30)" defaultValue="MANAGER_ONLY">
+                <constraints nullable="false"/>
+            </column>
+            <column name="allow_feedback_nominations" type="${booleanType}" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="max_contributors" type="INT" defaultValueNumeric="8">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <createTable tableName="review_feedback_request">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_review_feedback_request"/>
+            </column>
+            <column name="review_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="contributor_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="relationship" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requested_by_id" type="${uuidType}"/>
+            <column name="requested_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="due_date" type="DATE"/>
+            <column name="message" type="VARCHAR(1000)"/>
+            <column name="strengths" type="${clobType}"/>
+            <column name="improvements" type="${clobType}"/>
+            <column name="comments" type="${clobType}"/>
+            <column name="submitted_at" type="DATETIME"/>
+            <column name="decline_reason" type="VARCHAR(500)"/>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="review_feedback_request" baseColumnNames="review_id"
+                                 constraintName="fk_review_feedback_request_review"
+                                 referencedTableName="performance_review" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="review_feedback_request" baseColumnNames="contributor_id"
+                                 constraintName="fk_review_feedback_request_contributor"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="review_feedback_request" baseColumnNames="requested_by_id"
+                                 constraintName="fk_review_feedback_request_requested_by"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+        <createIndex tableName="review_feedback_request" indexName="idx_review_feedback_request_review">
+            <column name="review_id"/>
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="review_feedback_request" indexName="idx_review_feedback_request_contributor">
+            <column name="contributor_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+    <!-- Acknowledgement and dispute: the employee acknowledges a shared review (read, not agreed),
+         with an optional comment, or disputes it with a reason; HR resolves the dispute, possibly
+         changing the rating. Every change to a final rating after the reviewer gave it -
+         calibration or dispute resolution - is kept in review_rating_change. -->
+    <changeSet id="20261027-review-acknowledgement" author="halimzaaim">
+        <addColumn tableName="performance_review">
+            <column name="acknowledged_at" type="DATETIME"/>
+            <column name="employee_comment" type="${clobType}"/>
+            <column name="disputed" type="${booleanType}" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dispute_resolution" type="${clobType}"/>
+            <column name="dispute_resolved_at" type="DATETIME"/>
+            <column name="dispute_resolved_by_id" type="${uuidType}"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="performance_review" baseColumnNames="dispute_resolved_by_id"
+                                 constraintName="fk_performance_review_dispute_resolved_by"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+
+        <createTable tableName="review_rating_change">
+            <column name="id" type="${uuidType}">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_review_rating_change"/>
+            </column>
+            <column name="review_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="from_rating" type="INT"/>
+            <column name="to_rating" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reason" type="${clobType}"/>
+            <column name="changed_by_id" type="${uuidType}"/>
+            <column name="changed_at" type="DATETIME">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="DATETIME"/>
+            <column name="last_modified_by" type="VARCHAR(50)"/>
+            <column name="last_modified_date" type="DATETIME"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="review_rating_change" baseColumnNames="review_id"
+                                 constraintName="fk_review_rating_change_review"
+                                 referencedTableName="performance_review" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="review_rating_change" baseColumnNames="changed_by_id"
+                                 constraintName="fk_review_rating_change_changed_by"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+        <createIndex tableName="review_rating_change" indexName="idx_review_rating_change_review">
+            <column name="review_id"/>
+            <column name="changed_at"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Second-level sign-off: a cycle may require each written review to be signed off (the
+         reviewer's manager by default, or the PERFORMANCE_REVIEW approval chain) before it is
+         calibrated or shared. The approval itself lives in approval_request; the review keeps
+         where it stands and the approver's last decision. Existing cycles don't require it. -->
+    <changeSet id="20261027-review-sign-off" author="halimzaaim">
+        <addColumn tableName="review_cycle">
+            <column name="requires_sign_off" type="${booleanType}" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="performance_review">
+            <column name="sign_off_status" type="VARCHAR(20)"/>
+            <column name="sign_off_comment" type="VARCHAR(2000)"/>
+            <column name="sign_off_decided_at" type="DATETIME"/>
+            <column name="sign_off_decided_by_id" type="${uuidType}"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="performance_review" baseColumnNames="sign_off_decided_by_id"
+                                 constraintName="fk_performance_review_sign_off_by"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- Potential: the reviewer's view of how far the employee could grow (LOW / MODERATE / HIGH),
+         adjustable in calibration; with the rating it places the employee on the 9-box. Never
+         shown to the employee. -->
+    <changeSet id="20261027-review-potential" author="halimzaaim">
+        <addColumn tableName="performance_review">
+            <column name="potential" type="VARCHAR(20)"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- Cycle types: REGULAR (the calendar's cycles; may not overlap for the same people),
+         PROBATION (employees whose probation ends in the review period; the reviewer recommends
+         confirming, extending or not confirming - a recommendation only) and AD_HOC (named
+         employees, kept in review_cycle_employees). Existing cycles are regular. -->
+    <changeSet id="20261027-review-cycle-types" author="halimzaaim">
+        <addColumn tableName="review_cycle">
+            <column name="cycle_type" type="VARCHAR(20)" defaultValue="REGULAR">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <createTable tableName="review_cycle_employees">
+            <column name="cycle_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="employee_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="review_cycle_employees" columnNames="cycle_id, employee_id"
+                       constraintName="pk_review_cycle_employees"/>
+        <addForeignKeyConstraint baseTableName="review_cycle_employees" baseColumnNames="cycle_id"
+                                 constraintName="fk_review_cycle_employees_cycle"
+                                 referencedTableName="review_cycle" referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="review_cycle_employees" baseColumnNames="employee_id"
+                                 constraintName="fk_review_cycle_employees_employee"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+        <addColumn tableName="performance_review">
+            <column name="probation_recommendation" type="VARCHAR(20)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

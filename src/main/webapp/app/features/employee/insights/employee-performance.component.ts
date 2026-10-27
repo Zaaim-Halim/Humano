@@ -1,8 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 
+import { Permission } from 'app/config/permission.constants';
+import { AccountService } from 'app/core/auth/account.service';
 import { normalizeHttpError } from 'app/core/api';
 import {
   AlertComponent,
@@ -35,6 +38,7 @@ import { PerformanceReviewService } from '../services/performance-review.service
   selector: 'hum-employee-performance',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    RouterLink,
     DatePipe,
     DecimalPipe,
     TranslatePipe,
@@ -58,6 +62,10 @@ export class EmployeePerformanceComponent {
   private readonly trainingService = inject(EmployeeTrainingService);
   private readonly meWork = inject(MeWorkService);
   private readonly translate = inject(TranslateService);
+  private readonly account = inject(AccountService);
+
+  /** The full review page is open to the employee themselves and HR (its reviewer too, checked there). */
+  protected readonly canOpenReview = computed(() => this.self() || this.account.hasAnyPermission([Permission.VIEW_PERFORMANCE_REVIEWS]));
 
   /** Newest first. */
   protected readonly reviews = signal<PerformanceReview[] | null>(null);
@@ -98,7 +106,10 @@ export class EmployeePerformanceComponent {
   protected load(id = this.employeeId()): void {
     this.error.set(null);
     const page = { page: 0, size: 50, sort: ['reviewDate,desc'] };
-    const reviews$ = this.self() ? this.meWork.performanceReviews(page) : this.reviewService.search({ employeeId: id }, page);
+    // Completed reviews only; a review in a running cycle is followed on the cycle itself.
+    const reviews$ = this.self()
+      ? this.meWork.performanceReviews(page)
+      : this.reviewService.search({ employeeId: id, status: 'SHARED' }, page);
     const trainings$ = this.self()
       ? this.meWork.trainings({ page: 0, size: 50 })
       : this.trainingService.forEmployee(id, { page: 0, size: 50 });

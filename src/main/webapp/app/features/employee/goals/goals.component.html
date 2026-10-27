@@ -1,0 +1,325 @@
+<div class="hum-page">
+  <header class="hum-onbc-head">
+    <div>
+      <h1 class="hum-onbc-head__title">{{ 'humano.goals.title' | translate }}</h1>
+      <p class="hum-onbc-head__lead">{{ 'humano.goals.lead' | translate }}</p>
+    </div>
+    <div class="hum-onbc-head__actions">
+      <hum-button variant="primary" size="sm" icon="plus" (click)="newGoal()">{{
+        (view() === 'team' ? 'humano.goals.setForReport' : 'humano.goals.propose') | translate
+      }}</hum-button>
+    </div>
+  </header>
+
+  @if (tabs().length > 1) {
+    <hum-tabs [items]="tabs()" [value]="view()" (valueChange)="setView($event)" />
+  }
+
+  <div class="hum-goal-toolbar">
+    <p class="hum-onb-muted">
+      {{ (view() === 'team' ? 'humano.goals.teamHint' : 'humano.goals.mineHint') | translate }}
+    </p>
+    @if (closedCount()) {
+      <hum-switch
+        [ngModel]="showClosed()"
+        (ngModelChange)="showClosed.set($event)"
+        [label]="'humano.goals.showClosed' | translate: { count: closedCount() }"
+      />
+    }
+  </div>
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (mine() === null || team() === null) {
+    <hum-skeleton [height]="96" />
+    <hum-skeleton [height]="96" style="margin-top: var(--space-3)" />
+  } @else if (!groups().length) {
+    <hum-empty-state
+      icon="target"
+      [title]="(view() === 'team' ? 'humano.goals.emptyTeamTitle' : 'humano.goals.emptyTitle') | translate"
+      [description]="(view() === 'team' ? 'humano.goals.emptyTeamBody' : 'humano.goals.emptyBody') | translate"
+    />
+  } @else {
+    @for (group of groups(); track group.employeeId) {
+      <section class="hum-goal-group">
+        @if (view() === 'team' || group.weight !== null) {
+          <header class="hum-goal-group__head">
+            @if (view() === 'team') {
+              <h2 class="hum-onb-h2">{{ group.employeeName }}</h2>
+            }
+            @if (group.weight !== null) {
+              <span class="hum-goal-group__weight tabular-nums" [class.is-off]="group.weight !== 100">
+                @if (group.weight !== 100) {
+                  <lucide-icon name="triangle-alert" [size]="13" />
+                }
+                {{ 'humano.goals.weightTotal' | translate: { total: group.weight } }}
+              </span>
+            }
+          </header>
+        }
+        <ul class="hum-goal-list">
+          @for (g of group.goals; track g.id) {
+            <li class="hum-goal" [class.is-closed]="g.status === 'COMPLETED' || g.status === 'CANCELLED'">
+              <div class="hum-goal__main">
+                <p class="hum-goal__title">
+                  {{ g.title }}
+                  <hum-badge [tone]="statusTone(g.status)" [label]="'humano.goals.status.' + g.status | translate" />
+                  @if (g.locked) {
+                    <span class="hum-goal__lock" [title]="'humano.goals.lockedHint' | translate"
+                      ><lucide-icon name="lock" [size]="12" />{{ 'humano.goals.locked' | translate }}</span
+                    >
+                  }
+                </p>
+                @if (g.successMeasure) {
+                  <p class="hum-goal__measure"><lucide-icon name="flag" [size]="12" />{{ g.successMeasure }}</p>
+                }
+                @if (g.description) {
+                  <p class="hum-goal__desc">{{ g.description }}</p>
+                }
+                <p class="hum-goal__meta tabular-nums">
+                  <span [class.is-late]="overdue(g)"
+                    ><lucide-icon name="calendar" [size]="12" />{{
+                      'humano.goals.due' | translate: { date: (g.dueDate | date: 'mediumDate') }
+                    }}</span
+                  >
+                  @if (g.weight !== null) {
+                    <span>{{ 'humano.goals.weightShort' | translate: { weight: g.weight } }}</span>
+                  }
+                  @if (g.agreedByName) {
+                    <span>{{ 'humano.goals.agreedBy' | translate: { name: g.agreedByName } }}</span>
+                  } @else if (g.status === 'DRAFT') {
+                    <span>{{ 'humano.goals.awaitingAgreement' | translate }}</span>
+                  }
+                </p>
+                @if (g.status === 'CANCELLED' && g.cancelReason) {
+                  <p class="hum-goal__desc">{{ 'humano.goals.cancelledBecause' | translate: { reason: g.cancelReason } }}</p>
+                }
+                @if (g.status !== 'DRAFT' && g.status !== 'CANCELLED') {
+                  <hum-progress [value]="g.progress" [tone]="g.status === 'COMPLETED' ? 'success' : 'brand'" showValue />
+                }
+              </div>
+              <div class="hum-goal__actions">
+                @if (g.can.agree) {
+                  <hum-button variant="primary" size="sm" icon="check" [disabled]="saving()" (click)="agree(g)">{{
+                    'humano.goals.agree' | translate
+                  }}</hum-button>
+                }
+                @if (g.can.checkIn) {
+                  <hum-button variant="secondary" size="sm" icon="trending-up" (click)="openCheckIn(g)">{{
+                    'humano.goals.checkIn' | translate
+                  }}</hum-button>
+                }
+                @if (g.can.complete) {
+                  <hum-button variant="ghost" size="sm" icon="check-circle-2" [disabled]="saving()" (click)="complete(g)">{{
+                    'humano.goals.complete' | translate
+                  }}</hum-button>
+                }
+                @if (g.can.edit) {
+                  <hum-button variant="ghost" size="sm" icon="pencil" (click)="edit(g)">{{ 'humano.action.edit' | translate }}</hum-button>
+                }
+                @if (g.can.cancel) {
+                  <hum-button variant="ghost" size="sm" icon="x" (click)="openCancel(g)">{{
+                    'humano.goals.cancel' | translate
+                  }}</hum-button>
+                }
+                @if (g.can.delete) {
+                  <hum-button variant="ghost" size="sm" icon="trash-2" (click)="deleting.set(g)">{{
+                    'humano.action.delete' | translate
+                  }}</hum-button>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</div>
+
+<!-- Add / edit -->
+<hum-drawer
+  [open]="draft() !== null"
+  [title]="(draft()?.id ? 'humano.goals.editTitle' : view() === 'team' ? 'humano.goals.setForReport' : 'humano.goals.propose') | translate"
+  width="520px"
+  hasFooter
+  (closed)="draft.set(null)"
+>
+  @if (draft(); as d) {
+    <div class="hum-perf-form">
+      @if (!d.id && view() === 'mine') {
+        <p class="hum-onb-muted" style="margin: 0">{{ 'humano.goals.proposeHint' | translate }}</p>
+      }
+      @if (view() === 'team') {
+        <hum-form-field
+          [label]="'humano.goals.employee' | translate"
+          required
+          [error]="tried() && problem(d) === 'humano.goals.error.employee' ? ('humano.employeeForm.required' | translate) : undefined"
+        >
+          @if (d.id) {
+            <p class="hum-goal__readonly">{{ d.employeeName }}</p>
+          } @else if (canManageAll) {
+            <hum-autocomplete
+              [searchFn]="searchEmployees"
+              [placeholder]="'humano.onboarding.employeePlaceholder' | translate"
+              [loadingText]="'humano.employeeForm.searching' | translate"
+              [noResultsText]="'humano.employeeForm.noResults' | translate"
+              [(ngModel)]="d.employeeId"
+            />
+          } @else {
+            <hum-select [options]="memberOptions()" [ariaLabel]="'humano.goals.employee' | translate" [(ngModel)]="d.employeeId" />
+          }
+        </hum-form-field>
+      }
+      <hum-form-field
+        [label]="'humano.goals.field.title' | translate"
+        controlId="goal-title"
+        required
+        [error]="tried() && problem(d) === 'humano.goals.error.title' ? ('humano.employeeForm.required' | translate) : undefined"
+      >
+        <hum-input inputId="goal-title" [(ngModel)]="d.title" [invalid]="tried() && problem(d) === 'humano.goals.error.title'" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.goals.field.successMeasure' | translate"
+        [hint]="'humano.goals.field.successMeasureHint' | translate"
+      >
+        <hum-textarea [rows]="2" [(ngModel)]="d.successMeasure" />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.goals.field.description' | translate">
+        <hum-textarea [rows]="3" [(ngModel)]="d.description" />
+      </hum-form-field>
+      <div class="hum-goal-form__row">
+        <hum-form-field [label]="'humano.goals.field.startDate' | translate" controlId="goal-start" required>
+          <hum-input inputId="goal-start" type="date" [(ngModel)]="d.startDate" />
+        </hum-form-field>
+        <hum-form-field
+          [label]="'humano.goals.field.dueDate' | translate"
+          controlId="goal-due"
+          required
+          [error]="
+            tried() && problem(d) === 'humano.goals.error.dueBeforeStart' ? ('humano.goals.error.dueBeforeStart' | translate) : undefined
+          "
+        >
+          <hum-input inputId="goal-due" type="date" [(ngModel)]="d.dueDate" />
+        </hum-form-field>
+        <hum-form-field
+          [label]="'humano.goals.field.weight' | translate"
+          controlId="goal-weight"
+          [hint]="'humano.goals.field.weightHint' | translate"
+          [error]="tried() && problem(d) === 'humano.goals.error.weight' ? ('humano.goals.error.weight' | translate) : undefined"
+        >
+          <hum-input inputId="goal-weight" type="number" suffix="%" [(ngModel)]="d.weight" />
+        </hum-form-field>
+      </div>
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="draft.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" (click)="save()">{{
+      (draft()?.id || view() === 'team' ? 'humano.action.save' : 'humano.goals.submitProposal') | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Check-in -->
+<hum-dialog
+  [open]="checkingIn() !== null"
+  [title]="'humano.goals.checkInTitle' | translate"
+  [description]="checkingIn()?.title ?? ''"
+  hasFooter
+  (closed)="checkingIn.set(null)"
+>
+  @if (checkingIn()) {
+    <div class="hum-perf-form">
+      <hum-form-field
+        [label]="'humano.goals.progress' | translate"
+        controlId="goal-progress"
+        required
+        [error]="checkInInvalid() ? ('humano.goals.error.progress' | translate) : undefined"
+      >
+        <hum-input
+          inputId="goal-progress"
+          type="number"
+          suffix="%"
+          [ngModel]="checkInProgress()"
+          (ngModelChange)="checkInProgress.set($event)"
+          [invalid]="checkInInvalid()"
+        />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.goals.checkInComment' | translate">
+        <hum-textarea
+          [rows]="3"
+          [placeholder]="'humano.goals.checkInPlaceholder' | translate"
+          [ngModel]="checkInComment()"
+          (ngModelChange)="checkInComment.set($event)"
+        />
+      </hum-form-field>
+      <h3 class="hum-perf-subhead">{{ 'humano.goals.history' | translate }}</h3>
+      @if (history() === null) {
+        <hum-skeleton [height]="48" />
+      } @else if (!history()!.length) {
+        <p class="hum-onb-muted" style="margin: 0">{{ 'humano.goals.noHistory' | translate }}</p>
+      } @else {
+        <ol class="hum-goal-history">
+          @for (c of history(); track c.id) {
+            <li>
+              <p class="hum-goal-history__head tabular-nums">
+                <strong>{{ c.progress }}%</strong>
+                <span
+                  >{{ c.checkedInAt | date: 'mediumDate' }}
+                  @if (c.authorName) {
+                    · {{ c.authorName }}
+                  }
+                </span>
+              </p>
+              @if (c.comment) {
+                <p class="hum-goal-history__comment">{{ c.comment }}</p>
+              }
+            </li>
+          }
+        </ol>
+      }
+    </div>
+  }
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="checkingIn.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" [disabled]="checkInInvalid()" (click)="saveCheckIn()">{{
+      'humano.goals.saveCheckIn' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>
+
+<!-- Cancel -->
+<hum-dialog
+  [open]="cancelling() !== null"
+  [title]="'humano.goals.cancelTitle' | translate"
+  [description]="'humano.goals.cancelBody' | translate: { title: cancelling()?.title }"
+  hasFooter
+  (closed)="cancelling.set(null)"
+>
+  <hum-form-field [label]="'humano.goals.cancelReason' | translate" required>
+    <hum-textarea [rows]="3" [ngModel]="cancelReason()" (ngModelChange)="cancelReason.set($event)" />
+  </hum-form-field>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="cancelling.set(null)">{{ 'humano.goals.keep' | translate }}</hum-button>
+    <hum-button variant="destructive" [loading]="saving()" [disabled]="!cancelReason().trim()" (click)="confirmCancel()">{{
+      'humano.goals.cancel' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>
+
+<!-- Delete -->
+<hum-dialog
+  [open]="deleting() !== null"
+  [title]="'humano.goals.deleteTitle' | translate"
+  [description]="'humano.goals.deleteBody' | translate: { title: deleting()?.title }"
+  hasFooter
+  [hasBody]="false"
+  (closed)="deleting.set(null)"
+>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="deleting.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" [loading]="saving()" (click)="confirmDelete()">{{ 'humano.action.delete' | translate }}</hum-button>
+  </div>
+</hum-dialog>

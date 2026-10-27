@@ -1,0 +1,219 @@
+@if (error(); as e) {
+  <section class="hum-perf-card">
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  </section>
+} @else if (!overview()) {
+  <section class="hum-perf-card"><hum-skeleton-row /><hum-skeleton-row /></section>
+} @else if (visible()) {
+  @let o = overview()!;
+  <section class="hum-perf-card">
+    <header class="hum-perf-card__head">
+      <div>
+        <h2 class="hum-onb-h2">{{ 'humano.performance.feedback.title' | translate }}</h2>
+        <p class="hum-onb-muted">
+          {{
+            (isEmployee() ? 'humano.performance.feedback.leadEmployee' : 'humano.performance.feedback.leadReviewer')
+              | translate: { name: review().employeeName }
+          }}
+          {{ visibilityKey() | translate: { name: review().employeeName, min: o.minimumResponses } }}
+        </p>
+      </div>
+      @if (o.canRequest || o.canNominate) {
+        <hum-button variant="secondary" size="sm" icon="user-plus" [disabled]="full()" (click)="openAsk()">{{
+          (o.canNominate ? 'humano.performance.feedback.nominate' : 'humano.performance.feedback.ask') | translate
+        }}</hum-button>
+      }
+    </header>
+
+    @if (o.canRequest || o.canNominate) {
+      <p class="hum-perf-feedback__count tabular-nums">
+        {{ 'humano.performance.feedback.count' | translate: { active: o.activeContributors, max: o.maxContributors } }}
+        @if (full()) {
+          · {{ 'humano.performance.feedback.full' | translate }}
+        }
+      </p>
+    }
+
+    @if (o.withheld) {
+      <hum-alert tone="info" [title]="'humano.performance.feedback.withheldTitle' | translate">{{
+        'humano.performance.feedback.withheldBody' | translate: { min: o.minimumResponses }
+      }}</hum-alert>
+    }
+
+    @if (anonymous().length) {
+      <p class="hum-perf-feedback__anon">
+        <lucide-icon name="eye-off" [size]="14" />{{ 'humano.performance.feedback.anonymous' | translate }}
+      </p>
+      <ul class="hum-perf-feedback">
+        @for (a of anonymous(); track $index) {
+          <li class="hum-perf-feedback__item">
+            <dl class="hum-perf-answers">
+              @if (a.strengths) {
+                <dt>{{ 'humano.performance.feedback.strengths' | translate }}</dt>
+                <dd>{{ a.strengths }}</dd>
+              }
+              @if (a.improvements) {
+                <dt>{{ 'humano.performance.feedback.improvements' | translate }}</dt>
+                <dd>{{ a.improvements }}</dd>
+              }
+              @if (a.comments) {
+                <dt>{{ 'humano.performance.feedback.comments' | translate }}</dt>
+                <dd>{{ a.comments }}</dd>
+              }
+            </dl>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (named().length) {
+      <ul class="hum-perf-feedback">
+        @for (f of named(); track f.id) {
+          <li class="hum-perf-feedback__item" [class.is-closed]="f.status === 'CANCELLED' || f.status === 'DECLINED'">
+            <div class="hum-perf-feedback__row">
+              <hum-avatar [name]="f.contributorName ?? ''" size="sm" />
+              <div class="hum-perf-feedback__who">
+                <span class="hum-perf-feedback__name">{{ f.contributorName }}</span>
+                <span class="hum-perf-feedback__meta">
+                  {{ relationshipLabel(f) }}
+                  @if (f.contributorJobTitle) {
+                    · {{ f.contributorJobTitle }}
+                  }
+                  @if (nominatedByEmployee(f) && !isEmployee()) {
+                    · {{ 'humano.performance.feedback.nominatedBy' | translate: { name: review().employeeName } }}
+                  }
+                </span>
+              </div>
+              <div class="hum-perf-feedback__status">
+                <hum-badge [status]="f.status" />
+                @if (f.status === 'SUBMITTED' && f.submittedAt) {
+                  <span class="hum-perf-feedback__meta tabular-nums">{{ f.submittedAt | date: 'mediumDate' }}</span>
+                } @else if ((f.status === 'REQUESTED' || f.status === 'PENDING_APPROVAL') && f.dueDate) {
+                  <span class="hum-perf-feedback__meta tabular-nums">{{
+                    'humano.performance.feedback.due' | translate: { date: (f.dueDate | date: 'MMM d') }
+                  }}</span>
+                }
+              </div>
+              <div class="hum-perf-feedback__actions">
+                @if (o.canManage && f.status === 'PENDING_APPROVAL') {
+                  <hum-button variant="primary" size="sm" icon="check" [loading]="busy() === f.id" (click)="approve(f)">{{
+                    'humano.performance.feedback.approve' | translate
+                  }}</hum-button>
+                  <hum-button variant="ghost" size="sm" [disabled]="busy() === f.id" (click)="openDecline(f)">{{
+                    'humano.performance.feedback.turnDown' | translate
+                  }}</hum-button>
+                } @else if (o.canManage && f.status === 'REQUESTED') {
+                  <hum-button variant="ghost" size="sm" icon="x" [loading]="busy() === f.id" (click)="cancel(f)">{{
+                    'humano.performance.feedback.cancel' | translate
+                  }}</hum-button>
+                } @else if (canWithdraw(f)) {
+                  <hum-button variant="ghost" size="sm" icon="x" [loading]="busy() === f.id" (click)="cancel(f)">{{
+                    'humano.performance.feedback.withdraw' | translate
+                  }}</hum-button>
+                }
+              </div>
+            </div>
+            @if (f.strengths || f.improvements || f.comments) {
+              <dl class="hum-perf-answers hum-perf-feedback__answers">
+                @if (f.strengths) {
+                  <dt>{{ 'humano.performance.feedback.strengths' | translate }}</dt>
+                  <dd>{{ f.strengths }}</dd>
+                }
+                @if (f.improvements) {
+                  <dt>{{ 'humano.performance.feedback.improvements' | translate }}</dt>
+                  <dd>{{ f.improvements }}</dd>
+                }
+                @if (f.comments) {
+                  <dt>{{ 'humano.performance.feedback.comments' | translate }}</dt>
+                  <dd>{{ f.comments }}</dd>
+                }
+              </dl>
+            }
+            @if (f.status === 'DECLINED' && f.declineReason) {
+              <p class="hum-perf-feedback__reason">{{ f.declineReason }}</p>
+            }
+          </li>
+        }
+      </ul>
+    } @else if (!anonymous().length && !o.withheld) {
+      <p class="hum-perf-empty">
+        {{ (isEmployee() ? 'humano.performance.feedback.emptyEmployee' : 'humano.performance.feedback.emptyReviewer') | translate }}
+      </p>
+    }
+  </section>
+}
+
+<hum-dialog
+  [open]="askOpen()"
+  [title]="(overview()?.canNominate ? 'humano.performance.feedback.nominate' : 'humano.performance.feedback.ask') | translate"
+  [description]="
+    (overview()?.canNominate ? 'humano.performance.feedback.nominateDialog' : 'humano.performance.feedback.askDialog')
+      | translate: { name: review().employeeName }
+  "
+  hasFooter
+  (closed)="askOpen.set(false)"
+>
+  @if (askOpen()) {
+    <div style="display: grid; gap: var(--space-4)">
+      <hum-form-field [label]="'humano.performance.feedback.colleague' | translate" required>
+        <hum-autocomplete
+          [searchFn]="searchColleagues"
+          [placeholder]="'humano.performance.feedback.colleaguePlaceholder' | translate"
+          [loadingText]="'humano.employeeForm.searching' | translate"
+          [noResultsText]="'humano.employeeForm.noResults' | translate"
+          [ngModel]="contributorId()"
+          (ngModelChange)="contributorId.set($event ?? '')"
+        />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.performance.feedback.relationshipLabel' | translate" required>
+        <hum-select
+          [options]="relationshipOptions"
+          [ariaLabel]="'humano.performance.feedback.relationshipLabel' | translate"
+          [ngModel]="relationship()"
+          (ngModelChange)="relationship.set($event)"
+        />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.performance.feedback.dueDate' | translate"
+        [hint]="'humano.performance.feedback.dueDateHint' | translate"
+      >
+        <hum-input type="date" [ngModel]="dueDate()" (ngModelChange)="dueDate.set($event ?? '')" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.performance.feedback.message' | translate"
+        [hint]="'humano.performance.feedback.messageHint' | translate"
+      >
+        <hum-textarea [rows]="3" [ngModel]="message()" (ngModelChange)="message.set($event)" />
+      </hum-form-field>
+    </div>
+  }
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="askOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="send" [loading]="busy() === 'new'" [disabled]="!contributorId()" (click)="ask()">{{
+      (overview()?.canNominate ? 'humano.performance.feedback.sendNomination' : 'humano.performance.feedback.sendRequest') | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>
+
+<hum-dialog
+  [open]="!!declining()"
+  [title]="'humano.performance.feedback.turnDown' | translate"
+  [description]="'humano.performance.feedback.turnDownDialog' | translate: { name: declining()?.contributorName }"
+  hasFooter
+  (closed)="declining.set(null)"
+>
+  <hum-form-field
+    [label]="'humano.performance.feedback.turnDownReason' | translate"
+    [hint]="'humano.performance.feedback.turnDownHint' | translate"
+  >
+    <hum-textarea [rows]="3" [ngModel]="declineReason()" (ngModelChange)="declineReason.set($event)" />
+  </hum-form-field>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="declining.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" [loading]="busy() === declining()?.id" (click)="decline()">{{
+      'humano.performance.feedback.turnDown' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>

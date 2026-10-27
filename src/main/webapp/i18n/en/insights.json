@@ -57,12 +57,18 @@
         "trainings": "Learning",
         "completed": "Completed {{ date }}",
         "rating": {
-          "1": "Unsatisfactory",
-          "2": "Needs improvement",
+          "1": "Doesn't meet expectations",
+          "2": "Partially meets expectations",
           "3": "Meets expectations",
           "4": "Exceeds expectations",
           "5": "Outstanding"
-        }
+        },
+        "openReview": "Open the full review",
+        "strengths": "Strengths",
+        "areasForImprovement": "Areas for improvement",
+        "development": "Development",
+        "selfAchievements": "In their own words",
+        "feedbackNotes": "Agreed in the feedback meeting"
       }
     }
   }

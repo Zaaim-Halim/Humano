@@ -1,0 +1,168 @@
+<div class="hum-page">
+  <a class="hum-onb-back" routerLink="/reviews"
+    ><lucide-icon name="arrow-left" [size]="14" />{{ 'humano.performance.review.backToList' | translate }}</a
+  >
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (!request()) {
+    <hum-skeleton [height]="140" />
+    <hum-skeleton [height]="260" />
+  } @else {
+    @let r = request()!;
+
+    <section class="hum-onb-hero">
+      <div class="hum-onb-hero__top">
+        <hum-avatar [name]="r.employeeName" size="xl" />
+        <div class="hum-onb-hero__who">
+          <p class="hum-perf-eyebrow">{{ r.cycleName }}</p>
+          <h1 class="hum-onb-hero__name">{{ 'humano.performance.give.title' | translate: { name: r.employeeName } }}</h1>
+          <p class="hum-onb-hero__role">
+            @if (r.employeeJobTitle) {
+              <span>{{ r.employeeJobTitle }}</span>
+            }
+            @if (r.requestedByName) {
+              <span
+                ><lucide-icon name="user-check" [size]="13" />{{
+                  'humano.performance.give.askedBy' | translate: { name: r.requestedByName }
+                }}</span
+              >
+            }
+            @if (r.dueDate && r.open && r.status === 'REQUESTED') {
+              <span
+                ><lucide-icon name="calendar-clock" [size]="13" />{{
+                  'humano.performance.feedback.due' | translate: { date: (r.dueDate | date: 'EEE, MMM d') }
+                }}</span
+              >
+            }
+          </p>
+        </div>
+        <div class="hum-onb-hero__actions">
+          <hum-badge [status]="r.status" />
+        </div>
+      </div>
+      @if (r.message) {
+        <blockquote class="hum-perf-quote">{{ r.message }}</blockquote>
+      }
+    </section>
+
+    <div class="hum-onb-layout">
+      <div class="hum-perf-sections">
+        <section class="hum-perf-card">
+          <header class="hum-perf-card__head">
+            <div>
+              <h2 class="hum-onb-h2">{{ 'humano.performance.give.yourFeedback' | translate }}</h2>
+              <p class="hum-onb-muted">
+                @if (r.status === 'SUBMITTED' && r.submittedAt) {
+                  {{ 'humano.performance.review.submittedOn' | translate: { date: (r.submittedAt | date: 'mediumDate') } }}
+                } @else if (r.status === 'REQUESTED' && r.open) {
+                  {{ 'humano.performance.give.lead' | translate: { name: r.employeeName } }}
+                }
+              </p>
+            </div>
+            @if (r.open && r.status === 'SUBMITTED' && !showForm()) {
+              <hum-button variant="secondary" size="sm" icon="pencil" (click)="edit()">{{
+                'humano.performance.review.edit' | translate
+              }}</hum-button>
+            }
+          </header>
+
+          @if (showForm()) {
+            <form [formGroup]="form" (ngSubmit)="submit()" class="hum-perf-form">
+              @if (empty()) {
+                <hum-alert tone="warning" [title]="'humano.performance.give.emptyTitle' | translate">{{
+                  'humano.performance.give.emptyBody' | translate
+                }}</hum-alert>
+              }
+              <hum-form-field
+                [label]="'humano.performance.feedback.strengths' | translate"
+                [hint]="'humano.performance.give.strengthsHint' | translate: { name: r.employeeName }"
+              >
+                <hum-textarea formControlName="strengths" [rows]="5" />
+              </hum-form-field>
+              <hum-form-field
+                [label]="'humano.performance.feedback.improvements' | translate"
+                [hint]="'humano.performance.give.improvementsHint' | translate"
+              >
+                <hum-textarea formControlName="improvements" [rows]="4" />
+              </hum-form-field>
+              <hum-form-field [label]="'humano.performance.feedback.comments' | translate">
+                <hum-textarea formControlName="comments" [rows]="2" />
+              </hum-form-field>
+              <div class="hum-perf-form__actions">
+                <p class="hum-onb-muted">
+                  {{ 'humano.performance.give.visibility.' + r.visibility | translate: { name: r.employeeName } }}
+                </p>
+                @if (r.status === 'SUBMITTED') {
+                  <hum-button variant="ghost" (click)="editing.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+                } @else {
+                  <hum-button variant="ghost" [disabled]="saving()" (click)="openDecline()">{{
+                    'humano.performance.give.decline' | translate
+                  }}</hum-button>
+                }
+                <hum-button variant="primary" icon="send" type="submit" [loading]="saving()">{{
+                  (r.status === 'SUBMITTED' ? 'humano.performance.review.update' : 'humano.performance.give.submit') | translate
+                }}</hum-button>
+              </div>
+            </form>
+          } @else if (r.strengths || r.improvements || r.comments) {
+            <dl class="hum-perf-answers">
+              @if (r.strengths) {
+                <dt>{{ 'humano.performance.feedback.strengths' | translate }}</dt>
+                <dd>{{ r.strengths }}</dd>
+              }
+              @if (r.improvements) {
+                <dt>{{ 'humano.performance.feedback.improvements' | translate }}</dt>
+                <dd>{{ r.improvements }}</dd>
+              }
+              @if (r.comments) {
+                <dt>{{ 'humano.performance.feedback.comments' | translate }}</dt>
+                <dd>{{ r.comments }}</dd>
+              }
+            </dl>
+          } @else if (r.status === 'DECLINED') {
+            <p class="hum-perf-empty">{{ 'humano.performance.give.youDeclined' | translate }}</p>
+            @if (r.declineReason) {
+              <p class="hum-perf-feedback__reason">{{ r.declineReason }}</p>
+            }
+          } @else {
+            <p class="hum-perf-empty">{{ 'humano.performance.give.closed' | translate }}</p>
+          }
+        </section>
+      </div>
+
+      <aside class="hum-onb-aside">
+        <section class="hum-onb-panel hum-perf-note">
+          <h3 class="hum-onb-panel__title"><lucide-icon name="lock" [size]="15" />{{ 'humano.performance.review.whoSees' | translate }}</h3>
+          <p class="hum-onb-muted">{{ 'humano.performance.give.visibility.' + r.visibility | translate: { name: r.employeeName } }}</p>
+        </section>
+        <section class="hum-onb-panel hum-perf-note">
+          <h3 class="hum-onb-panel__title">
+            <lucide-icon name="lightbulb" [size]="15" />{{ 'humano.performance.give.tipsTitle' | translate }}
+          </h3>
+          <p class="hum-onb-muted">{{ 'humano.performance.give.tips' | translate }}</p>
+        </section>
+      </aside>
+    </div>
+  }
+</div>
+
+<hum-dialog
+  [open]="declineOpen()"
+  [title]="'humano.performance.give.decline' | translate"
+  [description]="'humano.performance.give.declineDialog' | translate: { name: request()?.employeeName }"
+  hasFooter
+  (closed)="declineOpen.set(false)"
+>
+  <hum-form-field [label]="'humano.performance.give.declineReason' | translate" required>
+    <hum-textarea [rows]="3" [ngModel]="declineReason()" (ngModelChange)="declineReason.set($event)" />
+  </hum-form-field>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="declineOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" [loading]="saving()" [disabled]="!declineReason().trim()" (click)="decline()">{{
+      'humano.performance.give.decline' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>

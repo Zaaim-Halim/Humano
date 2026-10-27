@@ -2,7 +2,6 @@ package com.humano.web.rest.me;
 
 import com.humano.domain.shared.User;
 import com.humano.dto.hr.requests.EmployeeTrainingSearchRequest;
-import com.humano.dto.hr.requests.PerformanceReviewSearchRequest;
 import com.humano.dto.hr.responses.EmployeeTrainingResponse;
 import com.humano.dto.hr.responses.PerformanceReviewResponse;
 import com.humano.dto.hr.responses.PositionChangeResponse;
@@ -153,14 +152,14 @@ public class MeWorkResource {
             .body(new InputStreamResource(download.content()));
     }
 
-    /** {@code GET /api/me/performance-reviews} : my reviews. */
+    /**
+     * {@code GET /api/me/performance-reviews} : my completed reviews. A review in a running cycle
+     * appears once it has been shared with me; until then it is under {@code /api/hr/workflows/review-cycles/my-reviews}.
+     */
     @GetMapping("/performance-reviews")
     @RequireAuthenticated
     public Page<PerformanceReviewResponse> performanceReviews(Pageable pageable) {
-        return performanceReviewService.searchPerformanceReviews(
-            new PerformanceReviewSearchRequest(me(), null, null, null, null, null, null, null, null, null),
-            pageable
-        );
+        return performanceReviewService.getReviewsSharedWith(me(), pageable);
     }
 
     /** {@code GET /api/me/trainings} : my training enrolments. */

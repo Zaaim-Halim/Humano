@@ -1,0 +1,159 @@
+<div class="hum-page">
+  <hum-page-header
+    [title]="'humano.performance.list.title' | translate"
+    [subtitle]="'humano.performance.list.subtitle' | translate"
+    [hasActions]="canSeeCycles || runsPlans()"
+  >
+    <ng-container hum-page-actions>
+      @if (runsPlans()) {
+        <hum-button variant="secondary" icon="clipboard-list" routerLink="/improvement-plans">{{
+          'humano.improvementPlans.title' | translate
+        }}</hum-button>
+      }
+      @if (canSeeCycles) {
+        <hum-button variant="secondary" icon="refresh-ccw" routerLink="/review-cycles">{{
+          'humano.performance.list.cycles' | translate
+        }}</hum-button>
+      }
+    </ng-container>
+  </hum-page-header>
+
+  @if (myPlan(); as plan) {
+    <hum-alert tone="warning" [title]="'humano.improvementPlans.bannerTitle' | translate" style="margin-bottom: var(--space-4)">
+      {{
+        (plan.acknowledgedAt ? 'humano.improvementPlans.bannerBody' : 'humano.improvementPlans.bannerAcknowledge')
+          | translate: { date: (plan.endDate | date: 'mediumDate') }
+      }}
+      <div style="margin-top: var(--space-2)">
+        <hum-button variant="outline" size="sm" [routerLink]="['/improvement-plans', plan.id]">{{
+          'humano.improvementPlans.open' | translate
+        }}</hum-button>
+      </div>
+    </hum-alert>
+  }
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (mine() === null) {
+    <hum-skeleton [height]="96" />
+    <hum-skeleton [height]="200" style="margin-top: var(--space-4)" />
+  } @else if (!mine()!.length && !toWrite()!.length && !asked().length) {
+    <hum-empty-state
+      icon="star"
+      [title]="'humano.performance.list.emptyTitle' | translate"
+      [description]="'humano.performance.list.emptyBody' | translate"
+    />
+  } @else {
+    @if (mine()!.length) {
+      <h3 class="hum-section-title">{{ 'humano.performance.list.mineTitle' | translate }}</h3>
+      <div class="hum-run-list hum-perf-block">
+        @for (r of mine(); track r.id) {
+          <a class="hum-run hum-perf-row" [routerLink]="['/reviews', r.id]" [class.is-action]="mineNeedsMe(r)">
+            <div class="hum-run__period">
+              <span class="hum-run__title">{{ r.cycleName }}</span>
+              <span class="hum-run__sub">{{ nextForMe(r) }}</span>
+            </div>
+            <div class="hum-run__progress">
+              <hum-badge [status]="r.status" />
+            </div>
+            <div class="hum-run__figure">
+              @if (r.phaseDeadline && r.status !== 'SHARED') {
+                <span class="hum-run__label">{{ 'humano.performance.list.due' | translate }}</span>
+                <span class="tabular-nums">{{ r.phaseDeadline | date: 'mediumDate' }}</span>
+              } @else if (r.sharedAt) {
+                <span class="hum-run__label">{{ 'humano.performance.list.sharedOn' | translate }}</span>
+                <span class="tabular-nums">{{ r.sharedAt | date: 'mediumDate' }}</span>
+              }
+            </div>
+            <lucide-icon name="chevron-right" [size]="16" class="hum-run__chevron" />
+          </a>
+        }
+      </div>
+    }
+
+    @if (asked().length) {
+      <h3 class="hum-section-title">{{ 'humano.performance.list.askedTitle' | translate }}</h3>
+      <div class="hum-run-list hum-perf-block">
+        @for (f of feedbackQueue(); track f.id) {
+          <a class="hum-run hum-perf-row" [routerLink]="['/reviews/feedback', f.id]" [class.is-action]="toAnswer(f)">
+            <div class="hum-run__period hum-perf-person">
+              <hum-avatar [name]="f.employeeName" size="sm" />
+              <div>
+                <span class="hum-run__title">{{ f.employeeName }}</span>
+                <span class="hum-run__sub">{{ f.cycleName }}</span>
+              </div>
+            </div>
+            <div class="hum-run__progress">
+              <hum-badge [status]="f.status" />
+              <span class="hum-run__sub">{{ feedbackState(f) }}</span>
+            </div>
+            <div class="hum-run__figure">
+              @if (f.requestedByName) {
+                <span class="hum-run__label">{{ 'humano.performance.list.asked.by' | translate }}</span>
+                <span>{{ f.requestedByName }}</span>
+              }
+            </div>
+            <div class="hum-run__figure">
+              @if (f.dueDate && toAnswer(f)) {
+                <span class="hum-run__label">{{ 'humano.performance.list.due' | translate }}</span>
+                <span class="tabular-nums">{{ f.dueDate | date: 'mediumDate' }}</span>
+              }
+            </div>
+            <lucide-icon name="chevron-right" [size]="16" class="hum-run__chevron" />
+          </a>
+        }
+      </div>
+    }
+
+    @if (toWrite()!.length) {
+      <div class="hum-onb-filter">
+        <h3 class="hum-section-title" style="margin: 0">{{ 'humano.performance.list.queueTitle' | translate }}</h3>
+        <div class="hum-chips" style="margin: 0">
+          @for (f of filters; track f) {
+            <button type="button" class="hum-chip" [class.is-active]="filter() === f" (click)="filter.set(f)">
+              {{ 'humano.performance.list.filter.' + f | translate }}<span class="hum-chip__count tabular-nums">{{ counts()[f] }}</span>
+            </button>
+          }
+        </div>
+      </div>
+      @if (!queue().length) {
+        <p class="hum-perf-empty">{{ 'humano.performance.list.queueEmpty' | translate }}</p>
+      }
+      <div class="hum-run-list">
+        @for (r of queue(); track r.id) {
+          <a class="hum-run hum-perf-row" [routerLink]="['/reviews', r.id]" [class.is-action]="needsMe(r)">
+            <div class="hum-run__period hum-perf-person">
+              <hum-avatar [name]="r.employeeName ?? ''" size="sm" />
+              <div>
+                <span class="hum-run__title">{{ r.employeeName }}</span>
+                <span class="hum-run__sub">{{ r.employeeJobTitle ?? r.departmentName }}</span>
+              </div>
+            </div>
+            <div class="hum-run__progress">
+              <hum-badge [status]="r.status" />
+              <span class="hum-run__sub">{{ nextForReviewer(r) }}</span>
+            </div>
+            <div class="hum-run__figure">
+              <span class="hum-run__label">{{ 'humano.performance.list.selfAssessment' | translate }}</span>
+              <span>{{ (r.selfAssessment ? 'humano.performance.list.selfIn' : 'humano.performance.list.selfMissing') | translate }}</span>
+            </div>
+            <div class="hum-run__figure">
+              @if (r.phaseDeadline && needsMe(r)) {
+                <span class="hum-run__label">{{ 'humano.performance.list.due' | translate }}</span>
+                <span class="tabular-nums">{{ r.phaseDeadline | date: 'mediumDate' }}</span>
+              }
+            </div>
+            <lucide-icon name="chevron-right" [size]="16" class="hum-run__chevron" />
+          </a>
+        }
+      </div>
+    }
+
+    <p class="hum-onb-muted hum-perf-footnote">
+      <lucide-icon name="history" [size]="14" />{{ 'humano.performance.list.history' | translate }}
+      <a routerLink="/my-profile">{{ 'humano.performance.list.historyLink' | translate }}</a>
+    </p>
+  }
+</div>

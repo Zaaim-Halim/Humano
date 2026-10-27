@@ -7,4 +7,6 @@ export enum ApprovalType {
   POSITION_TRANSFER = 'POSITION_TRANSFER',
   SALARY_ADJUSTMENT = 'SALARY_ADJUSTMENT',
   TIMESHEET_APPROVAL = 'TIMESHEET_APPROVAL',
+  /** Second-level sign-off of a performance review; the entity is the review. */
+  PERFORMANCE_REVIEW = 'PERFORMANCE_REVIEW',
 }

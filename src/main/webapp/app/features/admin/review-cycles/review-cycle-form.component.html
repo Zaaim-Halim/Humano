@@ -1,0 +1,199 @@
+<hum-drawer
+  [open]="open()"
+  [title]="(cycle() ? 'humano.performance.form.editTitle' : 'humano.performance.form.newTitle') | translate"
+  width="520px"
+  hasFooter
+  (closed)="closed.emit()"
+>
+  <form [formGroup]="form" (ngSubmit)="submit()" class="hum-perf-form">
+    @if (!cycle() && proposal()) {
+      <p class="hum-onb-muted" style="margin: 0">{{ 'humano.performance.form.fromCalendar' | translate }}</p>
+    }
+    <hum-form-field
+      [label]="'humano.performance.form.name' | translate"
+      controlId="rc-name"
+      required
+      [error]="invalid('name') ? ('humano.employeeForm.required' | translate) : undefined"
+    >
+      <hum-input inputId="rc-name" formControlName="name" [invalid]="invalid('name')" />
+    </hum-form-field>
+    <hum-form-field
+      [label]="'humano.performance.form.description' | translate"
+      [hint]="'humano.performance.form.descriptionHint' | translate"
+    >
+      <hum-textarea formControlName="description" [rows]="2" />
+    </hum-form-field>
+    <hum-form-field [label]="'humano.performance.form.type' | translate" [hint]="'humano.performance.cycleType.hint.' + type() | translate">
+      <hum-select formControlName="type" [options]="typeOptions" [ariaLabel]="'humano.performance.form.type' | translate" />
+    </hum-form-field>
+
+    <fieldset class="hum-perf-fieldset">
+      <legend>{{ 'humano.performance.form.period' | translate }}</legend>
+      <p class="hum-onb-muted">{{ 'humano.performance.form.periodHint' | translate }}</p>
+      <div class="hum-perf-pair">
+        <hum-form-field [label]="'humano.performance.form.from' | translate" controlId="rc-ps" required>
+          <hum-input inputId="rc-ps" type="date" formControlName="reviewPeriodStart" [invalid]="invalid('reviewPeriodStart')" />
+        </hum-form-field>
+        <hum-form-field [label]="'humano.performance.form.to' | translate" controlId="rc-pe" required>
+          <hum-input inputId="rc-pe" type="date" formControlName="reviewPeriodEnd" [invalid]="invalid('reviewPeriodEnd')" />
+        </hum-form-field>
+      </div>
+    </fieldset>
+
+    <fieldset class="hum-perf-fieldset">
+      <legend>{{ 'humano.performance.form.schedule' | translate }}</legend>
+      <div class="hum-perf-pair">
+        <hum-form-field [label]="'humano.performance.form.opens' | translate" controlId="rc-start" required>
+          <hum-input inputId="rc-start" type="date" formControlName="startDate" [invalid]="invalid('startDate')" />
+        </hum-form-field>
+        <hum-form-field [label]="'humano.performance.form.closes' | translate" controlId="rc-end" required>
+          <hum-input inputId="rc-end" type="date" formControlName="endDate" [invalid]="invalid('endDate')" />
+        </hum-form-field>
+      </div>
+      <hum-checkbox formControlName="calibrate" [label]="'humano.performance.form.calibrate' | translate" />
+      <ol class="hum-perf-deadlines">
+        @for (d of deadlines; track d.control) {
+          @if (d.key !== 'calibration' || calibrate()) {
+            <li>
+              <label [for]="'rc-' + d.key">{{ 'humano.performance.form.deadline.' + d.key | translate }}</label>
+              <hum-input
+                [inputId]="'rc-' + d.key"
+                type="date"
+                [formControlName]="d.control"
+                [invalid]="
+                  invalid(d.control) || (d.key === 'calibration' && calibrate() && !form.controls.calibrationDeadline.value && form.touched)
+                "
+              />
+            </li>
+          }
+        }
+      </ol>
+      @if (dateError(); as e) {
+        <p class="hum-perf-error">{{ e.key | translate: e.params }}</p>
+      }
+    </fieldset>
+
+    <fieldset class="hum-perf-fieldset">
+      <legend>{{ 'humano.performance.form.scope' | translate }}</legend>
+      @if (type() === 'AD_HOC') {
+        <hum-form-field [label]="'humano.performance.form.people' | translate" [hint]="'humano.performance.form.peopleHint' | translate">
+          @for (k of [pickerKey()]; track k) {
+            <hum-autocomplete
+              [searchFn]="searchEmployees"
+              [placeholder]="'humano.onboarding.employeePlaceholder' | translate"
+              [loadingText]="'humano.employeeForm.searching' | translate"
+              [noResultsText]="'humano.employeeForm.noResults' | translate"
+              [ngModel]="''"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="addPerson($event)"
+            />
+          }
+        </hum-form-field>
+        @if (people().length) {
+          <div class="hum-chips">
+            @for (p of people(); track p.id) {
+              <button
+                type="button"
+                class="hum-chip is-active"
+                [attr.aria-label]="'humano.performance.form.removePerson' | translate: { name: p.name }"
+                (click)="removePerson(p.id)"
+              >
+                {{ p.name }}<lucide-icon name="x" [size]="12" />
+              </button>
+            }
+          </div>
+        }
+        @if (scopeMissing() && form.touched) {
+          <p class="hum-perf-error">{{ 'humano.performance.form.error.people' | translate }}</p>
+        }
+      } @else {
+        <hum-switch formControlName="companyWide" [label]="'humano.performance.form.companyWide' | translate" />
+        @if (!companyWide()) {
+          @if (departments() === null) {
+            <p class="hum-onb-muted">{{ 'humano.performance.form.loadingDepartments' | translate }}</p>
+          } @else if (!departments()!.length) {
+            <p class="hum-onb-muted">{{ 'humano.performance.form.noDepartments' | translate }}</p>
+          } @else {
+            <div class="hum-perf-departments">
+              @for (d of departments(); track d.id) {
+                <hum-checkbox
+                  [label]="d.name + ' (' + d.employeeCount + ')'"
+                  [checked]="selected().has(d.id)"
+                  (checkedChange)="toggle(d.id, $event)"
+                />
+              }
+            </div>
+          }
+          @if (scopeMissing() && form.touched) {
+            <p class="hum-perf-error">{{ 'humano.performance.form.error.scope' | translate }}</p>
+          }
+        }
+        <p class="hum-onb-muted">
+          {{ (type() === 'PROBATION' ? 'humano.performance.form.scopeHintProbation' : 'humano.performance.form.scopeHint') | translate }}
+        </p>
+      }
+    </fieldset>
+
+    <fieldset class="hum-perf-fieldset">
+      <legend>{{ 'humano.performance.form.feedback' | translate }}</legend>
+      <hum-switch formControlName="collectFeedback" [label]="'humano.performance.form.collectFeedback' | translate" />
+      @if (collectFeedback()) {
+        <div class="hum-perf-pair">
+          <hum-form-field
+            [label]="'humano.performance.form.maxContributors' | translate"
+            controlId="rc-max"
+            [hint]="'humano.performance.form.maxContributorsHint' | translate"
+            required
+            [error]="invalid('maxContributors') ? ('humano.performance.form.error.maxContributors' | translate) : undefined"
+          >
+            <hum-input inputId="rc-max" type="number" formControlName="maxContributors" [invalid]="invalid('maxContributors')" />
+          </hum-form-field>
+          <hum-form-field [label]="'humano.performance.form.visibility' | translate">
+            <hum-select
+              formControlName="feedbackVisibility"
+              [options]="visibilityOptions"
+              [ariaLabel]="'humano.performance.form.visibility' | translate"
+            />
+          </hum-form-field>
+        </div>
+        <p class="hum-onb-muted">{{ 'humano.performance.form.feedbackVisibilityHint.' + visibility() | translate }}</p>
+        <hum-switch formControlName="allowNominations" [label]="'humano.performance.form.allowNominations' | translate" />
+      }
+      <p class="hum-onb-muted">{{ 'humano.performance.form.feedbackHint' | translate }}</p>
+    </fieldset>
+
+    <fieldset class="hum-perf-fieldset">
+      <legend>{{ 'humano.performance.form.reviewForm' | translate }}</legend>
+      <hum-select
+        formControlName="templateId"
+        [options]="templateOptions()"
+        [ariaLabel]="'humano.performance.form.reviewForm' | translate"
+      />
+      @if (template(); as t) {
+        <p class="hum-onb-muted">
+          {{
+            'humano.performance.form.templateSummary' | translate: { competencies: t.competencies.length, questions: t.questions.length }
+          }}
+        </p>
+      } @else {
+        <p class="hum-onb-muted">{{ 'humano.performance.form.standardFormHint' | translate }}</p>
+      }
+    </fieldset>
+
+    <fieldset class="hum-perf-fieldset">
+      <legend>{{ 'humano.performance.form.signOff' | translate }}</legend>
+      <hum-switch formControlName="requiresSignOff" [label]="'humano.performance.form.requiresSignOff' | translate" />
+      <p class="hum-onb-muted">{{ 'humano.performance.form.signOffHint' | translate }}</p>
+    </fieldset>
+
+    @if (cycle()) {
+      <hum-alert tone="info" [title]="'humano.performance.form.draftOnly' | translate" />
+    }
+  </form>
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="closed.emit()">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" (click)="submit()">{{
+      (cycle() ? 'humano.performance.form.save' : 'humano.performance.form.create') | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>

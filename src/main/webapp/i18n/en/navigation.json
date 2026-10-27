@@ -4,6 +4,7 @@
       "groups": {
         "overview": "Overview",
         "people": "People",
+        "performance": "Performance",
         "timeLeave": "Time & Leave",
         "payroll": "Payroll",
         "settings": "Settings"
@@ -19,13 +20,20 @@
       "org": "Org units",
       "departments": "Departments",
       "positions": "Positions",
+      "reviews": "Reviews",
+      "reviewCycles": "Review cycles",
+      "performanceFrameworks": "Competencies & templates",
       "leave": "Leave",
       "timesheets": "Timesheets",
       "runs": "Pay runs",
       "payslips": "Payslips",
       "approvals": "Approvals",
       "settings": "Workspace",
-      "myDocuments": "My documents"
+      "myDocuments": "My documents",
+      "goals": "Goals",
+      "improvementPlans": "Improvement plans",
+      "compensationReview": "Compensation review",
+      "performanceAnalytics": "Performance analytics"
     },
     "shell": {
       "search": "Search…  ⌘K",

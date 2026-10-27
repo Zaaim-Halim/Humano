@@ -5,6 +5,8 @@ import com.humano.dto.hr.requests.PerformanceReviewSearchRequest;
 import com.humano.dto.hr.requests.UpdatePerformanceReviewRequest;
 import com.humano.dto.hr.responses.PerformanceReviewResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.SecurityExpressions;
+import com.humano.security.SecurityUtils;
 import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.entitlement.FeatureCodes;
@@ -20,6 +22,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tech.jhipster.web.util.HeaderUtil;
@@ -27,6 +31,10 @@ import tech.jhipster.web.util.PaginationUtil;
 
 /**
  * REST controller for managing performance reviews.
+ * <p>
+ * HR ({@code VIEW_PERFORMANCE_REVIEWS}) reads every review. A manager with
+ * {@code VIEW_TEAM_PERFORMANCE} searches the reviews of one person in their reporting line, and
+ * only sees the ones shared with that person.
  */
 @RequireFeature(FeatureCodes.PERFORMANCE)
 @RestController
@@ -40,9 +48,11 @@ public class PerformanceReviewResource {
     private String applicationName;
 
     private final PerformanceReviewService performanceReviewService;
+    private final SecurityExpressions securityExpressions;
 
-    public PerformanceReviewResource(PerformanceReviewService performanceReviewService) {
+    public PerformanceReviewResource(PerformanceReviewService performanceReviewService, SecurityExpressions securityExpressions) {
         this.performanceReviewService = performanceReviewService;
+        this.securityExpressions = securityExpressions;
     }
 
     /**
@@ -128,12 +138,20 @@ public class PerformanceReviewResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of performance reviews in body
      */
     @GetMapping("/search")
-    @RequirePermission(PermissionsConstants.VIEW_PERFORMANCE_REVIEWS)
+    @PreAuthorize("@securityExpressions.hasAnyPermission('VIEW_PERFORMANCE_REVIEWS', 'VIEW_TEAM_PERFORMANCE')")
     public ResponseEntity<Page<PerformanceReviewResponse>> searchPerformanceReviews(
         PerformanceReviewSearchRequest searchRequest,
         Pageable pageable
     ) {
         LOG.debug("REST request to search PerformanceReviews with criteria: {}", searchRequest);
+
+        if (!securityExpressions.hasPermission(PermissionsConstants.VIEW_PERFORMANCE_REVIEWS)) {
+            UUID managerId = SecurityUtils.getCurrentUserId().orElse(null);
+            if (searchRequest.employeeId() == null || !performanceReviewService.isInReportingLine(managerId, searchRequest.employeeId())) {
+                throw new AccessDeniedException("You can only see the reviews of people who report to you");
+            }
+            searchRequest = PerformanceReviewSearchRequest.sharedWith(searchRequest.employeeId());
+        }
 
         Page<PerformanceReviewResponse> page = performanceReviewService.searchPerformanceReviews(searchRequest, pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);

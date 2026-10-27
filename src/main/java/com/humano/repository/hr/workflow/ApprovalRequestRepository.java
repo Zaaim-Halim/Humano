@@ -87,6 +87,12 @@ public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequest
     @Query("SELECT a FROM ApprovalRequest a " + "WHERE a.entityId = :entityId AND a.approvalType = :type AND a.status = 'PENDING_APPROVAL'")
     List<ApprovalRequest> findPendingByEntity(@Param("entityId") UUID entityId, @Param("type") ApprovalType type);
 
+    /** Whether {@code approverId} is, or was last, the approver of a request on the entity. */
+    boolean existsByEntityIdAndApprovalTypeAndApproverId(UUID entityId, ApprovalType approvalType, UUID approverId);
+
+    /** The entity's latest request of a type — e.g. a review's current sign-off. */
+    Optional<ApprovalRequest> findFirstByEntityIdAndApprovalTypeOrderBySubmittedAtDesc(UUID entityId, ApprovalType approvalType);
+
     /**
      * Find approvals submitted within date range.
      */

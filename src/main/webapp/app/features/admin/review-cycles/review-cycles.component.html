@@ -1,0 +1,165 @@
+<div class="hum-page">
+  <hum-page-header
+    [title]="'humano.performance.cycles.title' | translate"
+    [subtitle]="'humano.performance.cycles.subtitle' | translate"
+    [hasActions]="canConfigure"
+  >
+    <div hum-page-actions style="display: flex; gap: var(--space-2)">
+      <hum-button variant="secondary" icon="layers" routerLink="/performance-frameworks">{{
+        'humano.performance.cycles.frameworks' | translate
+      }}</hum-button>
+      <hum-button variant="secondary" icon="calendar-cog" routerLink="/review-cycles/calendar">{{
+        'humano.performance.cycles.calendar' | translate
+      }}</hum-button>
+      <hum-button variant="secondary" icon="archive" routerLink="/review-cycles/retention">{{
+        'humano.performance.cycles.retention' | translate
+      }}</hum-button>
+      <hum-button variant="primary" icon="plus" (click)="formOpen.set(true)">{{ 'humano.performance.cycles.new' | translate }}</hum-button>
+    </div>
+  </hum-page-header>
+
+  @if (proposal(); as p) {
+    <section class="hum-perf-proposal">
+      <lucide-icon name="calendar-plus" [size]="18" />
+      <div class="hum-perf-proposal__text">
+        <strong>{{ 'humano.performance.cycles.proposalTitle' | translate: { name: p.name } }}</strong>
+        <span>{{
+          'humano.performance.cycles.proposalBody'
+            | translate
+              : {
+                  from: (p.reviewPeriodStart | date: 'mediumDate'),
+                  to: (p.reviewPeriodEnd | date: 'mediumDate'),
+                  opens: (p.startDate | date: 'mediumDate'),
+                }
+        }}</span>
+      </div>
+      <hum-button variant="secondary" size="sm" (click)="formOpen.set(true)">{{
+        'humano.performance.cycles.setUp' | translate
+      }}</hum-button>
+    </section>
+  }
+
+  <hum-tabs [items]="tabs()" [value]="view()" (valueChange)="setView($event)" />
+
+  <div style="margin-top: var(--space-4)">
+    @if (error(); as e) {
+      <hum-alert tone="danger" [title]="e">
+        <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+      </hum-alert>
+    } @else if (cycles() === null) {
+      <hum-skeleton [height]="200" />
+    } @else {
+      @if (view() === 'current') {
+        <section class="hum-dir-stats hum-dir-stats--even">
+          <div class="hum-dir-stat">
+            <div class="hum-dir-stat__label">{{ 'humano.performance.cycles.running' | translate }}</div>
+            <div class="hum-dir-stat__value tabular-nums">{{ stats().running }}</div>
+            @if (stats().drafts) {
+              <div class="hum-dir-stat__sub">{{ 'humano.performance.cycles.drafts' | translate: { count: stats().drafts } }}</div>
+            }
+          </div>
+          <div class="hum-dir-stat">
+            <div class="hum-dir-stat__label">{{ 'humano.performance.cycles.people' | translate }}</div>
+            <div class="hum-dir-stat__value tabular-nums">{{ stats().people }}</div>
+          </div>
+          <div class="hum-dir-stat">
+            <div class="hum-dir-stat__label">{{ 'humano.performance.cycles.shared' | translate }}</div>
+            <div class="hum-dir-stat__value tabular-nums">{{ stats().shared }}</div>
+            <div class="hum-dir-stat__sub">{{ 'humano.performance.cycles.sharedHint' | translate }}</div>
+          </div>
+          <div class="hum-dir-stat" [class.hum-dir-stat--warn]="!!stats().next && stats().next!.date < today">
+            <div class="hum-dir-stat__label">{{ 'humano.performance.cycles.nextDeadline' | translate }}</div>
+            @if (stats().next; as n) {
+              <div class="hum-dir-stat__value tabular-nums">{{ n.date | date: 'MMM d' }}</div>
+              <div class="hum-dir-stat__sub">{{ 'humano.performance.phaseShort.' + n.cycle.phase | translate }} · {{ n.cycle.name }}</div>
+            } @else {
+              <div class="hum-dir-stat__value">—</div>
+            }
+          </div>
+        </section>
+      }
+
+      @if (!rows().length) {
+        @if (view() === 'current') {
+          <hum-empty-state
+            icon="refresh-ccw"
+            [title]="'humano.performance.cycles.emptyTitle' | translate"
+            [description]="'humano.performance.cycles.emptyBody' | translate"
+          />
+        } @else {
+          <hum-empty-state
+            icon="archive"
+            [title]="'humano.performance.cycles.closedEmptyTitle' | translate"
+            [description]="'humano.performance.cycles.closedEmptyBody' | translate"
+          />
+        }
+      } @else {
+        <div class="hum-run-list">
+          @for (c of rows(); track c.cycleId) {
+            <a class="hum-run hum-perf-cycle-row" [routerLink]="['/review-cycles', c.cycleId]">
+              <div class="hum-run__period">
+                <span class="hum-run__title"
+                  >{{ c.name }}
+                  @if (c.type !== 'REGULAR') {
+                    <span class="hum-perf-type-tag">{{ 'humano.performance.cycleType.' + c.type | translate }}</span>
+                  }
+                </span>
+                <span class="hum-run__sub">
+                  <lucide-icon name="calendar" [size]="12" />{{
+                    'humano.performance.cycles.periodRange'
+                      | translate: { from: (c.reviewPeriodStart | date: 'MMM y'), to: (c.reviewPeriodEnd | date: 'MMM y') }
+                  }}
+                </span>
+              </div>
+              <div class="hum-run__progress">
+                <hum-badge [status]="c.phase" />
+                @if (c.phase !== 'DRAFT') {
+                  <hum-progress
+                    style="flex: 1"
+                    [value]="c.progress.completionPercentage"
+                    [tone]="c.progress.completionPercentage === 100 ? 'success' : 'brand'"
+                    showValue
+                  />
+                }
+              </div>
+              <div class="hum-run__figure">
+                <span class="hum-run__label">{{ 'humano.performance.cycles.inScope' | translate }}</span>
+                <span class="tabular-nums">{{ c.progress.totalEmployees }}</span>
+              </div>
+              <div class="hum-run__figure">
+                <span class="hum-run__label">{{ 'humano.performance.cycles.scope' | translate }}</span>
+                <span>{{
+                  c.departmentIds.length
+                    ? ('humano.performance.cycles.departments' | translate: { count: c.departmentIds.length })
+                    : ('humano.performance.cycles.companyWide' | translate)
+                }}</span>
+              </div>
+              <div class="hum-run__figure">
+                @if (deadline(c); as d) {
+                  <span class="hum-run__label">{{ 'humano.performance.phaseShort.' + c.phase | translate }}</span>
+                  <span [class.hum-onb-overdue]="d < today">{{ countdown(d) }}</span>
+                } @else if (c.phase === 'DRAFT') {
+                  <span class="hum-run__label">{{ 'humano.performance.cycles.opens' | translate }}</span>
+                  <span class="tabular-nums">{{ c.startDate | date: 'mediumDate' }}</span>
+                } @else {
+                  <span class="hum-run__label">{{ 'humano.performance.cycles.closedOn' | translate }}</span>
+                  <span class="tabular-nums">{{ c.lastModifiedDate | date: 'mediumDate' }}</span>
+                }
+              </div>
+              <lucide-icon name="chevron-right" [size]="16" class="hum-run__chevron" />
+            </a>
+          }
+        </div>
+      }
+    }
+  </div>
+</div>
+
+@if (canConfigure) {
+  <hum-review-cycle-form
+    [open]="formOpen()"
+    [proposal]="proposal() ?? calendar()?.nextCycle ?? null"
+    (saved)="created($event)"
+    (closed)="formOpen.set(false)"
+  />
+}

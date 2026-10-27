@@ -1,0 +1,401 @@
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title th:text="|Performance review, ${model.employeeName}|">Performance review</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 16mm 16mm 22mm 16mm;
+        @bottom-left {
+          content: element(footer);
+          vertical-align: top;
+        }
+        @bottom-right {
+          content: 'Page ' counter(page) ' of ' counter(pages);
+          font-family: Helvetica, Arial, sans-serif;
+          font-size: 7.5pt;
+          color: #8a8f9c;
+          vertical-align: top;
+          padding-top: 6pt;
+        }
+      }
+      /* People's names and what they wrote can be in any language: Liberation Sans covers it. */
+      body {
+        font-family: 'Liberation Sans', Helvetica, sans-serif;
+        font-size: 9.5pt;
+        line-height: 1.5;
+        color: #1f2430;
+        margin: 0;
+      }
+      /* Fixed labels are ASCII, so they can use the bold base-14 face. */
+      .label,
+      .doc-title,
+      .section-title,
+      .field-title,
+      .rating-value,
+      .pill {
+        font-family: Helvetica, Arial, sans-serif;
+        font-weight: bold;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      td,
+      th {
+        vertical-align: top;
+        padding: 0;
+      }
+      .muted {
+        color: #6b7280;
+      }
+      .text {
+        white-space: pre-wrap;
+      }
+
+      /* Header */
+      .employer {
+        font-size: 15pt;
+        color: #111827;
+      }
+      .doc-title {
+        font-size: 18pt;
+        color: #111827;
+        text-align: right;
+      }
+      .doc-sub {
+        text-align: right;
+        color: #6b7280;
+        margin-top: 2pt;
+      }
+      .rule {
+        border-top: 0.75pt solid #e5e7eb;
+        margin: 14pt 0;
+      }
+      .label {
+        font-size: 7.5pt;
+        color: #6b7280;
+        letter-spacing: 0.3pt;
+        margin-bottom: 3pt;
+      }
+      .party {
+        font-size: 10.5pt;
+        color: #111827;
+      }
+
+      /* Overall rating */
+      .rating {
+        margin-top: 16pt;
+        border-radius: 6pt;
+        padding: 10pt 12pt;
+        background: #eef2ff;
+        border: 0.75pt solid #c7d2fe;
+      }
+      .rating-value {
+        font-size: 18pt;
+        color: #111827;
+      }
+      .rating-of {
+        color: #6b7280;
+      }
+      .rating-label {
+        font-size: 11pt;
+        color: #111827;
+        margin-left: 6pt;
+      }
+
+      /* Sections */
+      .section {
+        margin-top: 18pt;
+      }
+      .section-title {
+        font-size: 10.5pt;
+        color: #111827;
+        padding-bottom: 4pt;
+        margin-bottom: 8pt;
+        border-bottom: 0.75pt solid #d1d5db;
+      }
+      .section-note {
+        font-family: 'Liberation Sans', Helvetica, sans-serif;
+        font-weight: normal;
+        color: #6b7280;
+        font-size: 8pt;
+        margin-left: 4pt;
+      }
+      .field {
+        margin-bottom: 10pt;
+        page-break-inside: avoid;
+      }
+      .field-title {
+        font-size: 8.5pt;
+        color: #374151;
+        margin-bottom: 2pt;
+      }
+      table.items th {
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 7.5pt;
+        font-weight: bold;
+        color: #6b7280;
+        letter-spacing: 0.3pt;
+        text-align: left;
+        padding: 0 8pt 5pt 0;
+        border-bottom: 0.75pt solid #d1d5db;
+      }
+      table.items td {
+        padding: 6pt 8pt 6pt 0;
+        border-bottom: 0.5pt solid #eceef2;
+      }
+      table.items tr {
+        page-break-inside: avoid;
+      }
+      .pill {
+        display: inline-block;
+        padding: 1pt 6pt;
+        border-radius: 6pt;
+        font-size: 7.5pt;
+        background: #f3f4f6;
+        color: #374151;
+        white-space: nowrap;
+      }
+      .note {
+        margin-top: 2pt;
+        color: #4b5563;
+        white-space: pre-wrap;
+      }
+      .box {
+        border-radius: 6pt;
+        padding: 8pt 12pt;
+        background: #f9fafb;
+        border: 0.75pt solid #e5e7eb;
+      }
+      .box-warning {
+        background: #fffbeb;
+        border-color: #fde68a;
+      }
+
+      .footer .sep {
+        margin-left: 6pt;
+        padding-left: 6pt;
+        border-left: 0.5pt solid #c4c8d0;
+      }
+      .footer {
+        position: running(footer);
+        font-size: 7.5pt;
+        color: #8a8f9c;
+        padding-top: 6pt;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="footer">
+      <span th:text="${model.employerName} ?: 'Performance review'">Demo Company</span>
+      <span class="sep" th:text="${model.employeeName}">Jane Doe</span>
+      <span class="sep" th:text="|Generated ${model.generatedOn}|">Generated October 27, 2026</span>
+      <span class="sep">Confidential</span>
+    </div>
+
+    <!-- Header -->
+    <table>
+      <tr>
+        <td style="width: 55%">
+          <div class="employer" th:text="${model.employerName} ?: ''">Demo Company</div>
+          <div class="muted" style="margin-top: 2pt">Confidential</div>
+        </td>
+        <td style="width: 45%">
+          <div class="doc-title">Performance review</div>
+          <div class="doc-sub" th:text="${model.cycleName}">2026 Annual Review</div>
+          <div class="doc-sub" th:if="${model.periodStart}" th:text="|${model.periodStart} - ${model.periodEnd}|">
+            January 1, 2026 - December 31, 2026
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <div class="rule"></div>
+
+    <!-- People -->
+    <table>
+      <tr>
+        <td style="width: 38%; padding-right: 12pt">
+          <div class="label">EMPLOYEE</div>
+          <div class="party" th:text="${model.employeeName}">Jane Doe</div>
+          <div class="muted" th:if="${model.jobTitle}" th:text="${model.jobTitle}">Senior Engineer</div>
+          <div class="muted" th:if="${model.department}" th:text="${model.department}">Engineering</div>
+        </td>
+        <td style="width: 34%; padding-right: 12pt">
+          <div class="label">REVIEWER</div>
+          <div class="party" th:text="${model.reviewerName} ?: '-'">John Smith</div>
+        </td>
+        <td style="width: 28%">
+          <div class="label">SHARED ON</div>
+          <div class="party" th:text="${model.sharedOn} ?: '-'">November 30, 2026</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Overall rating -->
+    <div class="rating" th:if="${model.rating}">
+      <span class="label" style="display: block">OVERALL RATING</span>
+      <span class="rating-value" th:text="${model.rating}">4</span><span class="rating-of"> / 5</span>
+      <span class="rating-label" th:text="${model.ratingLabel}">Exceeds expectations</span>
+    </div>
+
+    <!-- Goals -->
+    <div class="section" th:if="${!model.goals.isEmpty()}">
+      <div class="section-title">Goals</div>
+      <table class="items">
+        <thead>
+          <tr>
+            <th style="width: 58%">GOAL</th>
+            <th style="width: 12%">WEIGHT</th>
+            <th style="width: 30%">ACHIEVEMENT</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="g : ${model.goals}">
+            <td>
+              <div th:text="${g.title}">Ship the new onboarding</div>
+              <div class="muted" th:if="${g.successMeasure}" th:text="${g.successMeasure}">Live for all new hires by June</div>
+              <div class="note" th:if="${g.comment}" th:text="${g.comment}">Delivered a month early.</div>
+            </td>
+            <td th:text="${g.weight != null ? g.weight + '%' : '-'}">40%</td>
+            <td><span class="pill" th:text="${g.achievement} ?: 'Not rated'">Exceeded</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Competencies -->
+    <div class="section" th:if="${!model.competencies.isEmpty()}">
+      <div class="section-title">
+        Competencies<span class="section-note" th:if="${model.templateName}" th:text="${model.templateName}">Annual review</span>
+      </div>
+      <table class="items">
+        <thead>
+          <tr>
+            <th style="width: 58%">COMPETENCY</th>
+            <th style="width: 42%">RATING</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="c : ${model.competencies}">
+            <td>
+              <div th:text="${c.name}">Ownership</div>
+              <div class="note" th:if="${c.comment}" th:text="${c.comment}">Takes problems end to end.</div>
+            </td>
+            <td>
+              <span class="pill" th:if="${c.rating}" th:text="|${c.rating} - ${c.ratingLabel}|">4 - Exceeds expectations</span>
+              <span class="muted" th:unless="${c.rating}">Not rated</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Reviewer's assessment -->
+    <div class="section" th:if="${model.manager != null or !model.reviewerAnswers.isEmpty() or model.overallComments != null}">
+      <div class="section-title">
+        Reviewer's assessment<span
+          class="section-note"
+          th:if="${model.manager != null and model.manager.submittedOn != null}"
+          th:text="|Submitted ${model.manager.submittedOn}|"
+          >Submitted November 20, 2026</span
+        >
+      </div>
+      <th:block th:if="${model.manager}">
+        <div class="field" th:if="${model.manager.strengths}">
+          <div class="field-title">Strengths</div>
+          <div class="text" th:text="${model.manager.strengths}">Clear communicator.</div>
+        </div>
+        <div class="field" th:if="${model.manager.areasForImprovement}">
+          <div class="field-title">Areas for improvement</div>
+          <div class="text" th:text="${model.manager.areasForImprovement}">Delegation.</div>
+        </div>
+        <div class="field" th:if="${model.manager.developmentRecommendations}">
+          <div class="field-title">Development recommendations</div>
+          <div class="text" th:text="${model.manager.developmentRecommendations}">A leadership course.</div>
+        </div>
+      </th:block>
+      <div class="field" th:each="a : ${model.reviewerAnswers}">
+        <div class="field-title" th:text="${a.question}">What should they keep doing?</div>
+        <div class="text" th:text="${a.answer}">Mentoring.</div>
+      </div>
+      <div class="field" th:if="${model.overallComments}">
+        <div class="field-title">Overall comments</div>
+        <div class="text" th:text="${model.overallComments}">A strong year.</div>
+      </div>
+    </div>
+
+    <!-- Self-assessment -->
+    <div class="section" th:if="${model.self != null or !model.employeeAnswers.isEmpty()}">
+      <div class="section-title">
+        Self-assessment<span
+          class="section-note"
+          th:if="${model.self != null and model.self.submittedOn != null}"
+          th:text="|Submitted ${model.self.submittedOn}|"
+          >Submitted November 5, 2026</span
+        >
+      </div>
+      <th:block th:if="${model.self}">
+        <div class="field" th:if="${model.self.achievements}">
+          <div class="field-title">Achievements</div>
+          <div class="text" th:text="${model.self.achievements}">Shipped onboarding.</div>
+        </div>
+        <div class="field" th:if="${model.self.challenges}">
+          <div class="field-title">Challenges</div>
+          <div class="text" th:text="${model.self.challenges}">Hiring.</div>
+        </div>
+        <div class="field" th:if="${model.self.developmentGoals}">
+          <div class="field-title">Development goals</div>
+          <div class="text" th:text="${model.self.developmentGoals}">Public speaking.</div>
+        </div>
+        <div class="field" th:if="${model.self.comments}">
+          <div class="field-title">Anything else</div>
+          <div class="text" th:text="${model.self.comments}">-</div>
+        </div>
+      </th:block>
+      <div class="field" th:each="a : ${model.employeeAnswers}">
+        <div class="field-title" th:text="${a.question}">What are you most proud of?</div>
+        <div class="text" th:text="${a.answer}">The launch.</div>
+      </div>
+    </div>
+
+    <!-- Meeting notes -->
+    <div class="section" th:if="${model.meetingNotes}">
+      <div class="section-title">Meeting notes</div>
+      <div class="text" th:text="${model.meetingNotes}">Agreed next steps.</div>
+    </div>
+
+    <!-- Acknowledgement -->
+    <div class="section" th:with="ack=${model.acknowledgement}">
+      <div class="section-title">Acknowledgement</div>
+      <div class="box" th:if="${ack == null}">
+        <span class="muted">Not acknowledged yet.</span>
+      </div>
+      <th:block th:if="${ack != null}">
+        <div class="box" th:classappend="${ack.disputed} ? 'box-warning'">
+          <div th:if="${!ack.disputed}" th:text="|Acknowledged on ${ack.acknowledgedOn}.|">Acknowledged on December 2, 2026.</div>
+          <div th:if="${ack.disputed}" th:text="|Acknowledged on ${ack.acknowledgedOn}, with a disagreement.|">
+            Acknowledged on December 2, 2026, with a disagreement.
+          </div>
+          <div class="muted" style="margin-top: 2pt">
+            Acknowledging records that the employee received and read the review, not that they agree with it.
+          </div>
+        </div>
+        <div class="field" th:if="${ack.comment}" style="margin-top: 10pt">
+          <div class="field-title" th:text="${ack.disputed} ? 'Why the employee disagrees' : 'Employee comment'">Employee comment</div>
+          <div class="text" th:text="${ack.comment}">Thanks for the feedback.</div>
+        </div>
+        <div class="field" th:if="${ack.resolution}">
+          <div
+            class="field-title"
+            th:text="|Resolution, ${ack.resolvedOn}${ack.resolvedByName != null ? ' by ' + ack.resolvedByName : ''}|"
+          >
+            Resolution
+          </div>
+          <div class="text" th:text="${ack.resolution}">The rating stands.</div>
+        </div>
+      </th:block>
+    </div>
+  </body>
+</html>

@@ -24,7 +24,8 @@
         "TRAINING_REQUEST": "Training request",
         "POSITION_TRANSFER": "Position transfer",
         "SALARY_ADJUSTMENT": "Salary adjustment",
-        "TIMESHEET_APPROVAL": "Timesheet"
+        "TIMESHEET_APPROVAL": "Timesheet",
+        "PERFORMANCE_REVIEW": "Performance review sign-off"
       },
       "submitted": "Submitted {{ date }}",
       "request": "Request",
@@ -46,7 +47,9 @@
         "APPROVE": "Request approved",
         "REJECT": "Request rejected",
         "REQUEST_MORE_INFO": "Asked for more information"
-      }
+      },
+      "openReview": "Read the review",
+      "reviewHint": "Read the review before you decide. To return it, say in the comment what should change."
     }
   }
 }

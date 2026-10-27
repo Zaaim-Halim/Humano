@@ -1,0 +1,1030 @@
+<div class="hum-page">
+  <a class="hum-onb-back" [routerLink]="backLink()"
+    ><lucide-icon name="arrow-left" [size]="14" />{{
+      (backLink().length > 1 ? 'humano.performance.review.backToCycle' : 'humano.performance.review.backToList') | translate
+    }}</a
+  >
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (!review()) {
+    <hum-skeleton [height]="160" />
+    <div class="hum-onb-layout">
+      <div><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+      <hum-skeleton [height]="220" />
+    </div>
+  } @else {
+    @let r = review()!;
+
+    <section class="hum-onb-hero">
+      <div class="hum-onb-hero__top">
+        <hum-avatar [name]="r.employeeName ?? ''" size="xl" />
+        <div class="hum-onb-hero__who">
+          <p class="hum-perf-eyebrow">{{ r.cycleName }}</p>
+          <h1 class="hum-onb-hero__name">
+            {{ isEmployee() ? ('humano.performance.review.yourReview' | translate) : r.employeeName }}
+          </h1>
+          <p class="hum-onb-hero__role">
+            @if (r.employeeJobTitle) {
+              <span>{{ r.employeeJobTitle }}</span>
+            }
+            @if (r.departmentName) {
+              <span><lucide-icon name="building-2" [size]="13" />{{ r.departmentName }}</span>
+            }
+            <span>
+              <lucide-icon name="user-check" [size]="13" />
+              @if (r.reviewerName) {
+                {{ 'humano.performance.review.reviewedBy' | translate: { name: r.reviewerName } }}
+              } @else {
+                {{ 'humano.performance.review.noReviewer' | translate }}
+              }
+            </span>
+          </p>
+        </div>
+        <div class="hum-onb-hero__actions">
+          <hum-badge [status]="r.status" />
+          @if (r.status === 'SHARED') {
+            <hum-button variant="outline" size="sm" icon="download" [loading]="downloading()" (click)="downloadPdf()">{{
+              'humano.performance.review.downloadPdf' | translate
+            }}</hum-button>
+          }
+        </div>
+      </div>
+
+      <div class="hum-perf-hero__track">
+        <hum-stepper [steps]="steps()" [current]="step()" />
+        @if (r.phaseDeadline && r.status !== 'SHARED' && r.status !== 'EXCLUDED') {
+          <p class="hum-perf-hero__due">
+            <lucide-icon name="calendar-clock" [size]="14" />
+            {{ 'humano.performance.phaseDue.' + r.cyclePhase | translate: { date: (r.phaseDeadline | date: 'EEE, MMM d') } }}
+          </p>
+        }
+      </div>
+    </section>
+
+    @if (r.status === 'EXCLUDED') {
+      <hum-alert tone="warning" [title]="'humano.performance.review.excluded.title' | translate" style="margin-top: var(--space-5)">
+        @if (r.exclusion; as x) {
+          {{
+            (x.excludedByName ? 'humano.performance.review.excluded.byHr' : 'humano.performance.review.excluded.leaver')
+              | translate: { name: x.excludedByName, date: (x.excludedAt | date: 'mediumDate'), reason: x.reason }
+          }}
+        } @else {
+          {{ 'humano.performance.review.excluded.employee' | translate }}
+        }
+      </hum-alert>
+    }
+
+    <div class="hum-onb-layout">
+      <div class="hum-perf-sections">
+        <!-- Self-assessment -->
+        <section class="hum-perf-card">
+          <header class="hum-perf-card__head">
+            <div>
+              <h2 class="hum-onb-h2">{{ 'humano.performance.review.selfTitle' | translate }}</h2>
+              <p class="hum-onb-muted">
+                @if (r.selfAssessment) {
+                  {{ 'humano.performance.review.submittedOn' | translate: { date: (r.selfAssessment.submittedAt | date: 'mediumDate') } }}
+                } @else if (isEmployee()) {
+                  {{ 'humano.performance.review.selfLead' | translate }}
+                } @else {
+                  {{ 'humano.performance.review.selfPending' | translate: { name: r.employeeName } }}
+                }
+              </p>
+            </div>
+            @if (canWriteSelf() && r.selfAssessment && !showSelfForm()) {
+              <hum-button variant="secondary" size="sm" icon="pencil" (click)="editSelf()">{{
+                'humano.performance.review.edit' | translate
+              }}</hum-button>
+            }
+          </header>
+
+          @if (showSelfForm()) {
+            <form [formGroup]="selfForm" (ngSubmit)="submitSelf()" class="hum-perf-form">
+              <hum-form-field
+                [label]="'humano.performance.self.achievements' | translate"
+                [hint]="'humano.performance.self.achievementsHint' | translate"
+                required
+                [error]="invalid('self', 'achievements') ? ('humano.employeeForm.required' | translate) : undefined"
+              >
+                <hum-textarea formControlName="achievements" [rows]="5" [invalid]="invalid('self', 'achievements')" />
+              </hum-form-field>
+              <hum-form-field
+                [label]="'humano.performance.self.challenges' | translate"
+                [hint]="'humano.performance.self.challengesHint' | translate"
+              >
+                <hum-textarea formControlName="challenges" [rows]="3" />
+              </hum-form-field>
+              <hum-form-field
+                [label]="'humano.performance.self.developmentGoals' | translate"
+                [hint]="'humano.performance.self.developmentGoalsHint' | translate"
+              >
+                <hum-textarea formControlName="developmentGoals" [rows]="3" />
+              </hum-form-field>
+              <hum-form-field [label]="'humano.performance.self.comments' | translate">
+                <hum-textarea formControlName="additionalComments" [rows]="2" />
+              </hum-form-field>
+              @for (q of employeeQuestions(); track q.id) {
+                <hum-form-field
+                  [label]="q.text"
+                  [hint]="q.helpText ?? undefined"
+                  [required]="q.required"
+                  [error]="answerMissing(q) && selfForm.touched ? ('humano.employeeForm.required' | translate) : undefined"
+                >
+                  <hum-textarea
+                    [rows]="3"
+                    [ngModel]="answerDraft()[q.id] ?? ''"
+                    [ngModelOptions]="{ standalone: true }"
+                    [invalid]="answerMissing(q) && selfForm.touched"
+                    (ngModelChange)="setAnswer(q.id, $event)"
+                  />
+                </hum-form-field>
+              }
+              <div class="hum-perf-form__actions">
+                <p class="hum-onb-muted">{{ 'humano.performance.review.selfVisibility' | translate }}</p>
+                @if (r.selfAssessment) {
+                  <hum-button variant="ghost" (click)="editingSelf.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+                }
+                <hum-button variant="primary" icon="send" type="submit" [loading]="saving()">{{
+                  (r.selfAssessment ? 'humano.performance.review.update' : 'humano.performance.review.submitSelf') | translate
+                }}</hum-button>
+              </div>
+            </form>
+          } @else if (r.selfAssessment; as s) {
+            <dl class="hum-perf-answers">
+              <dt>{{ 'humano.performance.self.achievements' | translate }}</dt>
+              <dd>{{ s.achievements }}</dd>
+              @if (s.challenges) {
+                <dt>{{ 'humano.performance.self.challenges' | translate }}</dt>
+                <dd>{{ s.challenges }}</dd>
+              }
+              @if (s.developmentGoals) {
+                <dt>{{ 'humano.performance.self.developmentGoals' | translate }}</dt>
+                <dd>{{ s.developmentGoals }}</dd>
+              }
+              @if (s.comments) {
+                <dt>{{ 'humano.performance.self.comments' | translate }}</dt>
+                <dd>{{ s.comments }}</dd>
+              }
+              @for (q of employeeQuestions(); track q.id) {
+                @if (answerOf(q.id); as a) {
+                  <dt>{{ q.text }}</dt>
+                  <dd>{{ a }}</dd>
+                }
+              }
+            </dl>
+          } @else if (isEmployee() && !canWriteSelf()) {
+            <p class="hum-perf-empty">{{ 'humano.performance.review.selfClosed' | translate }}</p>
+          }
+        </section>
+
+        <!-- Colleagues' feedback -->
+        @if (r.cycleId && known()) {
+          <hum-review-feedback-panel [review]="r" [isEmployee]="isEmployee()" />
+        }
+
+        <!-- Goals the review rates -->
+        @if (goals().length && !editingReview()) {
+          <section class="hum-perf-card">
+            <header class="hum-perf-card__head">
+              <div>
+                <h2 class="hum-onb-h2">{{ 'humano.performance.goals.title' | translate }}</h2>
+                <p class="hum-onb-muted">{{ 'humano.performance.goals.readLead' | translate }}</p>
+              </div>
+              @if (goalScore(); as score) {
+                <span class="hum-perf-goal__score tabular-nums" [title]="'humano.performance.goals.scoreHint' | translate">{{
+                  'humano.performance.goals.score' | translate: { score: score }
+                }}</span>
+              }
+            </header>
+            <ul class="hum-perf-comp-list">
+              @for (g of goals(); track g.id) {
+                <li>
+                  <div class="hum-perf-comp-list__head">
+                    <span class="hum-perf-comp__name">{{ g.title }}</span>
+                    @if (g.achievement) {
+                      <hum-badge [tone]="goalTone(g.achievement)" [label]="'humano.goals.achievement.' + g.achievement | translate" />
+                    } @else {
+                      <span class="hum-perf-comp__category tabular-nums">{{
+                        'humano.goals.progressValue' | translate: { progress: g.progress }
+                      }}</span>
+                    }
+                  </div>
+                  <p class="hum-perf-comp__anchor tabular-nums">
+                    @if (g.weight !== null) {
+                      {{ 'humano.goals.weightShort' | translate: { weight: g.weight } }} ·
+                    }
+                    {{ 'humano.goals.due' | translate: { date: (g.dueDate | date: 'mediumDate') } }}
+                    @if (g.successMeasure) {
+                      · {{ g.successMeasure }}
+                    }
+                  </p>
+                  @if (g.comment) {
+                    <p class="hum-perf-comp-list__comment">{{ g.comment }}</p>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
+        <!-- Manager review -->
+        <section class="hum-perf-card">
+          <header class="hum-perf-card__head">
+            <div>
+              <h2 class="hum-onb-h2">{{ 'humano.performance.review.managerTitle' | translate }}</h2>
+              <p class="hum-onb-muted">
+                @if (r.managerAssessment) {
+                  {{
+                    'humano.performance.review.submittedOn' | translate: { date: (r.managerAssessment.submittedAt | date: 'mediumDate') }
+                  }}
+                } @else if (isEmployee()) {
+                  {{ 'humano.performance.review.managerHidden' | translate }}
+                } @else if (canWriteReview() && isReviewer()) {
+                  {{ 'humano.performance.review.managerLead' | translate: { name: r.employeeName } }}
+                } @else if (canWriteReview()) {
+                  {{ 'humano.performance.review.managerOnBehalf' | translate: { name: r.reviewerName } }}
+                } @else {
+                  {{ 'humano.performance.review.managerPending' | translate }}
+                }
+              </p>
+            </div>
+            @if (canWriteReview() && !showReviewForm()) {
+              <hum-button variant="secondary" size="sm" icon="pencil" (click)="editReview()">{{
+                (r.managerAssessment ? 'humano.performance.review.edit' : 'humano.performance.review.writeOnBehalf') | translate
+              }}</hum-button>
+            }
+          </header>
+
+          @if (showReviewForm()) {
+            @if (!r.selfAssessment) {
+              <hum-alert tone="info" [title]="'humano.performance.review.noSelfTitle' | translate">{{
+                'humano.performance.review.noSelfBody' | translate: { name: r.employeeName }
+              }}</hum-alert>
+            }
+            <form [formGroup]="reviewForm" (ngSubmit)="submitReview()" class="hum-perf-form">
+              <div class="hum-perf-field">
+                <span class="hum-perf-field__label"
+                  >{{ 'humano.performance.manager.rating' | translate }} <span aria-hidden="true">*</span></span
+                >
+                <div class="hum-perf-scale" role="radiogroup" [attr.aria-label]="'humano.performance.manager.rating' | translate">
+                  @for (n of scale; track n) {
+                    <button
+                      type="button"
+                      role="radio"
+                      class="hum-perf-scale__option"
+                      [class.is-active]="reviewForm.controls.rating.value === n"
+                      [attr.aria-checked]="reviewForm.controls.rating.value === n"
+                      (click)="setRating(n)"
+                    >
+                      <span class="hum-perf-scale__value tabular-nums">{{ n }}</span>
+                      <span class="hum-perf-scale__label">{{ 'humano.performance.rating.' + n | translate }}</span>
+                    </button>
+                  }
+                </div>
+                @if (invalid('review', 'rating')) {
+                  <p class="hum-perf-error">{{ 'humano.performance.manager.ratingRequired' | translate }}</p>
+                }
+              </div>
+              <hum-form-field
+                [label]="'humano.performance.manager.strengths' | translate"
+                [hint]="'humano.performance.manager.strengthsHint' | translate"
+                required
+                [error]="invalid('review', 'strengths') ? ('humano.employeeForm.required' | translate) : undefined"
+              >
+                <hum-textarea formControlName="strengths" [rows]="4" [invalid]="invalid('review', 'strengths')" />
+              </hum-form-field>
+              <hum-form-field [label]="'humano.performance.manager.areasForImprovement' | translate">
+                <hum-textarea formControlName="areasForImprovement" [rows]="3" />
+              </hum-form-field>
+              <hum-form-field
+                [label]="'humano.performance.manager.development' | translate"
+                [hint]="'humano.performance.manager.developmentHint' | translate"
+              >
+                <hum-textarea formControlName="developmentRecommendations" [rows]="3" />
+              </hum-form-field>
+              <hum-form-field [label]="'humano.performance.manager.comments' | translate">
+                <hum-textarea formControlName="managerComments" [rows]="3" />
+              </hum-form-field>
+              @if (form()?.competencies?.length) {
+                <fieldset class="hum-perf-fieldset">
+                  <legend>{{ 'humano.performance.competencies.title' | translate }}</legend>
+                  <p class="hum-onb-muted">{{ 'humano.performance.competencies.lead' | translate }}</p>
+                  @for (c of form()!.competencies; track c.id) {
+                    @let given = ratingDraft()[c.id];
+                    <div class="hum-perf-comp" [class.is-missing]="reviewForm.touched && !given?.rating">
+                      <div class="hum-perf-comp__head">
+                        <span class="hum-perf-comp__name">{{ c.name }} <span aria-hidden="true">*</span></span>
+                        <span class="hum-perf-comp__category">{{ 'humano.performance.framework.category.' + c.category | translate }}</span>
+                      </div>
+                      @if (c.description) {
+                        <p class="hum-perf-comp__desc">{{ c.description }}</p>
+                      }
+                      <div class="hum-perf-comp__scale" role="radiogroup" [attr.aria-label]="c.name">
+                        @for (n of scale; track n) {
+                          <button
+                            type="button"
+                            role="radio"
+                            class="hum-perf-comp__option tabular-nums"
+                            [class.is-active]="given?.rating === n"
+                            [attr.aria-checked]="given?.rating === n"
+                            [title]="('humano.performance.rating.' + n | translate) + (anchor(c, n) ? ' — ' + anchor(c, n) : '')"
+                            (click)="setCompetencyRating(c.id, n)"
+                          >
+                            {{ n }}
+                          </button>
+                        }
+                        @if (given?.rating; as n) {
+                          <span class="hum-perf-comp__level">{{ 'humano.performance.rating.' + n | translate }}</span>
+                        }
+                      </div>
+                      @if (anchor(c, given?.rating); as a) {
+                        <p class="hum-perf-comp__anchor">{{ a }}</p>
+                      }
+                      <hum-textarea
+                        [rows]="2"
+                        [placeholder]="'humano.performance.competencies.commentPlaceholder' | translate"
+                        [ngModel]="given?.comment ?? ''"
+                        [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="setCompetencyComment(c.id, $event)"
+                      />
+                    </div>
+                  }
+                  @if (reviewForm.touched && reviewFormMissing()) {
+                    <p class="hum-perf-error">{{ 'humano.performance.competencies.missing' | translate }}</p>
+                  }
+                </fieldset>
+              }
+              @if (goals().length) {
+                <fieldset class="hum-perf-fieldset">
+                  <legend>{{ 'humano.performance.goals.title' | translate }}</legend>
+                  <p class="hum-onb-muted">{{ 'humano.performance.goals.lead' | translate }}</p>
+                  @for (g of goals(); track g.id) {
+                    @let given = goalDraft()[g.id];
+                    <div class="hum-perf-comp" [class.is-missing]="reviewForm.touched && !given?.achievement">
+                      <div class="hum-perf-comp__head">
+                        <span class="hum-perf-comp__name">{{ g.title }} <span aria-hidden="true">*</span></span>
+                        <span class="hum-perf-comp__category tabular-nums">
+                          @if (g.weight !== null) {
+                            {{ 'humano.goals.weightShort' | translate: { weight: g.weight } }} ·
+                          }
+                          {{ 'humano.goals.due' | translate: { date: (g.dueDate | date: 'mediumDate') } }}
+                        </span>
+                      </div>
+                      @if (g.successMeasure) {
+                        <p class="hum-perf-comp__desc">{{ g.successMeasure }}</p>
+                      }
+                      <hum-progress [value]="g.progress" [label]="'humano.goals.progress' | translate" showValue />
+                      <div class="hum-perf-comp__scale" role="radiogroup" [attr.aria-label]="g.title">
+                        @for (a of goalAchievements; track a) {
+                          <button
+                            type="button"
+                            role="radio"
+                            class="hum-perf-comp__option hum-perf-goal__option"
+                            [class.is-active]="given?.achievement === a"
+                            [attr.aria-checked]="given?.achievement === a"
+                            (click)="setGoalAchievement(g.id, a)"
+                          >
+                            {{ 'humano.goals.achievement.' + a | translate }}
+                          </button>
+                        }
+                      </div>
+                      <hum-textarea
+                        [rows]="2"
+                        [placeholder]="'humano.performance.goals.commentPlaceholder' | translate"
+                        [ngModel]="given?.comment ?? ''"
+                        [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="setGoalComment(g.id, $event)"
+                      />
+                    </div>
+                  }
+                  <div class="hum-perf-goal__summary">
+                    @if (goalScore(); as score) {
+                      <span>{{ 'humano.performance.goals.score' | translate: { score: score } }}</span>
+                    }
+                    @if (goalWeightTotal(); as total) {
+                      @if (total !== 100) {
+                        <span class="hum-perf-goal__warn"
+                          ><lucide-icon name="triangle-alert" [size]="14" />{{
+                            'humano.performance.goals.weightsOff' | translate: { total: total }
+                          }}</span
+                        >
+                      }
+                    }
+                  </div>
+                  @if (reviewForm.touched && reviewFormMissing()) {
+                    <p class="hum-perf-error">{{ 'humano.performance.goals.missing' | translate }}</p>
+                  }
+                </fieldset>
+              }
+              @for (q of reviewerQuestions(); track q.id) {
+                <hum-form-field
+                  [label]="q.text"
+                  [hint]="q.helpText ?? undefined"
+                  [required]="q.required"
+                  [error]="answerMissing(q) && reviewForm.touched ? ('humano.employeeForm.required' | translate) : undefined"
+                >
+                  <hum-textarea
+                    [rows]="3"
+                    [ngModel]="answerDraft()[q.id] ?? ''"
+                    [ngModelOptions]="{ standalone: true }"
+                    [invalid]="answerMissing(q) && reviewForm.touched"
+                    (ngModelChange)="setAnswer(q.id, $event)"
+                  />
+                </hum-form-field>
+              }
+              @if (isProbation()) {
+                <div class="hum-perf-confidential">
+                  <hum-form-field
+                    [label]="'humano.performance.probation.label' | translate"
+                    [hint]="'humano.performance.probation.hint' | translate"
+                    required
+                    [error]="probationMissing() && reviewForm.touched ? ('humano.performance.probation.required' | translate) : undefined"
+                  >
+                    <hum-select
+                      formControlName="probationRecommendation"
+                      [options]="probationOptions"
+                      [invalid]="probationMissing() && reviewForm.touched"
+                      [ariaLabel]="'humano.performance.probation.label' | translate"
+                    />
+                  </hum-form-field>
+                </div>
+              }
+              <div class="hum-perf-confidential">
+                <hum-checkbox formControlName="recommendForPromotion" [label]="'humano.performance.manager.promotion' | translate" />
+                <p class="hum-onb-muted">{{ 'humano.performance.manager.promotionHint' | translate }}</p>
+                <hum-form-field
+                  [label]="'humano.performance.manager.potential' | translate"
+                  [hint]="'humano.performance.manager.potentialHint' | translate"
+                >
+                  <hum-select
+                    formControlName="potential"
+                    [options]="potentialOptions"
+                    [ariaLabel]="'humano.performance.manager.potential' | translate"
+                  />
+                </hum-form-field>
+                @if (recommending()) {
+                  <hum-form-field
+                    [label]="'humano.performance.manager.promotionJustification' | translate"
+                    required
+                    [error]="justificationMissing() && reviewForm.touched ? ('humano.employeeForm.required' | translate) : undefined"
+                  >
+                    <hum-textarea
+                      formControlName="promotionJustification"
+                      [rows]="3"
+                      [invalid]="justificationMissing() && reviewForm.touched"
+                    />
+                  </hum-form-field>
+                }
+              </div>
+              <div class="hum-perf-form__actions">
+                <p class="hum-onb-muted">{{ 'humano.performance.review.managerVisibility' | translate }}</p>
+                @if (r.managerAssessment) {
+                  <hum-button variant="ghost" (click)="editingReview.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+                }
+                <hum-button variant="primary" icon="send" type="submit" [loading]="saving()">{{
+                  (r.managerAssessment ? 'humano.performance.review.update' : 'humano.performance.review.submitReview') | translate
+                }}</hum-button>
+              </div>
+            </form>
+          } @else if (r.managerAssessment; as m) {
+            <dl class="hum-perf-answers">
+              @if (m.strengths) {
+                <dt>{{ 'humano.performance.manager.strengths' | translate }}</dt>
+                <dd>{{ m.strengths }}</dd>
+              }
+              @if (m.areasForImprovement) {
+                <dt>{{ 'humano.performance.manager.areasForImprovement' | translate }}</dt>
+                <dd>{{ m.areasForImprovement }}</dd>
+              }
+              @if (m.developmentRecommendations) {
+                <dt>{{ 'humano.performance.manager.development' | translate }}</dt>
+                <dd>{{ m.developmentRecommendations }}</dd>
+              }
+              @if (r.comments) {
+                <dt>{{ 'humano.performance.manager.comments' | translate }}</dt>
+                <dd>{{ r.comments }}</dd>
+              }
+              @for (q of reviewerQuestions(); track q.id) {
+                @if (answerOf(q.id); as a) {
+                  <dt>{{ q.text }}</dt>
+                  <dd>{{ a }}</dd>
+                }
+              }
+            </dl>
+            @if (form()?.ratings?.length) {
+              <h3 class="hum-perf-subhead">{{ 'humano.performance.competencies.title' | translate }}</h3>
+              <ul class="hum-perf-comp-list">
+                @for (c of form()!.competencies; track c.id) {
+                  @if (ratingOf(c.id); as x) {
+                    <li>
+                      <div class="hum-perf-comp-list__head">
+                        <span class="hum-perf-comp__name">{{ c.name }}</span>
+                        <span class="hum-perf-comp-list__rating"
+                          ><strong class="tabular-nums">{{ x.rating }}</strong>
+                          {{ 'humano.performance.rating.' + x.rating | translate }}</span
+                        >
+                      </div>
+                      @if (anchor(c, x.rating); as a) {
+                        <p class="hum-perf-comp__anchor">{{ a }}</p>
+                      }
+                      @if (x.comment) {
+                        <p class="hum-perf-comp-list__comment">{{ x.comment }}</p>
+                      }
+                    </li>
+                  }
+                }
+              </ul>
+            }
+            @if (m.probationRecommendation) {
+              <div class="hum-perf-confidential">
+                <p class="hum-perf-confidential__title">
+                  <lucide-icon name="lock" [size]="14" />{{
+                    'humano.performance.probation.recommended.' + m.probationRecommendation | translate
+                  }}
+                </p>
+              </div>
+            }
+            @if (m.potential) {
+              <div class="hum-perf-confidential">
+                <p class="hum-perf-confidential__title">
+                  <lucide-icon name="lock" [size]="14" />{{ 'humano.performance.potential.' + m.potential | translate }}
+                </p>
+              </div>
+            }
+            @if (m.recommendForPromotion) {
+              <div class="hum-perf-confidential">
+                <p class="hum-perf-confidential__title">
+                  <lucide-icon name="trending-up" [size]="14" />{{ 'humano.performance.manager.promotionRecommended' | translate }}
+                </p>
+                @if (m.promotionJustification) {
+                  <p class="hum-perf-confidential__body">{{ m.promotionJustification }}</p>
+                }
+              </div>
+            }
+          }
+        </section>
+
+        <!-- Sign-off (never shown to the employee) -->
+        @if (r.signOff; as so) {
+          @if (!isEmployee()) {
+            <section class="hum-perf-card">
+              <header class="hum-perf-card__head">
+                <div>
+                  <h2 class="hum-onb-h2">{{ 'humano.performance.signOff.title' | translate }}</h2>
+                  <p class="hum-onb-muted">
+                    @switch (so.status) {
+                      @case ('PENDING') {
+                        @if (signOff()?.approverName; as approver) {
+                          {{ 'humano.performance.signOff.waitingOn' | translate: { name: approver } }}
+                          @if ((signOff()?.totalLevels ?? 1) > 1) {
+                            ·
+                            {{ 'humano.performance.signOff.level' | translate: { level: signOff()!.level, total: signOff()!.totalLevels } }}
+                          }
+                          @if (signOff()?.dueDate; as due) {
+                            · {{ 'humano.performance.signOff.due' | translate: { date: (due | date: 'mediumDate') } }}
+                          }
+                        } @else {
+                          {{ 'humano.performance.signOff.waiting' | translate }}
+                        }
+                      }
+                      @case ('APPROVED') {
+                        {{
+                          'humano.performance.signOff.approvedBy'
+                            | translate: { name: so.decidedByName ?? '—', date: (so.decidedAt | date: 'mediumDate') }
+                        }}
+                      }
+                      @case ('RETURNED') {
+                        {{
+                          'humano.performance.signOff.returnedBy'
+                            | translate: { name: so.decidedByName ?? '—', date: (so.decidedAt | date: 'mediumDate') }
+                        }}
+                      }
+                      @case ('WAIVED') {
+                        {{ 'humano.performance.signOff.waived' | translate }}
+                      }
+                    }
+                  </p>
+                </div>
+                <hum-badge
+                  [tone]="so.status === 'RETURNED' ? 'warning' : so.status === 'PENDING' ? 'info' : 'success'"
+                  [label]="'humano.performance.signOff.short.' + so.status | translate"
+                />
+              </header>
+              @if (so.comment) {
+                <blockquote class="hum-perf-quote">{{ so.comment }}</blockquote>
+              }
+              @if (so.status === 'RETURNED' && canWriteReview()) {
+                <p class="hum-onb-muted">{{ 'humano.performance.signOff.reviseHint' | translate }}</p>
+              }
+              @if (signOff()?.canDecide) {
+                <div class="hum-perf-form__actions">
+                  <p class="hum-onb-muted">{{ 'humano.performance.signOff.decideHint' | translate: { name: r.reviewerName } }}</p>
+                  <hum-button variant="secondary" icon="rotate-ccw" (click)="openDecision('REJECT')">{{
+                    'humano.performance.signOff.return' | translate
+                  }}</hum-button>
+                  <hum-button variant="primary" icon="check" (click)="openDecision('APPROVE')">{{
+                    'humano.performance.signOff.approve' | translate
+                  }}</hum-button>
+                </div>
+              }
+            </section>
+          }
+        }
+
+        <!-- Feedback meeting -->
+        @if (r.feedbackNotes || r.status === 'SHARED' || canRecordMeeting()) {
+          <section class="hum-perf-card">
+            <header class="hum-perf-card__head">
+              <div>
+                <h2 class="hum-onb-h2">{{ 'humano.performance.review.meetingTitle' | translate }}</h2>
+                <p class="hum-onb-muted">
+                  @if (r.sharedAt) {
+                    {{ 'humano.performance.review.sharedOn' | translate: { date: (r.sharedAt | date: 'mediumDate') } }}
+                  } @else {
+                    {{ 'humano.performance.review.meetingLead' | translate: { name: r.employeeName } }}
+                  }
+                </p>
+              </div>
+              @if (canRecordMeeting()) {
+                <hum-button
+                  [variant]="r.status === 'SHARED' ? 'secondary' : 'primary'"
+                  size="sm"
+                  [icon]="r.status === 'SHARED' ? 'pencil' : 'message-square'"
+                  (click)="openMeeting()"
+                  >{{
+                    (r.status === 'SHARED' ? 'humano.performance.review.editNotes' : 'humano.performance.review.recordMeeting') | translate
+                  }}</hum-button
+                >
+              }
+            </header>
+            @if (r.feedbackNotes) {
+              <p class="hum-perf-prose">{{ r.feedbackNotes }}</p>
+            }
+          </section>
+        }
+
+        <!-- Acknowledgement -->
+        @if (canAcknowledge() || r.acknowledgement) {
+          <section class="hum-perf-card">
+            <header class="hum-perf-card__head">
+              <div>
+                <h2 class="hum-onb-h2">{{ 'humano.performance.review.ackTitle' | translate }}</h2>
+                <p class="hum-onb-muted">
+                  @if (r.acknowledgement; as a) {
+                    {{ 'humano.performance.review.ackOn' | translate: { date: (a.acknowledgedAt | date: 'mediumDate') } }}
+                  } @else {
+                    {{ 'humano.performance.review.ackLead' | translate }}
+                  }
+                </p>
+              </div>
+              @if (r.acknowledgement?.disputed) {
+                <hum-badge
+                  [tone]="r.acknowledgement!.resolvedAt ? 'neutral' : 'warning'"
+                  [label]="
+                    (r.acknowledgement!.resolvedAt ? 'humano.performance.review.disputeClosed' : 'humano.performance.review.disputeOpen')
+                      | translate
+                  "
+                />
+              }
+            </header>
+
+            @if (canAcknowledge()) {
+              <div class="hum-perf-form">
+                <hum-form-field
+                  [label]="(ackDisputed() ? 'humano.performance.review.disputeReason' : 'humano.performance.review.ackComment') | translate"
+                  [hint]="'humano.performance.review.ackCommentHint' | translate"
+                  [required]="ackDisputed()"
+                  [error]="ackReasonMissing() && ackComment() ? ('humano.employeeForm.required' | translate) : undefined"
+                >
+                  <hum-textarea [rows]="3" [ngModel]="ackComment()" (ngModelChange)="ackComment.set($event)" />
+                </hum-form-field>
+                <div class="hum-perf-confidential">
+                  <hum-checkbox
+                    [label]="'humano.performance.review.ackDispute' | translate"
+                    [checked]="ackDisputed()"
+                    (checkedChange)="ackDisputed.set($event)"
+                  />
+                  <p class="hum-onb-muted">{{ 'humano.performance.review.ackDisputeHint' | translate }}</p>
+                </div>
+                <div class="hum-perf-form__actions">
+                  <p class="hum-onb-muted">{{ 'humano.performance.review.ackVisibility' | translate }}</p>
+                  <hum-button
+                    variant="primary"
+                    [icon]="ackDisputed() ? 'flag' : 'check'"
+                    [loading]="saving()"
+                    [disabled]="ackReasonMissing()"
+                    (click)="acknowledge()"
+                    >{{
+                      (ackDisputed() ? 'humano.performance.review.sendDispute' : 'humano.performance.review.acknowledge') | translate
+                    }}</hum-button
+                  >
+                </div>
+              </div>
+            } @else if (r.acknowledgement; as a) {
+              @if (a.comment) {
+                <dl class="hum-perf-answers">
+                  <dt>
+                    {{ (a.disputed ? 'humano.performance.review.disputeReason' : 'humano.performance.review.ackComment') | translate }}
+                  </dt>
+                  <dd>{{ a.comment }}</dd>
+                </dl>
+              } @else {
+                <p class="hum-perf-empty">{{ 'humano.performance.review.ackNoComment' | translate }}</p>
+              }
+              @if (a.resolution) {
+                <div class="hum-perf-confidential" style="margin-top: var(--space-4)">
+                  <p class="hum-perf-confidential__title">
+                    <lucide-icon name="scale" [size]="14" />{{
+                      'humano.performance.review.resolutionBy'
+                        | translate
+                          : {
+                              name: a.resolvedByName ?? ('humano.performance.review.hr' | translate),
+                              date: (a.resolvedAt | date: 'mediumDate'),
+                            }
+                    }}
+                  </p>
+                  <p class="hum-perf-confidential__body">{{ a.resolution }}</p>
+                </div>
+              } @else if (a.disputed) {
+                <p class="hum-onb-muted" style="margin: var(--space-3) 0 0">{{ 'humano.performance.review.disputePending' | translate }}</p>
+              }
+              @if (canResolve()) {
+                <div class="hum-perf-form__actions" style="margin-top: var(--space-4)">
+                  <hum-button variant="primary" icon="scale" (click)="openResolve()">{{
+                    'humano.performance.review.resolve' | translate
+                  }}</hum-button>
+                </div>
+              }
+            }
+          </section>
+        }
+      </div>
+
+      <aside class="hum-onb-aside">
+        <section class="hum-onb-panel">
+          <h3 class="hum-onb-panel__title"><lucide-icon name="star" [size]="15" />{{ 'humano.performance.review.rating' | translate }}</h3>
+          @if (r.rating) {
+            <div class="hum-perf-rating">
+              <span class="hum-perf-rating__value tabular-nums">{{ r.rating }}<small>/5</small></span>
+              <span class="hum-perf-rating__label">{{ ratingLabel(r.rating) }}</span>
+            </div>
+            @if (calibrated()) {
+              <p class="hum-perf-calibrated">
+                {{
+                  'humano.performance.review.calibratedFrom'
+                    | translate: { from: r.managerAssessment!.rating, label: ratingLabel(r.managerAssessment!.rating) }
+                }}
+              </p>
+            }
+            @if (r.managerAssessment?.calibrationNote; as note) {
+              <p class="hum-perf-confidential__body">{{ note }}</p>
+            }
+          } @else {
+            <p class="hum-onb-muted">
+              {{ (isEmployee() ? 'humano.performance.review.ratingHidden' : 'humano.performance.review.ratingPending') | translate }}
+            </p>
+          }
+          @if (canCalibrateNow()) {
+            <hum-button
+              variant="secondary"
+              size="sm"
+              icon="sliders-horizontal"
+              style="margin-top: var(--space-3)"
+              (click)="openCalibration()"
+              >{{ 'humano.performance.review.calibrate' | translate }}</hum-button
+            >
+          }
+          @if (ratingHistory().length) {
+            <h4 class="hum-perf-history__title">{{ 'humano.performance.review.ratingHistory' | translate }}</h4>
+            <ol class="hum-perf-history">
+              @for (c of ratingHistory(); track c.id) {
+                <li>
+                  <span class="hum-perf-history__change tabular-nums">{{ c.fromRating ?? '—' }} → {{ c.toRating }}</span>
+                  <span class="hum-perf-history__meta">
+                    {{ 'humano.performance.review.ratingSource.' + c.source | translate }} · {{ c.changedAt | date: 'mediumDate' }}
+                    @if (c.changedByName) {
+                      · {{ c.changedByName }}
+                    }
+                  </span>
+                  @if (c.reason) {
+                    <span class="hum-perf-history__reason">{{ c.reason }}</span>
+                  }
+                </li>
+              }
+            </ol>
+          }
+        </section>
+
+        @if (planStatus(); as ps) {
+          @if (ps.planId || ps.canStart) {
+            <section class="hum-onb-panel">
+              <h3 class="hum-onb-panel__title">
+                <lucide-icon name="clipboard-list" [size]="15" />{{ 'humano.improvementPlans.panelTitle' | translate }}
+              </h3>
+              @if (ps.planId) {
+                <p class="hum-onb-muted">
+                  {{
+                    'humano.improvementPlans.panelExists'
+                      | translate: { status: ('humano.improvementPlans.status.' + ps.status | translate) }
+                  }}
+                </p>
+                <hum-button variant="outline" size="sm" icon="arrow-right" [routerLink]="['/improvement-plans', ps.planId]">{{
+                  'humano.improvementPlans.open' | translate
+                }}</hum-button>
+              } @else {
+                <p class="hum-onb-muted">{{ 'humano.improvementPlans.panelStart' | translate }}</p>
+                <hum-button variant="secondary" size="sm" icon="plus" (click)="planFormOpen.set(true)">{{
+                  'humano.improvementPlans.start' | translate
+                }}</hum-button>
+              }
+            </section>
+          }
+        }
+
+        <section class="hum-onb-panel">
+          <h3 class="hum-onb-panel__title">
+            <lucide-icon name="calendar" [size]="15" />{{ 'humano.performance.review.cycle' | translate }}
+          </h3>
+          <dl class="hum-onb-dates">
+            <dt>{{ 'humano.performance.review.cycleName' | translate }}</dt>
+            <dd>
+              @if (canSeeCycles && r.cycleId) {
+                <a [routerLink]="['/review-cycles', r.cycleId]">{{ r.cycleName }}</a>
+              } @else {
+                {{ r.cycleName }}
+              }
+            </dd>
+            <dt>{{ 'humano.performance.review.phase' | translate }}</dt>
+            <dd><hum-badge [status]="r.cyclePhase ?? undefined" /></dd>
+            <dt>{{ 'humano.performance.review.periodEnd' | translate }}</dt>
+            <dd class="tabular-nums">{{ r.reviewDate | date: 'mediumDate' }}</dd>
+          </dl>
+        </section>
+
+        <section class="hum-onb-panel hum-perf-note">
+          <h3 class="hum-onb-panel__title"><lucide-icon name="lock" [size]="15" />{{ 'humano.performance.review.whoSees' | translate }}</h3>
+          <p class="hum-onb-muted">
+            {{ (isEmployee() ? 'humano.performance.review.whoSeesEmployee' : 'humano.performance.review.whoSeesReviewer') | translate }}
+          </p>
+        </section>
+      </aside>
+    </div>
+  }
+</div>
+
+<hum-dialog
+  [open]="meetingOpen()"
+  [title]="'humano.performance.review.recordMeeting' | translate"
+  [description]="'humano.performance.review.meetingDialog' | translate: { name: review()?.employeeName }"
+  hasFooter
+  (closed)="meetingOpen.set(false)"
+>
+  <hum-form-field
+    [label]="'humano.performance.review.meetingNotes' | translate"
+    [hint]="'humano.performance.review.meetingNotesHint' | translate"
+  >
+    <hum-textarea [rows]="5" [ngModel]="meetingNotes()" (ngModelChange)="meetingNotes.set($event)" />
+  </hum-form-field>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="meetingOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" (click)="recordMeeting()">{{
+      (review()?.status === 'SHARED' ? 'humano.performance.review.saveNotes' : 'humano.performance.review.shareReview') | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>
+
+<hum-dialog
+  [open]="calibrationOpen()"
+  [title]="'humano.performance.review.calibrate' | translate"
+  [description]="
+    'humano.performance.review.calibrateDialog' | translate: { name: review()?.employeeName, rating: review()?.managerAssessment?.rating }
+  "
+  hasFooter
+  (closed)="calibrationOpen.set(false)"
+>
+  <div style="display: grid; gap: var(--space-4)">
+    <hum-form-field [label]="'humano.performance.review.calibratedRating' | translate" required>
+      <hum-select
+        [options]="ratingOptions"
+        [ariaLabel]="'humano.performance.review.calibratedRating' | translate"
+        [ngModel]="calibrationRating() === null ? '' : '' + calibrationRating()"
+        (ngModelChange)="calibrationRating.set($event ? +$event : null)"
+      />
+    </hum-form-field>
+    <hum-form-field
+      [label]="'humano.performance.manager.potential' | translate"
+      [hint]="'humano.performance.calibration.potentialHint' | translate"
+    >
+      <hum-select
+        [options]="potentialOptions"
+        [ariaLabel]="'humano.performance.manager.potential' | translate"
+        [ngModel]="calibrationPotential()"
+        (ngModelChange)="calibrationPotential.set($event)"
+      />
+    </hum-form-field>
+    <hum-form-field
+      [label]="'humano.performance.review.calibrationNote' | translate"
+      [hint]="'humano.performance.review.calibrationNoteHint' | translate"
+      [required]="calibrationRating() !== review()?.managerAssessment?.rating"
+      [error]="calibrationNeedsNote() ? ('humano.performance.review.calibrationNoteRequired' | translate) : undefined"
+    >
+      <hum-textarea
+        [rows]="3"
+        [invalid]="calibrationNeedsNote()"
+        [ngModel]="calibrationNote()"
+        (ngModelChange)="calibrationNote.set($event)"
+      />
+    </hum-form-field>
+  </div>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="calibrationOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button
+      variant="primary"
+      icon="check"
+      [loading]="saving()"
+      [disabled]="calibrationRating() === null || calibrationNeedsNote()"
+      (click)="calibrate()"
+      >{{ 'humano.performance.review.saveCalibration' | translate }}</hum-button
+    >
+  </div>
+</hum-dialog>
+
+<hum-dialog
+  [open]="resolveOpen()"
+  [title]="'humano.performance.review.resolve' | translate"
+  [description]="'humano.performance.review.resolveDialog' | translate: { name: review()?.employeeName }"
+  hasFooter
+  (closed)="resolveOpen.set(false)"
+>
+  <div style="display: grid; gap: var(--space-4)">
+    @if (review()?.acknowledgement?.comment; as reason) {
+      <blockquote class="hum-perf-quote" style="margin: 0">{{ reason }}</blockquote>
+    }
+    <hum-form-field
+      [label]="'humano.performance.review.resolution' | translate"
+      [hint]="'humano.performance.review.resolutionHint' | translate"
+      required
+    >
+      <hum-textarea [rows]="4" [ngModel]="resolution()" (ngModelChange)="resolution.set($event)" />
+    </hum-form-field>
+    <hum-form-field
+      [label]="'humano.performance.review.finalRating' | translate"
+      [hint]="'humano.performance.review.finalRatingHint' | translate"
+    >
+      <hum-select
+        [options]="ratingOptions"
+        [ariaLabel]="'humano.performance.review.finalRating' | translate"
+        [ngModel]="resolveRating() === null ? '' : '' + resolveRating()"
+        (ngModelChange)="resolveRating.set($event ? +$event : null)"
+      />
+    </hum-form-field>
+  </div>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="resolveOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" [disabled]="!resolution().trim()" (click)="resolve()">{{
+      'humano.performance.review.saveResolution' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>
+
+<hum-dialog
+  [open]="decision() !== null"
+  [title]="(decision() === 'REJECT' ? 'humano.performance.signOff.return' : 'humano.performance.signOff.approve') | translate"
+  [description]="
+    (decision() === 'REJECT' ? 'humano.performance.signOff.returnDialog' : 'humano.performance.signOff.approveDialog')
+      | translate: { name: review()?.reviewerName, employee: review()?.employeeName }
+  "
+  hasFooter
+  (closed)="decision.set(null)"
+>
+  <hum-form-field
+    [label]="(decision() === 'REJECT' ? 'humano.performance.signOff.whatToChange' : 'humano.performance.signOff.note') | translate"
+    [required]="decision() === 'REJECT'"
+  >
+    <hum-textarea [rows]="4" [ngModel]="decisionComment()" (ngModelChange)="decisionComment.set($event)" />
+  </hum-form-field>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="decision.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button
+      variant="primary"
+      [icon]="decision() === 'REJECT' ? 'rotate-ccw' : 'check'"
+      [loading]="saving()"
+      [disabled]="decision() === 'REJECT' && !decisionComment().trim()"
+      (click)="decide()"
+      >{{ (decision() === 'REJECT' ? 'humano.performance.signOff.return' : 'humano.performance.signOff.approve') | translate }}</hum-button
+    >
+  </div>
+</hum-dialog>
+
+@if (review(); as r) {
+  <hum-improvement-plan-form
+    [open]="planFormOpen()"
+    [reviewId]="r.id"
+    [employeeName]="r.employeeName"
+    (saved)="planStarted($event)"
+    (closed)="planFormOpen.set(false)"
+  />
+}

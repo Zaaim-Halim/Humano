@@ -1,0 +1,576 @@
+<div class="hum-page">
+  <a class="hum-onb-back" routerLink="/review-cycles" [queryParams]="cycle()?.active === false ? { view: 'closed' } : {}"
+    ><lucide-icon name="arrow-left" [size]="14" />{{ 'humano.performance.cycle.backToList' | translate }}</a
+  >
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (!cycle()) {
+    <hum-skeleton [height]="180" />
+    <div class="hum-onb-layout">
+      <div><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
+      <hum-skeleton [height]="240" />
+    </div>
+  } @else {
+    @let c = cycle()!;
+
+    <section class="hum-onb-hero">
+      <div class="hum-onb-hero__top">
+        <div class="hum-onb-hero__who">
+          <h1 class="hum-onb-hero__name">{{ c.name }}</h1>
+          <p class="hum-onb-hero__role">
+            <span
+              ><lucide-icon name="calendar" [size]="13" />{{
+                'humano.performance.cycle.period'
+                  | translate: { from: (c.reviewPeriodStart | date: 'mediumDate'), to: (c.reviewPeriodEnd | date: 'mediumDate') }
+              }}</span
+            >
+            <span
+              ><lucide-icon name="users" [size]="13" />{{
+                c.type === 'AD_HOC'
+                  ? ('humano.performance.cycles.employees' | translate: { count: c.employees.length })
+                  : c.departmentIds.length
+                    ? ('humano.performance.cycles.departments' | translate: { count: c.departmentIds.length })
+                    : ('humano.performance.cycles.companyWide' | translate)
+              }}</span
+            >
+            @if (c.type !== 'REGULAR') {
+              <span><lucide-icon name="award" [size]="13" />{{ 'humano.performance.cycleType.' + c.type | translate }}</span>
+            }
+            @if (c.template; as t) {
+              <span><lucide-icon name="clipboard-list" [size]="13" />{{ t.name }}</span>
+            }
+          </p>
+          @if (c.type === 'AD_HOC' && c.employees.length) {
+            <p class="hum-perf-description">{{ employeeNames(c) }}</p>
+          }
+          @if (c.description) {
+            <p class="hum-perf-description">{{ c.description }}</p>
+          }
+        </div>
+        <div class="hum-onb-hero__actions">
+          <hum-badge [status]="c.phase" />
+          @if (canConfigure && c.phase === 'DRAFT') {
+            <hum-button variant="secondary" size="sm" icon="pencil" (click)="formOpen.set(true)">{{
+              'humano.performance.cycle.edit' | translate
+            }}</hum-button>
+          }
+          @if (c.phase !== 'DRAFT' && c.phase !== 'SELF_ASSESSMENT') {
+            <hum-button variant="secondary" size="sm" icon="scale" [routerLink]="['/review-cycles', c.cycleId, 'calibration']">{{
+              'humano.performance.calibration.open' | translate
+            }}</hum-button>
+          }
+          @if (canAddPeople()) {
+            <hum-button variant="secondary" size="sm" icon="user-plus" (click)="openAdd()">{{
+              'humano.performance.cycle.membership.add' | translate
+            }}</hum-button>
+          }
+          @if (previousPhase(); as back) {
+            <hum-button variant="ghost" size="sm" icon="rotate-ccw" (click)="openMoveBack()">{{
+              'humano.performance.cycle.moveBack.action' | translate: { phase: ('humano.performance.phaseShort.' + back | translate) }
+            }}</hum-button>
+          }
+          @if (canRemind()) {
+            <hum-button variant="secondary" size="sm" icon="bell" [loading]="busy() && !chosen()" (click)="remind()">{{
+              'humano.performance.cycle.remind' | translate
+            }}</hum-button>
+          }
+          @if (alternative(); as a) {
+            <hum-button variant="secondary" size="sm" [icon]="a.icon" (click)="chosen.set(a)">{{
+              'humano.performance.cycle.next.' + a.key + '.action' | translate
+            }}</hum-button>
+          }
+          @if (next(); as n) {
+            <hum-button variant="primary" size="sm" [icon]="n.icon" (click)="chosen.set(n)">{{
+              'humano.performance.cycle.next.' + n.key + '.action' | translate
+            }}</hum-button>
+          }
+        </div>
+      </div>
+
+      <div class="hum-perf-hero__track">
+        <hum-stepper [steps]="steps()" [current]="step()" />
+        @if (deadline(); as d) {
+          <p class="hum-perf-hero__due" [class.is-late]="daysLeft()! < 0">
+            <lucide-icon name="calendar-clock" [size]="14" />
+            {{ 'humano.performance.phaseDue.' + c.phase | translate: { date: (d | date: 'EEE, MMM d') } }}
+            @if (daysLeft()! < 0) {
+              · {{ 'humano.performance.cycles.overdue' | translate: { count: -daysLeft()! } }}
+            }
+          </p>
+        }
+      </div>
+    </section>
+
+    @if (c.phase === 'DRAFT') {
+      <hum-alert tone="info" [title]="'humano.performance.cycle.draftTitle' | translate" style="margin-top: var(--space-5)">{{
+        'humano.performance.cycle.draftBody' | translate: { count: c.progress.totalEmployees }
+      }}</hum-alert>
+    } @else {
+      <section class="hum-dir-stats hum-dir-stats--even" style="margin-top: var(--space-5)">
+        <div class="hum-dir-stat">
+          <div class="hum-dir-stat__label">{{ 'humano.performance.cycle.inReview' | translate }}</div>
+          <div class="hum-dir-stat__value tabular-nums">{{ c.progress.totalEmployees }}</div>
+          @if (counts().unassigned) {
+            <div class="hum-dir-stat__sub hum-onb-overdue">
+              {{ 'humano.performance.cycle.unassignedCount' | translate: { count: counts().unassigned } }}
+            </div>
+          }
+          @if (c.progress.disputesOpen) {
+            <div class="hum-dir-stat__sub hum-onb-overdue">
+              {{ 'humano.performance.cycle.disputesCount' | translate: { count: c.progress.disputesOpen } }}
+            </div>
+          }
+          @if (c.progress.signOffPending) {
+            <div class="hum-dir-stat__sub">
+              {{ 'humano.performance.cycle.signOffPendingCount' | translate: { count: c.progress.signOffPending } }}
+            </div>
+          }
+          @if (c.progress.signOffReturned) {
+            <div class="hum-dir-stat__sub hum-onb-overdue">
+              {{ 'humano.performance.cycle.signOffReturnedCount' | translate: { count: c.progress.signOffReturned } }}
+            </div>
+          }
+        </div>
+        @for (k of kpis(); track k.key) {
+          <div class="hum-dir-stat">
+            <div class="hum-dir-stat__label">{{ 'humano.performance.cycle.kpi.' + k.key | translate }}</div>
+            <div class="hum-dir-stat__value tabular-nums">
+              {{ k.done }}<span class="hum-perf-of"> / {{ c.progress.totalEmployees }}</span>
+            </div>
+            <hum-progress [value]="k.pct" [tone]="k.pct === 100 ? 'success' : 'brand'" />
+          </div>
+        }
+      </section>
+    }
+
+    <div class="hum-onb-layout">
+      <section>
+        <div class="hum-onb-filter">
+          <h2 class="hum-onb-h2">{{ 'humano.performance.cycle.reviews' | translate }}</h2>
+          @if (reviews()?.length) {
+            <div class="hum-perf-search">
+              <hum-input
+                icon="search"
+                [placeholder]="'humano.performance.cycle.search' | translate"
+                [ngModel]="search()"
+                (ngModelChange)="search.set($event)"
+              />
+            </div>
+          }
+        </div>
+
+        @if (reviews() === null) {
+          <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+        } @else if (!reviews()!.length) {
+          <hum-empty-state
+            icon="clipboard-list"
+            [title]="'humano.performance.cycle.noReviewsTitle' | translate"
+            [description]="'humano.performance.cycle.noReviewsBody' | translate"
+          />
+        } @else {
+          <div class="hum-chips">
+            @for (f of filters; track f) {
+              @if (f === 'all' || counts()[f]) {
+                <button type="button" class="hum-chip" [class.is-active]="filter() === f" (click)="filter.set(f)">
+                  {{ 'humano.performance.cycle.filter.' + f | translate
+                  }}<span class="hum-chip__count tabular-nums">{{ counts()[f] }}</span>
+                </button>
+              }
+            }
+          </div>
+
+          <div class="hum-table-wrap">
+            <table class="hum-table hum-perf-table">
+              <thead>
+                <tr>
+                  <th>{{ 'humano.performance.cycle.col.employee' | translate }}</th>
+                  <th>{{ 'humano.performance.cycle.col.reviewer' | translate }}</th>
+                  <th>{{ 'humano.performance.cycle.col.status' | translate }}</th>
+                  <th class="hum-table__num">{{ 'humano.performance.cycle.col.feedback' | translate }}</th>
+                  <th class="hum-table__num">{{ 'humano.performance.cycle.col.rating' | translate }}</th>
+                  <th>
+                    <span class="sr-only">{{ 'humano.performance.cycle.col.open' | translate }}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of visible(); track r.id) {
+                  <tr>
+                    <td>
+                      <a class="hum-perf-table__name" [routerLink]="['/reviews', r.id]">{{ r.employeeName }}</a>
+                      <span class="hum-perf-table__sub"
+                        >{{ r.employeeJobTitle ?? '' }}{{ r.departmentName ? ' · ' + r.departmentName : '' }}</span
+                      >
+                    </td>
+                    <td>
+                      @if (r.reviewerName) {
+                        {{ r.reviewerName }}
+                      } @else if (r.status === 'EXCLUDED') {
+                        <span class="hum-onb-muted">—</span>
+                      } @else {
+                        <span class="hum-onb-overdue">{{ 'humano.performance.cycle.noReviewer' | translate }}</span>
+                      }
+                      @if (reviewersOpen() && r.status !== 'MANAGER_SUBMITTED' && r.status !== 'SHARED' && r.status !== 'EXCLUDED') {
+                        <button type="button" class="hum-perf-link" (click)="openAssign(r, $event)">
+                          {{ (r.reviewerId ? 'humano.performance.cycle.change' : 'humano.performance.cycle.assign') | translate }}
+                        </button>
+                      }
+                    </td>
+                    <td>
+                      <hum-badge [status]="r.status" />
+                      @if (r.exclusion; as x) {
+                        <span class="hum-perf-table__sub" [title]="x.reason ?? ''">{{
+                          (x.excludedByName
+                            ? 'humano.performance.cycle.membership.excludedBy'
+                            : 'humano.performance.cycle.membership.excludedOn'
+                          ) | translate: { name: x.excludedByName, date: (x.excludedAt | date: 'mediumDate'), reason: x.reason }
+                        }}</span>
+                      } @else if (r.acknowledgement; as a) {
+                        <span class="hum-perf-table__sub" [class.hum-onb-overdue]="a.disputed && !a.resolvedAt">{{
+                          (a.disputed
+                            ? a.resolvedAt
+                              ? 'humano.performance.cycle.disputeResolved'
+                              : 'humano.performance.cycle.disputed'
+                            : 'humano.performance.cycle.acknowledged'
+                          ) | translate
+                        }}</span>
+                      } @else if (r.signOff; as so) {
+                        <span class="hum-perf-table__sub" [class.hum-onb-overdue]="so.status === 'RETURNED'">{{
+                          'humano.performance.signOff.short.' + so.status | translate
+                        }}</span>
+                      }
+                    </td>
+                    <td class="hum-table__num tabular-nums">
+                      @if (feedback().get(r.id); as f) {
+                        <span [title]="'humano.performance.cycle.feedbackOf' | translate: { received: f.received, requested: f.requested }"
+                          >{{ f.received }} / {{ f.requested }}</span
+                        >
+                        @if (f.awaitingApproval) {
+                          <span class="hum-perf-table__sub">{{
+                            'humano.performance.cycle.awaitingApproval' | translate: { count: f.awaitingApproval }
+                          }}</span>
+                        }
+                      } @else {
+                        <span class="hum-onb-muted">—</span>
+                      }
+                    </td>
+                    <td class="hum-table__num tabular-nums">
+                      @if (r.rating) {
+                        {{ r.rating }}
+                        @if (isCalibrated(r)) {
+                          <span
+                            class="hum-perf-calibrated-mark"
+                            [title]="'humano.performance.cycle.calibratedFrom' | translate: { from: r.managerAssessment!.rating }"
+                            >({{ r.managerAssessment!.rating }})</span
+                          >
+                        }
+                      } @else {
+                        <span class="hum-onb-muted">—</span>
+                      }
+                    </td>
+                    <td class="hum-table__num hum-perf-row-actions">
+                      @if (canExclude(r)) {
+                        <button type="button" class="hum-perf-link" (click)="openExclude(r)">
+                          {{ 'humano.performance.cycle.membership.exclude' | translate }}
+                        </button>
+                      } @else if (membershipOpen() && r.status === 'EXCLUDED') {
+                        <button type="button" class="hum-perf-link" [disabled]="busy()" (click)="restore(r)">
+                          {{ 'humano.performance.cycle.membership.restore' | translate }}
+                        </button>
+                      }
+                      <a
+                        [routerLink]="['/reviews', r.id]"
+                        [attr.aria-label]="'humano.performance.cycle.openReview' | translate: { name: r.employeeName }"
+                        ><lucide-icon name="chevron-right" [size]="16"
+                      /></a>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6" class="hum-onb-muted">{{ 'humano.performance.cycle.noMatch' | translate }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+
+      <aside class="hum-onb-aside">
+        <section class="hum-onb-panel">
+          <h3 class="hum-onb-panel__title">
+            <lucide-icon name="calendar" [size]="15" />{{ 'humano.performance.cycle.dates' | translate }}
+          </h3>
+          <dl class="hum-onb-dates">
+            <dt>{{ 'humano.performance.form.opens' | translate }}</dt>
+            <dd class="tabular-nums">{{ c.startDate | date: 'mediumDate' }}</dd>
+            <dt>{{ 'humano.performance.form.deadline.self' | translate }}</dt>
+            <dd class="tabular-nums">{{ c.deadlines.selfAssessmentDeadline | date: 'mediumDate' }}</dd>
+            <dt>{{ 'humano.performance.form.deadline.manager' | translate }}</dt>
+            <dd class="tabular-nums">{{ c.deadlines.managerReviewDeadline | date: 'mediumDate' }}</dd>
+            @if (c.deadlines.calibrationDeadline) {
+              <dt>{{ 'humano.performance.form.deadline.calibration' | translate }}</dt>
+              <dd class="tabular-nums">{{ c.deadlines.calibrationDeadline | date: 'mediumDate' }}</dd>
+            }
+            <dt>{{ 'humano.performance.form.deadline.feedback' | translate }}</dt>
+            <dd class="tabular-nums">{{ c.deadlines.feedbackDeadline | date: 'mediumDate' }}</dd>
+            <dt>{{ 'humano.performance.form.closes' | translate }}</dt>
+            <dd class="tabular-nums">{{ c.endDate | date: 'mediumDate' }}</dd>
+          </dl>
+        </section>
+
+        <section class="hum-onb-panel">
+          <h3 class="hum-onb-panel__title">
+            <lucide-icon name="users" [size]="15" />{{ 'humano.performance.cycle.feedbackTitle' | translate }}
+          </h3>
+          @if (c.feedback.maxContributors > 0) {
+            <dl class="hum-onb-dates">
+              @if (c.progress.feedbackRequested !== null) {
+                <dt>{{ 'humano.performance.cycle.feedbackReceived' | translate }}</dt>
+                <dd class="tabular-nums">{{ c.progress.feedbackReceived }} / {{ c.progress.feedbackRequested }}</dd>
+              }
+              <dt>{{ 'humano.performance.form.visibility' | translate }}</dt>
+              <dd>{{ 'humano.performance.form.feedbackVisibility.' + c.feedback.visibility | translate }}</dd>
+              <dt>{{ 'humano.performance.cycle.nominations' | translate }}</dt>
+              <dd>
+                {{ (c.feedback.allowNominations ? 'humano.performance.cycle.allowed' : 'humano.performance.cycle.notAllowed') | translate }}
+              </dd>
+              <dt>{{ 'humano.performance.form.maxContributors' | translate }}</dt>
+              <dd class="tabular-nums">{{ c.feedback.maxContributors }}</dd>
+            </dl>
+          } @else {
+            <p class="hum-onb-muted">{{ 'humano.performance.cycle.feedbackOff' | translate }}</p>
+          }
+        </section>
+
+        <section class="hum-onb-panel">
+          <h3 class="hum-onb-panel__title">
+            <lucide-icon name="shield-check" [size]="15" />{{ 'humano.performance.form.signOff' | translate }}
+          </h3>
+          @if (c.requiresSignOff) {
+            <dl class="hum-onb-dates">
+              @if (c.progress.signOffPending !== null) {
+                <dt>{{ 'humano.performance.signOff.short.PENDING' | translate }}</dt>
+                <dd class="tabular-nums">{{ c.progress.signOffPending }}</dd>
+                <dt>{{ 'humano.performance.signOff.short.RETURNED' | translate }}</dt>
+                <dd class="tabular-nums">{{ c.progress.signOffReturned }}</dd>
+              }
+            </dl>
+            <p class="hum-onb-muted">{{ 'humano.performance.cycle.signOffOn' | translate }}</p>
+          } @else {
+            <p class="hum-onb-muted">{{ 'humano.performance.cycle.signOffOff' | translate }}</p>
+          }
+        </section>
+
+        @if (distribution().total) {
+          <section class="hum-onb-panel">
+            <h3 class="hum-onb-panel__title">
+              <lucide-icon name="bar-chart-3" [size]="15" />{{ 'humano.performance.cycle.distribution' | translate }}
+            </h3>
+            <ul class="hum-perf-dist">
+              @for (b of distribution().bars; track b.rating) {
+                <li [title]="'humano.performance.rating.' + b.rating | translate">
+                  <span class="hum-perf-dist__rating tabular-nums">{{ b.rating }}</span>
+                  <span class="hum-perf-dist__track"><span class="hum-perf-dist__bar" [style.width.%]="b.pct"></span></span>
+                  <span class="hum-perf-dist__count tabular-nums">{{ b.count }} · {{ b.share }}%</span>
+                </li>
+              }
+            </ul>
+            <p class="hum-onb-muted">{{ 'humano.performance.cycle.distributionHint' | translate: { count: distribution().total } }}</p>
+          </section>
+        }
+
+        @if (c.progress.departmentProgress?.length) {
+          <section class="hum-onb-panel">
+            <h3 class="hum-onb-panel__title">
+              <lucide-icon name="building-2" [size]="15" />{{ 'humano.performance.cycle.byDepartment' | translate }}
+            </h3>
+            <ul class="hum-perf-depts">
+              @for (d of c.progress.departmentProgress; track d.departmentId) {
+                <li>
+                  <div class="hum-perf-depts__head">
+                    <span>{{ d.departmentName ?? ('humano.performance.cycle.noDepartment' | translate) }}</span>
+                    <span class="tabular-nums hum-onb-muted">{{ d.completedReviews }} / {{ d.totalEmployees }}</span>
+                  </div>
+                  <hum-progress [value]="d.completionPercentage" [tone]="d.completionPercentage === 100 ? 'success' : 'brand'" />
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </aside>
+    </div>
+
+    @if (chosen(); as n) {
+      <hum-dialog
+        [open]="true"
+        [title]="'humano.performance.cycle.next.' + n.key + '.title' | translate"
+        [description]="'humano.performance.cycle.next.' + n.key + '.body' | translate: { count: c.progress.totalEmployees }"
+        hasFooter
+        (closed)="chosen.set(null)"
+        [hasBody]="false"
+      >
+        <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+          <hum-button variant="ghost" (click)="chosen.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+          <hum-button variant="primary" [icon]="n.icon" [loading]="busy()" (click)="runChosen()">{{
+            'humano.performance.cycle.next.' + n.key + '.action' | translate
+          }}</hum-button>
+        </div>
+      </hum-dialog>
+    }
+
+    @if (canConfigure && c.phase === 'DRAFT') {
+      <hum-review-cycle-form [open]="formOpen()" [cycle]="c" (saved)="edited($event)" (closed)="formOpen.set(false)" />
+    }
+  }
+</div>
+
+<hum-dialog
+  [open]="!!excluding()"
+  [title]="'humano.performance.cycle.membership.excludeTitle' | translate"
+  [description]="'humano.performance.cycle.membership.excludeBody' | translate: { name: excluding()?.employeeName }"
+  hasFooter
+  (closed)="excluding.set(null)"
+>
+  <hum-form-field
+    [label]="'humano.performance.cycle.membership.reason' | translate"
+    [hint]="'humano.performance.cycle.membership.reasonHint' | translate"
+    controlId="rc-exclude-reason"
+    required
+  >
+    <hum-textarea [rows]="3" [invalid]="reason().length > reasonMax" [ngModel]="reason()" (ngModelChange)="reason.set($event ?? '')" />
+  </hum-form-field>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="excluding.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button
+      variant="destructive"
+      icon="user-minus"
+      [loading]="busy()"
+      [disabled]="!reason().trim() || reason().length > reasonMax"
+      (click)="exclude()"
+      >{{ 'humano.performance.cycle.membership.exclude' | translate }}</hum-button
+    >
+  </div>
+</hum-dialog>
+
+<hum-dialog
+  [open]="adding()"
+  [title]="'humano.performance.cycle.membership.addTitle' | translate"
+  [description]="'humano.performance.cycle.membership.addBody' | translate"
+  hasFooter
+  (closed)="adding.set(false)"
+>
+  @if (adding()) {
+    <hum-form-field [label]="'humano.performance.form.people' | translate">
+      @for (k of [pickerKey()]; track k) {
+        <hum-autocomplete
+          [searchFn]="searchAddable"
+          [placeholder]="'humano.onboarding.employeePlaceholder' | translate"
+          [loadingText]="'humano.employeeForm.searching' | translate"
+          [noResultsText]="'humano.performance.cycle.membership.noneAddable' | translate"
+          [ngModel]="''"
+          (ngModelChange)="addPerson($event)"
+        />
+      }
+    </hum-form-field>
+    @if (people().length) {
+      <div class="hum-chips">
+        @for (p of people(); track p.id) {
+          <button
+            type="button"
+            class="hum-chip is-active"
+            [attr.aria-label]="'humano.performance.form.removePerson' | translate: { name: p.name }"
+            (click)="removePerson(p.id)"
+          >
+            {{ p.name }}<lucide-icon name="x" [size]="12" />
+          </button>
+        }
+      </div>
+    }
+  }
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="adding.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="user-plus" [loading]="busy()" [disabled]="!people().length" (click)="addPeople()">{{
+      'humano.performance.cycle.membership.addSave' | translate: { count: people().length }
+    }}</hum-button>
+  </div>
+</hum-dialog>
+
+<hum-dialog
+  [open]="movingBack()"
+  [title]="
+    'humano.performance.cycle.moveBack.title' | translate: { phase: ('humano.performance.phaseShort.' + previousPhase() | translate) }
+  "
+  [description]="'humano.performance.cycle.moveBack.body' | translate"
+  hasFooter
+  (closed)="movingBack.set(false)"
+>
+  @if (movingBack()) {
+    <hum-form-field [label]="'humano.performance.cycle.membership.reason' | translate" controlId="rc-back-reason" required>
+      <hum-textarea [rows]="2" [invalid]="reason().length > reasonMax" [ngModel]="reason()" (ngModelChange)="reason.set($event ?? '')" />
+    </hum-form-field>
+    @for (d of backDeadlines(); track d.field; let first = $first) {
+      <hum-form-field
+        [label]="'humano.performance.form.deadline.' + d.label | translate"
+        [hint]="first ? ('humano.performance.cycle.moveBack.deadlineHint' | translate) : ''"
+        [controlId]="'rc-back-' + d.field"
+        [required]="first"
+      >
+        <hum-input
+          [inputId]="'rc-back-' + d.field"
+          type="date"
+          [invalid]="first && (!d.value || d.value < today)"
+          [ngModel]="d.value"
+          (ngModelChange)="setBackDeadline(d.field, $event ?? '')"
+        />
+      </hum-form-field>
+    }
+  }
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="movingBack.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button
+      variant="primary"
+      icon="rotate-ccw"
+      [loading]="busy()"
+      [disabled]="!reason().trim() || reason().length > reasonMax || !backDeadlines()[0]?.value || backDeadlines()[0].value < today"
+      (click)="moveBack()"
+      >{{ 'humano.performance.cycle.moveBack.confirm' | translate }}</hum-button
+    >
+  </div>
+</hum-dialog>
+
+<hum-dialog
+  [open]="!!assigning()"
+  [title]="'humano.performance.cycle.assignTitle' | translate"
+  [description]="'humano.performance.cycle.assignBody' | translate: { name: assigning()?.employeeName }"
+  hasFooter
+  (closed)="assigning.set(null)"
+>
+  @if (assigning(); as a) {
+    <hum-form-field [label]="'humano.performance.cycle.col.reviewer' | translate" required>
+      <hum-autocomplete
+        [searchFn]="searchEmployees"
+        [initialOption]="a.reviewerId ? { value: a.reviewerId, label: a.reviewerName ?? '' } : null"
+        [placeholder]="'humano.onboarding.employeePlaceholder' | translate"
+        [loadingText]="'humano.employeeForm.searching' | translate"
+        [noResultsText]="'humano.employeeForm.noResults' | translate"
+        [ngModel]="reviewerId()"
+        (ngModelChange)="reviewerId.set($event ?? '')"
+      />
+    </hum-form-field>
+  }
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="assigning.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button
+      variant="primary"
+      icon="check"
+      [loading]="busy()"
+      [disabled]="!reviewerId() || reviewerId() === assigning()?.reviewerId || reviewerId() === assigning()?.employeeId"
+      (click)="assign()"
+      >{{ 'humano.performance.cycle.assignSave' | translate }}</hum-button
+    >
+  </div>
+</hum-dialog>

@@ -34,9 +34,9 @@
         <section class="hum-card hum-insights__card">
           <header class="hum-insights__head">
             <span class="hum-records__icon"><lucide-icon name="message-square-quote" [size]="16" /></span>
-            <h3>{{ 'humano.insights.perf.latestReview' | translate }}</h3>
+            <h3>{{ r.cycleName ?? ('humano.insights.perf.latestReview' | translate) }}</h3>
             <span class="hum-records__spacer"></span>
-            <time class="hum-vline__date">{{ r.reviewDate | date: 'mediumDate' }}</time>
+            <time class="hum-vline__date">{{ r.sharedAt ?? r.reviewDate | date: 'mediumDate' }}</time>
           </header>
           <div class="hum-review">
             <div class="hum-stars" [attr.aria-label]="r.rating + '/5'">
@@ -48,11 +48,40 @@
             @if (r.comments) {
               <blockquote class="hum-review__quote">{{ r.comments }}</blockquote>
             }
+            @if (r.managerAssessment || r.selfAssessment || r.feedbackNotes) {
+              <dl class="hum-perf-answers hum-review__sections">
+                @if (r.managerAssessment?.strengths; as v) {
+                  <dt>{{ 'humano.insights.perf.strengths' | translate }}</dt>
+                  <dd>{{ v }}</dd>
+                }
+                @if (r.managerAssessment?.areasForImprovement; as v) {
+                  <dt>{{ 'humano.insights.perf.areasForImprovement' | translate }}</dt>
+                  <dd>{{ v }}</dd>
+                }
+                @if (r.managerAssessment?.developmentRecommendations; as v) {
+                  <dt>{{ 'humano.insights.perf.development' | translate }}</dt>
+                  <dd>{{ v }}</dd>
+                }
+                @if (r.feedbackNotes) {
+                  <dt>{{ 'humano.insights.perf.feedbackNotes' | translate }}</dt>
+                  <dd>{{ r.feedbackNotes }}</dd>
+                }
+                @if (r.selfAssessment?.achievements; as v) {
+                  <dt>{{ 'humano.insights.perf.selfAchievements' | translate }}</dt>
+                  <dd>{{ v }}</dd>
+                }
+              </dl>
+            }
             @if (r.reviewerName) {
               <div class="hum-review__by">
                 <hum-avatar [name]="r.reviewerName" size="sm" />
                 <span>{{ 'humano.insights.perf.reviewedBy' | translate: { name: r.reviewerName } }}</span>
               </div>
+            }
+            @if (r.cycleId && canOpenReview()) {
+              <a class="hum-review__open" [routerLink]="['/reviews', r.id]"
+                >{{ 'humano.insights.perf.openReview' | translate }}<lucide-icon name="arrow-right" [size]="14"
+              /></a>
             }
           </div>
         </section>

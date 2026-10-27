@@ -73,6 +73,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -96,6 +97,7 @@ class EmployeeLifecycleWorkflowServiceTest {
     private final LeaveRequestRepository leave = mock(LeaveRequestRepository.class);
     private final TerminationReasonRepository terminationReasons = mock(TerminationReasonRepository.class);
     private final PersistentTokenRepository rememberedSignIns = mock(PersistentTokenRepository.class);
+    private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
     private final EmployeeLifecycleWorkflowService service = new EmployeeLifecycleWorkflowService(
         workflows,
         mock(NotificationOrchestrationService.class),
@@ -120,7 +122,8 @@ class EmployeeLifecycleWorkflowServiceTest {
             mock(TenantIteration.class),
             new SimpleMeterRegistry(),
             entitlements
-        )
+        ),
+        eventPublisher
     );
 
     private static final LocalDate START = LocalDate.of(2026, 10, 1);

@@ -29,6 +29,7 @@ const TYPE_STYLE: Partial<Record<ApprovalType, { icon: string; color: string }>>
   [ApprovalType.LEAVE_REQUEST]: { icon: 'palmtree', color: 'var(--brand)' },
   [ApprovalType.EXPENSE_CLAIM]: { icon: 'receipt', color: 'var(--success-solid)' },
   [ApprovalType.OVERTIME_REQUEST]: { icon: 'clock', color: 'var(--warning-solid)' },
+  [ApprovalType.PERFORMANCE_REVIEW]: { icon: 'award', color: 'var(--info-solid)' },
 };
 
 /**
@@ -121,6 +122,7 @@ export default class ApprovalsComponent {
     });
   });
   protected readonly decisions = ApprovalDecision;
+  protected readonly types = ApprovalType;
 
   constructor() {
     this.currentEmployee.resolve();

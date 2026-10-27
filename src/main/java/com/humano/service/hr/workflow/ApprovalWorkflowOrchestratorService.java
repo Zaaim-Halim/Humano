@@ -10,9 +10,11 @@ import com.humano.dto.hr.workflow.responses.PendingApprovalSummary;
 import com.humano.repository.hr.ExpenseClaimRepository;
 import com.humano.repository.hr.LeaveRequestRepository;
 import com.humano.repository.hr.OvertimeRecordRepository;
+import com.humano.repository.hr.PerformanceReviewRepository;
 import com.humano.repository.hr.workflow.ApprovalChainConfigRepository;
 import com.humano.repository.hr.workflow.ApprovalRequestRepository;
 import com.humano.repository.shared.EmployeeRepository;
+import com.humano.security.SecurityUtils;
 import com.humano.service.billing.entitlement.EntitlementService;
 import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.errors.BadRequestAlertException;
@@ -29,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,6 +82,11 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>{@code LEAVE_REQUEST} → {@code LeaveRequest.status} = APPROVED / REJECTED.</li>
  *   <li>{@code EXPENSE_CLAIM} → {@code ExpenseClaim.status} = APPROVED / REJECTED.</li>
  *   <li>{@code OVERTIME_REQUEST} → {@code OvertimeRecord.approvalStatus} = APPROVED / REJECTED.</li>
+ *   <li>{@code PERFORMANCE_REVIEW} → {@code PerformanceReview.signOffStatus} = APPROVED / RETURNED
+ *       (only while the review waits on its sign-off). Asking for more information returns the
+ *       review too, and returning needs a comment: the reviewer revises and resubmits. The
+ *       sign-off can't be withdrawn, and neither the reviewer nor the reviewed employee may decide
+ *       it, whatever their oversight rights.</li>
  *   <li>Other {@code ApprovalType} values log "Unknown approval type" at WARN — no entity is touched.</li>
  * </ul>
  *
@@ -122,6 +130,7 @@ public class ApprovalWorkflowOrchestratorService {
     private final LeaveRequestRepository leaveRequestRepository;
     private final ExpenseClaimRepository expenseClaimRepository;
     private final OvertimeRecordRepository overtimeRecordRepository;
+    private final PerformanceReviewRepository performanceReviewRepository;
     private final EntitlementService entitlementService;
 
     public ApprovalWorkflowOrchestratorService(
@@ -134,6 +143,7 @@ public class ApprovalWorkflowOrchestratorService {
         LeaveRequestRepository leaveRequestRepository,
         ExpenseClaimRepository expenseClaimRepository,
         OvertimeRecordRepository overtimeRecordRepository,
+        PerformanceReviewRepository performanceReviewRepository,
         EntitlementService entitlementService
     ) {
         this.workflowStateManager = workflowStateManager;
@@ -145,6 +155,7 @@ public class ApprovalWorkflowOrchestratorService {
         this.leaveRequestRepository = leaveRequestRepository;
         this.expenseClaimRepository = expenseClaimRepository;
         this.overtimeRecordRepository = overtimeRecordRepository;
+        this.performanceReviewRepository = performanceReviewRepository;
         this.entitlementService = entitlementService;
     }
 
@@ -270,6 +281,21 @@ public class ApprovalWorkflowOrchestratorService {
 
         WorkflowInstance workflow = approvalRequest.getWorkflowInstance();
 
+        if (approvalRequest.getApprovalType() == ApprovalType.PERFORMANCE_REVIEW) {
+            requireOutsideReview(approvalRequest);
+            boolean returning =
+                decision.decision() == ApprovalDecisionRequest.ApprovalDecision.REJECT ||
+                decision.decision() == ApprovalDecisionRequest.ApprovalDecision.REQUEST_MORE_INFO;
+            if (returning && (decision.comments() == null || decision.comments().isBlank())) {
+                throw new BadRequestAlertException("Say what the reviewer should change", "approval", "returncomment");
+            }
+            if (decision.decision() == ApprovalDecisionRequest.ApprovalDecision.REQUEST_MORE_INFO) {
+                // No on-hold state for a review: the reviewer revises it and sends it again.
+                handleRejection(approvalRequest, workflow, decision.comments());
+                return getApprovalStatus(approvalRequestId);
+            }
+        }
+
         switch (decision.decision()) {
             case APPROVE -> handleApproval(approvalRequest, workflow, decision.comments());
             case REJECT -> handleRejection(approvalRequest, workflow, decision.comments());
@@ -292,6 +318,14 @@ public class ApprovalWorkflowOrchestratorService {
 
         if (approvalRequest.getStatus() != WorkflowStatus.PENDING_APPROVAL) {
             throw new BadRequestAlertException("Only pending approvals can be withdrawn", "approval", "cannotwithdraw");
+        }
+        if (approvalRequest.getApprovalType() == ApprovalType.PERFORMANCE_REVIEW) {
+            // Withdrawing would leave the review waiting forever; the reviewer revises it instead.
+            throw new BadRequestAlertException(
+                "A review's sign-off can't be withdrawn; revise the review to send it again",
+                "approval",
+                "cannotwithdraw"
+            );
         }
 
         approvalRequest.setStatus(WorkflowStatus.CANCELLED);
@@ -343,6 +377,23 @@ public class ApprovalWorkflowOrchestratorService {
             );
             log.info("Closed pending approval {} for {} {} ({})", approvalRequest.getId(), type, entityId, outcome);
         }
+    }
+
+    /**
+     * The first approver a request of {@code type} from {@code requestor} would go to — the same
+     * resolution {@link #submitForApproval} uses — or empty when nobody fits (e.g. no manager).
+     */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public Optional<Employee> firstApprover(ApprovalType type, Employee requestor) {
+        List<ApprovalChainConfig> chain = getApprovalChain(
+            type,
+            null,
+            requestor.getDepartment() != null ? requestor.getDepartment().getId() : null
+        );
+        if (chain.isEmpty()) {
+            chain = createDefaultApprovalChain(type);
+        }
+        return Optional.ofNullable(determineApprover(chain.get(0), requestor));
     }
 
     /**
@@ -552,11 +603,19 @@ public class ApprovalWorkflowOrchestratorService {
         int totalLevels = approvalChain.isEmpty() ? 1 : approvalChain.size();
 
         if (currentLevel < totalLevels) {
-            // Move to next approval level
-            ApprovalChainConfig nextLevelConfig = approvalChain.get(currentLevel);
-            Employee nextApprover = determineApprover(nextLevelConfig, approvalRequest.getRequestor());
+            // Move to next approval level; a review's sign-off skips levels landing on someone party to it
+            int nextLevel = currentLevel;
+            Employee nextApprover = determineApprover(approvalChain.get(nextLevel), approvalRequest.getRequestor());
+            while (nextApprover != null && isPartyToReview(approvalRequest, nextApprover)) {
+                log.info("Skipping level {} of approval {}: its approver is party to the review", nextLevel + 1, approvalRequest.getId());
+                nextLevel++;
+                nextApprover = nextLevel < totalLevels
+                    ? determineApprover(approvalChain.get(nextLevel), approvalRequest.getRequestor())
+                    : null;
+            }
 
             if (nextApprover != null) {
+                approvalRequest.setCurrentLevel(nextLevel);
                 approvalRequest.moveToNextLevel(nextApprover);
                 approvalRequest.setApproverComments(comments);
                 approvalRequestRepository.save(approvalRequest);
@@ -564,8 +623,8 @@ public class ApprovalWorkflowOrchestratorService {
                 // Update workflow
                 workflowStateManager.transitionState(
                     workflow.getId(),
-                    "PENDING_LEVEL_" + (currentLevel + 1),
-                    "Approved at level " + currentLevel + ", awaiting level " + (currentLevel + 1)
+                    "PENDING_LEVEL_" + (nextLevel + 1),
+                    "Approved at level " + currentLevel + ", awaiting level " + (nextLevel + 1)
                 );
                 workflowStateManager.assignWorkflow(workflow.getId(), nextApprover.getId());
 
@@ -576,13 +635,13 @@ public class ApprovalWorkflowOrchestratorService {
                     "Approval request from " +
                     approvalRequest.getRequestor().getFirstName() +
                     " requires your approval (Level " +
-                    (currentLevel + 1) +
+                    (nextLevel + 1) +
                     ")",
                     approvalRequest.getEntityId(),
                     approvalRequest.getEntityType()
                 );
 
-                log.info("Moved approval {} to level {}", approvalRequest.getId(), currentLevel + 1);
+                log.info("Moved approval {} to level {}", approvalRequest.getId(), nextLevel + 1);
                 return;
             }
         }
@@ -598,10 +657,13 @@ public class ApprovalWorkflowOrchestratorService {
         workflowStateManager.completeWorkflow(workflow.getId(), "APPROVED");
 
         // Notify requestor
+        boolean review = approvalRequest.getApprovalType() == ApprovalType.PERFORMANCE_REVIEW;
         notificationService.notifyApprovalDecision(
             approvalRequest.getRequestor().getId(),
-            "Request Approved",
-            "Your " + approvalRequest.getApprovalType().name().toLowerCase().replace("_", " ") + " has been approved.",
+            review ? "Performance Review Signed Off" : "Request Approved",
+            review
+                ? "The performance review you wrote has been signed off."
+                : "Your " + approvalRequest.getApprovalType().name().toLowerCase().replace("_", " ") + " has been approved.",
             approvalRequest.getEntityId(),
             approvalRequest.getEntityType(),
             true
@@ -621,10 +683,16 @@ public class ApprovalWorkflowOrchestratorService {
         workflowStateManager.completeWorkflow(workflow.getId(), "REJECTED");
 
         // Notify requestor
+        boolean review = approvalRequest.getApprovalType() == ApprovalType.PERFORMANCE_REVIEW;
         notificationService.notifyApprovalDecision(
             approvalRequest.getRequestor().getId(),
-            "Request Rejected",
-            "Your " + approvalRequest.getApprovalType().name().toLowerCase().replace("_", " ") + " has been rejected. Reason: " + comments,
+            review ? "Performance Review Returned" : "Request Rejected",
+            review
+                ? "The performance review you wrote was returned for changes: " + comments + " Revise it and submit it again."
+                : "Your " +
+                approvalRequest.getApprovalType().name().toLowerCase().replace("_", " ") +
+                " has been rejected. Reason: " +
+                comments,
             approvalRequest.getEntityId(),
             approvalRequest.getEntityType(),
             false
@@ -648,6 +716,42 @@ public class ApprovalWorkflowOrchestratorService {
         );
 
         log.info("Requested more info for approval request {}", approvalRequest.getId());
+    }
+
+    /**
+     * Nobody decides the sign-off of a review they wrote or that is about them — not even with
+     * oversight rights, which otherwise let HR managers decide for anyone.
+     */
+    private void requireOutsideReview(ApprovalRequest approvalRequest) {
+        UUID actorId = SecurityUtils.getCurrentUserId().orElse(null);
+        if (actorId == null) {
+            return;
+        }
+        boolean wroteIt = approvalRequest.getRequestor() != null && actorId.equals(approvalRequest.getRequestor().getId());
+        boolean aboutThem = performanceReviewRepository
+            .findById(approvalRequest.getEntityId())
+            .map(review -> actorId.equals(review.getEmployee().getId()))
+            .orElse(false);
+        if (wroteIt || aboutThem) {
+            throw new AccessDeniedException("You can't sign off a review you wrote or that is about you");
+        }
+    }
+
+    /**
+     * Whether {@code approver} wrote the review a sign-off is about, or is the reviewed employee —
+     * people {@link #requireOutsideReview} never lets decide. Always false for other approval types.
+     */
+    private boolean isPartyToReview(ApprovalRequest approvalRequest, Employee approver) {
+        if (approvalRequest.getApprovalType() != ApprovalType.PERFORMANCE_REVIEW) {
+            return false;
+        }
+        if (approvalRequest.getRequestor() != null && approver.getId().equals(approvalRequest.getRequestor().getId())) {
+            return true;
+        }
+        return performanceReviewRepository
+            .findById(approvalRequest.getEntityId())
+            .map(review -> approver.getId().equals(review.getEmployee().getId()))
+            .orElse(false);
     }
 
     private void updateEntityStatus(ApprovalRequest approvalRequest, boolean approved) {
@@ -677,6 +781,18 @@ public class ApprovalWorkflowOrchestratorService {
                         or.setApprovalStatus(approved ? OvertimeApprovalStatus.APPROVED : OvertimeApprovalStatus.REJECTED);
                         or.setApprovedBy(approvalRequest.getApprover());
                         overtimeRecordRepository.save(or);
+                    });
+            }
+            case PERFORMANCE_REVIEW -> {
+                performanceReviewRepository
+                    .findById(approvalRequest.getEntityId())
+                    .filter(review -> review.getSignOffStatus() == SignOffStatus.PENDING)
+                    .ifPresent(review -> {
+                        review.setSignOffStatus(approved ? SignOffStatus.APPROVED : SignOffStatus.RETURNED);
+                        review.setSignOffComment(approvalRequest.getApproverComments());
+                        review.setSignOffDecidedAt(Instant.now());
+                        review.setSignOffDecidedBy(approvalRequest.getApprover());
+                        performanceReviewRepository.save(review);
                     });
             }
             default -> log.warn("Unknown approval type: {}", approvalRequest.getApprovalType());
@@ -746,6 +862,7 @@ public class ApprovalWorkflowOrchestratorService {
             case TRAINING_REQUEST -> WorkflowType.TRAINING_ENROLLMENT;
             case POSITION_TRANSFER -> WorkflowType.TRANSFER;
             case TIMESHEET_APPROVAL -> WorkflowType.TIMESHEET_APPROVAL;
+            case PERFORMANCE_REVIEW -> WorkflowType.PERFORMANCE_REVIEW_SIGN_OFF;
             default -> WorkflowType.LEAVE_APPROVAL;
         };
     }
@@ -758,11 +875,15 @@ public class ApprovalWorkflowOrchestratorService {
             case TRAINING_REQUEST -> "Training Request Pending Approval";
             case POSITION_TRANSFER -> "Transfer Request Pending Approval";
             case TIMESHEET_APPROVAL -> "Timesheet Pending Approval";
+            case PERFORMANCE_REVIEW -> "Performance Review Awaiting Sign-off";
             default -> "Request Pending Approval";
         };
     }
 
     private String buildApprovalNotificationMessage(SubmitApprovalRequest request, Employee requestor) {
+        if (request.approvalType() == ApprovalType.PERFORMANCE_REVIEW && request.comments() != null) {
+            return request.comments();
+        }
         StringBuilder message = new StringBuilder();
         message.append(requestor.getFirstName()).append(" ").append(requestor.getLastName());
         message.append(" has submitted a ").append(request.approvalType().name().toLowerCase().replace("_", " "));
@@ -838,6 +959,17 @@ public class ApprovalWorkflowOrchestratorService {
                 case EXPENSE_CLAIM -> "Expense claim" +
                 (request.getAmount() != null ? " - $" + String.format("%.2f", request.getAmount()) : "");
                 case OVERTIME_REQUEST -> "Overtime request" + (request.getAmount() != null ? " - " + request.getAmount() + " hours" : "");
+                case PERFORMANCE_REVIEW -> performanceReviewRepository
+                    .findById(request.getEntityId())
+                    .map(
+                        r ->
+                            "Review of " +
+                            r.getEmployee().getFirstName() +
+                            " " +
+                            r.getEmployee().getLastName() +
+                            (r.getCycle() != null ? " - " + r.getCycle().getName() : "")
+                    )
+                    .orElse("Performance review");
                 default -> request.getEntityType();
             };
 

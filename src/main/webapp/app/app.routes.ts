@@ -256,6 +256,106 @@ const routes: Routes = [
         data: { permissions: [Permission.VIEW_OFFBOARDING, Permission.MANAGE_OFFBOARDING] },
       },
       {
+        // Everyone: their own review and the ones they write (the API checks each review).
+        path: 'reviews',
+        title: 'humano.nav.reviews',
+        loadComponent: () => import('./features/employee/performance-reviews/performance-reviews.component'),
+        canActivate: [UserRouteAccessService],
+      },
+      {
+        // A colleague giving feedback on someone's review (the API checks it's theirs).
+        path: 'reviews/feedback/:requestId',
+        title: 'humano.nav.reviews',
+        loadComponent: () => import('./features/employee/review-feedback/review-feedback.component'),
+        canActivate: [UserRouteAccessService],
+      },
+      {
+        path: 'reviews/:id',
+        title: 'humano.nav.reviews',
+        loadComponent: () => import('./features/employee/performance-review/performance-review.component'),
+        canActivate: [UserRouteAccessService],
+      },
+      {
+        // Everyone: their own goals and their direct reports' (the API checks the reporting line).
+        path: 'goals',
+        title: 'humano.nav.goals',
+        loadComponent: () => import('./features/employee/goals/goals.component'),
+        canActivate: [UserRouteAccessService],
+      },
+      {
+        // The plans one runs, and one's own once shared (the API checks each plan).
+        path: 'improvement-plans',
+        title: 'humano.improvementPlans.title',
+        loadComponent: () => import('./features/employee/improvement-plans/improvement-plans.component'),
+        canActivate: [UserRouteAccessService],
+      },
+      {
+        path: 'improvement-plans/:id',
+        title: 'humano.improvementPlans.title',
+        loadComponent: () => import('./features/employee/improvement-plans/improvement-plan.component'),
+        canActivate: [UserRouteAccessService],
+      },
+      {
+        path: 'performance-analytics',
+        title: 'humano.performanceAnalytics.title',
+        loadComponent: () => import('./features/admin/performance-analytics/performance-analytics.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.VIEW_PERFORMANCE_REVIEWS] },
+      },
+      {
+        // Pay decisions after a regular cycle; the cycle is the `cycle` query parameter.
+        path: 'compensation-reviews',
+        title: 'humano.compensationReview.title',
+        loadComponent: () => import('./features/admin/compensation-review/compensation-review.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.MANAGE_COMPENSATION] },
+      },
+      {
+        path: 'review-cycles',
+        title: 'humano.nav.reviewCycles',
+        loadComponent: () => import('./features/admin/review-cycles/review-cycles.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.VIEW_PERFORMANCE_REVIEWS] },
+      },
+      {
+        // Read-only without MANAGE_PERFORMANCE_FRAMEWORKS.
+        path: 'performance-frameworks',
+        title: 'humano.performance.framework.title',
+        loadComponent: () => import('./features/admin/performance-frameworks/performance-frameworks.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.MANAGE_PERFORMANCE_FRAMEWORKS, Permission.VIEW_PERFORMANCE_REVIEWS] },
+      },
+      {
+        // Before `review-cycles/:id`, so "calendar" isn't read as a cycle id.
+        path: 'review-cycles/calendar',
+        title: 'humano.performance.calendar.title',
+        loadComponent: () => import('./features/admin/review-calendar/review-calendar.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.CONFIGURE_PERFORMANCE_CYCLES] },
+      },
+      {
+        // Before `review-cycles/:id`, like the calendar.
+        path: 'review-cycles/retention',
+        title: 'humano.performance.retention.title',
+        loadComponent: () => import('./features/admin/review-retention/review-retention.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.CONFIGURE_PERFORMANCE_CYCLES] },
+      },
+      {
+        path: 'review-cycles/:id/calibration',
+        title: 'humano.performance.calibration.title',
+        loadComponent: () => import('./features/admin/review-cycle-calibration/review-cycle-calibration.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.VIEW_PERFORMANCE_REVIEWS] },
+      },
+      {
+        path: 'review-cycles/:id',
+        title: 'humano.nav.reviewCycles',
+        loadComponent: () => import('./features/admin/review-cycle-detail/review-cycle-detail.component'),
+        canActivate: [UserRouteAccessService],
+        data: { permissions: [Permission.VIEW_PERFORMANCE_REVIEWS] },
+      },
+      {
         path: 'org',
         title: 'humano.nav.org',
         loadComponent: () => import('./features/admin/org-units/org-units.component'),

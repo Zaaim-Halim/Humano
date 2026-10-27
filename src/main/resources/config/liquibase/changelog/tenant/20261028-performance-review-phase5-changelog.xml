@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Cycle membership: a review taken out of its cycle (by HR with a reason, or because the
+         employee left) has status EXCLUDED and keeps when, why and by whom. Nothing is deleted, so
+         HR can put it back while the cycle runs. excluded_by_id is empty when leaving excluded it. -->
+    <changeSet id="20261028-performance-review-exclusion" author="halimzaaim">
+        <addColumn tableName="performance_review">
+            <column name="excluded_at" type="DATETIME"/>
+            <column name="exclusion_reason" type="VARCHAR(500)"/>
+            <column name="excluded_by_id" type="${uuidType}"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="performance_review" baseColumnNames="excluded_by_id"
+                                 constraintName="fk_performance_review_excluded_by"
+                                 referencedTableName="employee" referencedColumnNames="id"/>
+    </changeSet>
+</databaseChangeLog>

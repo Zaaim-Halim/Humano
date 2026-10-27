@@ -1,0 +1,279 @@
+<div class="hum-page">
+  <a class="hum-onb-back" [routerLink]="['/review-cycles', id()]"
+    ><lucide-icon name="arrow-left" [size]="14" />{{ 'humano.performance.calibration.back' | translate }}</a
+  >
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (!cycle() || reviews() === null) {
+    <hum-skeleton [height]="120" />
+    <hum-skeleton [height]="320" />
+    <hum-skeleton-row /><hum-skeleton-row />
+  } @else {
+    @let c = cycle()!;
+
+    <section class="hum-onb-hero">
+      <div class="hum-onb-hero__top">
+        <div class="hum-onb-hero__who">
+          <p class="hum-perf-eyebrow">{{ c.name }}</p>
+          <h1 class="hum-onb-hero__name">{{ 'humano.performance.calibration.title' | translate }}</h1>
+          <p class="hum-onb-hero__role">
+            <span>{{ 'humano.performance.calibration.lead' | translate }}</span>
+          </p>
+        </div>
+        <div class="hum-onb-hero__actions">
+          <hum-badge [status]="c.phase" />
+        </div>
+      </div>
+    </section>
+
+    @if (!open()) {
+      <hum-alert tone="info" [title]="'humano.performance.calibration.readOnlyTitle' | translate" style="margin-top: var(--space-5)">{{
+        (canCalibrate ? 'humano.performance.calibration.readOnlyPhase' : 'humano.performance.calibration.readOnlyRights') | translate
+      }}</hum-alert>
+    }
+    @if (blocked()) {
+      <hum-alert
+        tone="warning"
+        [title]="'humano.performance.calibration.blocked' | translate: { count: blocked() }"
+        style="margin-top: var(--space-3)"
+      />
+    }
+
+    <div class="hum-perf-calib__filters">
+      <hum-form-field [label]="'humano.performance.calibration.department' | translate">
+        <hum-select
+          [options]="departmentOptions()"
+          [ariaLabel]="'humano.performance.calibration.department' | translate"
+          [ngModel]="department()"
+          (ngModelChange)="department.set($event); box.set(null)"
+        />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.performance.calibration.reviewer' | translate">
+        <hum-select
+          [options]="reviewerOptions()"
+          [ariaLabel]="'humano.performance.calibration.reviewer' | translate"
+          [ngModel]="reviewer()"
+          (ngModelChange)="reviewer.set($event); box.set(null)"
+        />
+      </hum-form-field>
+    </div>
+
+    @if (!written().length) {
+      <hum-empty-state
+        icon="bar-chart-3"
+        [title]="'humano.performance.calibration.emptyTitle' | translate"
+        [description]="'humano.performance.calibration.emptyBody' | translate"
+      />
+    } @else {
+      <div class="hum-perf-calib">
+        <!-- 9-box -->
+        <section class="hum-perf-card">
+          <header class="hum-perf-card__head">
+            <div>
+              <h2 class="hum-onb-h2">{{ 'humano.performance.calibration.nineBox' | translate }}</h2>
+              <p class="hum-onb-muted">{{ 'humano.performance.calibration.nineBoxLead' | translate }}</p>
+            </div>
+          </header>
+          <div class="hum-perf-ninebox">
+            <span class="hum-perf-ninebox__axis hum-perf-ninebox__axis--y">{{
+              'humano.performance.calibration.potentialAxis' | translate
+            }}</span>
+            <div class="hum-perf-ninebox__grid">
+              @for (p of rows; track p) {
+                <span class="hum-perf-ninebox__row-label">{{ 'humano.performance.potential.' + p | translate }}</span>
+                @for (b of bands; track b) {
+                  @let inBox = people(b, p);
+                  <button
+                    type="button"
+                    class="hum-perf-ninebox__cell"
+                    [class.is-active]="isBox(b, p)"
+                    [class.is-empty]="!inBox.length"
+                    [attr.data-tone]="p + '_' + b"
+                    [attr.aria-pressed]="isBox(b, p)"
+                    (click)="toggleBox(b, p)"
+                  >
+                    <span class="hum-perf-ninebox__name">{{ 'humano.performance.calibration.box.' + p + '_' + b | translate }}</span>
+                    <span class="hum-perf-ninebox__count tabular-nums">{{ inBox.length }}</span>
+                    @if (inBox.length) {
+                      <span class="hum-perf-ninebox__people">
+                        @for (r of inBox.slice(0, 3); track r.id) {
+                          <span>{{ r.employeeName }}</span>
+                        }
+                        @if (inBox.length > 3) {
+                          <span>{{ 'humano.performance.calibration.more' | translate: { count: inBox.length - 3 } }}</span>
+                        }
+                      </span>
+                    }
+                  </button>
+                }
+              }
+              <span></span>
+              @for (b of bands; track b) {
+                <span class="hum-perf-ninebox__col-label">{{ 'humano.performance.calibration.band.' + b | translate }}</span>
+              }
+            </div>
+            <span class="hum-perf-ninebox__axis">{{ 'humano.performance.calibration.performanceAxis' | translate }}</span>
+          </div>
+          @if (grid().unplaced.length) {
+            <p class="hum-onb-muted">{{ 'humano.performance.calibration.unplaced' | translate: { count: grid().unplaced.length } }}</p>
+          }
+        </section>
+
+        <!-- Distribution -->
+        <section class="hum-perf-card">
+          <header class="hum-perf-card__head">
+            <div>
+              <h2 class="hum-onb-h2">{{ 'humano.performance.cycle.distribution' | translate }}</h2>
+              <p class="hum-onb-muted">
+                {{ 'humano.performance.calibration.distributionLead' | translate: { count: distribution().total } }}
+              </p>
+            </div>
+          </header>
+          <ul class="hum-perf-calib-dist">
+            @for (b of distribution().bars; track b.rating) {
+              <li>
+                <span class="hum-perf-calib-dist__label">
+                  <strong class="tabular-nums">{{ b.rating }}</strong> {{ 'humano.performance.rating.' + b.rating | translate }}
+                </span>
+                <span class="hum-perf-calib-dist__track">
+                  <span class="hum-perf-calib-dist__given" [style.width.%]="b.givenShare"></span>
+                  <span class="hum-perf-calib-dist__final" [style.width.%]="b.finalShare"></span>
+                  <span
+                    class="hum-perf-calib-dist__guide"
+                    [style.left.%]="b.guidance"
+                    [title]="'humano.performance.calibration.guidanceOf' | translate: { share: b.guidance }"
+                  ></span>
+                </span>
+                <span class="hum-perf-calib-dist__count tabular-nums">{{ b.final }} · {{ b.finalShare }}%</span>
+              </li>
+            }
+          </ul>
+          <p class="hum-perf-calib-dist__legend">
+            <span><i class="is-final"></i>{{ 'humano.performance.calibration.legendFinal' | translate }}</span>
+            <span><i class="is-given"></i>{{ 'humano.performance.calibration.legendGiven' | translate }}</span>
+            <span><i class="is-guide"></i>{{ 'humano.performance.calibration.legendGuide' | translate }}</span>
+          </p>
+          <p class="hum-onb-muted">{{ 'humano.performance.calibration.guidanceHint' | translate }}</p>
+        </section>
+      </div>
+
+      <!-- Reviews -->
+      <section style="margin-top: var(--space-6)">
+        <div class="hum-onb-filter">
+          <h2 class="hum-onb-h2">{{ 'humano.performance.cycle.reviews' | translate }}</h2>
+          @if (box(); as b) {
+            <button type="button" class="hum-chip is-active" (click)="box.set(null)">
+              {{ boxLabel(b) }}<lucide-icon name="x" [size]="12" />
+            </button>
+          }
+        </div>
+        <div class="hum-table-wrap">
+          <table class="hum-table hum-perf-table">
+            <thead>
+              <tr>
+                <th>{{ 'humano.performance.cycle.col.employee' | translate }}</th>
+                <th>{{ 'humano.performance.cycle.col.reviewer' | translate }}</th>
+                <th class="hum-table__num">{{ 'humano.performance.calibration.col.given' | translate }}</th>
+                <th class="hum-table__num">{{ 'humano.performance.calibration.col.final' | translate }}</th>
+                <th>{{ 'humano.performance.calibration.col.potential' | translate }}</th>
+                <th>
+                  <span class="sr-only">{{ 'humano.performance.cycle.col.open' | translate }}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of visible(); track r.id) {
+                <tr>
+                  <td>
+                    <a class="hum-perf-table__name" [routerLink]="['/reviews', r.id]">{{ r.employeeName }}</a>
+                    <span class="hum-perf-table__sub">{{ r.employeeJobTitle }}{{ r.departmentName ? ' · ' + r.departmentName : '' }}</span>
+                    @if (r.managerAssessment?.recommendForPromotion) {
+                      <span class="hum-perf-table__sub"
+                        ><lucide-icon name="trending-up" [size]="12" /> {{ 'humano.performance.calibration.promotion' | translate }}</span
+                      >
+                    }
+                  </td>
+                  <td>{{ r.reviewerName }}</td>
+                  <td class="hum-table__num tabular-nums">{{ r.managerAssessment?.rating }}</td>
+                  <td class="hum-table__num tabular-nums">
+                    {{ r.rating }}
+                    @if (isCalibrated(r)) {
+                      <span class="hum-perf-calibrated-mark" [title]="r.managerAssessment?.calibrationNote ?? ''">{{
+                        'humano.performance.calibration.calibrated' | translate
+                      }}</span>
+                    }
+                  </td>
+                  <td>
+                    @if (r.managerAssessment?.potential; as p) {
+                      {{ 'humano.performance.potential.' + p | translate }}
+                    } @else {
+                      <span class="hum-perf-table__sub">{{ 'humano.performance.calibration.noPotential' | translate }}</span>
+                    }
+                  </td>
+                  <td>
+                    @if (canCalibrateRow(r)) {
+                      <hum-button variant="ghost" size="sm" icon="scale" (click)="edit(r)">{{
+                        'humano.performance.review.calibrate' | translate
+                      }}</hum-button>
+                    } @else if (r.signOff && r.signOff.status !== 'APPROVED' && r.signOff.status !== 'WAIVED') {
+                      <span class="hum-perf-table__sub">{{ 'humano.performance.signOff.short.' + r.signOff.status | translate }}</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  }
+</div>
+
+<hum-dialog
+  [open]="editing() !== null"
+  [title]="'humano.performance.review.calibrate' | translate"
+  [description]="
+    'humano.performance.calibration.dialog'
+      | translate: { name: editing()?.employeeName, rating: editing()?.managerAssessment?.rating, reviewer: editing()?.reviewerName }
+  "
+  hasFooter
+  (closed)="editing.set(null)"
+>
+  <div style="display: grid; gap: var(--space-4)">
+    <hum-form-field [label]="'humano.performance.review.finalRating' | translate" required>
+      <hum-select
+        [options]="ratingOptions"
+        [ariaLabel]="'humano.performance.review.finalRating' | translate"
+        [ngModel]="rating() === null ? '' : '' + rating()"
+        (ngModelChange)="rating.set($event ? +$event : null)"
+      />
+    </hum-form-field>
+    <hum-form-field
+      [label]="'humano.performance.calibration.col.potential' | translate"
+      [hint]="'humano.performance.calibration.potentialHint' | translate"
+    >
+      <hum-select
+        [options]="potentialOptions"
+        [ariaLabel]="'humano.performance.calibration.col.potential' | translate"
+        [ngModel]="potential()"
+        (ngModelChange)="potential.set($event)"
+      />
+    </hum-form-field>
+    <hum-form-field
+      [label]="'humano.performance.calibration.note' | translate"
+      [required]="noteMissing()"
+      [error]="noteMissing() ? ('humano.performance.calibration.noteRequired' | translate) : undefined"
+    >
+      <hum-textarea [rows]="3" [ngModel]="note()" (ngModelChange)="note.set($event)" />
+    </hum-form-field>
+  </div>
+  <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="editing.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" [disabled]="rating() === null || noteMissing()" (click)="save()">{{
+      'humano.performance.review.saveCalibration' | translate
+    }}</hum-button>
+  </div>
+</hum-dialog>

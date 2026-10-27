@@ -10,6 +10,7 @@ import com.humano.dto.hr.workflow.responses.EmployeeProcessSummary;
 import com.humano.dto.hr.workflow.responses.OffboardingProcessResponse;
 import com.humano.dto.hr.workflow.responses.OnboardingChecklistResponse;
 import com.humano.dto.hr.workflow.responses.OnboardingProcessResponse;
+import com.humano.events.EmployeeLeftEvent;
 import com.humano.repository.hr.*;
 import com.humano.repository.payroll.EmployeeBenefitRepository;
 import com.humano.repository.shared.EmployeeRepository;
@@ -22,6 +23,7 @@ import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.hr.workflow.infrastructure.DeadlineMonitorService;
 import com.humano.service.hr.workflow.infrastructure.NotificationOrchestrationService;
 import com.humano.service.hr.workflow.infrastructure.WorkflowStateManager;
+import com.humano.tenancy.TenantContext;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -31,6 +33,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -126,6 +129,7 @@ public class EmployeeLifecycleWorkflowService {
     private final EntitlementService entitlementService;
     private final TerminationReasonRepository terminationReasonRepository;
     private final UserAccountService userAccountService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public EmployeeLifecycleWorkflowService(
         WorkflowStateManager workflowStateManager,
@@ -143,7 +147,8 @@ public class EmployeeLifecycleWorkflowService {
         TrainingRepository trainingRepository,
         EntitlementService entitlementService,
         TerminationReasonRepository terminationReasonRepository,
-        UserAccountService userAccountService
+        UserAccountService userAccountService,
+        ApplicationEventPublisher eventPublisher
     ) {
         this.workflowStateManager = workflowStateManager;
         this.notificationService = notificationService;
@@ -161,6 +166,7 @@ public class EmployeeLifecycleWorkflowService {
         this.entitlementService = entitlementService;
         this.terminationReasonRepository = terminationReasonRepository;
         this.userAccountService = userAccountService;
+        this.eventPublisher = eventPublisher;
     }
 
     // ==================== ONBOARDING ====================
@@ -978,6 +984,7 @@ public class EmployeeLifecycleWorkflowService {
             employee.setTerminationNotes(reason.toString());
         }
         employeeRepository.save(employee);
+        eventPublisher.publishEvent(new EmployeeLeftEvent(TenantContext.getCurrentTenant(), employee.getId(), employee.getEndDate()));
         log.info("Employee {} terminated after their last working day {}", employee.getId(), lastDay);
         return true;
     }

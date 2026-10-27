@@ -56,4 +56,21 @@ export const STATUS_MAP: Record<string, StatusMeta> = {
   MIGRATION_FAILED: { tone: 'danger', label: 'Migration failed' },
   DEACTIVATED: { tone: 'neutral', label: 'Deactivated' },
   DELETED: { tone: 'neutral', label: 'Deleted' },
+  // review cycles (ReviewCyclePhase) — DRAFT/COMPLETED shared above
+  SELF_ASSESSMENT: { tone: 'info', label: 'Self-assessment' },
+  MANAGER_REVIEW: { tone: 'info', label: 'Manager review' },
+  CALIBRATION: { tone: 'warning', label: 'Calibration' },
+  FEEDBACK_DELIVERY: { tone: 'brand', label: 'Feedback' },
+  GOAL_SETTING: { tone: 'brand', label: 'Goal setting' },
+  ARCHIVED: { tone: 'neutral', label: 'Archived' },
+  // performance reviews (PerformanceReviewStatus)
+  NOT_STARTED: { tone: 'neutral', label: 'Not started' },
+  SELF_SUBMITTED: { tone: 'info', label: 'Self-assessed' },
+  MANAGER_SUBMITTED: { tone: 'warning', label: 'Reviewed' },
+  SHARED: { tone: 'success', label: 'Shared' },
+  EXCLUDED: { tone: 'neutral', label: 'Excluded' },
+  // feedback requests (FeedbackRequestStatus) — PENDING_APPROVAL/CANCELLED shared above
+  REQUESTED: { tone: 'info', label: 'Requested' },
+  SUBMITTED: { tone: 'success', label: 'Submitted' },
+  DECLINED: { tone: 'neutral', label: 'Declined' },
 };

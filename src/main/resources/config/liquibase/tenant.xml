@@ -111,6 +111,18 @@
     <!-- Leave pay rules: stretches of an absence paid at their own rate (sick pay, maternity pay) -->
     <include file="config/liquibase/changelog/tenant/20261025-leave-pay-bands-changelog.xml" relativeToChangelogFile="false"/>
 
+    <!-- Performance reviews: reviews belong to a cycle and keep the self and manager assessments apart -->
+    <include file="config/liquibase/changelog/tenant/20261026-performance-review-cycles-changelog.xml" relativeToChangelogFile="false"/>
+
+    <!-- Performance reviews: additional reviewers, acknowledgement, sign-off, calibration log, cycle types -->
+    <include file="config/liquibase/changelog/tenant/20261027-performance-review-phase3-changelog.xml" relativeToChangelogFile="false"/>
+
+    <!-- Performance reviews: competency framework, review templates, goals, improvement plans, compensation proposals -->
+    <include file="config/liquibase/changelog/tenant/20261027-performance-review-phase4-changelog.xml" relativeToChangelogFile="false"/>
+
+    <!-- Performance reviews: cycle membership (excluding and putting back reviews, leavers) -->
+    <include file="config/liquibase/changelog/tenant/20261028-performance-review-phase5-changelog.xml" relativeToChangelogFile="false"/>
+
     <!--  will add tenant liquibase changelogs here -->
 
 </databaseChangeLog>

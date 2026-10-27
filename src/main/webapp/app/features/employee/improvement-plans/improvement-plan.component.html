@@ -1,0 +1,439 @@
+<div class="hum-page">
+  <a class="hum-onb-back" [routerLink]="isEmployee() ? '/reviews' : '/improvement-plans'"
+    ><lucide-icon name="arrow-left" [size]="14" />{{
+      (isEmployee() ? 'humano.improvementPlans.backToReviews' : 'humano.improvementPlans.backToList') | translate
+    }}</a
+  >
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (!plan()) {
+    <hum-skeleton [height]="160" />
+    <hum-skeleton [height]="320" style="margin-top: var(--space-4)" />
+  } @else {
+    @let p = plan()!;
+
+    <section class="hum-onb-hero">
+      <div class="hum-onb-hero__top">
+        <hum-avatar [name]="p.employeeName" size="xl" />
+        <div class="hum-onb-hero__who">
+          <p class="hum-perf-eyebrow">{{ 'humano.improvementPlans.eyebrow' | translate }}</p>
+          <h1 class="hum-onb-hero__name">
+            {{ isEmployee() ? ('humano.improvementPlans.yourPlan' | translate) : p.employeeName }}
+          </h1>
+          <p class="hum-onb-hero__role">
+            @if (p.employeeJobTitle && !isEmployee()) {
+              <span>{{ p.employeeJobTitle }}</span>
+            }
+            <span class="tabular-nums"
+              ><lucide-icon name="calendar" [size]="13" />{{ p.startDate | date: 'mediumDate' }} – {{ p.endDate | date: 'mediumDate' }} ·
+              {{ 'humano.improvementPlans.form.days' | translate: { count: duration() } }}</span
+            >
+            @if (p.ownerName) {
+              <span
+                ><lucide-icon name="user-check" [size]="13" />{{ 'humano.improvementPlans.runBy' | translate: { name: p.ownerName } }}</span
+              >
+            }
+          </p>
+        </div>
+        <div class="hum-onb-hero__actions">
+          <hum-badge [tone]="statusTone(p.status)" [label]="'humano.improvementPlans.status.' + p.status | translate" />
+          @if (p.outcome) {
+            <hum-badge [tone]="outcomeTone(p.outcome)" [label]="'humano.improvementPlans.outcome.' + p.outcome | translate" />
+          }
+        </div>
+      </div>
+      <div class="hum-pip-actions">
+        @if (p.can.edit) {
+          <hum-button variant="secondary" size="sm" icon="pencil" (click)="editing.set(true)">{{
+            'humano.action.edit' | translate
+          }}</hum-button>
+        }
+        @if (p.can.delete) {
+          <hum-button variant="ghost" size="sm" icon="trash-2" (click)="openDialog('delete')">{{
+            'humano.improvementPlans.delete.action' | translate
+          }}</hum-button>
+        }
+        @if (p.can.activate) {
+          <hum-button variant="primary" size="sm" icon="send" (click)="openDialog('activate')">{{
+            'humano.improvementPlans.activate.action' | translate
+          }}</hum-button>
+        }
+        @if (p.can.checkIn) {
+          <hum-button variant="primary" size="sm" icon="message-square" (click)="openDialog('checkIn')">{{
+            'humano.improvementPlans.checkIn.action' | translate
+          }}</hum-button>
+        }
+        @if (p.can.extend) {
+          <hum-button variant="secondary" size="sm" icon="calendar-clock" (click)="openDialog('extend')">{{
+            'humano.improvementPlans.extend.action' | translate
+          }}</hum-button>
+        }
+        @if (p.can.close) {
+          <hum-button variant="secondary" size="sm" icon="check-circle-2" (click)="openDialog('close')">{{
+            'humano.improvementPlans.close.action' | translate
+          }}</hum-button>
+        }
+        @if (daysLeft() !== null) {
+          <span class="hum-pip-due tabular-nums" [class.is-late]="daysLeft()! < 0">
+            <lucide-icon name="calendar-clock" [size]="14" />
+            {{
+              daysLeft()! < 0
+                ? ('humano.improvementPlans.endedAgo' | translate: { count: -daysLeft()! })
+                : ('humano.improvementPlans.daysLeft' | translate: { count: daysLeft() })
+            }}
+          </span>
+        }
+      </div>
+    </section>
+
+    @if (p.status === 'DRAFT') {
+      <hum-alert tone="info" [title]="'humano.improvementPlans.draftTitle' | translate" style="margin-top: var(--space-5)">{{
+        'humano.improvementPlans.draftBody' | translate
+      }}</hum-alert>
+    }
+    @if (p.can.acknowledge) {
+      <hum-alert tone="warning" [title]="'humano.improvementPlans.acknowledge.title' | translate" style="margin-top: var(--space-5)">
+        {{ 'humano.improvementPlans.acknowledge.body' | translate }}
+        <div style="margin-top: var(--space-3)">
+          <hum-button variant="primary" size="sm" icon="check" (click)="openDialog('acknowledge')">{{
+            'humano.improvementPlans.acknowledge.action' | translate
+          }}</hum-button>
+        </div>
+      </hum-alert>
+    }
+
+    <div class="hum-onb-layout">
+      <div class="hum-perf-sections">
+        @if (p.status === 'CLOSED' && p.outcome) {
+          <section class="hum-perf-card">
+            <header class="hum-perf-card__head">
+              <div>
+                <h2 class="hum-onb-h2">{{ 'humano.improvementPlans.outcomeTitle' | translate }}</h2>
+                <p class="hum-onb-muted">
+                  {{
+                    'humano.improvementPlans.closedOn'
+                      | translate
+                        : { date: (p.closedAt | date: 'mediumDate'), name: p.closedByName ?? ('humano.improvementPlans.hr' | translate) }
+                  }}
+                </p>
+              </div>
+              <hum-badge [tone]="outcomeTone(p.outcome)" [label]="'humano.improvementPlans.outcome.' + p.outcome | translate" />
+            </header>
+            <p class="hum-pip-text">{{ p.outcomeNote }}</p>
+          </section>
+        }
+
+        <section class="hum-perf-card">
+          <header class="hum-perf-card__head">
+            <div>
+              <h2 class="hum-onb-h2">{{ 'humano.improvementPlans.field.concerns' | translate }}</h2>
+            </div>
+          </header>
+          <p class="hum-pip-text">{{ p.concerns }}</p>
+        </section>
+
+        <section class="hum-perf-card">
+          <header class="hum-perf-card__head">
+            <div>
+              <h2 class="hum-onb-h2">{{ 'humano.improvementPlans.field.objectives' | translate }}</h2>
+              <p class="hum-onb-muted">{{ 'humano.improvementPlans.objectivesLead' | translate }}</p>
+            </div>
+          </header>
+          <ol class="hum-pip-objectives">
+            @for (o of p.objectives; track o.id ?? $index) {
+              <li>
+                <p class="hum-pip-objectives__text">{{ o.description }}</p>
+                @if (o.successMeasure || o.dueDate) {
+                  <p class="hum-pip-objectives__meta">
+                    @if (o.successMeasure) {
+                      <span><lucide-icon name="flag" [size]="12" />{{ o.successMeasure }}</span>
+                    }
+                    @if (o.dueDate) {
+                      <span class="tabular-nums"
+                        ><lucide-icon name="calendar" [size]="12" />{{
+                          'humano.goals.due' | translate: { date: (o.dueDate | date: 'mediumDate') }
+                        }}</span
+                      >
+                    }
+                  </p>
+                }
+              </li>
+            }
+          </ol>
+        </section>
+
+        @if (p.support) {
+          <section class="hum-perf-card">
+            <header class="hum-perf-card__head">
+              <div>
+                <h2 class="hum-onb-h2">{{ 'humano.improvementPlans.field.support' | translate }}</h2>
+              </div>
+            </header>
+            <p class="hum-pip-text">{{ p.support }}</p>
+          </section>
+        }
+
+        <section class="hum-perf-card">
+          <header class="hum-perf-card__head">
+            <div>
+              <h2 class="hum-onb-h2">{{ 'humano.improvementPlans.checkInsTitle' | translate }}</h2>
+              @if (p.meetingCadence) {
+                <p class="hum-onb-muted">{{ 'humano.improvementPlans.cadence' | translate: { cadence: p.meetingCadence } }}</p>
+              }
+            </div>
+          </header>
+          @if (!p.checkIns.length) {
+            <p class="hum-perf-empty">{{ 'humano.improvementPlans.noCheckIns' | translate }}</p>
+          } @else {
+            <ol class="hum-pip-timeline">
+              @for (c of p.checkIns; track c.id) {
+                <li>
+                  <div class="hum-pip-timeline__head">
+                    <hum-badge [tone]="progressTone(c.progress)" [label]="'humano.improvementPlans.progress.' + c.progress | translate" />
+                    <span class="tabular-nums"
+                      >{{ c.checkedInAt | date: 'mediumDate' }}
+                      @if (c.authorName) {
+                        · {{ c.authorName }}
+                      }
+                    </span>
+                  </div>
+                  <p class="hum-pip-text">{{ c.note }}</p>
+                </li>
+              }
+            </ol>
+          }
+        </section>
+      </div>
+
+      <aside class="hum-onb-aside">
+        <section class="hum-onb-panel">
+          <h3 class="hum-onb-panel__title">
+            <lucide-icon name="clipboard-list" [size]="15" />{{ 'humano.improvementPlans.details' | translate }}
+          </h3>
+          <dl class="hum-onb-dates">
+            <dt>{{ 'humano.improvementPlans.fromReview' | translate }}</dt>
+            <dd>
+              <a [routerLink]="['/reviews', p.reviewId]">{{ p.cycleName ?? ('humano.improvementPlans.review' | translate) }}</a>
+              @if (p.reviewRating) {
+                <span class="tabular-nums"> · {{ p.reviewRating }}/5</span>
+              }
+            </dd>
+            <dt>{{ 'humano.improvementPlans.field.startDate' | translate }}</dt>
+            <dd class="tabular-nums">{{ p.startDate | date: 'mediumDate' }}</dd>
+            <dt>{{ 'humano.improvementPlans.field.endDate' | translate }}</dt>
+            <dd class="tabular-nums">{{ p.endDate | date: 'mediumDate' }}</dd>
+            @if (p.originalEndDate) {
+              <dt>{{ 'humano.improvementPlans.extendedFrom' | translate }}</dt>
+              <dd>
+                <span class="tabular-nums">{{ p.originalEndDate | date: 'mediumDate' }}</span>
+                @if (p.extensionReason) {
+                  <p class="hum-onb-muted" style="margin: var(--space-1) 0 0">{{ p.extensionReason }}</p>
+                }
+              </dd>
+            }
+            @if (p.activatedAt) {
+              <dt>{{ 'humano.improvementPlans.sharedOn' | translate }}</dt>
+              <dd class="tabular-nums">{{ p.activatedAt | date: 'mediumDate' }}</dd>
+            }
+            @if (p.status !== 'DRAFT') {
+              <dt>{{ 'humano.improvementPlans.acknowledgement' | translate }}</dt>
+              <dd>
+                @if (p.acknowledgedAt) {
+                  <span class="tabular-nums">{{
+                    'humano.improvementPlans.acknowledgedOn' | translate: { date: (p.acknowledgedAt | date: 'mediumDate') }
+                  }}</span>
+                } @else {
+                  {{ 'humano.improvementPlans.notAcknowledged' | translate }}
+                }
+              </dd>
+            }
+          </dl>
+        </section>
+        @if (p.employeeComment) {
+          <section class="hum-onb-panel">
+            <h3 class="hum-onb-panel__title">
+              <lucide-icon name="message-square" [size]="15" />{{ 'humano.improvementPlans.employeeComment' | translate }}
+            </h3>
+            <p class="hum-pip-text">{{ p.employeeComment }}</p>
+          </section>
+        }
+        <section class="hum-onb-panel hum-perf-note">
+          <h3 class="hum-onb-panel__title"><lucide-icon name="lock" [size]="15" />{{ 'humano.performance.review.whoSees' | translate }}</h3>
+          <p class="hum-onb-muted">{{ 'humano.improvementPlans.whoSees' | translate }}</p>
+        </section>
+      </aside>
+    </div>
+
+    <hum-improvement-plan-form
+      [open]="editing()"
+      [plan]="p"
+      [employeeName]="p.employeeName"
+      (saved)="edited($event)"
+      (closed)="editing.set(false)"
+    />
+
+    <!-- Share with the employee -->
+    <hum-dialog
+      [open]="dialog() === 'activate'"
+      [title]="'humano.improvementPlans.activate.title' | translate"
+      [description]="'humano.improvementPlans.activate.body' | translate: { name: p.employeeName }"
+      hasFooter
+      [hasBody]="false"
+      (closed)="dialog.set(null)"
+    >
+      <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="ghost" (click)="dialog.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+        <hum-button variant="primary" icon="send" [loading]="saving()" (click)="activate()">{{
+          'humano.improvementPlans.activate.action' | translate
+        }}</hum-button>
+      </div>
+    </hum-dialog>
+
+    <!-- Delete the draft -->
+    <hum-dialog
+      [open]="dialog() === 'delete'"
+      [title]="'humano.improvementPlans.delete.title' | translate"
+      [description]="'humano.improvementPlans.delete.body' | translate"
+      hasFooter
+      [hasBody]="false"
+      (closed)="dialog.set(null)"
+    >
+      <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="ghost" (click)="dialog.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+        <hum-button variant="destructive" [loading]="saving()" (click)="remove()">{{
+          'humano.improvementPlans.delete.action' | translate
+        }}</hum-button>
+      </div>
+    </hum-dialog>
+
+    <!-- Acknowledge -->
+    <hum-dialog
+      [open]="dialog() === 'acknowledge'"
+      [title]="'humano.improvementPlans.acknowledge.title' | translate"
+      [description]="'humano.improvementPlans.acknowledge.dialogBody' | translate"
+      hasFooter
+      (closed)="dialog.set(null)"
+    >
+      <hum-form-field
+        [label]="'humano.improvementPlans.acknowledge.comment' | translate"
+        [hint]="'humano.improvementPlans.acknowledge.commentHint' | translate"
+      >
+        <hum-textarea [rows]="4" [ngModel]="note()" (ngModelChange)="note.set($event)" />
+      </hum-form-field>
+      <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="ghost" (click)="dialog.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+        <hum-button variant="primary" icon="check" [loading]="saving()" (click)="acknowledge()">{{
+          'humano.improvementPlans.acknowledge.action' | translate
+        }}</hum-button>
+      </div>
+    </hum-dialog>
+
+    <!-- Check-in -->
+    <hum-dialog
+      [open]="dialog() === 'checkIn'"
+      [title]="'humano.improvementPlans.checkIn.title' | translate"
+      [description]="'humano.improvementPlans.checkIn.body' | translate"
+      hasFooter
+      (closed)="dialog.set(null)"
+    >
+      <div class="hum-perf-form">
+        <hum-form-field [label]="'humano.improvementPlans.checkIn.progress' | translate" required>
+          <div class="hum-perf-comp__scale" role="radiogroup" [attr.aria-label]="'humano.improvementPlans.checkIn.progress' | translate">
+            @for (level of progressLevels; track level) {
+              <button
+                type="button"
+                role="radio"
+                class="hum-perf-comp__option hum-perf-goal__option"
+                [class.is-active]="progress() === level"
+                [attr.aria-checked]="progress() === level"
+                (click)="progress.set(level)"
+              >
+                {{ 'humano.improvementPlans.progress.' + level | translate }}
+              </button>
+            }
+          </div>
+        </hum-form-field>
+        <hum-form-field [label]="'humano.improvementPlans.checkIn.note' | translate" required>
+          <hum-textarea
+            [rows]="5"
+            [placeholder]="'humano.improvementPlans.checkIn.placeholder' | translate"
+            [ngModel]="note()"
+            (ngModelChange)="note.set($event)"
+          />
+        </hum-form-field>
+      </div>
+      <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="ghost" (click)="dialog.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+        <hum-button variant="primary" icon="check" [loading]="saving()" [disabled]="checkInInvalid()" (click)="checkIn()">{{
+          'humano.improvementPlans.checkIn.save' | translate
+        }}</hum-button>
+      </div>
+    </hum-dialog>
+
+    <!-- Extend -->
+    <hum-dialog
+      [open]="dialog() === 'extend'"
+      [title]="'humano.improvementPlans.extend.title' | translate"
+      [description]="'humano.improvementPlans.extend.body' | translate: { days: limits.maxExtensionDays }"
+      hasFooter
+      (closed)="dialog.set(null)"
+    >
+      <div class="hum-perf-form">
+        <hum-form-field
+          [label]="'humano.improvementPlans.extend.newEnd' | translate"
+          required
+          [hint]="'humano.improvementPlans.extend.latest' | translate: { date: (maxExtension() | date: 'mediumDate') }"
+        >
+          <hum-input type="date" [ngModel]="endDate()" (ngModelChange)="endDate.set($event)" />
+        </hum-form-field>
+        <hum-form-field [label]="'humano.improvementPlans.extend.reason' | translate" required>
+          <hum-textarea [rows]="3" [ngModel]="note()" (ngModelChange)="note.set($event)" />
+        </hum-form-field>
+      </div>
+      <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="ghost" (click)="dialog.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+        <hum-button variant="primary" icon="calendar-clock" [loading]="saving()" [disabled]="extendInvalid()" (click)="extend()">{{
+          'humano.improvementPlans.extend.action' | translate
+        }}</hum-button>
+      </div>
+    </hum-dialog>
+
+    <!-- Close with an outcome -->
+    <hum-dialog
+      [open]="dialog() === 'close'"
+      [title]="'humano.improvementPlans.close.title' | translate"
+      [description]="'humano.improvementPlans.close.body' | translate"
+      hasFooter
+      (closed)="dialog.set(null)"
+    >
+      <div class="hum-perf-form">
+        <hum-form-field
+          [label]="'humano.improvementPlans.close.outcome' | translate"
+          required
+          [error]="
+            closeProblem() === 'humano.improvementPlans.close.tooEarly' ? ('humano.improvementPlans.close.tooEarly' | translate) : undefined
+          "
+        >
+          <hum-select
+            [options]="outcomeOptions"
+            [ariaLabel]="'humano.improvementPlans.close.outcome' | translate"
+            [ngModel]="outcome()"
+            (ngModelChange)="outcome.set($event)"
+          />
+        </hum-form-field>
+        <hum-form-field [label]="'humano.improvementPlans.close.note' | translate" required>
+          <hum-textarea [rows]="4" [ngModel]="note()" (ngModelChange)="note.set($event)" />
+        </hum-form-field>
+      </div>
+      <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+        <hum-button variant="ghost" (click)="dialog.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+        <hum-button variant="primary" icon="check-circle-2" [loading]="saving()" [disabled]="!!closeProblem()" (click)="close()">{{
+          'humano.improvementPlans.close.action' | translate
+        }}</hum-button>
+      </div>
+    </hum-dialog>
+  }
+</div>

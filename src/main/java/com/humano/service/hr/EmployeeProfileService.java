@@ -18,6 +18,7 @@ import com.humano.dto.hr.responses.EmployeeProfileResponse;
 import com.humano.dto.hr.responses.GovernmentIdentification;
 import com.humano.dto.hr.responses.ReferenceDataRef;
 import com.humano.dto.hr.responses.SimpleEmployeeProfileResponse;
+import com.humano.events.EmployeeLeftEvent;
 import com.humano.repository.hr.DepartmentRepository;
 import com.humano.repository.hr.EmployeeCategoryRepository;
 import com.humano.repository.hr.EmploymentTypeRepository;
@@ -42,6 +43,7 @@ import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.errors.BadRequestAlertException;
 import com.humano.service.errors.EntityNotFoundException;
 import com.humano.service.errors.ErrorConstants;
+import com.humano.tenancy.TenantContext;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -52,6 +54,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -76,6 +79,7 @@ public class EmployeeProfileService {
     private static final UUID NO_DEPARTMENT = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
     private final EmployeeRepository employeeRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final PositionRepository positionRepository;
@@ -108,9 +112,11 @@ public class EmployeeProfileService {
         TerminationReasonRepository terminationReasonRepository,
         UserAccountService userAccountService,
         MailService mailService,
-        EntitlementService entitlementService
+        EntitlementService entitlementService,
+        ApplicationEventPublisher eventPublisher
     ) {
         this.employeeRepository = employeeRepository;
+        this.eventPublisher = eventPublisher;
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.positionRepository = positionRepository;
@@ -225,6 +231,10 @@ public class EmployeeProfileService {
                     log.info("Rewrote {} descendant path(s) after reparenting employee {}", rewritten, id);
                     // The bulk update cleared the persistence context: reload so the response's lazy associations resolve.
                     saved = employeeRepository.findById(id).orElseThrow();
+                }
+
+                if (EmployeeStatus.WORKING.contains(statusBefore) && saved.getStatus() == EmployeeStatus.TERMINATED) {
+                    eventPublisher.publishEvent(new EmployeeLeftEvent(TenantContext.getCurrentTenant(), saved.getId(), saved.getEndDate()));
                 }
 
                 return mapToEmployeeProfileResponse(saved);

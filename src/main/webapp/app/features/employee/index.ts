@@ -58,7 +58,104 @@ export type {
   CreatePerformanceReviewRequest,
   UpdatePerformanceReviewRequest,
   PerformanceReviewSearchRequest,
+  PerformanceReviewStatus,
+  SelfAssessment,
+  ManagerAssessment,
+  ReviewPotential,
+  ProbationRecommendation,
+  ReviewAcknowledgement,
+  ReviewExclusion,
+  ReviewSignOff,
+  ReviewSignOffDetail,
+  SignOffStatus,
 } from './models/performance-review.model';
+
+export { ReviewCycleService } from './services/review-cycle.service';
+export type { ReviewPhaseStep } from './services/review-cycle.service';
+export { ReviewCalendarService } from './services/review-calendar.service';
+export { PerformanceFrameworkService } from './services/performance-framework.service';
+export { COMPETENCY_CATEGORIES, REVIEW_QUESTION_AUDIENCES } from './models/performance-framework.model';
+export { ImprovementPlanService } from './services/improvement-plan.service';
+export { IMPROVEMENT_PLAN_LIMITS, IMPROVEMENT_PLAN_OUTCOMES, IMPROVEMENT_PLAN_PROGRESS } from './models/improvement-plan.model';
+export type {
+  ImprovementPlan,
+  ImprovementPlanActions,
+  ImprovementPlanCheckIn,
+  ImprovementPlanObjective,
+  ImprovementPlanOutcome,
+  ImprovementPlanProgress,
+  ImprovementPlanStatus,
+  ReviewImprovementPlanStatus,
+  SaveImprovementPlanRequest,
+} from './models/improvement-plan.model';
+export { GoalService } from './services/goal.service';
+export { GOAL_ACHIEVEMENT_SCORE, GOAL_ACHIEVEMENTS, GOAL_STATUSES } from './models/goal.model';
+export type {
+  Goal,
+  GoalAchievement,
+  GoalActions,
+  GoalCheckIn,
+  GoalCheckInRequest,
+  GoalRatingInput,
+  GoalStatus,
+  GoalTeamMember,
+  ReviewFormGoal,
+  SaveGoalRequest,
+} from './models/goal.model';
+export type {
+  Competency,
+  CompetencyCategory,
+  CompetencyRatingInput,
+  ReviewAnswerInput,
+  ReviewForm,
+  ReviewFormCompetency,
+  ReviewFormQuestion,
+  ReviewQuestionAudience,
+  ReviewTemplate,
+  ReviewTemplateQuestion,
+  SaveCompetencyRequest,
+  SaveReviewTemplateRequest,
+} from './models/performance-framework.model';
+export { FEEDBACK_VISIBILITIES, RATING_SCALE, REVIEW_CYCLE_PHASES, REVIEW_CYCLE_TYPES } from './models/review-cycle.model';
+export { PROBATION_RECOMMENDATIONS, REVIEW_POTENTIALS } from './models/performance-review.model';
+export type {
+  ReviewCyclePhase,
+  ReviewCycle,
+  ReviewCycleEmployee,
+  ReviewCycleType,
+  ReviewCycleProgress,
+  ReviewDepartmentProgress,
+  ReviewPhaseDeadlines,
+  SaveReviewCycleRequest,
+  SelfAssessmentRequest,
+  ManagerReviewRequest,
+  CalibrateReviewRequest,
+  AcknowledgeReviewRequest,
+  CycleCandidate,
+  MoveBackPhaseRequest,
+  ResolveDisputeRequest,
+  RatingChange,
+  RatingChangeSource,
+  ReviewCadence,
+  ReviewCalendar,
+  ReviewCycleProposal,
+  UpdateReviewCalendarRequest,
+  FeedbackVisibility,
+  ReviewFeedbackSettings,
+} from './models/review-cycle.model';
+
+export { ReviewFeedbackService } from './services/review-feedback.service';
+export { FEEDBACK_RELATIONSHIPS } from './models/review-feedback.model';
+export type {
+  FeedbackCandidate,
+  FeedbackRelationship,
+  FeedbackRequestStatus,
+  ReviewFeedback,
+  ReviewFeedbackOverview,
+  ReviewFeedbackCount,
+  RequestFeedbackRequest,
+  SubmitFeedbackRequest,
+} from './models/review-feedback.model';
 
 // Documents
 

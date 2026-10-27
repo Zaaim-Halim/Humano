@@ -1,0 +1,105 @@
+<hum-drawer
+  [open]="open()"
+  [title]="
+    (plan() ? 'humano.improvementPlans.form.editTitle' : 'humano.improvementPlans.form.newTitle') | translate: { name: employeeName() }
+  "
+  width="640px"
+  hasFooter
+  (closed)="closed.emit()"
+>
+  @if (draft(); as d) {
+    <div class="hum-perf-form">
+      <p class="hum-onb-muted" style="margin: 0">{{ 'humano.improvementPlans.form.lead' | translate }}</p>
+
+      <hum-form-field
+        [label]="'humano.improvementPlans.field.concerns' | translate"
+        [hint]="'humano.improvementPlans.field.concernsHint' | translate"
+        required
+        [error]="
+          tried() && problem(d) === 'humano.improvementPlans.error.concerns' ? ('humano.employeeForm.required' | translate) : undefined
+        "
+      >
+        <hum-textarea [rows]="5" [(ngModel)]="d.concerns" [invalid]="tried() && problem(d) === 'humano.improvementPlans.error.concerns'" />
+      </hum-form-field>
+
+      <fieldset class="hum-perf-fieldset">
+        <legend>{{ 'humano.improvementPlans.field.objectives' | translate }}</legend>
+        <p class="hum-onb-muted">{{ 'humano.improvementPlans.field.objectivesHint' | translate }}</p>
+        @for (o of d.objectives; track $index; let i = $index) {
+          <div class="hum-pip-objective">
+            <div class="hum-pip-objective__head">
+              <span class="hum-pip-objective__index tabular-nums">{{ i + 1 }}</span>
+              @if (d.objectives.length > 1) {
+                <hum-icon-button
+                  icon="x"
+                  size="sm"
+                  [label]="'humano.improvementPlans.form.removeObjective' | translate"
+                  (click)="removeObjective(d, i)"
+                />
+              }
+            </div>
+            <hum-form-field [label]="'humano.improvementPlans.field.objective' | translate" required>
+              <hum-textarea [rows]="2" [(ngModel)]="o.description" [invalid]="tried() && !o.description.trim()" />
+            </hum-form-field>
+            <div class="hum-pip-objective__row">
+              <hum-form-field [label]="'humano.improvementPlans.field.successMeasure' | translate">
+                <hum-input [(ngModel)]="o.successMeasure" [placeholder]="'humano.improvementPlans.field.successMeasureHint' | translate" />
+              </hum-form-field>
+              <hum-form-field [label]="'humano.improvementPlans.field.objectiveDue' | translate">
+                <hum-input type="date" [(ngModel)]="o.dueDate" />
+              </hum-form-field>
+            </div>
+          </div>
+        }
+        @if (d.objectives.length < limits.maxObjectives) {
+          <hum-button variant="ghost" size="sm" icon="plus" (click)="addObjective(d)">{{
+            'humano.improvementPlans.form.addObjective' | translate
+          }}</hum-button>
+        }
+        @if (
+          tried() &&
+          (problem(d) === 'humano.improvementPlans.error.objectives' || problem(d) === 'humano.improvementPlans.error.objectiveDue')
+        ) {
+          <p class="hum-perf-error">{{ problem(d)! | translate }}</p>
+        }
+      </fieldset>
+
+      <hum-form-field
+        [label]="'humano.improvementPlans.field.support' | translate"
+        [hint]="'humano.improvementPlans.field.supportHint' | translate"
+      >
+        <hum-textarea [rows]="3" [(ngModel)]="d.support" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.improvementPlans.field.meetingCadence' | translate"
+        [hint]="'humano.improvementPlans.field.meetingCadenceHint' | translate"
+      >
+        <hum-input [(ngModel)]="d.meetingCadence" />
+      </hum-form-field>
+
+      <div class="hum-pip-objective__row">
+        <hum-form-field [label]="'humano.improvementPlans.field.startDate' | translate" required>
+          <hum-input type="date" [(ngModel)]="d.startDate" />
+        </hum-form-field>
+        <hum-form-field
+          [label]="'humano.improvementPlans.field.endDate' | translate"
+          required
+          [hint]="days(d) !== null ? ('humano.improvementPlans.form.days' | translate: { count: days(d) }) : undefined"
+          [error]="
+            tried() && problem(d) === 'humano.improvementPlans.error.duration'
+              ? ('humano.improvementPlans.error.duration' | translate: limits)
+              : undefined
+          "
+        >
+          <hum-input type="date" [(ngModel)]="d.endDate" />
+        </hum-form-field>
+      </div>
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="ghost" (click)="closed.emit()">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" (click)="save()">{{
+      'humano.improvementPlans.form.saveDraft' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
