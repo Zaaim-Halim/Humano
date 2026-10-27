@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { MoneyPipe, PayPeriodPipe, PluralPipe } from 'app/shared/util/format.pipes';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -22,6 +22,8 @@ import {
   SkeletonRowComponent,
   AvatarComponent,
   InputComponent,
+  MenuComponent,
+  MenuItem,
   SelectComponent,
   StepperComponent,
   TextareaComponent,
@@ -84,6 +86,7 @@ function maxByCurrency<T extends { currencyCode: string | null }>(list: T[], val
     AlertComponent,
     EmptyStateComponent,
     SkeletonRowComponent,
+    MenuComponent,
   ],
   templateUrl: './payroll-run.component.html',
 })
@@ -101,6 +104,7 @@ export default class PayrollRunComponent {
   private readonly currentEmployee = inject(CurrentEmployeeService);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
+  private readonly document = inject(DOCUMENT);
 
   protected readonly summary = signal<Holder<PayrollRunSummary>>(idle());
   protected readonly results = signal<Holder<PayrollResult[]>>(idle());
@@ -108,6 +112,18 @@ export default class PayrollRunComponent {
   protected readonly run = signal<PayrollRun | null>(null);
   protected readonly busy = signal(false);
   protected readonly confirm = signal<'approve' | 'post' | null>(null);
+
+  // Export: any run past draft, as the register (CSV) or a workbook (Excel)
+  protected readonly canExport = computed(() => {
+    const status = this.run()?.status;
+    return !!status && status !== RunStatus.DRAFT;
+  });
+  protected readonly exportOpen = signal(false);
+  protected readonly exporting = signal(false);
+  protected readonly exportItems = computed<MenuItem[]>(() => [
+    { id: 'xlsx', icon: 'file-spreadsheet', label: String(this.translate.instant('humano.payrollRun.exportExcel')) },
+    { id: 'csv', icon: 'file-text', label: String(this.translate.instant('humano.payrollRun.exportCsv')) },
+  ]);
 
   /** Employees the latest calculation could not pay: approving leaves them unpaid, so it takes an override and a reason. */
   protected readonly issueCount = computed(() => this.run()?.validationErrors.length ?? 0);
@@ -249,6 +265,30 @@ export default class PayrollRunComponent {
 
   protected recalculate(): void {
     this.act(this.runService.recalculate(this.id(), { payrollRunId: this.id(), recalculateAll: true }), 'humano.payrollRun.recalculated');
+  }
+
+  protected exportRun(format: string | undefined): void {
+    this.exportOpen.set(false);
+    if (format !== 'csv' && format !== 'xlsx') return;
+    this.exporting.set(true);
+    this.runService.exportRun(this.id(), format).subscribe({
+      next: res => {
+        this.exporting.set(false);
+        if (!res.body) return;
+        const url = URL.createObjectURL(res.body);
+        const a = this.document.createElement('a');
+        a.href = url;
+        a.download =
+          /filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ??
+          `payroll-${this.run()?.periodCode ?? this.id()}.${format}`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (err: unknown) => {
+        this.exporting.set(false);
+        this.toast.danger(normalizeHttpError(err));
+      },
+    });
   }
 
   protected generatePayslips(): void {

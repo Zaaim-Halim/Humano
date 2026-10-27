@@ -34,6 +34,25 @@
           }}</hum-button>
         }
       }
+      @if (canExport()) {
+        <div style="position: relative" (keydown.escape)="exportOpen.set(false)">
+          <hum-button variant="secondary" size="sm" icon="download" [loading]="exporting()" (click)="exportOpen.set(!exportOpen())">{{
+            'humano.payrollRun.export' | translate
+          }}</hum-button>
+          @if (exportOpen()) {
+            <button
+              type="button"
+              aria-hidden="true"
+              tabindex="-1"
+              (click)="exportOpen.set(false)"
+              style="position: fixed; inset: 0; z-index: 55; background: transparent; border: 0; cursor: default"
+            ></button>
+            <div style="position: absolute; right: 0; top: calc(100% + var(--space-1_5)); z-index: 60; min-width: 180px">
+              <hum-menu [items]="exportItems()" (selected)="exportRun($event)" />
+            </div>
+          }
+        </div>
+      }
     </div>
   </hum-page-header>
 

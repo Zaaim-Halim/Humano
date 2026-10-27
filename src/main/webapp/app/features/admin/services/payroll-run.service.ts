@@ -72,6 +72,15 @@ export class PayrollRunService {
     return this.http.get<PayrollResult[]>(`${this.resourceUrl}/${encodeURIComponent(id)}/results`);
   }
 
+  /** `GET /api/payroll/runs/{id}/export` — the run as CSV (the register) or Excel (register, lines and totals). */
+  exportRun(id: string, format: 'csv' | 'xlsx'): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${this.resourceUrl}/${encodeURIComponent(id)}/export`, {
+      params: { format },
+      observe: 'response',
+      responseType: 'blob',
+    });
+  }
+
   /** `POST /api/payroll/runs/{id}/generate-payslips`. */
   generatePayslips(id: string): Observable<Payslip[]> {
     return this.http.post<Payslip[]>(`${this.resourceUrl}/${encodeURIComponent(id)}/generate-payslips`, {});

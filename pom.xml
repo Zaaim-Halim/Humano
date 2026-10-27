@@ -115,6 +115,12 @@
             <artifactId>openhtmltopdf-slf4j</artifactId>
             <version>1.0.10</version>
         </dependency>
+        <!-- Payroll run export to Excel. Write-only and streaming, without Apache POI's weight. -->
+        <dependency>
+            <groupId>org.dhatim</groupId>
+            <artifactId>fastexcel</artifactId>
+            <version>0.20.2</version>
+        </dependency>
         <!-- P4.2: Stripe SDK for charge / refund / SetupIntent + webhook signature verification.
              Pinned to a recent stable; the SDK is API-versioned server-side, so version bumps
              here don't change behaviour without an explicit Stripe-Version header. -->

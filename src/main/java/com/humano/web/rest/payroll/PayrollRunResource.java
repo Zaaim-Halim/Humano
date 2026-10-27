@@ -11,11 +11,14 @@ import com.humano.security.PermissionsConstants;
 import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.entitlement.FeatureCodes;
+import com.humano.service.errors.BusinessRuleViolationException;
+import com.humano.service.payroll.PayrollExportService;
 import com.humano.service.payroll.PayrollProcessingService;
 import com.humano.service.payroll.PayslipService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,10 +57,16 @@ public class PayrollRunResource {
 
     private final PayrollProcessingService processingService;
     private final PayslipService payslipService;
+    private final PayrollExportService exportService;
 
-    public PayrollRunResource(PayrollProcessingService processingService, PayslipService payslipService) {
+    public PayrollRunResource(
+        PayrollProcessingService processingService,
+        PayslipService payslipService,
+        PayrollExportService exportService
+    ) {
         this.processingService = processingService;
         this.payslipService = payslipService;
+        this.exportService = exportService;
     }
 
     /** Run history, newest pay period first (page / size / sort query params). */
@@ -138,6 +147,26 @@ public class PayrollRunResource {
     @RequirePermission(PermissionsConstants.VIEW_PAYROLL_RUN)
     public ResponseEntity<List<PayrollResultResponse>> results(@PathVariable UUID id) {
         return ResponseEntity.ok(payslipService.getResultsForRun(id));
+    }
+
+    /**
+     * The run as a file: {@code format=csv} (the register) or {@code format=xlsx} (register, lines
+     * and totals). Any run past draft, including posted runs from earlier periods.
+     */
+    @GetMapping("/{id}/export")
+    @RequirePermission(PermissionsConstants.VIEW_PAYROLL_RUN)
+    public ResponseEntity<byte[]> export(@PathVariable UUID id, @RequestParam(defaultValue = "xlsx") String format) {
+        PayrollExportService.Format parsed;
+        try {
+            parsed = PayrollExportService.Format.valueOf(format.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new BusinessRuleViolationException("Unknown export format '" + format + "': use csv or xlsx");
+        }
+        PayrollExportService.Export export = exportService.export(id, parsed);
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(export.contentType()))
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + export.filename() + "\"")
+            .body(export.content());
     }
 
     @PostMapping("/{id}/generate-payslips")
