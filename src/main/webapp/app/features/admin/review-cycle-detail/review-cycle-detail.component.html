@@ -464,32 +464,34 @@
   (closed)="adding.set(false)"
 >
   @if (adding()) {
-    <hum-form-field [label]="'humano.performance.form.people' | translate">
-      @for (k of [pickerKey()]; track k) {
-        <hum-autocomplete
-          [searchFn]="searchAddable"
-          [placeholder]="'humano.onboarding.employeePlaceholder' | translate"
-          [loadingText]="'humano.employeeForm.searching' | translate"
-          [noResultsText]="'humano.performance.cycle.membership.noneAddable' | translate"
-          [ngModel]="''"
-          (ngModelChange)="addPerson($event)"
-        />
-      }
-    </hum-form-field>
-    @if (people().length) {
-      <div class="hum-chips">
-        @for (p of people(); track p.id) {
-          <button
-            type="button"
-            class="hum-chip is-active"
-            [attr.aria-label]="'humano.performance.form.removePerson' | translate: { name: p.name }"
-            (click)="removePerson(p.id)"
-          >
-            {{ p.name }}<lucide-icon name="x" [size]="12" />
-          </button>
+    <div class="hum-perf-form">
+      <hum-form-field [label]="'humano.performance.form.people' | translate">
+        @for (k of [pickerKey()]; track k) {
+          <hum-autocomplete
+            [searchFn]="searchAddable"
+            [placeholder]="'humano.onboarding.employeePlaceholder' | translate"
+            [loadingText]="'humano.employeeForm.searching' | translate"
+            [noResultsText]="'humano.performance.cycle.membership.noneAddable' | translate"
+            [ngModel]="''"
+            (ngModelChange)="addPerson($event)"
+          />
         }
-      </div>
-    }
+      </hum-form-field>
+      @if (people().length) {
+        <div class="hum-chips">
+          @for (p of people(); track p.id) {
+            <button
+              type="button"
+              class="hum-chip is-active"
+              [attr.aria-label]="'humano.performance.form.removePerson' | translate: { name: p.name }"
+              (click)="removePerson(p.id)"
+            >
+              {{ p.name }}<lucide-icon name="x" [size]="12" />
+            </button>
+          }
+        </div>
+      }
+    </div>
   }
   <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
     <hum-button variant="ghost" (click)="adding.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
@@ -509,25 +511,27 @@
   (closed)="movingBack.set(false)"
 >
   @if (movingBack()) {
-    <hum-form-field [label]="'humano.performance.cycle.membership.reason' | translate" controlId="rc-back-reason" required>
-      <hum-textarea [rows]="2" [invalid]="reason().length > reasonMax" [ngModel]="reason()" (ngModelChange)="reason.set($event ?? '')" />
-    </hum-form-field>
-    @for (d of backDeadlines(); track d.field; let first = $first) {
-      <hum-form-field
-        [label]="'humano.performance.form.deadline.' + d.label | translate"
-        [hint]="first ? ('humano.performance.cycle.moveBack.deadlineHint' | translate) : ''"
-        [controlId]="'rc-back-' + d.field"
-        [required]="first"
-      >
-        <hum-input
-          [inputId]="'rc-back-' + d.field"
-          type="date"
-          [invalid]="first && (!d.value || d.value < today)"
-          [ngModel]="d.value"
-          (ngModelChange)="setBackDeadline(d.field, $event ?? '')"
-        />
+    <div class="hum-perf-form">
+      <hum-form-field [label]="'humano.performance.cycle.membership.reason' | translate" controlId="rc-back-reason" required>
+        <hum-textarea [rows]="2" [invalid]="reason().length > reasonMax" [ngModel]="reason()" (ngModelChange)="reason.set($event ?? '')" />
       </hum-form-field>
-    }
+      @for (d of backDeadlines(); track d.field; let first = $first) {
+        <hum-form-field
+          [label]="'humano.performance.form.deadline.' + d.label | translate"
+          [hint]="first ? ('humano.performance.cycle.moveBack.deadlineHint' | translate) : ''"
+          [controlId]="'rc-back-' + d.field"
+          [required]="first"
+        >
+          <hum-input
+            [inputId]="'rc-back-' + d.field"
+            type="date"
+            [invalid]="first && (!d.value || d.value < today)"
+            [ngModel]="d.value"
+            (ngModelChange)="setBackDeadline(d.field, $event ?? '')"
+          />
+        </hum-form-field>
+      }
+    </div>
   }
   <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
     <hum-button variant="ghost" (click)="movingBack.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>

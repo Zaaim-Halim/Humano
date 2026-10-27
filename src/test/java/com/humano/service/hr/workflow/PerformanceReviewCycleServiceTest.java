@@ -1422,11 +1422,13 @@ class PerformanceReviewCycleServiceTest {
         service.startCalibrationPhase(cycle.getId());
         service.calibrateReview(cycle.getId(), reviewOf(alice).getId(), hrUser, new CalibrateReviewRequest(4, "Raised", null));
 
+        assertThat(service.getCycleStatus(cycle.getId()).previousPhase()).isNull();
         assertThatThrownBy(() -> service.moveBackPhase(cycle.getId(), back(null, null, null, null))).hasMessageContaining(
             "already changed in calibration"
         );
 
         service.calibrateReview(cycle.getId(), reviewOf(alice).getId(), hrUser, new CalibrateReviewRequest(3, null, null));
+        assertThat(service.getCycleStatus(cycle.getId()).previousPhase()).isEqualTo(ReviewCyclePhase.MANAGER_REVIEW);
         service.moveBackPhase(cycle.getId(), back(null, null, null, null));
 
         assertThat(cycle.getPhase()).isEqualTo(ReviewCyclePhase.MANAGER_REVIEW);
@@ -1453,6 +1455,7 @@ class PerformanceReviewCycleServiceTest {
 
         service.startFeedbackDeliveryPhase(cycle.getId());
         service.recordFeedbackMeeting(cycle.getId(), alice.getId(), manager.getId(), false, "Discussed");
+        assertThat(service.getCycleStatus(cycle.getId()).previousPhase()).isNull();
         assertThatThrownBy(() -> service.moveBackPhase(cycle.getId(), back(null, null, null, null))).hasMessageContaining("already shared");
     }
 

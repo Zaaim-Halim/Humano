@@ -541,7 +541,8 @@ public class PerformanceReviewCycleService {
 
         closeOpenDeadlines(cycle);
         if (cycle.getWorkflowInstance() != null) {
-            workflowStateManager.completeWorkflow(cycle.getWorkflowInstance().getId(), "Review cycle completed successfully");
+            // workflow_instance.outcome is varchar(30)
+            workflowStateManager.completeWorkflow(cycle.getWorkflowInstance().getId(), "Review cycle completed");
         }
 
         for (PerformanceReview review : included(performanceReviewRepository.findByCycleId(cycleId))) {
@@ -1246,26 +1247,9 @@ public class PerformanceReviewCycleService {
         ReviewCyclePhase to = previousPhase(cycle);
         log.info("Moving cycle {} back from {} to {}", cycleId, from, to);
 
-        if (
-            to == ReviewCyclePhase.MANAGER_REVIEW &&
-            performanceReviewRepository.findByCycleId(cycleId).stream().anyMatch(PerformanceReviewCycleService::calibrated)
-        ) {
-            throw new BadRequestAlertException(
-                "Ratings were already changed in calibration; reopening manager reviews would let reviewers overwrite them",
-                ENTITY_NAME,
-                "calibrated"
-            );
-        }
-        if (
-            from == ReviewCyclePhase.FEEDBACK_DELIVERY &&
-            !performanceReviewRepository.findByCycleIdAndStatusIn(cycleId, List.of(PerformanceReviewStatus.SHARED)).isEmpty()
-        ) {
-            throw new BadRequestAlertException(
-                "Reviews were already shared with employees; feedback delivery can't be undone",
-                ENTITY_NAME,
-                "shared"
-            );
-        }
+        moveBackRefusal(cycle, to).ifPresent(refusal -> {
+            throw refusal;
+        });
         applyMovedBackDeadlines(cycle, to, request);
 
         cycle.setPhase(to);
@@ -1945,6 +1929,39 @@ public class PerformanceReviewCycleService {
         };
     }
 
+    /**
+     * Why going back to {@code to} is refused even though the phase allows it: manager reviews
+     * don't reopen once a rating changed in calibration, and feedback delivery isn't undone once a
+     * review was shared.
+     */
+    private Optional<BadRequestAlertException> moveBackRefusal(ReviewCycle cycle, ReviewCyclePhase to) {
+        if (
+            to == ReviewCyclePhase.MANAGER_REVIEW &&
+            performanceReviewRepository.findByCycleId(cycle.getId()).stream().anyMatch(PerformanceReviewCycleService::calibrated)
+        ) {
+            return Optional.of(
+                new BadRequestAlertException(
+                    "Ratings were already changed in calibration; reopening manager reviews would let reviewers overwrite them",
+                    ENTITY_NAME,
+                    "calibrated"
+                )
+            );
+        }
+        if (
+            cycle.getPhase() == ReviewCyclePhase.FEEDBACK_DELIVERY &&
+            !performanceReviewRepository.findByCycleIdAndStatusIn(cycle.getId(), List.of(PerformanceReviewStatus.SHARED)).isEmpty()
+        ) {
+            return Optional.of(
+                new BadRequestAlertException(
+                    "Reviews were already shared with employees; feedback delivery can't be undone",
+                    ENTITY_NAME,
+                    "shared"
+                )
+            );
+        }
+        return Optional.empty();
+    }
+
     /** Manager review or calibration: the phase feedback delivery was last started from. */
     private Optional<ReviewCyclePhase> phaseBeforeFeedback(ReviewCycle cycle) {
         Set<String> forward = Set.of(STATE_MANAGER_REVIEW, STATE_CALIBRATION);
@@ -2272,7 +2289,7 @@ public class PerformanceReviewCycleService {
             cycle.getStartDate(),
             cycle.getEndDate(),
             cycle.getPhase(),
-            withDepartments ? reopenablePhase(cycle).orElse(null) : null,
+            withDepartments ? reopenablePhase(cycle).filter(to -> moveBackRefusal(cycle, to).isEmpty()).orElse(null) : null,
             deadlines,
             progressOf(cycle, withDepartments),
             new ReviewCycleResponse.FeedbackSettings(
@@ -2282,7 +2299,8 @@ public class PerformanceReviewCycleService {
             ),
             cycle.isRequiresSignOff(),
             cycle.getType(),
-            cycle.getDepartmentIds(),
+            // Copied while the session is open: Jackson writes an unloaded lazy collection as null.
+            Set.copyOf(cycle.getDepartmentIds()),
             cycle.getEmployeeIds().isEmpty()
                 ? List.of()
                 : employeeRepository
