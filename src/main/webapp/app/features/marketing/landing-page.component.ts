@@ -49,7 +49,7 @@ const COMPANY_SIZES = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'
 /** One area of the product and what it does — only what the app actually ships. */
 interface Capability {
   /** Which mini illustration heads the card. */
-  visual: 'payroll' | 'people' | 'org' | 'time' | 'approvals' | 'self' | 'admin';
+  visual: 'payroll' | 'people' | 'org' | 'time' | 'performance' | 'approvals' | 'self' | 'admin';
   /** Spans two columns of the grid. */
   wide: boolean;
   icon: string;
@@ -110,7 +110,7 @@ export default class LandingPageComponent {
   /** Facts about the product itself (not usage numbers). */
   protected readonly stats = [
     { figure: '14 days', label: 'Free trial, no credit card' },
-    { figure: '7', label: 'Kinds of request in one approvals queue' },
+    { figure: '8', label: 'Kinds of request in one approvals queue' },
     { figure: '11', label: 'Kinds of employee record, with expiry dates' },
     { figure: '1', label: 'Separate database for each company' },
   ];
@@ -194,12 +194,27 @@ export default class LandingPageComponent {
       ],
     },
     {
+      visual: 'performance',
+      wide: true,
+      icon: 'star',
+      area: 'Performance',
+      summary: 'Review cycles from self-assessment to the feedback meeting, rated the same way across teams.',
+      items: [
+        'Regular, probation and ad hoc cycles: self-assessment, manager review, calibration and feedback meetings',
+        "Feedback from colleagues, and sign-off by the reviewer's manager",
+        'Calibration with a 9-box, and every rating change logged',
+        'Employees acknowledge their review, or dispute it with HR',
+        'Goals with check-ins, improvement plans and compensation proposals',
+        'Competency frameworks, review templates and a review calendar',
+      ],
+    },
+    {
       visual: 'approvals',
       wide: false,
       icon: 'check-check',
       area: 'Approvals',
       summary: 'Every request that needs a yes lands in one queue.',
-      items: ['Time off, expenses and overtime', 'Training, transfers and salary changes', 'Timesheets'],
+      items: ['Time off, expenses and overtime', 'Training, transfers and salary changes', 'Timesheets and performance review sign-off'],
     },
     {
       visual: 'self',
@@ -211,7 +226,7 @@ export default class LandingPageComponent {
     },
     {
       visual: 'admin',
-      wide: false,
+      wide: true,
       icon: 'shield-check',
       area: 'Administration & security',
       summary: 'Control who sees what, and keep each company apart.',

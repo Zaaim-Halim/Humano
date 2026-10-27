@@ -286,6 +286,33 @@
                       }
                     </div>
                   }
+                  @case ('performance') {
+                    <div class="lp-vis-perf">
+                      <ol class="lp-vis-run__steps">
+                        <li class="is-done"><lucide-icon name="check" [size]="12" />Self-assessment</li>
+                        <li class="is-done"><lucide-icon name="check" [size]="12" />Manager review</li>
+                        <li class="is-current">Calibration</li>
+                        <li>Feedback</li>
+                      </ol>
+                      <div class="lp-vis-perf__body">
+                        <div class="lp-vis-perf__grid">
+                          @for (n of [1, 3, 2, 0, 5, 3, 0, 1, 1]; track $index) {
+                            <span [class.is-on]="$index === 2" class="tabular-nums">{{ n }}</span>
+                          }
+                        </div>
+                        <div class="lp-vis-perf__review">
+                          <span class="hum-person"
+                            ><hum-avatar name="Mei Chen" size="xs" /><span class="hum-person__name">Mei Chen</span></span
+                          >
+                          <span class="lp-vis-perf__rating"><strong class="tabular-nums">4</strong>/5 · Exceeds expectations</span>
+                          <div class="lp-vis-chips">
+                            <span class="is-on"><lucide-icon name="check" [size]="12" />Signed off</span>
+                            <span><lucide-icon name="users" [size]="12" />3 colleagues</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  }
                   @case ('approvals') {
                     <div class="lp-vis-queue">
                       <div class="lp-vis-queue__item" style="--c: var(--brand)">
