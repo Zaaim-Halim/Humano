@@ -2,7 +2,7 @@
   <!-- ============ Nav ============ -->
   <header class="lp-nav">
     <div class="lp-container lp-nav__inner">
-      <a routerLink="/" class="lp-wordmark">humano<span class="lp-dot" aria-hidden="true"></span></a>
+      <a routerLink="/" class="lp-wordmark"><hum-logo /></a>
 
       <nav class="lp-nav__links" aria-label="Primary">
         @for (link of navLinks; track link.href) {
@@ -61,7 +61,7 @@
           </div>
           <div class="lp-mock__body">
             <aside class="lp-mock__side">
-              <div class="lp-mock__brand">humano<span class="lp-dot" aria-hidden="true"></span></div>
+              <div class="lp-mock__brand"><hum-logo size="sm" /></div>
               <span class="lp-mock__nav">Overview</span>
               <span class="lp-mock__nav">People</span>
               <span class="lp-mock__nav is-active">Payroll</span>
@@ -497,7 +497,7 @@
     <div class="lp-container">
       <div class="lp-footer__top">
         <div class="lp-footer__brand">
-          <a routerLink="/" class="lp-wordmark">humano<span class="lp-dot" aria-hidden="true"></span></a>
+          <a routerLink="/" class="lp-wordmark"><hum-logo /></a>
           <p class="lp-footer__tagline">The calm system of record for HR &amp; payroll.</p>
         </div>
         @for (col of footerColumns; track col.heading) {

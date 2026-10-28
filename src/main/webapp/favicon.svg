@@ -1,14 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="humano">
-  <!-- Brand tile: --indigo-700, the light-theme --brand token. Solid so the mark
+  <!-- (No double hyphens in these comments: they are invalid XML and stop the icon rendering.)
+       Brand tile: indigo-700, the light-theme brand token. Solid so the mark
        stays legible against both light and dark browser chrome. -->
   <rect width="32" height="32" rx="7" fill="#4338ca" />
-  <!-- Lowercase "h" built from geometry rather than text, so the icon never depends
-       on a font being available. Stem, shoulder and leg share one grid: the shoulder
-       is a half-annulus centred (16,16), outer r=9 (x 7→25), inner r=4.5 (x 11.5→20.5),
-       which is also the 4.5-unit stroke width. Sized to stay readable at 16px. -->
-  <g fill="#ffffff">
-    <rect x="7" y="5" width="4.5" height="22" rx="1.2" />
-    <rect x="20.5" y="15" width="4.5" height="12" rx="1.2" />
-    <path d="M7 16A9 9 0 0 1 25 16L20.5 16A4.5 4.5 0 0 0 11.5 16Z" />
-  </g>
+  <!-- "Two people": a lowercase "h" drawn as one outline rather than text, so the icon never
+       depends on a font, with the wordmark's dot as the head of a second, smaller figure. One
+       grid: stem x 7 to 11.5, leg x 20.5 to 25, the shoulder a half-annulus centred (16,19.5),
+       outer r=9, inner r=4.5 (the 4.5-unit stroke). One outline, so the joins are tangent and
+       seamless; ends rounded r=1.2, a r=1 curve where the shoulder leaves the stem. The shoulder sits
+       lower than a plain "h" to leave room for the head (r=2.75, indigo-300) above the short leg;
+       the gap stays about 2px at 16px, so the figures read in a browser tab. -->
+  <path fill="#ffffff" d="M7 6.2A1.2 1.2 0 0 1 8.2 5H10.3A1.2 1.2 0 0 1 11.5 6.2V10.133A1 1 0 0 0 12.85 11.069A9 9 0 0 1 25 19.5V25.8A1.2 1.2 0 0 1 23.8 27H21.7A1.2 1.2 0 0 1 20.5 25.8V19.5A4.5 4.5 0 0 0 11.5 19.5V25.8A1.2 1.2 0 0 1 10.3 27H8.2A1.2 1.2 0 0 1 7 25.8Z" />
+  <circle cx="22.75" cy="6.9" r="2.75" fill="#a5b4fc" />
 </svg>

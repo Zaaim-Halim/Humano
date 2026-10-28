@@ -4,7 +4,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 
 import { ThemeService } from 'app/core/theme/theme.service';
-import { IconButtonComponent } from 'app/shared/ui';
+import { IconButtonComponent, LogoComponent } from 'app/shared/ui';
 
 import { AuthSceneComponent } from './auth-scene.component';
 
@@ -50,7 +50,7 @@ function ledger(): LedgerRow[] {
 @Component({
   selector: 'hum-auth-layout',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, TranslatePipe, LucideAngularModule, IconButtonComponent, AuthSceneComponent],
+  imports: [RouterOutlet, RouterLink, TranslatePipe, LucideAngularModule, IconButtonComponent, LogoComponent, AuthSceneComponent],
   template: `
     <div class="hum-auth">
       <div class="hum-auth__ledger" aria-hidden="true">
@@ -71,7 +71,7 @@ function ledger(): LedgerRow[] {
       <hum-auth-scene />
 
       <header class="hum-auth__bar">
-        <a routerLink="/" class="hum-auth__wordmark">humano<span class="hum-auth__dot" aria-hidden="true"></span></a>
+        <a routerLink="/" class="hum-auth__wordmark"><hum-logo /></a>
         <hum-icon-button
           [icon]="theme.theme() === 'dark' ? 'sun' : 'moon'"
           [label]="'humano.shell.toggleTheme' | translate"

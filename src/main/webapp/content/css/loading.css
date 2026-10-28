@@ -60,7 +60,7 @@ html {
   animation: app-loading-enter 0.5s ease-out 0.25s both;
 }
 
-/* --- Wordmark: mirrors .hum-auth__wordmark ---------------------------------- */
+/* --- Wordmark: mirrors .hum-logo (logo.component.ts), drawn before Angular - */
 
 .app-loading__mark {
   display: inline-flex;

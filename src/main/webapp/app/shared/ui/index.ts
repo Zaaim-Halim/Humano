@@ -9,6 +9,7 @@ export type { AvatarSize, Person } from './data-display/avatar.component';
 export { BadgeComponent } from './data-display/badge.component';
 export { TagComponent } from './data-display/tag.component';
 export { CardComponent } from './data-display/card.component';
+export { LogoComponent } from './data-display/logo.component';
 export { ProgressComponent } from './data-display/progress.component';
 export type { ProgressTone } from './data-display/progress.component';
 export { StatTileComponent, SparklineComponent } from './data-display/stat-tile.component';

@@ -1563,21 +1563,45 @@ dt {
   align-items: center;
   justify-content: space-between;
 }
-.hum-auth__wordmark {
-  position: relative;
+/* Logo (hum-logo) — the wordmark everywhere it appears; see logo.component.ts */
+.hum-logo {
   display: inline-flex;
-  align-items: baseline;
-  font: var(--weight-bold) var(--text-lg) var(--font-sans);
+  align-items: center;
+  gap: 0.45em;
+  font: var(--weight-bold) var(--text-lg) / 1 var(--font-sans);
   letter-spacing: var(--tracking-tight);
   color: var(--text-strong);
-  text-decoration: none;
+  white-space: nowrap;
 }
-.hum-auth__dot {
+/* The icon tile is drawn in brand colours on every surface, like the favicon. */
+.hum-logo__mark {
+  flex: none;
+  width: 1.3em;
+  height: 1.3em;
+}
+.hum-logo__word {
+  display: inline-flex;
+  align-items: baseline;
+}
+.hum-logo__dot {
   width: 6px;
   height: 6px;
   margin-left: 2px;
   border-radius: var(--radius-full);
-  background: var(--brand);
+  background: var(--indigo-500);
+}
+.hum-logo--sm {
+  font-size: var(--text-base);
+}
+.hum-logo--sm .hum-logo__dot {
+  width: 4px;
+  height: 4px;
+  margin-left: 1.5px;
+}
+.hum-auth__wordmark {
+  position: relative;
+  display: inline-flex;
+  text-decoration: none;
 }
 .hum-auth__main {
   position: relative;
@@ -2708,20 +2732,6 @@ dt {
   flex: none;
   border-bottom: 1px solid var(--border-subtle);
 }
-.hum-side__wordmark {
-  display: inline-flex;
-  align-items: baseline;
-  font: var(--weight-bold) 19px/1 var(--font-sans);
-  letter-spacing: -0.03em;
-  color: var(--text-strong);
-}
-.hum-side__wordmark .hum-side__dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--indigo-500);
-  margin-left: 2px;
-}
 .hum-side__nav {
   flex: 1;
   overflow-y: auto;
@@ -2929,10 +2939,10 @@ dt {
 [data-chrome='platform'] .hum-side__brand {
   border-color: var(--chrome-border);
 }
-[data-chrome='platform'] .hum-side__wordmark {
+[data-chrome='platform'] .hum-logo {
   color: #fff;
 }
-[data-chrome='platform'] .hum-side__wordmark .hum-side__dot {
+[data-chrome='platform'] .hum-logo__dot {
   background: var(--chrome-accent);
 }
 [data-chrome='platform'] .hum-side__heading {
@@ -3027,18 +3037,7 @@ dt {
 }
 .lp-wordmark {
   display: inline-flex;
-  align-items: baseline;
-  font: var(--weight-bold) var(--text-lg) var(--font-sans);
-  letter-spacing: var(--tracking-tight);
-  color: var(--text-strong);
   text-decoration: none;
-}
-.lp-dot {
-  width: 6px;
-  height: 6px;
-  margin-left: 2px;
-  border-radius: var(--radius-full);
-  background: var(--indigo-500);
 }
 
 /* section rhythm + alternating surfaces */
@@ -3209,10 +3208,7 @@ dt {
 }
 .lp-mock__brand {
   display: inline-flex;
-  align-items: baseline;
   margin-bottom: var(--space-2);
-  font: var(--weight-bold) var(--text-base) var(--font-sans);
-  color: var(--text-strong);
 }
 .lp-mock__nav {
   padding: var(--space-1_5) var(--space-2);

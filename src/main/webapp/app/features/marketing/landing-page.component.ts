@@ -16,6 +16,7 @@ import {
   DialogComponent,
   FormFieldComponent,
   InputComponent,
+  LogoComponent,
   SelectComponent,
   TextareaComponent,
 } from 'app/shared/ui';
@@ -80,6 +81,7 @@ interface Faq {
     LucideAngularModule,
     AlertComponent,
     ButtonComponent,
+    LogoComponent,
     BadgeComponent,
     AvatarComponent,
     DialogComponent,

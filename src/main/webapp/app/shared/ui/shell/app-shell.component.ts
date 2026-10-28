@@ -6,6 +6,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { filter } from 'rxjs/operators';
 
 import { AvatarComponent } from '../data-display/avatar.component';
+import { LogoComponent } from '../data-display/logo.component';
 
 export type ShellChrome = 'app' | 'platform';
 
@@ -55,7 +56,7 @@ export interface ShellTenant {
 @Component({
   selector: 'hum-app-shell',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, RouterLink, LucideAngularModule, AvatarComponent],
+  imports: [NgTemplateOutlet, RouterLink, LucideAngularModule, AvatarComponent, LogoComponent],
   host: {
     class: 'hum-shell',
     '[class.hum-shell--nav-open]': 'sidebarOpen()',
@@ -65,7 +66,7 @@ export interface ShellTenant {
   template: `
     <aside class="hum-side" id="hum-shell-sidebar">
       <div class="hum-side__brand">
-        <span class="hum-side__wordmark">{{ brand() }}<span class="hum-side__dot" aria-hidden="true"></span></span>
+        <hum-logo [name]="brand()" />
       </div>
 
       <nav class="hum-side__nav" [attr.aria-label]="navLabel()">
