@@ -1,0 +1,30 @@
+{
+  "legal": {
+    "nav": "Legal documents",
+    "updated": "Last updated {{ date }}",
+    "terms": {
+      "title": "Terms of Service"
+    },
+    "privacy": {
+      "title": "Privacy Policy"
+    },
+    "dpa": {
+      "title": "Data Protection"
+    },
+    "links": {
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "dpa": "Data protection"
+    },
+    "consent": {
+      "before": "I agree to the",
+      "terms": "Terms of Service",
+      "and": "and",
+      "dpa": "Data Processing Addendum",
+      "after": ", and have read the",
+      "privacy": "Privacy Policy",
+      "end": ".",
+      "aria": "Accept the Terms of Service and Data Processing Addendum"
+    }
+  }
+}

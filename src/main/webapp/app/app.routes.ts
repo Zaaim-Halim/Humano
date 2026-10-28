@@ -77,6 +77,14 @@ const routes: Routes = [
         title: 'register.verify.title',
         loadComponent: () => import('./login/signup-verify.component'),
       },
+      { path: 'legal', pathMatch: 'full', redirectTo: 'legal/terms' },
+      { path: 'legal/terms', title: 'legal.terms.title', loadComponent: () => import('./features/legal/terms.component') },
+      { path: 'legal/privacy', title: 'legal.privacy.title', loadComponent: () => import('./features/legal/privacy.component') },
+      {
+        path: 'legal/data-protection',
+        title: 'legal.dpa.title',
+        loadComponent: () => import('./features/legal/data-protection.component'),
+      },
     ],
   },
   {

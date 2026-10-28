@@ -12,6 +12,7 @@ import {
   AlertComponent,
   BadgeComponent,
   ButtonComponent,
+  CheckboxComponent,
   FormFieldComponent,
   InputComponent,
   RadioComponent,
@@ -58,6 +59,7 @@ const NO_TEMPLATE = '';
     AlertComponent,
     BadgeComponent,
     ButtonComponent,
+    CheckboxComponent,
     FormFieldComponent,
     InputComponent,
     RadioComponent,
@@ -87,6 +89,8 @@ export default class SignupComponent {
     email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
     country: ['', [Validators.required]],
     payrollTemplateId: [NO_TEMPLATE],
+    /** Terms of Service and Data Processing Addendum; the workspace can't be created without them. */
+    acceptTerms: [false, [Validators.requiredTrue]],
     website: [''],
   });
 

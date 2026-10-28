@@ -1,0 +1,225 @@
+<hum-legal-nav />
+
+<div class="hum-auth__head">
+  <h1 class="hum-auth__title">Privacy Policy</h1>
+  <p class="hum-auth__desc">
+    This policy explains how {{ legal.entity }} (“{{ legal.product }}”, “we”, “us”) collects and uses personal data, and the rights you have
+    over it. It is written to meet the EU and UK General Data Protection Regulation (GDPR) and comparable laws in other countries.
+  </p>
+</div>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">1. Who is responsible for your data</h2>
+  <p>{{ legal.product }} plays two different roles, depending on whose data it is:</p>
+  <ul class="hum-legal__list">
+    <li>
+      <strong>We are the controller</strong> of the personal data of visitors to our website, people who request a demo, the people who sign
+      up for and administer a workspace, billing contacts, and anyone who contacts us. This policy covers that data.
+    </li>
+    <li>
+      <strong>Your employer is the controller</strong> of the data in its workspace — employee records, payroll, leave, timesheets,
+      documents, performance reviews and so on. We process it only on the employer’s instructions, as its processor, under our
+      <a routerLink="/legal/data-protection">Data Processing Addendum</a>. If you are an employee and want to see, correct or delete your HR
+      data, please contact your employer’s HR team; if you contact us, we will pass your request on to them.
+    </li>
+  </ul>
+  <p>
+    Contact: {{ legal.entity }}, {{ legal.address }} · {{ legal.privacyEmail }}. Data protection officer / representative: {{ legal.dpo }}.
+  </p>
+</section>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">2. What we collect, why, and on what legal basis</h2>
+  <div class="hum-legal__table-wrap">
+    <table class="hum-legal__table">
+      <thead>
+        <tr>
+          <th scope="col">Data</th>
+          <th scope="col">Purpose</th>
+          <th scope="col">Legal basis (GDPR art. 6)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <strong>Sign-up details</strong>: work email, company name, workspace address, country, time zone, chosen plan and payroll
+            template
+          </td>
+          <td>Create and provision your workspace, verify your email, run your trial</td>
+          <td>Contract (taking steps at your request to enter into it)</td>
+        </tr>
+        <tr>
+          <td>
+            <strong>Account data</strong> of workspace users: name, email, password (stored only as a one-way hash), role, language and
+            preferences
+          </td>
+          <td>Let you sign in, secure your account, provide the service</td>
+          <td>Contract; legitimate interests in securing the service</td>
+        </tr>
+        <tr>
+          <td><strong>Demo requests</strong>: name, work email, company, company size, country, phone (optional), message</td>
+          <td>Reply to you and set up a demo workspace</td>
+          <td>Legitimate interests in answering enquiries; contract, at your request</td>
+        </tr>
+        <tr>
+          <td>
+            <strong>Billing data</strong>: billing contact, company and tax details, invoices, payment status. Card details are collected
+            and held by Stripe, not by us.
+          </td>
+          <td>Charge for subscriptions, issue invoices, keep accounting records</td>
+          <td>Contract; legal obligation (tax and accounting law)</td>
+        </tr>
+        <tr>
+          <td>
+            <strong>Technical and security data</strong>: IP address, browser and device information, sign-in times and devices, security
+            and audit logs
+          </td>
+          <td>Keep the service secure, prevent abuse and fraud, investigate incidents, show you your signed-in devices</td>
+          <td>Legitimate interests in security and preventing misuse</td>
+        </tr>
+        <tr>
+          <td><strong>Support and correspondence</strong>: what you tell us when you write to us</td>
+          <td>Answer your questions and fix problems</td>
+          <td>Contract; legitimate interests</td>
+        </tr>
+        <tr>
+          <td><strong>Service emails</strong>: your email address</td>
+          <td>Account, security, billing and important service notices</td>
+          <td>Contract; legitimate interests</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    We do not sell personal data, use it for advertising profiles or make decisions about you based solely on automated processing that have
+    legal or similarly significant effects. We do not use the HR data in customer workspaces for our own purposes. If we ever want to send
+    you marketing emails, we will do so only with your consent where the law requires it, and every such email will let you unsubscribe.
+  </p>
+  <p>Some details are needed to provide the service — without a valid email address and company details, we cannot create a workspace.</p>
+</section>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">3. Cookies and browser storage</h2>
+  <p>
+    We do not use advertising or analytics cookies, and no third-party tracking scripts run on our pages. The site and app use your
+    browser’s local and session storage only for things that are strictly necessary or that you choose:
+  </p>
+  <ul class="hum-legal__list">
+    <li><strong>Sign-in token</strong> — keeps you signed in; kept for the browser session, or longer if you choose “Remember me”.</li>
+    <li><strong>Workspace</strong> — which workspace you are signing in to, for the browser session.</li>
+    <li><strong>Preferences</strong> — light or dark theme, display density, language, list views and dismissed hints.</li>
+  </ul>
+  <p>
+    Because these are strictly necessary for the service you ask for, or only remember your own choices, they do not require consent. You
+    can clear them at any time in your browser settings; you will then be signed out. Our pages load fonts from Google Fonts, which means
+    your browser connects to Google’s servers and shares its IP address and browser details with Google.
+  </p>
+</section>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">4. Who we share data with</h2>
+  <p>
+    We share personal data only with service providers that help us run {{ legal.product }} and act on our instructions under written
+    contracts, with professional advisers bound by confidentiality, with a buyer or successor if our business is sold or reorganised, and
+    with authorities where the law requires it. Our current service providers are:
+  </p>
+  <div class="hum-legal__table-wrap">
+    <table class="hum-legal__table">
+      <thead>
+        <tr>
+          <th scope="col">Provider</th>
+          <th scope="col">Purpose</th>
+          <th scope="col">Location</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of subprocessors; track p.name) {
+          <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.purpose }}</td>
+            <td>{{ p.location }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">5. International transfers</h2>
+  <p>
+    Our service is hosted in {{ legal.hostingRegion }}. Where personal data is transferred to a country that has not been recognised as
+    providing an adequate level of protection, we rely on appropriate safeguards — such as the European Commission’s Standard Contractual
+    Clauses, the UK International Data Transfer Addendum, or the EU-U.S. Data Privacy Framework where the recipient is certified — together
+    with any additional measures needed. You can ask us for a copy of the relevant safeguards.
+  </p>
+</section>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">6. How long we keep data</h2>
+  <ul class="hum-legal__list">
+    <li>
+      Account and workspace data: for as long as the workspace exists, then as set out in our Terms (deleted within
+      {{ legal.deletionDays }} days of the end of the subscription, and from backups within a further {{ legal.backupDays }} days).
+    </li>
+    <li>
+      Unconfirmed sign-ups: nothing is stored until you confirm your email — the details you entered travel only inside the signed link we
+      email you (apart from the email delivery itself).
+    </li>
+    <li>
+      Demo requests that do not become customers: up to {{ legal.demoRetentionMonths }} months after our last contact, unless you ask us to
+      delete them sooner.
+    </li>
+    <li>Invoices and billing records: as long as tax and accounting law requires (typically up to 10 years).</li>
+    <li>Security logs: for as long as needed for security purposes, and normally no longer than {{ legal.logRetentionMonths }} months.</li>
+  </ul>
+</section>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">7. Your rights</h2>
+  <p>Depending on where you live, you have the right to:</p>
+  <ul class="hum-legal__list">
+    <li>access the personal data we hold about you and get a copy of it;</li>
+    <li>have inaccurate data corrected and incomplete data completed;</li>
+    <li>have your data erased, or its use restricted, in the cases the law provides;</li>
+    <li>receive data you gave us in a structured, machine-readable format, and have it sent to someone else (portability);</li>
+    <li><strong>object</strong> at any time to processing based on our legitimate interests, and always to direct marketing;</li>
+    <li>withdraw consent at any time, where we rely on it, without affecting what we did before;</li>
+    <li>
+      lodge a complaint with a data protection supervisory authority — in particular in the country where you live or work, or where an
+      alleged infringement took place. Our lead authority is {{ legal.supervisoryAuthority }}.
+    </li>
+  </ul>
+  <p>
+    To use these rights, email {{ legal.privacyEmail }}. We will reply within one month (extendable by two further months for complex
+    requests, in which case we will tell you), and may need to confirm your identity first. Exercising your rights is free unless a request
+    is manifestly unfounded or excessive. California residents have equivalent rights to know, delete and correct, and we do not sell or
+    share personal information as those terms are defined under California law.
+  </p>
+</section>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">8. Security</h2>
+  <p>
+    We protect personal data with appropriate technical and organisational measures, including a separate database for each workspace,
+    encrypted connections, hashed passwords, permission-based access controls and audit logging. These are described in more detail in Annex
+    2 of the <a routerLink="/legal/data-protection">Data Processing Addendum</a>. No system is perfectly secure; if a breach affects your
+    personal data and is likely to put your rights at high risk, we will tell you without undue delay.
+  </p>
+</section>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">9. Children</h2>
+  <p>
+    {{ legal.product }} is a business service and not directed at children. We do not knowingly collect personal data from children for our
+    own purposes.
+  </p>
+</section>
+
+<section class="hum-guide__section">
+  <h2 class="hum-guide__h2">10. Changes to this policy</h2>
+  <p>
+    We may update this policy from time to time. The date at the top shows when it last changed; if a change is significant, we will also
+    tell workspace owners by email or in the app before it takes effect.
+  </p>
+</section>

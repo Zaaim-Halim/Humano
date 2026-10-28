@@ -316,6 +316,14 @@ export default class LandingPageComponent {
         { label: 'Sign in', href: '/login' },
       ],
     },
+    {
+      heading: 'Legal',
+      links: [
+        { label: 'Terms of Service', href: '/legal/terms' },
+        { label: 'Privacy Policy', href: '/legal/privacy' },
+        { label: 'Data protection', href: '/legal/data-protection' },
+      ],
+    },
   ];
 
   protected readonly year = new Date().getFullYear();

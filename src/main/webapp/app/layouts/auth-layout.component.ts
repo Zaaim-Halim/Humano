@@ -90,6 +90,11 @@ function ledger(): LedgerRow[] {
         <span class="hum-auth__foot-item"
           ><lucide-icon name="database" [size]="13" aria-hidden="true" />{{ 'login.footer.isolated' | translate }}</span
         >
+        <span class="hum-auth__foot-links">
+          <a routerLink="/legal/terms">{{ 'legal.links.terms' | translate }}</a>
+          <a routerLink="/legal/privacy">{{ 'legal.links.privacy' | translate }}</a>
+          <a routerLink="/legal/data-protection">{{ 'legal.links.dpa' | translate }}</a>
+        </span>
         <span>© {{ year }} Humano</span>
       </footer>
     </div>

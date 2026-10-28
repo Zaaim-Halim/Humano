@@ -133,6 +133,20 @@
       <p class="hum-auth__choices-hint">{{ 'register.form.payrollNotInPlan' | translate }}</p>
     }
 
+    <!-- The legal pages open in a new tab so the form keeps what was typed. -->
+    <div class="hum-auth__consent">
+      <hum-checkbox formControlName="acceptTerms" [ariaLabel]="'legal.consent.aria' | translate" />
+      <span
+        >{{ 'legal.consent.before' | translate }}
+        <a routerLink="/legal/terms" target="_blank" rel="noopener">{{ 'legal.consent.terms' | translate }}</a>
+        {{ 'legal.consent.and' | translate }}
+        <a routerLink="/legal/data-protection" target="_blank" rel="noopener">{{ 'legal.consent.dpa' | translate }}</a
+        >{{ 'legal.consent.after' | translate }}
+        <a routerLink="/legal/privacy" target="_blank" rel="noopener">{{ 'legal.consent.privacy' | translate }}</a
+        >{{ 'legal.consent.end' | translate }}</span
+      >
+    </div>
+
     <!-- Honeypot: hidden from people; bots that fill it in are ignored. -->
     <div class="lp-demo-form__hp" aria-hidden="true">
       <label for="su-website">Website</label>

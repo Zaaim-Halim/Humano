@@ -580,6 +580,10 @@
       <hum-form-field label="What would you like to see? (optional)" controlId="demo-message">
         <hum-textarea [rows]="3" [ngModel]="f.message" (ngModelChange)="patchDemo({ message: $event })" name="message" />
       </hum-form-field>
+      <p class="lp-demo-form__privacy">
+        We use these details only to arrange your demo — see our
+        <a routerLink="/legal/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
+      </p>
       <!-- Honeypot: hidden from people; bots that fill it in are ignored. -->
       <div class="lp-demo-form__hp" aria-hidden="true">
         <label for="demo-website">Website</label>

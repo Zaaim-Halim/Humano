@@ -2138,6 +2138,140 @@ dt {
 .hum-guide__code--example {
   color: var(--brand-text);
 }
+/* Public legal pages (terms, privacy, data protection): long-form prose in the auth shell. */
+.hum-auth__panel:has(.hum-legal) {
+  max-width: 880px;
+}
+.hum-legal p,
+.hum-legal__list,
+.hum-legal__dl dd {
+  margin: 0;
+  max-width: 75ch;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-default);
+}
+.hum-legal a {
+  color: var(--brand-text);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+.hum-legal a:hover {
+  text-decoration: underline;
+}
+.hum-legal strong {
+  font-weight: var(--weight-semibold);
+  color: var(--text-strong);
+}
+.hum-legal__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.hum-legal a.hum-legal__tab {
+  padding: var(--space-1_5) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.hum-legal a.hum-legal__tab:hover {
+  color: var(--text-strong);
+  background: var(--bg-muted);
+  text-decoration: none;
+}
+.hum-legal a.hum-legal__tab.is-active {
+  color: var(--brand-text);
+  background: var(--brand-subtle);
+}
+.hum-legal p.hum-legal__updated {
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+.hum-legal__list {
+  padding-left: var(--space-5);
+  display: grid;
+  gap: var(--space-1_5);
+  list-style: disc;
+}
+.hum-legal__list--ordered {
+  list-style: decimal;
+}
+.hum-legal__dl {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+.hum-legal__dl dt {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-strong);
+}
+.hum-legal__dl dd .hum-legal__list {
+  margin-top: var(--space-1);
+}
+.hum-legal__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.hum-legal__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+.hum-legal__table th,
+.hum-legal__table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-default);
+}
+.hum-legal__table th {
+  font-weight: var(--weight-semibold);
+  color: var(--text-strong);
+  background: var(--bg-subtle);
+}
+.hum-legal__table tr:last-child td {
+  border-bottom: 0;
+}
+@media (max-width: 560px) {
+  .hum-auth__panel:has(.hum-legal) {
+    padding: var(--space-5);
+  }
+}
+/* Sign-up: accepting the terms (checkbox plus a sentence with links). */
+.hum-auth__consent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
+}
+.hum-auth__consent a {
+  color: var(--brand-text);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+.hum-auth__consent a:hover {
+  text-decoration: underline;
+}
+.hum-auth__foot-links {
+  display: inline-flex;
+  gap: var(--space-3);
+}
+.hum-auth__foot-links a {
+  color: inherit;
+  text-decoration: none;
+}
+.hum-auth__foot-links a:hover {
+  color: var(--text-default);
+}
 /* Sign-up: payroll template choice (radio cards). */
 .hum-auth__choices {
   display: grid;
@@ -3704,6 +3838,15 @@ dt {
   gap: var(--space-4);
 }
 
+.lp-demo-form__privacy {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
+.lp-demo-form__privacy a {
+  color: var(--brand-text);
+  text-decoration: none;
+}
 .lp-demo-form__hp {
   position: absolute;
   left: -10000px;
@@ -3883,7 +4026,7 @@ dt {
 /* footer */
 .lp-footer__top {
   display: grid;
-  grid-template-columns: 2fr repeat(2, 1fr);
+  grid-template-columns: 2fr repeat(3, 1fr);
   gap: var(--space-8);
 }
 .lp-footer__tagline {
