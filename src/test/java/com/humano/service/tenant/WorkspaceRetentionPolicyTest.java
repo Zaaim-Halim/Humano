@@ -7,12 +7,12 @@ import com.humano.domain.enumeration.billing.SubscriptionStatus;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.domain.tenant.TenantDatabaseConfig;
-import com.humano.service.tenant.WorkspaceRetentionJob.Action;
+import com.humano.service.tenant.WorkspaceRetentionPolicy.Action;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 
-class WorkspaceRetentionJobTest {
+class WorkspaceRetentionPolicyTest {
 
     private static final int DAYS = 90;
     private static final int WARN = 7;
@@ -40,7 +40,7 @@ class WorkspaceRetentionJobTest {
     }
 
     private static Action decide(Subscription s, Instant now) {
-        return WorkspaceRetentionJob.decide(s, now, DAYS, WARN, PLATFORM);
+        return WorkspaceRetentionPolicy.decide(s, now, DAYS, WARN, PLATFORM);
     }
 
     @Test
@@ -72,8 +72,8 @@ class WorkspaceRetentionJobTest {
         Subscription s = warnedAt(late);
         assertThat(decide(s, late.plus(WARN, ChronoUnit.DAYS).minusSeconds(1))).isEqualTo(Action.NONE);
         assertThat(decide(s, late.plus(WARN, ChronoUnit.DAYS))).isEqualTo(Action.DELETE);
-        assertThat(WorkspaceRetentionJob.deleteOn(ENDED, late, DAYS, WARN)).isEqualTo(late.plus(WARN, ChronoUnit.DAYS));
-        assertThat(WorkspaceRetentionJob.deleteOn(ENDED, WARN_FROM, DAYS, WARN)).isEqualTo(RETENTION_OVER);
+        assertThat(WorkspaceRetentionPolicy.deleteOn(ENDED, late, DAYS, WARN)).isEqualTo(late.plus(WARN, ChronoUnit.DAYS));
+        assertThat(WorkspaceRetentionPolicy.deleteOn(ENDED, WARN_FROM, DAYS, WARN)).isEqualTo(RETENTION_OVER);
     }
 
     @Test

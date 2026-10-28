@@ -21,5 +21,11 @@ public final class Constants {
      */
     public static final String TERMS_VERSION = "2026-10-28";
 
+    /**
+     * Days' notice customers get before a new sub-processor starts processing their data (Data
+     * Processing Addendum §3). Must match {@code LEGAL.subprocessorNoticeDays} in {@code legal-info.ts}.
+     */
+    public static final int SUBPROCESSOR_NOTICE_DAYS = 30;
+
     private Constants() {}
 }

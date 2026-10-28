@@ -9,6 +9,16 @@ import { BillingCycle } from '../models/enums/billing-cycle.enum';
 import { Entitlements, StorageAddon } from '../models/entitlements.model';
 import { Subscription } from '../models/subscription.model';
 
+/** The workspace's acceptance of the Terms of Service and DPA; `applies` is false for demos. */
+export interface TermsStatus {
+  applies: boolean;
+  currentVersion: string;
+  acceptedVersion: string | null;
+  acceptedAt: string | null;
+  acceptedBy: string | null;
+  upToDate: boolean;
+}
+
 /**
  * Self-service billing — `/api/billing/me`: the company's own subscription, and (with
  * `MANAGE_SUBSCRIPTIONS`) changing plan, cancelling at period end and taking that back. Demo
@@ -32,6 +42,16 @@ export class MeBillingService {
    * locked nav items, the read-only notice on modules outside the plan and the usage meters.
    */
   readonly entitlements = signal<Entitlements | null>(null);
+
+  /** `GET /api/billing/me/terms`: which version of the Terms and DPA the workspace accepted. */
+  terms(): Observable<TermsStatus> {
+    return this.http.get<TermsStatus>(`${this.resourceUrl}/terms`);
+  }
+
+  /** `POST /api/billing/me/terms/accept` (`MANAGE_SUBSCRIPTIONS`): accepts `version`, which must be the current one. */
+  acceptTerms(version: string): Observable<TermsStatus> {
+    return this.http.post<TermsStatus>(`${this.resourceUrl}/terms/accept`, { version });
+  }
 
   /** `GET /api/billing/me/entitlements`, kept in {@link entitlements}. */
   loadEntitlements(): void {

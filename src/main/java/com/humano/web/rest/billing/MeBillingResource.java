@@ -1,15 +1,19 @@
 package com.humano.web.rest.billing;
 
+import com.humano.dto.billing.requests.AcceptTermsRequest;
 import com.humano.dto.billing.requests.ChangeMyPlanRequest;
 import com.humano.dto.billing.requests.SetStorageAddonRequest;
 import com.humano.dto.billing.responses.EntitlementsResponse;
 import com.humano.dto.billing.responses.StorageAddonResponse;
 import com.humano.dto.billing.responses.SubscriptionResponse;
+import com.humano.dto.billing.responses.TermsStatusResponse;
 import com.humano.security.PermissionsConstants;
+import com.humano.security.SecurityUtils;
 import com.humano.security.annotation.RequireAuthenticated;
 import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.SelfServiceBillingService;
 import com.humano.service.billing.SubscriptionService;
+import com.humano.service.billing.TermsAcceptanceService;
 import com.humano.service.billing.entitlement.PlanUsageService;
 import com.humano.service.billing.entitlement.StorageAddonService;
 import com.humano.tenancy.TenantIdResolver;
@@ -37,19 +41,39 @@ public class MeBillingResource {
     private final TenantIdResolver tenantIdResolver;
     private final PlanUsageService planUsageService;
     private final StorageAddonService storageAddonService;
+    private final TermsAcceptanceService termsAcceptanceService;
 
     public MeBillingResource(
         SubscriptionService subscriptionService,
         SelfServiceBillingService selfService,
         TenantIdResolver tenantIdResolver,
         PlanUsageService planUsageService,
-        StorageAddonService storageAddonService
+        StorageAddonService storageAddonService,
+        TermsAcceptanceService termsAcceptanceService
     ) {
         this.subscriptionService = subscriptionService;
         this.selfService = selfService;
         this.tenantIdResolver = tenantIdResolver;
         this.planUsageService = planUsageService;
         this.storageAddonService = storageAddonService;
+        this.termsAcceptanceService = termsAcceptanceService;
+    }
+
+    /** Which version of the Terms of Service and DPA the workspace accepted, and whether it is the current one. */
+    @GetMapping("/terms")
+    public TermsStatusResponse terms() {
+        return termsAcceptanceService.status(tenantIdResolver.requireCurrentTenantId());
+    }
+
+    /** A billing admin accepts the current Terms for the workspace (allowed while read-only, like choosing a plan). */
+    @PostMapping("/terms/accept")
+    @RequirePermission(PermissionsConstants.MANAGE_SUBSCRIPTIONS)
+    public TermsStatusResponse acceptTerms(@Valid @RequestBody AcceptTermsRequest request) {
+        return termsAcceptanceService.accept(
+            tenantIdResolver.requireCurrentTenantId(),
+            request.version(),
+            SecurityUtils.getCurrentUserLogin().orElse(null)
+        );
     }
 
     @GetMapping("/current-subscription")

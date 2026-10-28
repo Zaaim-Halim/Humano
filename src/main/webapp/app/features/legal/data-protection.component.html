@@ -11,6 +11,14 @@
   </p>
 </div>
 
+<p class="hum-legal__actions hum-no-print">
+  <hum-button variant="secondary" icon="file-signature" (click)="print()">Print or save as PDF to sign</hum-button>
+</p>
+<p class="hum-no-print">
+  You do not need to sign anything: this DPA applies as soon as you accept the Terms. If your company needs a signed copy, print it, sign
+  the block at the end and send it to {{ legal.contactEmail }}; we will return it countersigned.
+</p>
+
 <section class="hum-guide__section">
   <h2 class="hum-guide__h2">1. Roles and scope</h2>
   <p>
@@ -252,5 +260,48 @@
         }
       </tbody>
     </table>
+  </div>
+</section>
+
+<section class="hum-guide__section hum-legal__sign">
+  <h2 class="hum-guide__h2">Signatures</h2>
+  <p>Signed by the authorised representatives of the parties. This DPA version: {{ updated }}.</p>
+  <div class="hum-legal__sign-grid">
+    <div>
+      <p><strong>Customer (Controller)</strong></p>
+      <dl class="hum-legal__sign-lines">
+        <dt>Company</dt>
+        <dd></dd>
+        <dt>Address</dt>
+        <dd></dd>
+        <dt>Name</dt>
+        <dd></dd>
+        <dt>Title</dt>
+        <dd></dd>
+        <dt>Date</dt>
+        <dd></dd>
+        <dt>Signature</dt>
+        <dd class="is-tall"></dd>
+      </dl>
+    </div>
+    <div>
+      <p>
+        <strong>{{ legal.entity }} (Processor)</strong>
+      </p>
+      <dl class="hum-legal__sign-lines">
+        <dt>Company</dt>
+        <dd>{{ legal.entity }}</dd>
+        <dt>Address</dt>
+        <dd>{{ legal.address }}</dd>
+        <dt>Name</dt>
+        <dd></dd>
+        <dt>Title</dt>
+        <dd></dd>
+        <dt>Date</dt>
+        <dd></dd>
+        <dt>Signature</dt>
+        <dd class="is-tall"></dd>
+      </dl>
+    </div>
   </div>
 </section>

@@ -25,6 +25,8 @@ export class LegalNavComponent {
     { path: '/legal/terms', label: 'legal.terms.title' },
     { path: '/legal/privacy', label: 'legal.privacy.title' },
     { path: '/legal/data-protection', label: 'legal.dpa.title' },
+    // Not one of our documents: a template for employers, set apart in the tab row.
+    { path: '/legal/employee-notice', label: 'legal.employeeNotice.tab' },
   ];
   protected readonly updated = LEGAL_UPDATED;
 }

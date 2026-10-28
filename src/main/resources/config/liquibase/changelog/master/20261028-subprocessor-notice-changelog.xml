@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- Notices to every customer of a new sub-processor, ahead of time (Data Processing Addendum §3) -->
+    <changeSet id="20261028-create-subprocessor-notice" author="halimzaaim">
+        <createTable tableName="subprocessor_notice">
+            <column name="id" type="${uuidType}">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="purpose" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="data_categories" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="location" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="effective_from" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sent_at" type="${datetimeType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sent_by" type="VARCHAR(254)"/>
+            <column name="recipient_count" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="missing_count" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Notices that could not be sent to a workspace (separate changeSet: the table may already exist) -->
+    <changeSet id="20261028-add-failed-count-to-subprocessor-notice" author="halimzaaim">
+        <addColumn tableName="subprocessor_notice">
+            <column name="failed_count" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="subprocessor_notice" columnName="failed_count"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Who accepted the Terms recorded on the workspace (at sign-up, or again after they changed) -->
+    <changeSet id="20261028-add-terms-accepted-by-to-tenant" author="halimzaaim">
+        <addColumn tableName="tenant">
+            <column name="terms_accepted_by" type="VARCHAR(254)"/>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="tenant" columnName="terms_accepted_by"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

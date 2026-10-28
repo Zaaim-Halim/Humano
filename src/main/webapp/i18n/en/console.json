@@ -22,7 +22,8 @@
           "admin": "Administration"
         },
         "demos": "Demos",
-        "addons": "Add-ons"
+        "addons": "Add-ons",
+        "compliance": "Data protection"
       },
       "cycle": {
         "MONTHLY": "Monthly",
@@ -144,6 +145,7 @@
         "back": "All customers",
         "since": "Customer since {{ date }}",
         "termsAccepted": "Accepted terms v{{ version }} on {{ date }}",
+        "termsAcceptedBy": "by {{ who }}",
         "suspend": "Suspend",
         "reactivate": "Reactivate",
         "suspendedTitle": "This workspace is suspended",
@@ -538,6 +540,75 @@
         "onRenewal": "On the monthly renewal invoice",
         "empty": "No add-ons yet",
         "emptyHint": "When customers buy extra storage, or you add it for them from their page, it shows here."
+      },
+      "compliance": {
+        "title": "Data protection",
+        "subtitle": "Workspaces due for deletion after their subscription ended, and notices of new sub-processors to customers.",
+        "disabled": "Workspace deletion is switched off in this environment's configuration: nothing below will be warned or deleted.",
+        "overdue": "{{ n }} deletion warning(s) should have gone out and have not. Check that email is configured; nothing is deleted until the warning is sent.",
+        "kpi": {
+          "total": "In retention",
+          "totalHint": "Subscription ended; kept {{ days }} days",
+          "warned": "Warned",
+          "warnedHint": "At least {{ days }} days' notice before deletion",
+          "nextWeek": "Deleted within 7 days",
+          "nextWeekHint": "At the earliest",
+          "notices": "Sub-processor notices",
+          "noticesHint": "Sent at least {{ days }} days ahead"
+        },
+        "subscription": {
+          "EXPIRED": "trial ended",
+          "CANCELLED": "cancelled"
+        },
+        "deletions": {
+          "title": "Scheduled deletions",
+          "hint": "A workspace is deleted {{ days }} days after its subscription ended, and only once its admin has been warned and {{ warning }} full days have passed since. Reactivating it stops this.",
+          "workspace": "Workspace",
+          "ended": "Ended",
+          "warning": "Warning",
+          "deleteOn": "Deleted on",
+          "state": "Status",
+          "sentOn": "Sent {{ date }}",
+          "dueOn": "Due {{ date }}",
+          "earliest": "From",
+          "empty": "Nothing scheduled",
+          "emptyHint": "Workspaces whose trial lapsed or that were cancelled show here until they are deleted or reactivated."
+        },
+        "states": {
+          "WAITING": "Waiting",
+          "WARNING_DUE": "Warning due",
+          "WARNED": "Warned",
+          "OVERDUE": "Warning overdue"
+        },
+        "notices": {
+          "title": "Sub-processor notices",
+          "hint": "Before a new sub-processor starts processing customer data, every customer must be told at least {{ days }} days ahead. Add it to the sub-processor list in the DPA too.",
+          "new": "Send a notice",
+          "name": "Sub-processor",
+          "effectiveFrom": "Starts on",
+          "sent": "Sent",
+          "recipients": "Workspaces",
+          "noAddress": "{{ n }} without an address",
+          "failed": "{{ n }} failed",
+          "empty": "No notices sent",
+          "emptyHint": "Notices you send to customers about new sub-processors are listed here as the record."
+        },
+        "notice": {
+          "title": "Notice of a new sub-processor",
+          "body": "This emails the contact of every customer workspace whose data we hold. The start date must be at least {{ days }} days away; customers can object until then.",
+          "purpose": "Purpose",
+          "purposeHint": "What it does for humano, e.g. \"Transactional email delivery\".",
+          "data": "Personal data it processes",
+          "location": "Location",
+          "locationHint": "Where data is processed, and the transfer safeguard if outside the EEA.",
+          "dateHint": "At least {{ days }} days from today.",
+          "reach": "It will go to {{ n }} workspace(s).",
+          "annex": "Remember to update the sub-processor list (Annex 3 of the DPA) before the start date.",
+          "send": "Send to all customers",
+          "sent": "Notice sent to {{ n }} workspace(s).",
+          "missing": "{{ n }} workspace(s) have no contact address and did not get it.",
+          "failed": "{{ n }} could not be sent (see the server log); send them the notice by hand."
+        }
       }
     }
   }

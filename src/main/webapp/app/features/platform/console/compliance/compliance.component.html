@@ -1,0 +1,237 @@
+<div class="hum-page">
+  <hum-page-header [title]="'humano.console.compliance.title' | translate" [subtitle]="'humano.console.compliance.subtitle' | translate" />
+
+  @if (error(); as e) {
+    <hum-alert tone="danger" [title]="e">
+      <hum-button variant="outline" size="sm" icon="rotate-ccw" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+    </hum-alert>
+  } @else if (deletions() === null || notices() === null) {
+    <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
+  } @else {
+    @if (!deletions()!.enabled) {
+      <hum-alert tone="warning" [title]="'humano.console.compliance.disabled' | translate" style="margin-bottom: var(--space-4)" />
+    }
+    @if (counts().overdue) {
+      <hum-alert
+        tone="danger"
+        [title]="'humano.console.compliance.overdue' | translate: { n: counts().overdue }"
+        style="margin-bottom: var(--space-4)"
+      />
+    }
+
+    <div class="hum-insights__kpis hum-dash-kpis">
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="archive" [size]="14" />{{ 'humano.console.compliance.kpi.total' | translate }}</div>
+        <div class="hum-kpi__value tabular-nums">{{ counts().total }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.compliance.kpi.totalHint' | translate: { days: deletions()!.days } }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label"><lucide-icon name="mail" [size]="14" />{{ 'humano.console.compliance.kpi.warned' | translate }}</div>
+        <div class="hum-kpi__value tabular-nums">{{ counts().warned }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.compliance.kpi.warnedHint' | translate: { days: deletions()!.warningDays } }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label">
+          <lucide-icon name="trash-2" [size]="14" />{{ 'humano.console.compliance.kpi.nextWeek' | translate }}
+        </div>
+        <div class="hum-kpi__value tabular-nums">{{ counts().nextWeek }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.compliance.kpi.nextWeekHint' | translate }}</div>
+      </div>
+      <div class="hum-kpi">
+        <div class="hum-kpi__label">
+          <lucide-icon name="file-signature" [size]="14" />{{ 'humano.console.compliance.kpi.notices' | translate }}
+        </div>
+        <div class="hum-kpi__value tabular-nums">{{ notices()!.length }}</div>
+        <div class="hum-kpi__hint">{{ 'humano.console.compliance.kpi.noticesHint' | translate: { days: noticeDays } }}</div>
+      </div>
+    </div>
+
+    <!-- ======================= Scheduled deletions ======================= -->
+    <section class="hum-set-card" style="padding: 0; margin-top: var(--space-4)">
+      <header class="hum-set-card__head-row" style="padding: var(--space-4) var(--space-4) 0">
+        <div>
+          <h3>{{ 'humano.console.compliance.deletions.title' | translate }}</h3>
+          <p>
+            {{ 'humano.console.compliance.deletions.hint' | translate: { days: deletions()!.days, warning: deletions()!.warningDays } }}
+          </p>
+        </div>
+      </header>
+      @if (deletions()!.items.length) {
+        <div class="hum-con-table-wrap">
+          <table class="hum-con-table">
+            <thead>
+              <tr>
+                <th>{{ 'humano.console.compliance.deletions.workspace' | translate }}</th>
+                <th>{{ 'humano.console.compliance.deletions.ended' | translate }}</th>
+                <th>{{ 'humano.console.compliance.deletions.warning' | translate }}</th>
+                <th>{{ 'humano.console.compliance.deletions.deleteOn' | translate }}</th>
+                <th>{{ 'humano.console.compliance.deletions.state' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (i of deletions()!.items; track i.tenantId) {
+                <tr>
+                  <td>
+                    <span class="hum-person__text">
+                      <span class="hum-person__name">{{ i.name }}</span>
+                      <span class="hum-person__sub">
+                        {{ i.subdomain }} · {{ 'humano.console.compliance.subscription.' + i.subscriptionStatus | translate }}
+                      </span>
+                    </span>
+                  </td>
+                  <td class="tabular-nums">{{ i.endedAt | date: 'mediumDate' }}</td>
+                  <td class="tabular-nums">
+                    @if (i.warningSentAt) {
+                      {{ 'humano.console.compliance.deletions.sentOn' | translate: { date: (i.warningSentAt | date: 'mediumDate') } }}
+                    } @else {
+                      {{ 'humano.console.compliance.deletions.dueOn' | translate: { date: (i.warnFrom | date: 'mediumDate') } }}
+                    }
+                  </td>
+                  <td class="tabular-nums">
+                    @if (i.state !== 'WARNED') {
+                      {{ 'humano.console.compliance.deletions.earliest' | translate }}
+                    }
+                    {{ i.deleteOn | date: 'mediumDate' }}
+                  </td>
+                  <td>
+                    <hum-badge
+                      [tone]="stateTone(i.state, i.warningOverdue)"
+                      [label]="
+                        (i.warningOverdue ? 'humano.console.compliance.states.OVERDUE' : 'humano.console.compliance.states.' + i.state)
+                          | translate
+                      "
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <hum-empty-state
+          icon="archive"
+          [title]="'humano.console.compliance.deletions.empty' | translate"
+          [description]="'humano.console.compliance.deletions.emptyHint' | translate"
+        />
+      }
+    </section>
+
+    <!-- ======================= Sub-processor notices ======================= -->
+    <section class="hum-set-card" style="padding: 0; margin-top: var(--space-4)">
+      <header class="hum-set-card__head-row" style="padding: var(--space-4) var(--space-4) 0">
+        <div>
+          <h3>{{ 'humano.console.compliance.notices.title' | translate }}</h3>
+          <p>{{ 'humano.console.compliance.notices.hint' | translate: { days: noticeDays } }}</p>
+        </div>
+        @if (canSend()) {
+          <hum-button variant="secondary" size="sm" icon="send" (click)="openNotice()">{{
+            'humano.console.compliance.notices.new' | translate
+          }}</hum-button>
+        }
+      </header>
+      @if (notices()!.length) {
+        <div class="hum-con-table-wrap">
+          <table class="hum-con-table">
+            <thead>
+              <tr>
+                <th>{{ 'humano.console.compliance.notices.name' | translate }}</th>
+                <th>{{ 'humano.console.compliance.notices.effectiveFrom' | translate }}</th>
+                <th>{{ 'humano.console.compliance.notices.sent' | translate }}</th>
+                <th>{{ 'humano.console.compliance.notices.recipients' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (n of notices(); track n.id) {
+                <tr>
+                  <td>
+                    <span class="hum-person__text">
+                      <span class="hum-person__name">{{ n.name }}</span>
+                      <span class="hum-person__sub">{{ n.purpose }} · {{ n.location }}</span>
+                    </span>
+                  </td>
+                  <td class="tabular-nums">{{ n.effectiveFrom | date: 'mediumDate' }}</td>
+                  <td class="tabular-nums">
+                    <span class="hum-person__text">
+                      <span>{{ n.sentAt | date: 'mediumDate' }}</span>
+                      @if (n.sentBy) {
+                        <span class="hum-person__sub">{{ n.sentBy }}</span>
+                      }
+                    </span>
+                  </td>
+                  <td class="tabular-nums">
+                    {{ n.recipientCount }}
+                    @if (n.missingCount) {
+                      <span class="hum-con-late">{{
+                        'humano.console.compliance.notices.noAddress' | translate: { n: n.missingCount }
+                      }}</span>
+                    }
+                    @if (n.failedCount) {
+                      <span class="hum-con-late">{{ 'humano.console.compliance.notices.failed' | translate: { n: n.failedCount } }}</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <hum-empty-state
+          icon="file-signature"
+          [title]="'humano.console.compliance.notices.empty' | translate"
+          [description]="'humano.console.compliance.notices.emptyHint' | translate"
+        />
+      }
+    </section>
+  }
+</div>
+
+<!-- New sub-processor notice -->
+<hum-drawer [open]="draft() !== null" [title]="'humano.console.compliance.notice.title' | translate" hasFooter (closed)="draft.set(null)">
+  @if (draft(); as d) {
+    <div style="display: grid; gap: var(--space-4)">
+      <hum-alert tone="info" [title]="'humano.console.compliance.notice.body' | translate: { days: noticeDays }" />
+      <hum-form-field [label]="'humano.console.compliance.notices.name' | translate" controlId="sp-name" required>
+        <hum-input inputId="sp-name" [ngModel]="d.name" (ngModelChange)="patch({ name: $event })" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.console.compliance.notice.purpose' | translate"
+        [hint]="'humano.console.compliance.notice.purposeHint' | translate"
+        controlId="sp-purpose"
+        required
+      >
+        <hum-input inputId="sp-purpose" [ngModel]="d.purpose" (ngModelChange)="patch({ purpose: $event })" />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.console.compliance.notice.data' | translate" controlId="sp-data" required>
+        <hum-textarea [rows]="3" [ngModel]="d.dataCategories" (ngModelChange)="patch({ dataCategories: $event })" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.console.compliance.notice.location' | translate"
+        [hint]="'humano.console.compliance.notice.locationHint' | translate"
+        controlId="sp-location"
+        required
+      >
+        <hum-input inputId="sp-location" [ngModel]="d.location" (ngModelChange)="patch({ location: $event })" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.console.compliance.notices.effectiveFrom' | translate"
+        [hint]="'humano.console.compliance.notice.dateHint' | translate: { days: noticeDays }"
+        controlId="sp-from"
+        required
+      >
+        <hum-input inputId="sp-from" type="date" [ngModel]="d.effectiveFrom" (ngModelChange)="patch({ effectiveFrom: $event })" />
+      </hum-form-field>
+      <p class="hum-kpi__hint">
+        @if (recipients() !== null) {
+          {{ 'humano.console.compliance.notice.reach' | translate: { n: recipients() } }}
+        }
+        {{ 'humano.console.compliance.notice.annex' | translate }}
+      </p>
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" icon="x" (click)="draft.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="send" [loading]="busy()" [disabled]="!draftValid()" (click)="send()">{{
+      'humano.console.compliance.notice.send' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>

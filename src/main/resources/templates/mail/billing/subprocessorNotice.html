@@ -1,0 +1,31 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}" lang="en">
+  <head>
+    <title th:text="#{email.billing.subprocessor-notice.title}">New sub-processor</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  </head>
+  <body>
+    <p th:text="#{email.billing.subprocessor-notice.greeting(${tenantName})}">Hi,</p>
+    <p th:text="#{email.billing.subprocessor-notice.body(${effectiveFrom})}">A new sub-processor will start on this date:</p>
+    <ul>
+      <li>
+        <strong th:text="#{email.billing.subprocessor-notice.name}">Sub-processor:</strong> <span th:text="${subprocessor}">Name</span>
+      </li>
+      <li><strong th:text="#{email.billing.subprocessor-notice.purpose}">Purpose:</strong> <span th:text="${purpose}">Purpose</span></li>
+      <li><strong th:text="#{email.billing.subprocessor-notice.data}">Data:</strong> <span th:text="${dataCategories}">Data</span></li>
+      <li>
+        <strong th:text="#{email.billing.subprocessor-notice.location}">Location:</strong> <span th:text="${location}">Location</span>
+      </li>
+    </ul>
+    <p th:text="#{email.billing.subprocessor-notice.object}">Reply to object.</p>
+    <p>
+      <span th:text="#{email.billing.subprocessor-notice.list}">Full list:</span>
+      <a th:with="url=(@{|${baseUrl}/legal/data-protection|})" th:href="${url}" th:text="${url}">Data Processing Addendum</a>
+    </p>
+    <p>
+      <span th:text="#{email.billing.text2}">Regards,</span>
+      <br />
+      <em th:text="#{email.signature}">Humano Team.</em>
+    </p>
+  </body>
+</html>

@@ -212,6 +212,11 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
     @Column(name = "terms_accepted_at")
     private Instant termsAcceptedAt;
 
+    /** Who accepted them: the confirmed sign-up email, or the admin who accepted updated Terms. */
+    @Column(name = "terms_accepted_by", length = 254)
+    @Size(max = 254)
+    private String termsAcceptedBy;
+
     /**
      * When the admin was emailed that the workspace is about to be deleted, once its subscription has
      * ended (see {@code WorkspaceRetentionJob}). A workspace is never deleted before this is set, and a
@@ -451,6 +456,14 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
 
     public void setTermsAcceptedAt(Instant termsAcceptedAt) {
         this.termsAcceptedAt = termsAcceptedAt;
+    }
+
+    public String getTermsAcceptedBy() {
+        return termsAcceptedBy;
+    }
+
+    public void setTermsAcceptedBy(String termsAcceptedBy) {
+        this.termsAcceptedBy = termsAcceptedBy;
     }
 
     public Instant getDeletionWarningSentAt() {

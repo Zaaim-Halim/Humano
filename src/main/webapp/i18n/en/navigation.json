@@ -47,6 +47,10 @@
       "profile": "Profile",
       "settings": "Settings",
       "logout": "Sign out",
+      "legal": "Legal",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "dataProtection": "Data protection",
       "roles": {
         "admin": "Administrator",
         "employee": "Employee"

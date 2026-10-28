@@ -248,6 +248,7 @@ public class TenantService {
             tenant.getDemoExpiresAt(),
             tenant.getTermsVersion(),
             tenant.getTermsAcceptedAt(),
+            tenant.getTermsAcceptedBy(),
             tenant.getCreatedBy(),
             tenant.getCreatedDate(),
             tenant.getLastModifiedBy(),

@@ -35,8 +35,11 @@
             <span
               ><lucide-icon name="file-signature" [size]="14" />{{
                 'humano.console.customer.termsAccepted' | translate: { version: t.termsVersion, date: (t.termsAcceptedAt | date: 'medium') }
-              }}</span
-            >
+              }}
+              @if (t.termsAcceptedBy) {
+                {{ 'humano.console.customer.termsAcceptedBy' | translate: { who: t.termsAcceptedBy } }}
+              }
+            </span>
           }
         </p>
         <div class="hum-con-hero__badges">

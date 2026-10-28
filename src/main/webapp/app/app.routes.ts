@@ -85,6 +85,11 @@ const routes: Routes = [
         title: 'legal.dpa.title',
         loadComponent: () => import('./features/legal/data-protection.component'),
       },
+      {
+        path: 'legal/employee-notice',
+        title: 'legal.employeeNotice.title',
+        loadComponent: () => import('./features/legal/employee-notice.component'),
+      },
     ],
   },
   {
@@ -119,6 +124,11 @@ const routes: Routes = [
         path: 'demos/:tab',
         title: 'humano.console.nav.demos',
         loadComponent: () => import('./features/platform/console/demos/demos.component'),
+      },
+      {
+        path: 'compliance',
+        title: 'humano.console.nav.compliance',
+        loadComponent: () => import('./features/platform/console/compliance/compliance.component'),
       },
       { path: 'team', title: 'humano.console.nav.team', loadComponent: () => import('./features/platform/console/team/team.component') },
       { path: 'account', pathMatch: 'full', redirectTo: 'account/profile' },

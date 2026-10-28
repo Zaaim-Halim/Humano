@@ -27,6 +27,8 @@ export interface Tenant extends AuditFields {
   /** Terms of Service / DPA version accepted at self-serve sign-up, and when; null otherwise. */
   termsVersion: string | null;
   termsAcceptedAt: string | null;
+  /** The confirmed sign-up email, or the admin who accepted updated Terms. */
+  termsAcceptedBy: string | null;
 }
 
 /** Live Hikari pool stats attached to tenant detail (best-effort, may be null). */

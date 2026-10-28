@@ -299,6 +299,9 @@ public class SignupService {
                 t.setDemoContactEmail(p.email());
                 t.setTermsVersion(p.termsVersion());
                 t.setTermsAcceptedAt(p.termsAcceptedAt());
+                if (p.termsVersion() != null) {
+                    t.setTermsAcceptedBy(p.email());
+                }
                 return tenantRepository.save(t);
             });
         } catch (DataIntegrityViolationException e) {

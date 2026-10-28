@@ -40,6 +40,11 @@
         "workspaceHint": "Your sign-in organization; contact support to change it.",
         "locale": "Time & money",
         "localeHint": "Times are recorded and shown in this timezone; amounts default to this currency.",
+        "legal": "Data protection",
+        "legalHint": "You are the controller of your staff's data in Humano; we process it for you under our Data Processing Addendum.",
+        "legalDpa": "Data Processing Addendum — print a copy to sign",
+        "legalNotice": "Privacy notice template for your employees",
+        "legalTerms": "Terms of Service",
         "timezone": "Timezone",
         "timezoneHint": "Clock-ins, schedules and payroll dates use this timezone.",
         "currency": "Default currency",
@@ -204,6 +209,15 @@
       "readOnly": "Your free trial has ended. This workspace is read-only until {{ date }}, then it is paused. Its data is kept for 90 days after the trial ended, then deleted.",
       "choosePlan": "Choose a plan",
       "askAdmin": "Ask an administrator to choose a plan."
+    },
+    "terms": {
+      "updated": "We have updated our Terms of Service and Data Processing Addendum. They apply from your next renewal; please review and accept them for your company.",
+      "notAccepted": "Your company has not yet accepted our Terms of Service and Data Processing Addendum. Please review and accept them.",
+      "review": "Review the changes",
+      "accept": "Accept for my company",
+      "accepted": "Thank you — the updated terms are accepted.",
+      "outdated": "Our terms changed again since this page was opened. Reload the page and review them before accepting.",
+      "failed": "The terms could not be accepted. Please try again."
     },
     "plan": {
       "navBadge": "Upgrade",

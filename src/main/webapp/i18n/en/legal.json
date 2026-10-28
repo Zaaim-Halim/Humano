@@ -11,6 +11,10 @@
     "dpa": {
       "title": "Data Protection"
     },
+    "employeeNotice": {
+      "title": "Employee privacy notice template",
+      "tab": "Template: employee notice"
+    },
     "links": {
       "terms": "Terms",
       "privacy": "Privacy",

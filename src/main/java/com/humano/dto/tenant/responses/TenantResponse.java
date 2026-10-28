@@ -29,6 +29,7 @@ public record TenantResponse(
     Instant demoExpiresAt,
     String termsVersion,
     Instant termsAcceptedAt,
+    String termsAcceptedBy,
     String createdBy,
     Instant createdDate,
     String lastModifiedBy,

@@ -7,6 +7,7 @@ import { merge } from 'rxjs';
 import { Authority } from 'app/config/authority.constants';
 import { AccountService } from 'app/core/auth/account.service';
 import { ThemeService } from 'app/core/theme/theme.service';
+import { legalMenuItems, openLegalPage } from 'app/features/legal/legal-menu';
 import { LoginService } from 'app/login/login.service';
 import {
   AppShellComponent,
@@ -93,7 +94,16 @@ const CONSOLE_NAV: { headingKey?: string; items: ConsoleNavItem[] }[] = [
   },
   {
     headingKey: 'humano.console.nav.groups.admin',
-    items: [{ id: 'team', labelKey: 'humano.console.nav.team', icon: 'users', link: '/platform/team', keywords: 'staff users invite' }],
+    items: [
+      {
+        id: 'compliance',
+        labelKey: 'humano.console.nav.compliance',
+        icon: 'shield',
+        link: '/platform/compliance',
+        keywords: 'gdpr privacy retention deletion subprocessor dpa legal',
+      },
+      { id: 'team', labelKey: 'humano.console.nav.team', icon: 'users', link: '/platform/team', keywords: 'staff users invite' },
+    ],
   },
 ];
 
@@ -215,6 +225,8 @@ export default class PlatformShellComponent {
       { heading: this.t('humano.shell.account') },
       { id: 'account', label: this.t('humano.shell.settings'), icon: 'settings' },
       { separator: true },
+      ...legalMenuItems(this.t.bind(this)),
+      { separator: true },
       { id: 'logout', label: this.t('humano.shell.logout'), icon: 'log-out', danger: true },
     ];
   });
@@ -234,6 +246,7 @@ export default class PlatformShellComponent {
 
   protected onMenu(id: string | undefined): void {
     this.menuOpen.set(false);
+    if (openLegalPage(id)) return;
     if (id === 'account') {
       void this.router.navigate(['/platform/account', 'profile']);
     } else if (id === 'logout') {

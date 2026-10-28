@@ -12,6 +12,7 @@ import { planIncludes } from 'app/features/platform/models/entitlements.model';
 import { MeBillingService } from 'app/features/platform/services/me-billing.service';
 import { CurrentEmployeeService } from 'app/features/employee';
 import { ThemeService } from 'app/core/theme/theme.service';
+import { legalMenuItems, openLegalPage } from 'app/features/legal/legal-menu';
 import { LoginService } from 'app/login/login.service';
 import {
   AppShellComponent,
@@ -27,6 +28,7 @@ import {
 } from 'app/shared/ui';
 
 import { SHELL_NAV } from './shell-nav';
+import { TermsBannerComponent } from './terms-banner.component';
 import { TrialBannerComponent } from './trial-banner.component';
 
 /**
@@ -53,6 +55,7 @@ import { TrialBannerComponent } from './trial-banner.component';
     MenuComponent,
     AvatarComponent,
     TrialBannerComponent,
+    TermsBannerComponent,
   ],
   template: `
     <hum-app-shell
@@ -103,6 +106,7 @@ import { TrialBannerComponent } from './trial-banner.component';
       </div>
 
       <hum-trial-banner />
+      <hum-terms-banner />
       <router-outlet />
     </hum-app-shell>
 
@@ -166,6 +170,8 @@ export default class ShellLayoutComponent {
     { id: 'profile', label: this.t('humano.shell.profile'), icon: 'user' },
     { id: 'settings', label: this.t('humano.shell.settings'), icon: 'settings' },
     { separator: true },
+    ...legalMenuItems(this.t.bind(this)),
+    { separator: true },
     { id: 'logout', label: this.t('humano.shell.logout'), icon: 'log-out', danger: true },
   ]);
 
@@ -215,6 +221,7 @@ export default class ShellLayoutComponent {
 
   protected onUserMenuSelect(id: string | undefined): void {
     this.userMenuOpen.set(false);
+    if (openLegalPage(id)) return;
     switch (id) {
       case 'logout':
         this.company.clear();

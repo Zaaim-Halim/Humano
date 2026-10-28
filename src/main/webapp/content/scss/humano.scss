@@ -2244,6 +2244,97 @@ dt {
     padding: var(--space-5);
   }
 }
+/* Employee notice template: the copyable notice in a frame of its own. */
+.hum-legal p.hum-legal__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+.hum-legal__template {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+}
+/* DPA: the block a customer signs on the printed copy. */
+.hum-legal__sign-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-6);
+}
+.hum-legal__sign-lines {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-3) var(--space-3);
+  margin: 0;
+  align-items: end;
+}
+.hum-legal__sign-lines dt {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.hum-legal__sign-lines dd {
+  margin: 0;
+  min-height: 1.5em;
+  border-bottom: 1px solid var(--border-strong);
+  font-size: var(--text-sm);
+}
+.hum-legal__sign-lines dd.is-tall {
+  min-height: 3.5em;
+}
+/* Printing a legal page (the DPA to sign): the document only, black on white, no sign-in chrome. */
+@media print {
+  .hum-auth:has(.hum-legal) {
+    min-height: 0;
+    padding: 0;
+    background: #fff;
+  }
+  .hum-auth:has(.hum-legal) .hum-auth__ledger,
+  .hum-auth:has(.hum-legal) .hum-auth__bar,
+  .hum-auth:has(.hum-legal) .hum-auth__foot,
+  .hum-legal__nav {
+    display: none !important;
+  }
+  .hum-auth__panel:has(.hum-legal) {
+    max-width: none;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: #fff;
+  }
+  .hum-legal,
+  .hum-legal p,
+  .hum-legal__list,
+  .hum-legal a {
+    color: #000;
+  }
+  .hum-legal__table-wrap {
+    overflow: visible;
+  }
+  .hum-legal__sign {
+    break-inside: avoid;
+  }
+}
+/* Settings: a short list of links (legal documents). */
+.hum-set-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+.hum-set-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--brand-text);
+  text-decoration: none;
+}
+.hum-set-links a:hover {
+  text-decoration: underline;
+}
 /* Sign-up: accepting the terms (checkbox plus a sentence with links). */
 .hum-auth__consent {
   display: flex;

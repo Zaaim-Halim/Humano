@@ -45,6 +45,7 @@ import tech.jhipster.config.JHipsterProperties;
  *   <li>{@code mail/billing/trialEnding}</li>
  *   <li>{@code mail/billing/trialEnded}</li>
  *   <li>{@code mail/billing/workspaceDeletion}</li>
+ *   <li>{@code mail/billing/subprocessorNotice}</li>
  *   <li>{@code mail/signup/confirm}, {@code mail/signup/existingWorkspace}</li>
  * </ul>
  */
@@ -196,6 +197,32 @@ public class BillingMailService {
         Locale locale = Locale.ENGLISH;
         String body = render("mail/billing/workspaceDeletion", locale, vars);
         mailService.sendEmailNow(to, messageSource.getMessage("email.billing.workspace-deletion.title", null, locale), body, false, true);
+    }
+
+    /**
+     * A new sub-processor will start processing the workspace's data on {@code effectiveFrom}: the advance
+     * notice the Data Processing Addendum promises, with how to object. Sent synchronously and throws if it
+     * cannot be, so the record of the notice counts only emails that actually went out.
+     */
+    public void sendSubprocessorNotice(
+        String to,
+        String tenantName,
+        String subprocessor,
+        String purpose,
+        String dataCategories,
+        String location,
+        LocalDate effectiveFrom
+    ) throws MessagingException {
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("tenantName", tenantName);
+        vars.put("subprocessor", subprocessor);
+        vars.put("purpose", purpose);
+        vars.put("dataCategories", dataCategories);
+        vars.put("location", location);
+        vars.put("effectiveFrom", HUMAN_DATE.format(effectiveFrom));
+        Locale locale = Locale.ENGLISH;
+        String body = render("mail/billing/subprocessorNotice", locale, vars);
+        mailService.sendEmailNow(to, messageSource.getMessage("email.billing.subprocessor-notice.title", null, locale), body, false, true);
     }
 
     /** Self-serve sign-up: the link that confirms the email and starts the workspace setup. */

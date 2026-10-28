@@ -1,0 +1,90 @@
+<hum-legal-nav />
+
+<div class="hum-auth__head">
+  <h1 class="hum-auth__title">Employee privacy notice — template</h1>
+  <p class="hum-auth__desc">
+    As an employer using {{ legal.product }}, you are the controller of your staff’s HR data and must tell them how it is used. This
+    template covers what {{ legal.product }} holds. Adapt it to your organisation — replace everything in [brackets], remove what you do not
+    record, and add any other systems you use — and have it checked by your own adviser. It is a starting point, not legal advice.
+  </p>
+</div>
+
+<p class="hum-legal__actions">
+  <hum-button variant="secondary" [icon]="copied() ? 'check' : 'copy'" (click)="copy()">{{
+    copied() ? 'Copied' : 'Copy the notice as text'
+  }}</hum-button>
+</p>
+
+<article class="hum-legal__template" #notice>
+  <h2 class="hum-guide__h2">Privacy notice for employees of [Employer name]</h2>
+  <p>
+    [Employer legal name], [registered address] (“we”), is responsible, as the controller, for the personal data we hold about you as a
+    current, former or prospective employee or worker. This notice explains what we hold, why, and your rights. Questions: [HR / privacy
+    contact email][, our data protection officer: contact details].
+  </p>
+
+  <h3 class="hum-guide__h3">What we hold</h3>
+  <ul class="hum-legal__list">
+    <li>Identity and contact details: name, photo, date of birth, gender, marital status, nationality, addresses, email, phone.</li>
+    <li>Government identifiers: national ID, passport, social security and tax identification numbers.</li>
+    <li>
+      Your employment: job, position, department, manager, contracts, start and end dates, working time, education, training and licences.
+    </li>
+    <li>Pay: salary and other compensation, deductions, tax, payslips, and the bank account (IBAN) we pay you into.</li>
+    <li>Time and absence: leave requests and balances, timesheets.</li>
+    <li>Performance: goals, reviews, feedback, ratings and improvement plans.</li>
+    <li>Emergency contacts you give us.</li>
+    <li>
+      Health-related data, only where needed: [for example a medical profile (blood type, allergies, emergency medical notes), health
+      insurance details, reasons for sick leave].
+    </li>
+    <li>Documents you or we upload, and records of your use of the HR system (sign-ins, changes made).</li>
+  </ul>
+
+  <h3 class="hum-guide__h3">Why, and on what legal basis</h3>
+  <ul class="hum-legal__list">
+    <li>To manage your employment and pay you — necessary for your employment contract (GDPR art. 6(1)(b)).</li>
+    <li>
+      To meet our legal obligations: tax and social-security reporting, payroll records, working-time and employment law (art. 6(1)(c)).
+    </li>
+    <li>
+      To run the organisation: reporting lines, performance management, planning and security of our systems — our legitimate interests
+      (art. 6(1)(f)), which you may object to.
+    </li>
+    <li>
+      Health data and other special categories only where employment, social-security or social-protection law requires or permits it (art.
+      9(2)(b)), or to protect your vital interests in an emergency (art. 9(2)(c)).
+    </li>
+  </ul>
+
+  <h3 class="hum-guide__h3">Who sees it</h3>
+  <ul class="hum-legal__list">
+    <li>Within [Employer name]: HR and payroll staff, and your managers for what their role needs — access is controlled by role.</li>
+    <li>
+      {{ legal.product }}, the HR and payroll software we use, which stores and processes this data on our behalf under a data processing
+      agreement, and its own service providers (hosting, email delivery, payments).
+    </li>
+    <li>Tax, social-security and other authorities, our bank for salary payments, [pension / insurance providers], as the law requires.</li>
+    <li>[Our accountants, auditors, legal advisers.]</li>
+  </ul>
+  <p>[Where data is transferred outside your country / the EEA, describe the safeguards, e.g. Standard Contractual Clauses.]</p>
+
+  <h3 class="hum-guide__h3">How long we keep it</h3>
+  <p>
+    For the duration of your employment and afterwards for as long as the law requires or allows: [for example payroll and tax records for N
+    years, performance reviews for N years after the review period, other records N years after you leave]. We then delete it.
+  </p>
+
+  <h3 class="hum-guide__h3">Your rights</h3>
+  <p>
+    You may ask to see the data we hold about you and get a copy, have it corrected or completed, have it erased or its use restricted where
+    the law allows, receive it in a portable format, and object to processing based on our legitimate interests. Contact [HR / privacy
+    contact email]. You may also complain to the data protection authority: [name and website of the authority].
+  </p>
+
+  <p class="hum-legal__updated">Last updated: [date]</p>
+</article>
+
+<p class="hum-auth__meta">
+  See also our <a routerLink="/legal/privacy">Privacy Policy</a> and <a routerLink="/legal/data-protection">Data Processing Addendum</a>.
+</p>

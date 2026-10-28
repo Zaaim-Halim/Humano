@@ -61,6 +61,30 @@
       </div>
     </section>
 
+    <section class="hum-set-card">
+      <header>
+        <h3>{{ 'humano.settings.company.legal' | translate }}</h3>
+        <p>{{ 'humano.settings.company.legalHint' | translate }}</p>
+      </header>
+      <ul class="hum-set-links">
+        <li>
+          <a href="/legal/data-protection" target="_blank" rel="noopener"
+            ><lucide-icon name="scale" [size]="15" />{{ 'humano.settings.company.legalDpa' | translate }}</a
+          >
+        </li>
+        <li>
+          <a href="/legal/employee-notice" target="_blank" rel="noopener"
+            ><lucide-icon name="file-text" [size]="15" />{{ 'humano.settings.company.legalNotice' | translate }}</a
+          >
+        </li>
+        <li>
+          <a href="/legal/terms" target="_blank" rel="noopener"
+            ><lucide-icon name="shield" [size]="15" />{{ 'humano.settings.company.legalTerms' | translate }}</a
+          >
+        </li>
+      </ul>
+    </section>
+
     <div class="hum-set-actions">
       @if (form.dirty) {
         <span class="hum-kpi__hint">{{ 'humano.settings.unsaved' | translate }}</span>
