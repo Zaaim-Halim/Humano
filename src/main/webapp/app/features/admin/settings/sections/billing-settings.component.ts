@@ -8,6 +8,7 @@ import { Permission } from 'app/config/permission.constants';
 import { normalizeHttpError } from 'app/core/api';
 import { AccountService } from 'app/core/auth/account.service';
 import { PublicPricing } from 'app/features/marketing/marketing.service';
+import { planHighlights } from 'app/features/marketing/plan-highlights';
 import {
   BillingCycle,
   CurrentTenantService,
@@ -176,15 +177,10 @@ export class BillingSettingsComponent {
   protected readonly options = computed<PlanOption[]>(() => {
     const p = this.pricing();
     if (!p) return [];
-    const names = new Map(p.features.map(f => [f.id, f]));
     return p.plans.map((plan, i) => {
-      const prev = i > 0 ? p.plans[i - 1] : null;
-      const before = new Map((prev?.items ?? []).filter(it => it.included).map(it => [it.featureId, `${it.limitValue}|${it.note}`]));
-      const highlights = plan.items
-        .filter(it => it.included && names.has(it.featureId) && before.get(it.featureId) !== `${it.limitValue}|${it.note}`)
+      const highlights = planHighlights(p, i)
         .slice(0, 4)
-        .map(it => {
-          const f = names.get(it.featureId)!;
+        .map(({ feature: f, item: it }) => {
           if (f.limitType === 'QUANTITY') {
             const unit = f.unit ?? f.name.toLowerCase();
             return it.limitValue === null

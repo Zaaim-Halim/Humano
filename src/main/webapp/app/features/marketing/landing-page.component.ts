@@ -22,7 +22,8 @@ import {
 import { countryOptions } from 'app/shared/util/countries';
 
 import { LandingShowcaseComponent } from './landing-showcase.component';
-import { DemoRequestForm, MarketingService, PublicPlan, PublicPricing } from './marketing.service';
+import { DemoRequestForm, MarketingService, PublicPricing } from './marketing.service';
+import { PlanHighlight, planHighlights } from './plan-highlights';
 import { formatPlanAmount } from 'app/shared/util/plan-units';
 
 interface Persona {
@@ -244,7 +245,13 @@ export default class LandingPageComponent {
       price: '$6',
       unit: '/ employee / mo',
       note: 'Billed annually. Minimum 5 seats.',
-      features: ['Employee directory and records', 'Time off and attendance', 'Payroll runs and payslips', 'Employee self-service'],
+      features: [
+        'Employee directory and records',
+        'Time off and attendance',
+        'Payroll runs and payslips',
+        'Statutory payroll templates',
+        'Employee self-service',
+      ],
       cta: 'Start free trial',
       featured: false,
       signup: {},
@@ -337,10 +344,8 @@ export default class LandingPageComponent {
   protected readonly tiers = computed<Tier[]>(() => {
     const p = this.pricing();
     if (!p?.plans.length) return this.fallbackTiers;
-    const featureById = new Map(p.features.map(f => [f.id, f]));
     const money = new Intl.NumberFormat('en', { style: 'currency', currency: p.currency, maximumFractionDigits: 0 });
-    const label = (it: PublicPlan['items'][number]): string => {
-      const f = featureById.get(it.featureId)!;
+    const label = ({ feature: f, item: it }: PlanHighlight): string => {
       const unit = f.unit ?? f.name.toLowerCase();
       if (f.limitType === 'QUANTITY') {
         if (it.limitValue === null) return `Unlimited ${unit}`;
@@ -353,18 +358,14 @@ export default class LandingPageComponent {
       const monthly = plan.monthlyPrice;
       const previous = i > 0 ? p.plans[i - 1] : null;
       // After the first plan, list only what this one adds or raises over the previous one.
-      const before = new Map((previous?.items ?? []).filter(it => it.included).map(it => [it.featureId, label(it)]));
-      const lines = plan.items
-        .filter(it => it.included && featureById.has(it.featureId))
-        .filter(it => before.get(it.featureId) !== label(it))
-        .map(label);
+      const lines = planHighlights(p, i).map(label);
       return {
         name: plan.name,
         desc: plan.description ?? '',
         price: monthly > 0 ? money.format(monthly) : 'Free',
         unit: monthly > 0 ? '/ month' : '',
         note: monthly > 0 ? `${money.format(monthly * YEARLY_FACTOR)} / month billed yearly` : 'No credit card needed',
-        features: [...(previous ? [`Everything in ${previous.name}, plus`] : []), ...lines.slice(0, previous ? 5 : 6)],
+        features: [...(previous ? [`Everything in ${previous.name}, plus`] : []), ...lines.slice(0, previous ? 6 : 7)],
         cta: 'Start free trial',
         featured: plan.featured,
         signup: { plan: plan.id },

@@ -271,7 +271,10 @@ public class PlatformDemoSeeder {
     public void seed(String demoSubdomain) {
         boolean seeded = planRepository.findAll().stream().anyMatch(p -> MARKER_PLAN.equals(p.getDisplayName()));
         if (seeded) {
-            masterTx.executeWithoutResult(status -> backfillPricingCopy());
+            masterTx.executeWithoutResult(status -> {
+                backfillPricingCopy();
+                backfillCatalog();
+            });
             return;
         }
         java.util.Map<UUID, Instant> joinedDates = new java.util.LinkedHashMap<>();
@@ -429,6 +432,15 @@ public class PlatformDemoSeeder {
         ),
         new Row(
             "Payroll",
+            "PAYROLL_TEMPLATES",
+            "Statutory payroll templates",
+            "Ready-made income tax and social contribution rules for 13 countries, updated for each new tax year.",
+            FeatureLimitType.BOOLEAN,
+            null,
+            new Object[] { false, true, true, true }
+        ),
+        new Row(
+            "Payroll",
             "PAYROLL_COUNTRIES",
             "Payroll countries",
             "Countries you can run payroll in.",
@@ -449,7 +461,7 @@ public class PlatformDemoSeeder {
             "Talent",
             "PERFORMANCE",
             "Performance reviews",
-            null,
+            "Review cycles with self-assessment, manager review, 360° feedback, calibration (9-box), goals and improvement plans.",
             FeatureLimitType.BOOLEAN,
             null,
             new Object[] { false, false, true, true }
@@ -528,19 +540,23 @@ public class PlatformDemoSeeder {
             for (int i = 0; i < plans.length; i++) {
                 SubscriptionPlan plan = plans[i];
                 if (plan == null) continue;
-                Object v = row.values()[i];
-                PlanFeature pf = new PlanFeature();
-                pf.setPlan(plan);
-                pf.setFeature(feature);
-                pf.setIncluded(!Boolean.FALSE.equals(v));
-                if (v instanceof Integer limit) pf.setLimitValue(limit);
-                if (v instanceof String note) pf.setNote(note);
-                plan.getFeatures().add(pf);
+                plan.getFeatures().add(planFeature(plan, feature, row.values()[i]));
             }
         }
         for (SubscriptionPlan plan : plans) {
             if (plan != null) planRepository.save(plan);
         }
+    }
+
+    /** A plan's cell for a catalog value: {@code false} = not included, a number = limit, a string = note. */
+    private static PlanFeature planFeature(SubscriptionPlan plan, Feature feature, Object v) {
+        PlanFeature pf = new PlanFeature();
+        pf.setPlan(plan);
+        pf.setFeature(feature);
+        pf.setIncluded(!Boolean.FALSE.equals(v));
+        if (v instanceof Integer limit) pf.setLimitValue(limit);
+        if (v instanceof String note) pf.setNote(note);
+        return pf;
     }
 
     private SubscriptionPlan plan(SubscriptionType type, String name, String monthly) {
@@ -566,6 +582,54 @@ public class PlatformDemoSeeder {
             plan.setFeatured(true);
         } else if ("Enterprise".equals(name)) {
             plan.setDescription("For groups, resellers and complex org structures.");
+        }
+    }
+
+    /**
+     * Databases seeded before a feature joined {@link #CATALOG}: add it once, in its catalog place and with
+     * its value on each seeded plan. Features already there are left as they are, edits included.
+     */
+    private void backfillCatalog() {
+        List<SubscriptionPlan> all = planRepository.findAll();
+        SubscriptionPlan[] plans = {
+            all.stream().filter(p -> p.getSubscriptionType() == SubscriptionType.FREE).findFirst().orElse(null),
+            all.stream().filter(p -> "Starter".equals(p.getDisplayName())).findFirst().orElse(null),
+            all.stream().filter(p -> MARKER_PLAN.equals(p.getDisplayName())).findFirst().orElse(null),
+            all.stream().filter(p -> "Enterprise".equals(p.getDisplayName())).findFirst().orElse(null),
+        };
+        Feature previous = null;
+        for (Row row : CATALOG) {
+            Feature existing = featureRepository.findOneByCode(row.code()).orElse(null);
+            if (existing != null) {
+                previous = existing;
+                continue;
+            }
+            // Right after the catalog row before it; later features move down one.
+            int order = previous != null ? previous.getSortOrder() + 1 : 0;
+            for (Feature later : featureRepository.findAll()) {
+                if (later.getSortOrder() >= order) {
+                    later.setSortOrder(later.getSortOrder() + 1);
+                    featureRepository.save(later);
+                }
+            }
+            Feature f = new Feature();
+            f.setCode(row.code());
+            f.setName(row.name());
+            f.setDescription(row.description());
+            f.setCategory(row.category());
+            f.setLimitType(row.type());
+            f.setUnit(row.unit());
+            f.setSortOrder(order);
+            f.setActive(true);
+            Feature feature = featureRepository.save(f);
+            for (int i = 0; i < plans.length; i++) {
+                if (plans[i] != null) {
+                    plans[i].getFeatures().add(planFeature(plans[i], feature, row.values()[i]));
+                    planRepository.save(plans[i]);
+                }
+            }
+            log.info("[dev-seed] added plan feature '{}' to the catalog", row.code());
+            previous = feature;
         }
     }
 
