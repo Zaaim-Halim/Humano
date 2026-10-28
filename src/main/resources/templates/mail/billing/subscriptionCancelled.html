@@ -7,6 +7,7 @@
   <body>
     <p th:text="#{email.billing.subscription-cancelled.greeting(${tenantName})}">Hi,</p>
     <p th:text="#{email.billing.subscription-cancelled.body(${planName}, ${effectiveAt})}">Your subscription to plan has been cancelled.</p>
+    <p th:text="#{email.billing.subscription-cancelled.retention(${retentionDays})}">Your data is kept, then deleted.</p>
     <p>
       <span th:text="#{email.billing.text2}">Regards,</span>
       <br />

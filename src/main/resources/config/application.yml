@@ -203,7 +203,7 @@ jhipster:
     license: unlicensed
     license-url:
   security:
-    content-security-policy: "default-src 'self'; frame-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://storage.googleapis.com; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com data:"
+    content-security-policy: "default-src 'self'; frame-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://storage.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:"
 
 # ===================================================================
 
@@ -283,3 +283,17 @@ humano:
     dunning:
       max-attempts: 3
       cron: '0 0 6 * * *'
+  # How long data is kept once it is no longer needed — the periods the Terms of Service, Privacy
+  # Policy and Data Processing Addendum promise. Keep in step with LEGAL in
+  # src/main/webapp/app/features/legal/legal-info.ts (deletionDays, demoRetentionMonths).
+  retention:
+    # Workspaces whose subscription ended (lapsed trial or cancellation) this many days ago are deleted
+    # nightly — files and database; the admin is emailed warning-days before. Off in dev (application-dev.yml).
+    workspace-deletion:
+      enabled: true
+      days: 90
+      warning-days: 7
+      cron: '0 50 3 * * *'
+    # "Book a demo" requests that never became customers, deleted once untouched this long.
+    demo-requests:
+      months: 24

@@ -130,4 +130,9 @@ jhipster:
 # Application specific properties
 # ===================================================================
 
+humano:
+  retention:
+    # Never delete local workspaces automatically.
+    workspace-deletion:
+      enabled: false
 # application:

@@ -227,8 +227,8 @@
 
 :root {
   /* families */
-  --font-sans: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --font-sans: 'Geist Variable', 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   /* type scale (px) — 12/13/14/16/20/24/30 + display */
   --text-xs: 0.75rem; /* 12 — meta, captions, table micro */

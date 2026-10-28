@@ -1,0 +1,18 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}" lang="en">
+  <head>
+    <title th:text="#{email.billing.workspace-deletion.title}">Your workspace will be deleted soon</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  </head>
+  <body>
+    <p th:text="#{email.billing.workspace-deletion.greeting(${tenantName})}">Hi,</p>
+    <p th:text="#{email.billing.workspace-deletion.body(${retentionDays})}">Your subscription ended; data is kept for a while.</p>
+    <p th:text="#{email.billing.workspace-deletion.when(${deleteOn})}">On this date the workspace is deleted.</p>
+    <p th:text="#{email.billing.workspace-deletion.action}">Reply to keep it.</p>
+    <p>
+      <span th:text="#{email.billing.text2}">Regards,</span>
+      <br />
+      <em th:text="#{email.signature}">Humano Team.</em>
+    </p>
+  </body>
+</html>

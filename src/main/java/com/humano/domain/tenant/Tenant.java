@@ -212,6 +212,14 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
     @Column(name = "terms_accepted_at")
     private Instant termsAcceptedAt;
 
+    /**
+     * When the admin was emailed that the workspace is about to be deleted, once its subscription has
+     * ended (see {@code WorkspaceRetentionJob}). A workspace is never deleted before this is set, and a
+     * value older than the subscription's end belongs to an earlier lapse and does not count.
+     */
+    @Column(name = "deletion_warning_sent_at")
+    private Instant deletionWarningSentAt;
+
     @Override
     public UUID getId() {
         return id;
@@ -443,6 +451,14 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
 
     public void setTermsAcceptedAt(Instant termsAcceptedAt) {
         this.termsAcceptedAt = termsAcceptedAt;
+    }
+
+    public Instant getDeletionWarningSentAt() {
+        return deletionWarningSentAt;
+    }
+
+    public void setDeletionWarningSentAt(Instant deletionWarningSentAt) {
+        this.deletionWarningSentAt = deletionWarningSentAt;
     }
 
     public DemoSetupStatus getDemoSetup() {

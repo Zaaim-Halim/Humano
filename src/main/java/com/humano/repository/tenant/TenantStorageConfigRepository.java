@@ -2,18 +2,17 @@ package com.humano.repository.tenant;
 
 import com.humano.domain.tenant.Tenant;
 import com.humano.domain.tenant.TenantStorageConfig;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 /**
  * Spring Data JPA repository for the TenantStorageConfig entity.
  */
 @Repository
 public interface TenantStorageConfigRepository extends JpaRepository<TenantStorageConfig, UUID> {
-
     /**
      * Find the active storage configuration for a specific tenant.
      *
@@ -29,4 +28,7 @@ public interface TenantStorageConfigRepository extends JpaRepository<TenantStora
      * @return the active storage configuration if exists
      */
     Optional<TenantStorageConfig> findByTenant_IdAndActiveTrue(UUID tenantId);
+
+    /** Every storage configuration a tenant has had, active or not. */
+    List<TenantStorageConfig> findByTenant_Id(UUID tenantId);
 }

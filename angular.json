@@ -57,7 +57,11 @@
                 "output": "swagger-ui"
               }
             ],
-            "styles": ["src/main/webapp/content/scss/global.scss"],
+            "styles": [
+              "node_modules/@fontsource-variable/geist/index.css",
+              "node_modules/@fontsource-variable/geist-mono/index.css",
+              "src/main/webapp/content/scss/global.scss"
+            ],
             "scripts": []
           },
           "configurations": {

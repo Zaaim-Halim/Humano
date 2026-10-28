@@ -56,6 +56,22 @@ public class MailService {
         sendEmailSync(to, subject, content, isMultipart, isHtml);
     }
 
+    /**
+     * Sends right away and throws if the mail server refuses it, for the emails whose delivery something
+     * else depends on; {@link #sendEmail} only queues and logs failures.
+     */
+    public void sendEmailNow(String to, String subject, String content, boolean isMultipart, boolean isHtml)
+        throws MailException, MessagingException {
+        MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+        MimeMessageHelper message = new MimeMessageHelper(mimeMessage, isMultipart, StandardCharsets.UTF_8.name());
+        message.setTo(to);
+        message.setFrom(jHipsterProperties.getMail().getFrom());
+        message.setSubject(subject);
+        message.setText(content, isHtml);
+        javaMailSender.send(mimeMessage);
+        LOG.debug("Sent email to '{}'", to);
+    }
+
     private void sendEmailSync(String to, String subject, String content, boolean isMultipart, boolean isHtml) {
         LOG.debug(
             "Send email[multipart '{}' and html '{}'] to '{}' with subject '{}' and content={}",

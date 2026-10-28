@@ -19,12 +19,18 @@ export const LEGAL = {
   courts: '[City and country of the competent courts]',
   supervisoryAuthority: '[Lead data protection authority]',
   hostingRegion: '[Hosting region, e.g. European Union]',
-  /** How long a cancelled or paused workspace's data is kept before it is deleted. */
-  deletionDays: '[N]',
+  /**
+   * Days a workspace's data is kept after its subscription ends (lapsed trial or cancellation) before it is
+   * deleted. Must match `humano.retention.workspace-deletion.days`, which the nightly deletion job uses.
+   */
+  deletionDays: 90,
+  /** Days before deletion the workspace admin is emailed. Must match `humano.retention.workspace-deletion.warning-days`. */
+  deletionWarningDays: 7,
   /** How long backups take to roll over once data is deleted from the live system. */
   backupDays: '[N]',
-  /** How long demo requests that don't become customers, and security logs, are kept. */
-  demoRetentionMonths: '[N]',
+  /** Months an untouched demo request that never became a customer is kept. Must match `humano.retention.demo-requests.months`. */
+  demoRetentionMonths: 24,
+  /** Months our own server and application logs are kept: set by the deployment's logging, not by the app. */
   logRetentionMonths: '[N]',
   /** Written notice of new sub-processors before they start processing customer data. */
   subprocessorNoticeDays: 30,
@@ -68,11 +74,5 @@ export const SUBPROCESSORS: Subprocessor[] = [
     purpose: 'Subscription billing and card payments',
     data: 'Billing contact, company details, payment card data (held by Stripe, never by us)',
     location: 'United States / European Union',
-  },
-  {
-    name: 'Google LLC (Google Fonts)',
-    purpose: 'Delivery of the web fonts used by the site and the app',
-    data: 'IP address and browser details of the device loading the page',
-    location: 'United States',
   },
 ];

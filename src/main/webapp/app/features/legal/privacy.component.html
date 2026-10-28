@@ -111,8 +111,8 @@
   </ul>
   <p>
     Because these are strictly necessary for the service you ask for, or only remember your own choices, they do not require consent. You
-    can clear them at any time in your browser settings; you will then be signed out. Our pages load fonts from Google Fonts, which means
-    your browser connects to Google’s servers and shares its IP address and browser details with Google.
+    can clear them at any time in your browser settings; you will then be signed out. Fonts and all other page resources are served from our
+    own servers, so loading a page does not contact any third party.
   </p>
 </section>
 
@@ -171,7 +171,14 @@
       delete them sooner.
     </li>
     <li>Invoices and billing records: as long as tax and accounting law requires (typically up to 10 years).</li>
-    <li>Security logs: for as long as needed for security purposes, and normally no longer than {{ legal.logRetentionMonths }} months.</li>
+    <li>
+      Our server and application logs: for as long as needed for security purposes, and normally no longer than
+      {{ legal.logRetentionMonths }} months.
+    </li>
+    <li>
+      The audit trail inside a workspace (who changed what) belongs to the customer: it is kept for the life of the workspace and deleted
+      with it.
+    </li>
   </ul>
 </section>
 

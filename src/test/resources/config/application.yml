@@ -120,3 +120,8 @@ management:
   health:
     mail:
       enabled: false
+
+humano:
+  retention:
+    workspace-deletion:
+      enabled: false

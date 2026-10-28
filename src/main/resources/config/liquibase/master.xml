@@ -70,6 +70,7 @@
     <include file="config/liquibase/changelog/master/20261018-subscription-addons-changelog.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/master/20261018-invoice-lines-changelog.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/master/20261028-tenant-terms-acceptance-changelog.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/master/20261028-tenant-deletion-warning-changelog.xml" relativeToChangelogFile="false"/>
 
     <!--  will add incremental liquibase changelogs here -->
 </databaseChangeLog>

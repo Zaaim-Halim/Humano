@@ -7,8 +7,10 @@ import com.humano.domain.tenant.TenantDatabaseConfig;
 import com.humano.dto.tenant.TenantRegistrationDTO;
 import com.humano.repository.tenant.TenantDatabaseConfigRepository;
 import com.humano.repository.tenant.TenantRepository;
+import com.humano.service.storage.TenantFileEraser;
 import com.humano.tenancy.MultiTenantProperties;
 import com.humano.tenancy.TenantAccessGuard;
+import com.humano.tenancy.TenantDataSourceProvider;
 import com.humano.tenancy.TenantPasswordCipher;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,6 +47,8 @@ public class TenantProvisioningService {
     private final DatabaseServerSelector serverSelector;
     private final MultiTenantProperties properties;
     private final TenantPasswordCipher passwordCipher;
+    private final TenantFileEraser fileEraser;
+    private final TenantDataSourceProvider dataSourceProvider;
     private final TransactionTemplate masterTx;
 
     public TenantProvisioningService(
@@ -57,9 +61,13 @@ public class TenantProvisioningService {
         MultiTenantProperties properties,
         TenantPasswordCipher passwordCipher,
         @Qualifier("masterTransactionManager") PlatformTransactionManager masterTransactionManager,
-        TenantAccessGuard accessGuard
+        TenantAccessGuard accessGuard,
+        TenantFileEraser fileEraser,
+        TenantDataSourceProvider dataSourceProvider
     ) {
         this.accessGuard = accessGuard;
+        this.fileEraser = fileEraser;
+        this.dataSourceProvider = dataSourceProvider;
         this.tenantRepository = tenantRepository;
         this.databaseConfigRepository = databaseConfigRepository;
         this.databaseManager = databaseManager;
@@ -233,7 +241,9 @@ public class TenantProvisioningService {
     }
 
     /**
-     * Deprovisions a tenant and removes their database.
+     * Deprovisions a tenant and removes their data: first the uploaded files kept outside the database
+     * ({@link TenantFileEraser} — if any cannot be erased, nothing else happens, so a retry still finds
+     * them), then the database itself, and its connection pool.
      *
      * @param tenantId the tenant ID
      */
@@ -246,8 +256,10 @@ public class TenantProvisioningService {
         LOG.warn("Deprovisioning tenant: {}", tenant.getSubdomain());
 
         try {
+            fileEraser.eraseAll(tenant);
             // Drop the tenant's database
             if (tenant.getDatabaseConfig() != null) {
+                dataSourceProvider.evictDataSource(tenant.getSubdomain());
                 databaseManager.dropDatabaseIfExists(tenant.getDatabaseConfig());
                 databaseConfigRepository.delete(tenant.getDatabaseConfig());
             }

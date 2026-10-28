@@ -1,6 +1,7 @@
 package com.humano.service.billing;
 
 import com.humano.service.MailService;
+import jakarta.mail.MessagingException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -11,6 +12,7 @@ import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
@@ -42,6 +44,7 @@ import tech.jhipster.config.JHipsterProperties;
  *   <li>{@code mail/billing/subscriptionRenewed}</li>
  *   <li>{@code mail/billing/trialEnding}</li>
  *   <li>{@code mail/billing/trialEnded}</li>
+ *   <li>{@code mail/billing/workspaceDeletion}</li>
  *   <li>{@code mail/signup/confirm}, {@code mail/signup/existingWorkspace}</li>
  * </ul>
  */
@@ -56,17 +59,21 @@ public class BillingMailService {
     private final MessageSource messageSource;
     private final SpringTemplateEngine templateEngine;
     private final JHipsterProperties jHipsterProperties;
+    /** Days a workspace's data is kept after its subscription ends; quoted in the emails that mention it. */
+    private final int retentionDays;
 
     public BillingMailService(
         MailService mailService,
         MessageSource messageSource,
         SpringTemplateEngine templateEngine,
-        JHipsterProperties jHipsterProperties
+        JHipsterProperties jHipsterProperties,
+        @Value("${humano.retention.workspace-deletion.days:90}") int retentionDays
     ) {
         this.mailService = mailService;
         this.messageSource = messageSource;
         this.templateEngine = templateEngine;
         this.jHipsterProperties = jHipsterProperties;
+        this.retentionDays = retentionDays;
     }
 
     public void sendWelcome(String to, String tenantName, String subdomain, String adminFirstName, boolean trial) {
@@ -134,6 +141,7 @@ public class BillingMailService {
         vars.put("tenantName", tenantName);
         vars.put("planName", planName);
         vars.put("effectiveAt", formatInstant(effectiveAt));
+        vars.put("retentionDays", retentionDays);
         dispatch(to, "mail/billing/subscriptionCancelled", "email.billing.subscription-cancelled.title", vars);
     }
 
@@ -167,7 +175,27 @@ public class BillingMailService {
         Map<String, Object> vars = new HashMap<>();
         vars.put("tenantName", tenantName);
         vars.put("readOnlyUntil", formatInstant(readOnlyUntil));
+        vars.put("retentionDays", retentionDays);
         dispatch(to, "mail/billing/trialEnded", "email.billing.trial-ended.title", vars);
+    }
+
+    /**
+     * The subscription ended long enough ago that the workspace is about to be deleted for good on
+     * {@code deleteOn}, under the Terms' retention period: a last chance to choose a plan or export.
+     * Sent right away, not queued: the workspace is only deleted once this went out, so it throws if
+     * there is no recipient or the mail server refuses it.
+     */
+    public void sendWorkspaceDeletionWarning(String to, String tenantName, Instant deleteOn) throws MessagingException {
+        if (to == null || to.isBlank()) {
+            throw new IllegalStateException("No recipient for the deletion warning of '" + tenantName + "'");
+        }
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("tenantName", tenantName);
+        vars.put("deleteOn", formatInstant(deleteOn));
+        vars.put("retentionDays", retentionDays);
+        Locale locale = Locale.ENGLISH;
+        String body = render("mail/billing/workspaceDeletion", locale, vars);
+        mailService.sendEmailNow(to, messageSource.getMessage("email.billing.workspace-deletion.title", null, locale), body, false, true);
     }
 
     /** Self-serve sign-up: the link that confirms the email and starts the workspace setup. */
@@ -193,15 +221,19 @@ public class BillingMailService {
             return;
         }
         Locale locale = Locale.ENGLISH;
-        Context context = new Context(locale);
-        context.setVariable("baseUrl", jHipsterProperties.getMail().getBaseUrl());
-        vars.forEach(context::setVariable);
-        String body = templateEngine.process(templateName, context);
+        String body = render(templateName, locale, vars);
         String subject = messageSource.getMessage(titleKey, null, locale);
         // MailService.sendEmail is @Async — returns immediately, send happens
         // on the application's TaskExecutor.
         mailService.sendEmail(to, subject, body, false, true);
         LOG.debug("Queued billing email '{}' to '{}'", templateName, to);
+    }
+
+    private String render(String templateName, Locale locale, Map<String, Object> vars) {
+        Context context = new Context(locale);
+        context.setVariable("baseUrl", jHipsterProperties.getMail().getBaseUrl());
+        vars.forEach(context::setVariable);
+        return templateEngine.process(templateName, context);
     }
 
     private static String formatInstant(Instant instant) {

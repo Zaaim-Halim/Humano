@@ -294,7 +294,7 @@ export default class LandingPageComponent {
     },
     {
       q: 'What happens after the trial?',
-      a: 'Your 14-day trial needs no credit card. When it ends, pick a plan to keep going. If you do not, your workspace turns read-only for 14 days and then pauses — nothing is deleted.',
+      a: 'Your 14-day trial needs no credit card. When it ends, pick a plan to keep going. If you do not, your workspace turns read-only for 14 days and then pauses. We keep your data for 90 days after the trial ends, then delete it.',
     },
   ];
 

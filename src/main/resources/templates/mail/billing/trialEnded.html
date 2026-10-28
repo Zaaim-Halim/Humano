@@ -7,7 +7,7 @@
   <body>
     <p th:text="#{email.billing.trial-ended.greeting(${tenantName})}">Hi,</p>
     <p th:text="#{email.billing.trial-ended.body}">Your trial ended; the workspace is read-only.</p>
-    <p th:text="#{email.billing.trial-ended.until(${readOnlyUntil})}">Pick a plan before the date.</p>
+    <p th:text="#{email.billing.trial-ended.until(${readOnlyUntil}, ${retentionDays})}">Pick a plan before the date.</p>
     <p>
       <a th:with="url=(@{|${baseUrl}/settings/billing|})" th:href="${url}" th:text="${url}">Choose a plan</a>
     </p>

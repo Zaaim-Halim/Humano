@@ -7,6 +7,8 @@ import com.humano.repository.storage.FileBlobRepository;
 import com.humano.repository.tenant.TenantStorageConfigRepository;
 import com.humano.tenancy.TenantIdResolver;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -67,6 +69,29 @@ public class StorageFactory {
     public void invalidate(UUID tenantId) {
         if (tenantId == null) return;
         storageServiceCache.remove(tenantId);
+    }
+
+    /**
+     * The tenant's own default filesystem root ({@code app.file-storage.filesystem.root-location/{tenantId}}),
+     * which holds nothing but that tenant's files.
+     */
+    public Path defaultFilesystemRoot(UUID tenantId) {
+        return Path.of(defaultFilesystemRootLocation, tenantId.toString()).toAbsolutePath().normalize();
+    }
+
+    /** Every filesystem root the tenant's files may have been written under: the default one, and any it was configured with. */
+    public List<Path> filesystemRoots(UUID tenantId) {
+        List<Path> roots = new ArrayList<>();
+        roots.add(defaultFilesystemRoot(tenantId));
+        for (TenantStorageConfig config : tenantStorageConfigRepository.findByTenant_Id(tenantId)) {
+            if (config.getConfig() instanceof FilesystemStorageDetails fs) {
+                Path root = resolveFsRoot(fs, config).toAbsolutePath().normalize();
+                if (!roots.contains(root)) {
+                    roots.add(root);
+                }
+            }
+        }
+        return roots;
     }
 
     private FileStorageService build(UUID tenantId) {
