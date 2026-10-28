@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- The workspace retention period as set in the platform console, with when each value took effect -->
+    <changeSet id="20261028-create-retention-period-version" author="halimzaaim">
+        <createTable tableName="retention_period_version">
+            <column name="id" type="${uuidType}">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="effective_from" type="${datetimeType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="days" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="warning_days" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="${datetimeType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(254)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- The deletion date the warning email gave: the workspace is never deleted before it -->
+    <changeSet id="20261028-add-deletion-scheduled-for-to-tenant" author="halimzaaim">
+        <addColumn tableName="tenant">
+            <column name="deletion_scheduled_for" type="${datetimeType}"/>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="tenant" columnName="deletion_scheduled_for"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

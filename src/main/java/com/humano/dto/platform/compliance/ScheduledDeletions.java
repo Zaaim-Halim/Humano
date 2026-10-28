@@ -21,7 +21,8 @@ public record ScheduledDeletions(boolean enabled, int days, int warningDays, Lis
 
     /**
      * One workspace. {@code deleteOn} is final once warned; before that it is the earliest date (the
-     * retention period's end, later if the warning goes out late). {@code warningOverdue}: due for more
+     * retention period's end, later if the warning goes out late). {@code retentionDays} is this
+     * workspace's period — the longer of the one in force when it ended and now. {@code warningOverdue}: due for more
      * than a day and still not sent — usually mail that is not configured.
      */
     public record Item(
@@ -31,6 +32,7 @@ public record ScheduledDeletions(boolean enabled, int days, int warningDays, Lis
         String tenantStatus,
         String subscriptionStatus,
         Instant endedAt,
+        int retentionDays,
         Instant warnFrom,
         Instant warningSentAt,
         Instant deleteOn,

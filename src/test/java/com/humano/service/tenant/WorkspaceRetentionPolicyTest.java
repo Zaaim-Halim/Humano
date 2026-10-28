@@ -8,8 +8,11 @@ import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.domain.tenant.TenantDatabaseConfig;
 import com.humano.service.tenant.WorkspaceRetentionPolicy.Action;
+import com.humano.service.tenant.WorkspaceRetentionPolicy.Rules;
+import com.humano.service.tenant.WorkspaceRetentionPolicy.Version;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class WorkspaceRetentionPolicyTest {
@@ -142,5 +145,78 @@ class WorkspaceRetentionPolicyTest {
         Subscription s = warnedAt(WARN_FROM);
         s.setEndDate(null);
         assertThat(decide(s, RETENTION_OVER)).isEqualTo(Action.NONE);
+    }
+
+    // ---- Periods changed in the console
+
+    private static Version version(Instant from, int days, int warningDays) {
+        return new Version(from, days, warningDays, "owner", from);
+    }
+
+    private static final Version DEFAULT = new Version(Instant.EPOCH, DAYS, WARN, null, null);
+
+    @Test
+    void aLongerPeriodAppliesToEveryoneAtOnce() {
+        Instant changed = ENDED.plus(10, ChronoUnit.DAYS);
+        List<Version> versions = List.of(DEFAULT, version(changed, 120, 14));
+        assertThat(WorkspaceRetentionPolicy.rulesFor(versions, ENDED, changed)).isEqualTo(new Rules(120, 14));
+    }
+
+    @Test
+    void aShorterPeriodNeverReachesBackToSubscriptionsThatEndedBefore() {
+        Instant takesEffect = ENDED.plus(30, ChronoUnit.DAYS);
+        List<Version> versions = List.of(DEFAULT, version(takesEffect, 60, 3));
+        // Ended under the 90-day promise: keeps it, even once the shorter period is in force.
+        assertThat(WorkspaceRetentionPolicy.rulesFor(versions, ENDED, takesEffect.plus(1, ChronoUnit.DAYS))).isEqualTo(
+            new Rules(DAYS, WARN)
+        );
+        // Ending after it took effect: the shorter period.
+        Instant laterEnd = takesEffect.plus(5, ChronoUnit.DAYS);
+        assertThat(WorkspaceRetentionPolicy.rulesFor(versions, laterEnd, laterEnd)).isEqualTo(new Rules(60, 3));
+    }
+
+    @Test
+    void aScheduledChangeIsNotInForceBeforeItsDate() {
+        Instant takesEffect = ENDED.plus(30, ChronoUnit.DAYS);
+        List<Version> versions = List.of(DEFAULT, version(takesEffect, 60, 3));
+        assertThat(WorkspaceRetentionPolicy.inForce(versions, takesEffect.minusSeconds(1))).isEqualTo(DEFAULT);
+        assertThat(WorkspaceRetentionPolicy.inForce(versions, takesEffect).days()).isEqualTo(60);
+    }
+
+    @Test
+    void neverDeletedBeforeTheDateTheWarningGave() {
+        // Warned for deletion on RETENTION_OVER; the period has since been shortened to 60 days.
+        Subscription s = warnedAt(WARN_FROM);
+        s.getTenant().setDeletionScheduledFor(RETENTION_OVER);
+        Instant underShorterRules = ENDED.plus(60, ChronoUnit.DAYS).plus(WARN + 1, ChronoUnit.DAYS);
+        assertThat(WorkspaceRetentionPolicy.decide(s, underShorterRules, 60, WARN, PLATFORM)).isEqualTo(Action.NONE);
+        assertThat(WorkspaceRetentionPolicy.decide(s, RETENTION_OVER, 60, WARN, PLATFORM)).isEqualTo(Action.DELETE);
+    }
+
+    @Test
+    void anAnnouncementFromAnEarlierLapseDoesNotCount() {
+        Subscription s = warnedAt(ENDED.minus(200, ChronoUnit.DAYS));
+        s.getTenant().setDeletionScheduledFor(RETENTION_OVER.plus(365, ChronoUnit.DAYS));
+        assertThat(WorkspaceRetentionPolicy.validAnnouncement(s)).isNull();
+    }
+
+    @Test
+    void aLongerPeriodPublishedSinceTheEndIsKeptWhenShortenedAgain() {
+        // Ended under 90; lengthened to 120 (published as "the period above"); later shortened to 60.
+        List<Version> versions = List.of(
+            DEFAULT,
+            version(ENDED.plus(10, ChronoUnit.DAYS), 120, 14),
+            version(ENDED.plus(50, ChronoUnit.DAYS), 60, 3)
+        );
+        assertThat(WorkspaceRetentionPolicy.rulesFor(versions, ENDED, ENDED.plus(51, ChronoUnit.DAYS))).isEqualTo(new Rules(120, 14));
+    }
+
+    @Test
+    void aSubscriptionEndingLaterGetsThePeriodScheduledForThen() {
+        // A yearly plan cancelled now ends after a shorter period takes effect: its emails must not promise more.
+        Instant takesEffect = ENDED.plus(30, ChronoUnit.DAYS);
+        List<Version> versions = List.of(DEFAULT, version(takesEffect, 60, 3));
+        Instant now = takesEffect.minus(40, ChronoUnit.DAYS);
+        assertThat(WorkspaceRetentionPolicy.rulesFor(versions, takesEffect.plus(5, ChronoUnit.DAYS), now)).isEqualTo(new Rules(60, 3));
     }
 }

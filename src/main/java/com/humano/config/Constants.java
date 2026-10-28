@@ -27,5 +27,11 @@ public final class Constants {
      */
     public static final int SUBPROCESSOR_NOTICE_DAYS = 30;
 
+    /**
+     * Days' notice before a shorter workspace retention period takes effect: a material change to the Terms
+     * of Service (§ Changes), which needs at least this much notice.
+     */
+    public static final int TERMS_CHANGE_NOTICE_DAYS = 30;
+
     private Constants() {}
 }

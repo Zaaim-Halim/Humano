@@ -543,7 +543,7 @@
       },
       "compliance": {
         "title": "Data protection",
-        "subtitle": "Workspaces due for deletion after their subscription ended, and notices of new sub-processors to customers.",
+        "subtitle": "The retention period, workspaces due for deletion after their subscription ended, and notices of new sub-processors to customers.",
         "disabled": "Workspace deletion is switched off in this environment's configuration: nothing below will be warned or deleted.",
         "overdue": "{{ n }} deletion warning(s) should have gone out and have not. Check that email is configured; nothing is deleted until the warning is sent.",
         "kpi": {
@@ -572,7 +572,8 @@
           "dueOn": "Due {{ date }}",
           "earliest": "From",
           "empty": "Nothing scheduled",
-          "emptyHint": "Workspaces whose trial lapsed or that were cancelled show here until they are deleted or reactivated."
+          "emptyHint": "Workspaces whose trial lapsed or that were cancelled show here until they are deleted or reactivated.",
+          "kept": "kept {{ n }} days"
         },
         "states": {
           "WAITING": "Waiting",
@@ -608,6 +609,36 @@
           "sent": "Notice sent to {{ n }} workspace(s).",
           "missing": "{{ n }} workspace(s) have no contact address and did not get it.",
           "failed": "{{ n }} could not be sent (see the server log); send them the notice by hand."
+        },
+        "retention": {
+          "title": "Retention period",
+          "hint": "How long a workspace is kept after its subscription ends, and when its admin is warned. The Terms, Privacy Policy, DPA, website and emails quote these figures.",
+          "change": "Change",
+          "days": "Kept after the subscription ends",
+          "warningDays": "Admin warned before deletion",
+          "since": "In force since",
+          "default": "Default (configuration)",
+          "nDays": "{{ n }} days",
+          "upcoming": "From {{ date }}: {{ days }} days, warned {{ warning }} days before.",
+          "upcomingHint": "It applies only to subscriptions that end from that day. The Terms already announce it; tell your customers by email too.",
+          "cancel": "Cancel the change",
+          "changeTitle": "Change the retention period",
+          "changeBody": "This is part of your Terms of Service. A workspace is never deleted before the date its warning email gave.",
+          "daysHint": "From the day the subscription or trial ends.",
+          "warningHint": "The workspace is never deleted sooner than this after the warning was sent.",
+          "longerHint": "Longer, or the same: applies at once, to every workspace — including those already waiting to be deleted.",
+          "shorterTitle": "Shorter: a change to your Terms",
+          "shorterBody": "It needs at least {{ days }} days' notice, and applies only to subscriptions that end on or after its start date; workspaces whose subscription ended before keep the current period. Tell your customers by email.",
+          "effectiveFrom": "Takes effect on",
+          "effectiveHint": "At least {{ days }} days from today.",
+          "daysRange": "Between {{ min }} and {{ max }} days.",
+          "warningRange": "Between 1 and {{ max }} days, and less than the retention period.",
+          "dateTooSoon": "Choose a date at least {{ days }} days from today.",
+          "save": "Save",
+          "schedule": "Schedule the change",
+          "saved": "Retention period updated.",
+          "scheduled": "Shorter retention period scheduled.",
+          "cancelled": "Scheduled change cancelled."
         }
       }
     }

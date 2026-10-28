@@ -23,7 +23,14 @@ import {
   ToastService,
 } from 'app/shared/ui';
 
-import { DeletionState, NewSubprocessorNotice, ScheduledDeletions, SubprocessorNotice } from '../../models/compliance.model';
+import {
+  DeletionState,
+  NewSubprocessorNotice,
+  RetentionChange,
+  RetentionSettings,
+  ScheduledDeletions,
+  SubprocessorNotice,
+} from '../../models/compliance.model';
 import { PlatformComplianceService } from '../../services/platform-compliance.service';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -70,6 +77,7 @@ export default class ConsoleComplianceComponent {
   protected readonly noticeDays = LEGAL.subprocessorNoticeDays;
   protected readonly deletions = signal<ScheduledDeletions | null>(null);
   protected readonly notices = signal<SubprocessorNotice[] | null>(null);
+  protected readonly retention = signal<RetentionSettings | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly busy = signal(false);
 
@@ -103,6 +111,31 @@ export default class ConsoleComplianceComponent {
     );
   });
 
+  // ---- Retention period
+  protected readonly retentionDraft = signal<RetentionChange | null>(null);
+  /** Shortening either value: needs a start date far enough ahead, and applies only to subscriptions ending from then. */
+  protected readonly retentionShorter = computed(() => {
+    const d = this.retentionDraft();
+    const c = this.retention()?.current;
+    return !!d && !!c && (d.days < c.days || d.warningDays < c.warningDays);
+  });
+  protected readonly retentionMinDate = computed(() => isoDateIn(this.retention()?.shorteningNoticeDays ?? 30));
+  protected readonly retentionError = computed<string | null>(() => {
+    const d = this.retentionDraft();
+    const r = this.retention();
+    if (!d || !r) return null;
+    if (!Number.isInteger(d.days) || d.days < r.minDays || d.days > r.maxDays) {
+      return this.t('humano.console.compliance.retention.daysRange', { min: r.minDays, max: r.maxDays });
+    }
+    if (!Number.isInteger(d.warningDays) || d.warningDays < 1 || d.warningDays > r.maxWarningDays || d.warningDays >= d.days) {
+      return this.t('humano.console.compliance.retention.warningRange', { max: r.maxWarningDays });
+    }
+    if (this.retentionShorter() && (!d.effectiveFrom || d.effectiveFrom < this.retentionMinDate())) {
+      return this.t('humano.console.compliance.retention.dateTooSoon', { days: r.shorteningNoticeDays });
+    }
+    return null;
+  });
+
   constructor() {
     this.load();
   }
@@ -117,6 +150,62 @@ export default class ConsoleComplianceComponent {
       next: n => this.notices.set(n),
       error: err => this.error.set(normalizeHttpError(err)),
     });
+    this.api.retention().subscribe({
+      next: r => this.retention.set(r),
+      error: err => this.error.set(normalizeHttpError(err)),
+    });
+  }
+
+  protected openRetention(): void {
+    const r = this.retention();
+    if (!r) return;
+    this.retentionDraft.set({ days: r.current.days, warningDays: r.current.warningDays, effectiveFrom: this.retentionMinDate() });
+  }
+
+  protected patchRetention(p: Partial<RetentionChange>): void {
+    const d = this.retentionDraft();
+    if (d) this.retentionDraft.set({ ...d, ...p });
+  }
+
+  protected saveRetention(): void {
+    const d = this.retentionDraft();
+    if (!d || this.retentionError()) return;
+    this.busy.set(true);
+    this.api.changeRetention({ ...d, effectiveFrom: this.retentionShorter() ? d.effectiveFrom : null }).subscribe({
+      next: r => {
+        this.busy.set(false);
+        this.retentionDraft.set(null);
+        this.retention.set(r);
+        this.reloadDeletions();
+        this.toast.show({
+          tone: 'success',
+          title: this.t(r.upcoming ? 'humano.console.compliance.retention.scheduled' : 'humano.console.compliance.retention.saved'),
+        });
+      },
+      error: err => {
+        this.busy.set(false);
+        this.toast.show({ tone: 'danger', title: normalizeHttpError(err) });
+      },
+    });
+  }
+
+  protected cancelScheduled(): void {
+    this.busy.set(true);
+    this.api.cancelScheduledRetention().subscribe({
+      next: r => {
+        this.busy.set(false);
+        this.retention.set(r);
+        this.toast.show({ tone: 'success', title: this.t('humano.console.compliance.retention.cancelled') });
+      },
+      error: err => {
+        this.busy.set(false);
+        this.toast.show({ tone: 'danger', title: normalizeHttpError(err) });
+      },
+    });
+  }
+
+  private reloadDeletions(): void {
+    this.api.deletions().subscribe({ next: d => this.deletions.set(d), error: () => undefined });
   }
 
   protected stateTone(state: DeletionState, overdue: boolean): BadgeTone {

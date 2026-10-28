@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { ButtonComponent } from 'app/shared/ui';
 
 import { LEGAL, LEGAL_UPDATED, SUBPROCESSORS } from './legal-info';
 import { LegalNavComponent } from './legal-nav.component';
+import { LegalRetentionService } from './legal-retention.service';
 
 /**
  * Public Data Processing Addendum (GDPR art. 28): the terms on which Humano processes the HR and
@@ -22,6 +23,8 @@ import { LegalNavComponent } from './legal-nav.component';
 })
 export default class DataProtectionComponent {
   protected readonly legal = LEGAL;
+  /** The retention period, as set in the platform console. */
+  protected readonly retention = inject(LegalRetentionService).retention;
   protected readonly subprocessors = SUBPROCESSORS;
   protected readonly updated = LEGAL_UPDATED;
 

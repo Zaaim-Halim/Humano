@@ -1,6 +1,7 @@
 package com.humano.service.billing;
 
 import com.humano.service.MailService;
+import com.humano.service.tenant.WorkspaceRetentionPolicy;
 import jakarta.mail.MessagingException;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -12,7 +13,6 @@ import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
@@ -60,21 +60,21 @@ public class BillingMailService {
     private final MessageSource messageSource;
     private final SpringTemplateEngine templateEngine;
     private final JHipsterProperties jHipsterProperties;
-    /** Days a workspace's data is kept after its subscription ends; quoted in the emails that mention it. */
-    private final int retentionDays;
+    /** How long a workspace's data is kept after its subscription ends; quoted in the emails that mention it. */
+    private final WorkspaceRetentionPolicy retentionPolicy;
 
     public BillingMailService(
         MailService mailService,
         MessageSource messageSource,
         SpringTemplateEngine templateEngine,
         JHipsterProperties jHipsterProperties,
-        @Value("${humano.retention.workspace-deletion.days:90}") int retentionDays
+        WorkspaceRetentionPolicy retentionPolicy
     ) {
         this.mailService = mailService;
         this.messageSource = messageSource;
         this.templateEngine = templateEngine;
         this.jHipsterProperties = jHipsterProperties;
-        this.retentionDays = retentionDays;
+        this.retentionPolicy = retentionPolicy;
     }
 
     public void sendWelcome(String to, String tenantName, String subdomain, String adminFirstName, boolean trial) {
@@ -142,7 +142,7 @@ public class BillingMailService {
         vars.put("tenantName", tenantName);
         vars.put("planName", planName);
         vars.put("effectiveAt", formatInstant(effectiveAt));
-        vars.put("retentionDays", retentionDays);
+        vars.put("retentionDays", retentionDaysFor(effectiveAt != null ? effectiveAt : Instant.now()));
         dispatch(to, "mail/billing/subscriptionCancelled", "email.billing.subscription-cancelled.title", vars);
     }
 
@@ -176,7 +176,7 @@ public class BillingMailService {
         Map<String, Object> vars = new HashMap<>();
         vars.put("tenantName", tenantName);
         vars.put("readOnlyUntil", formatInstant(readOnlyUntil));
-        vars.put("retentionDays", retentionDays);
+        vars.put("retentionDays", retentionDaysFor(Instant.now()));
         dispatch(to, "mail/billing/trialEnded", "email.billing.trial-ended.title", vars);
     }
 
@@ -186,7 +186,7 @@ public class BillingMailService {
      * Sent right away, not queued: the workspace is only deleted once this went out, so it throws if
      * there is no recipient or the mail server refuses it.
      */
-    public void sendWorkspaceDeletionWarning(String to, String tenantName, Instant deleteOn) throws MessagingException {
+    public void sendWorkspaceDeletionWarning(String to, String tenantName, Instant deleteOn, int retentionDays) throws MessagingException {
         if (to == null || to.isBlank()) {
             throw new IllegalStateException("No recipient for the deletion warning of '" + tenantName + "'");
         }
@@ -240,6 +240,11 @@ public class BillingMailService {
         vars.put("tenantName", tenantName);
         vars.put("subdomain", subdomain);
         dispatch(to, "mail/signup/existingWorkspace", "email.signup.existing.title", vars);
+    }
+
+    /** The retention period of a subscription ending at {@code endDate}, as the Terms now promise it. */
+    private int retentionDaysFor(Instant endDate) {
+        return retentionPolicy.load().rulesFor(endDate, Instant.now()).days();
     }
 
     private void dispatch(String to, String templateName, String titleKey, Map<String, Object> vars) {

@@ -289,6 +289,8 @@ humano:
   retention:
     # Workspaces whose subscription ended (lapsed trial or cancellation) this many days ago are deleted
     # nightly — files and database; the admin is emailed warning-days before. Off in dev (application-dev.yml).
+    # days / warning-days are only the default: the owner sets the period in the platform console
+    # (Data protection), where it is kept with when each value took effect.
     workspace-deletion:
       enabled: true
       days: 90

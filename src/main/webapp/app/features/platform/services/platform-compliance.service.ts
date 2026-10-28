@@ -4,9 +4,15 @@ import { Observable, map } from 'rxjs';
 
 import { ApplicationConfigService } from 'app/core/config/application-config.service';
 
-import { NewSubprocessorNotice, ScheduledDeletions, SubprocessorNotice } from '../models/compliance.model';
+import {
+  NewSubprocessorNotice,
+  RetentionChange,
+  RetentionSettings,
+  ScheduledDeletions,
+  SubprocessorNotice,
+} from '../models/compliance.model';
 
-/** Owner console — data protection (`/api/platform/compliance`): scheduled deletions and sub-processor notices. */
+/** Owner console — data protection (`/api/platform/compliance`): retention period, scheduled deletions, sub-processor notices. */
 @Injectable({ providedIn: 'root' })
 export class PlatformComplianceService {
   private readonly http = inject(HttpClient);
@@ -14,6 +20,20 @@ export class PlatformComplianceService {
 
   deletions(): Observable<ScheduledDeletions> {
     return this.http.get<ScheduledDeletions>(`${this.url}/deletions`);
+  }
+
+  retention(): Observable<RetentionSettings> {
+    return this.http.get<RetentionSettings>(`${this.url}/retention`);
+  }
+
+  /** Sets the retention period (`MANAGE_PLATFORM_BILLING`): longer at once, shorter from a date far enough ahead. */
+  changeRetention(body: RetentionChange): Observable<RetentionSettings> {
+    return this.http.put<RetentionSettings>(`${this.url}/retention`, body);
+  }
+
+  /** Cancels a scheduled change of the retention period. */
+  cancelScheduledRetention(): Observable<RetentionSettings> {
+    return this.http.delete<RetentionSettings>(`${this.url}/retention/scheduled`);
   }
 
   notices(): Observable<SubprocessorNotice[]> {

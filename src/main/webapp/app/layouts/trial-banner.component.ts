@@ -9,6 +9,7 @@ import { Permission } from 'app/config/permission.constants';
 import { AccountService } from 'app/core/auth/account.service';
 import { planIncludes } from 'app/features/platform/models/entitlements.model';
 import { SubscriptionStatus } from 'app/features/platform/models/enums/subscription-status.enum';
+import { LegalRetentionService } from 'app/features/legal/legal-retention.service';
 import { MeBillingService } from 'app/features/platform/services/me-billing.service';
 import { AlertComponent } from 'app/shared/ui';
 
@@ -47,7 +48,7 @@ type BannerState =
             {{ (s.plan ? 'humano.plan.moduleReadOnly' : 'humano.plan.moduleReadOnlyNoPlan') | translate: { name: s.name, plan: s.plan } }}
           }
           @case ('readOnly') {
-            {{ 'humano.trial.readOnly' | translate: { date: (s.until | date: 'longDate') } }}
+            {{ 'humano.trial.readOnly' | translate: { date: (s.until | date: 'longDate'), days: retention().days } }}
           }
         }
         @if (canManage()) {
@@ -63,6 +64,7 @@ type BannerState =
 })
 export class TrialBannerComponent {
   private readonly meBilling = inject(MeBillingService);
+  protected readonly retention = inject(LegalRetentionService).retention;
   private readonly router = inject(Router);
   private readonly account = inject(AccountService).trackCurrentAccount();
 

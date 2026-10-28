@@ -5,7 +5,7 @@
     <hum-alert tone="danger" [title]="e">
       <hum-button variant="outline" size="sm" icon="rotate-ccw" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
     </hum-alert>
-  } @else if (deletions() === null || notices() === null) {
+  } @else if (deletions() === null || notices() === null || retention() === null) {
     <hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row />
   } @else {
     @if (!deletions()!.enabled) {
@@ -46,6 +46,63 @@
       </div>
     </div>
 
+    <!-- ======================= Retention period ======================= -->
+    @if (retention(); as r) {
+      <section class="hum-set-card" style="margin-top: var(--space-4)">
+        <header class="hum-set-card__head-row">
+          <div>
+            <h3>{{ 'humano.console.compliance.retention.title' | translate }}</h3>
+            <p>{{ 'humano.console.compliance.retention.hint' | translate }}</p>
+          </div>
+          @if (canSend()) {
+            <hum-button variant="secondary" size="sm" icon="pencil" (click)="openRetention()">{{
+              'humano.console.compliance.retention.change' | translate
+            }}</hum-button>
+          }
+        </header>
+        <dl class="hum-con-facts">
+          <div>
+            <dt>{{ 'humano.console.compliance.retention.days' | translate }}</dt>
+            <dd class="tabular-nums">{{ 'humano.console.compliance.retention.nDays' | translate: { n: r.current.days } }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'humano.console.compliance.retention.warningDays' | translate }}</dt>
+            <dd class="tabular-nums">{{ 'humano.console.compliance.retention.nDays' | translate: { n: r.current.warningDays } }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'humano.console.compliance.retention.since' | translate }}</dt>
+            <dd>
+              @if (r.current.isDefault) {
+                {{ 'humano.console.compliance.retention.default' | translate }}
+              } @else {
+                {{ r.current.effectiveFrom | date: 'mediumDate' }}
+                @if (r.current.changedBy) {
+                  · {{ r.current.changedBy }}
+                }
+              }
+            </dd>
+          </div>
+        </dl>
+        @if (r.upcoming; as u) {
+          <hum-alert
+            tone="warning"
+            style="margin-top: var(--space-3)"
+            [title]="
+              'humano.console.compliance.retention.upcoming'
+                | translate: { date: (u.effectiveFrom | date: 'longDate' : 'UTC'), days: u.days, warning: u.warningDays }
+            "
+          >
+            {{ 'humano.console.compliance.retention.upcomingHint' | translate }}
+            @if (canSend()) {
+              <hum-button variant="outline" size="sm" icon="x" [loading]="busy()" (click)="cancelScheduled()">{{
+                'humano.console.compliance.retention.cancel' | translate
+              }}</hum-button>
+            }
+          </hum-alert>
+        }
+      </section>
+    }
+
     <!-- ======================= Scheduled deletions ======================= -->
     <section class="hum-set-card" style="padding: 0; margin-top: var(--space-4)">
       <header class="hum-set-card__head-row" style="padding: var(--space-4) var(--space-4) 0">
@@ -79,7 +136,14 @@
                       </span>
                     </span>
                   </td>
-                  <td class="tabular-nums">{{ i.endedAt | date: 'mediumDate' }}</td>
+                  <td class="tabular-nums">
+                    <span class="hum-person__text">
+                      <span>{{ i.endedAt | date: 'mediumDate' }}</span>
+                      <span class="hum-person__sub">{{
+                        'humano.console.compliance.deletions.kept' | translate: { n: i.retentionDays }
+                      }}</span>
+                    </span>
+                  </td>
                   <td class="tabular-nums">
                     @if (i.warningSentAt) {
                       {{ 'humano.console.compliance.deletions.sentOn' | translate: { date: (i.warningSentAt | date: 'mediumDate') } }}
@@ -232,6 +296,70 @@
     <hum-button variant="secondary" icon="x" (click)="draft.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
     <hum-button variant="primary" icon="send" [loading]="busy()" [disabled]="!draftValid()" (click)="send()">{{
       'humano.console.compliance.notice.send' | translate
+    }}</hum-button>
+  </div>
+</hum-drawer>
+
+<!-- Change the retention period -->
+<hum-drawer
+  [open]="retentionDraft() !== null"
+  [title]="'humano.console.compliance.retention.changeTitle' | translate"
+  hasFooter
+  (closed)="retentionDraft.set(null)"
+>
+  @if (retentionDraft(); as d) {
+    <div style="display: grid; gap: var(--space-4)">
+      <hum-alert tone="info" [title]="'humano.console.compliance.retention.changeBody' | translate" />
+      <hum-form-field
+        [label]="'humano.console.compliance.retention.days' | translate"
+        [hint]="'humano.console.compliance.retention.daysHint' | translate"
+        controlId="ret-days"
+        required
+      >
+        <hum-input inputId="ret-days" type="number" [ngModel]="d.days" (ngModelChange)="patchRetention({ days: +$event })" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.console.compliance.retention.warningDays' | translate"
+        [hint]="'humano.console.compliance.retention.warningHint' | translate"
+        controlId="ret-warning"
+        required
+      >
+        <hum-input
+          inputId="ret-warning"
+          type="number"
+          [ngModel]="d.warningDays"
+          (ngModelChange)="patchRetention({ warningDays: +$event })"
+        />
+      </hum-form-field>
+      @if (retentionShorter()) {
+        <hum-alert tone="warning" [title]="'humano.console.compliance.retention.shorterTitle' | translate">
+          {{ 'humano.console.compliance.retention.shorterBody' | translate: { days: retention()?.shorteningNoticeDays } }}
+        </hum-alert>
+        <hum-form-field
+          [label]="'humano.console.compliance.retention.effectiveFrom' | translate"
+          [hint]="'humano.console.compliance.retention.effectiveHint' | translate: { days: retention()?.shorteningNoticeDays }"
+          controlId="ret-from"
+          required
+        >
+          <hum-input
+            inputId="ret-from"
+            type="date"
+            [ngModel]="d.effectiveFrom"
+            (ngModelChange)="patchRetention({ effectiveFrom: $event })"
+          />
+        </hum-form-field>
+      } @else {
+        <p class="hum-kpi__hint">{{ 'humano.console.compliance.retention.longerHint' | translate }}</p>
+      }
+      @if (retentionError(); as e) {
+        <p class="hum-con-late">{{ e }}</p>
+      }
+    </div>
+  }
+  <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
+    <hum-button variant="secondary" icon="x" (click)="retentionDraft.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="busy()" [disabled]="!!retentionError()" (click)="saveRetention()">{{
+      (retentionShorter() ? 'humano.console.compliance.retention.schedule' : 'humano.console.compliance.retention.save') | translate
     }}</hum-button>
   </div>
 </hum-drawer>

@@ -10,6 +10,8 @@ import com.humano.service.billing.BillingMailService;
 import com.humano.service.billing.TenantAdminEmailResolver;
 import com.humano.service.multitenancy.TenantProvisioningService;
 import com.humano.service.tenant.WorkspaceRetentionPolicy.Action;
+import com.humano.service.tenant.WorkspaceRetentionPolicy.Rules;
+import com.humano.service.tenant.WorkspaceRetentionPolicy.Schedule;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -74,16 +76,36 @@ public class WorkspaceRetentionJob {
             return;
         }
         Instant now = Instant.now();
-        record Due(UUID subscriptionId, UUID tenantId, String subdomain, String name, String contact, Instant endDate, Action action) {}
+        Schedule schedule = policy.load();
+        record Due(
+            UUID subscriptionId,
+            UUID tenantId,
+            String subdomain,
+            String name,
+            String contact,
+            Instant endDate,
+            Rules rules,
+            Action action
+        ) {}
         List<Due> due = masterTx.execute(tx -> {
             List<Due> found = new ArrayList<>();
             for (SubscriptionStatus status : List.of(SubscriptionStatus.EXPIRED, SubscriptionStatus.CANCELLED)) {
                 for (Subscription s : subscriptionRepository.findByStatus(status)) {
-                    Action action = policy.decide(s, now);
+                    Action action = schedule.decide(s, now);
                     if (action != Action.NONE) {
                         Tenant t = s.getTenant();
+                        Rules rules = schedule.rulesFor(s.getEndDate(), now);
                         found.add(
-                            new Due(s.getId(), t.getId(), t.getSubdomain(), t.getName(), t.getDemoContactEmail(), s.getEndDate(), action)
+                            new Due(
+                                s.getId(),
+                                t.getId(),
+                                t.getSubdomain(),
+                                t.getName(),
+                                t.getDemoContactEmail(),
+                                s.getEndDate(),
+                                rules,
+                                action
+                            )
                         );
                     }
                 }
@@ -99,18 +121,21 @@ public class WorkspaceRetentionJob {
                 if (d.action() == Action.WARN) {
                     String to = adminEmailResolver.resolveBillingContact(d.subdomain()).orElse(d.contact());
                     Instant sentAt = Instant.now();
-                    mailService.sendWorkspaceDeletionWarning(to, d.name(), policy.deleteOn(d.endDate(), sentAt));
+                    Instant deleteOn = WorkspaceRetentionPolicy.deleteOn(d.endDate(), sentAt, d.rules().days(), d.rules().warningDays());
+                    mailService.sendWorkspaceDeletionWarning(to, d.name(), deleteOn, d.rules().days());
+                    // The date the email gave is kept: the workspace is never deleted before it, even if the period is shortened.
                     masterTx.executeWithoutResult(tx ->
                         tenantRepository
                             .findById(d.tenantId())
                             .ifPresent(t -> {
                                 t.setDeletionWarningSentAt(sentAt);
+                                t.setDeletionScheduledFor(deleteOn);
                                 tenantRepository.save(t);
                             })
                     );
                     warned++;
                 } else if (deleteIfStillDue(d.subscriptionId(), d.tenantId())) {
-                    log.warn("Workspace '{}' deleted: its subscription ended more than {} days ago", d.subdomain(), policy.days());
+                    log.warn("Workspace '{}' deleted: its subscription ended more than {} days ago", d.subdomain(), d.rules().days());
                     deleted++;
                 }
             } catch (Exception e) {
@@ -126,7 +151,7 @@ public class WorkspaceRetentionJob {
     /** Re-checks right before deleting (the workspace may have been reactivated since the scan), then deletes. */
     private boolean deleteIfStillDue(UUID subscriptionId, UUID tenantId) {
         Boolean still = masterTx.execute(tx ->
-            subscriptionRepository.findById(subscriptionId).map(s -> policy.decide(s, Instant.now()) == Action.DELETE).orElse(false)
+            subscriptionRepository.findById(subscriptionId).map(s -> policy.load().decide(s, Instant.now()) == Action.DELETE).orElse(false)
         );
         if (!Boolean.TRUE.equals(still)) {
             return false;

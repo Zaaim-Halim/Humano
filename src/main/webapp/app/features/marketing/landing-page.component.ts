@@ -7,6 +7,7 @@ import { LucideAngularModule } from 'lucide-angular';
 
 import { AccountService } from 'app/core/auth/account.service';
 import { ThemeService } from 'app/core/theme/theme.service';
+import { LegalRetentionService } from 'app/features/legal/legal-retention.service';
 import {
   AlertComponent,
   AvatarComponent,
@@ -93,6 +94,7 @@ export default class LandingPageComponent {
   protected readonly theme = inject(ThemeService);
   private readonly accountService = inject(AccountService);
   private readonly marketing = inject(MarketingService);
+  private readonly retention = inject(LegalRetentionService).retention;
 
   private readonly account = this.accountService.trackCurrentAccount();
   protected readonly authenticated = computed(() => !!this.account());
@@ -271,7 +273,8 @@ export default class LandingPageComponent {
     },
   ];
 
-  protected readonly faqs: Faq[] = [
+  /** The retention period in the trial answer is the one set in the platform console. */
+  protected readonly faqs = computed<Faq[]>(() => [
     {
       q: 'How long does setup take?',
       a: 'Start a trial and your workspace is ready in about a minute. Add your company details, create your employees and set up your pay rules; there is no implementation project.',
@@ -294,9 +297,9 @@ export default class LandingPageComponent {
     },
     {
       q: 'What happens after the trial?',
-      a: 'Your 14-day trial needs no credit card. When it ends, pick a plan to keep going. If you do not, your workspace turns read-only for 14 days and then pauses. We keep your data for 90 days after the trial ends, then delete it.',
+      a: `Your 14-day trial needs no credit card. When it ends, pick a plan to keep going. If you do not, your workspace turns read-only for 14 days and then pauses. We keep your data for ${this.retention().days} days after the trial ends, then delete it.`,
     },
-  ];
+  ]);
 
   /** Only places that exist: sections of this page and the account screens. */
   protected readonly footerColumns = [

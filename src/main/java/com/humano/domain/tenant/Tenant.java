@@ -225,6 +225,10 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
     @Column(name = "deletion_warning_sent_at")
     private Instant deletionWarningSentAt;
 
+    /** The deletion date that warning gave: the workspace is never deleted before it, whatever changes since. */
+    @Column(name = "deletion_scheduled_for")
+    private Instant deletionScheduledFor;
+
     @Override
     public UUID getId() {
         return id;
@@ -472,6 +476,14 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
 
     public void setDeletionWarningSentAt(Instant deletionWarningSentAt) {
         this.deletionWarningSentAt = deletionWarningSentAt;
+    }
+
+    public Instant getDeletionScheduledFor() {
+        return deletionScheduledFor;
+    }
+
+    public void setDeletionScheduledFor(Instant deletionScheduledFor) {
+        this.deletionScheduledFor = deletionScheduledFor;
     }
 
     public DemoSetupStatus getDemoSetup() {

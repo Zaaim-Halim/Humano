@@ -21,10 +21,11 @@ export const LEGAL = {
   hostingRegion: '[Hosting region, e.g. European Union]',
   /**
    * Days a workspace's data is kept after its subscription ends (lapsed trial or cancellation) before it is
-   * deleted. Must match `humano.retention.workspace-deletion.days`, which the nightly deletion job uses.
+   * deleted. Only a fallback: the pages quote the period set in the platform console (`LegalRetentionService`).
+   * Keep it in step with the default `humano.retention.workspace-deletion.days`.
    */
   deletionDays: 90,
-  /** Days before deletion the workspace admin is emailed. Must match `humano.retention.workspace-deletion.warning-days`. */
+  /** Days before deletion the workspace admin is emailed. Fallback, like {@link deletionDays} (`warning-days`). */
   deletionWarningDays: 7,
   /** How long backups take to roll over once data is deleted from the live system. */
   backupDays: '[N]',

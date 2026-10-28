@@ -134,6 +134,7 @@ public class SecurityConfiguration {
                     .requestMatchers(mvc.pattern("/api/authenticate")).permitAll()
                     .requestMatchers(mvc.pattern("/api/activate")).permitAll()
                     .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/public/pricing")).permitAll()
+                    .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/public/legal/retention")).permitAll()
                     .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/public/payroll-templates")).permitAll()
                     .requestMatchers(mvc.pattern(HttpMethod.POST, "/api/public/demo-requests")).permitAll()
                     .requestMatchers(mvc.pattern(HttpMethod.GET, "/api/public/signup/subdomains/*")).permitAll()

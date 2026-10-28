@@ -206,7 +206,7 @@
     "trial": {
       "daysLeft": "{{ n }} days left in your free trial.",
       "lastDay": "Your free trial ends today.",
-      "readOnly": "Your free trial has ended. This workspace is read-only until {{ date }}, then it is paused. Its data is kept for 90 days after the trial ended, then deleted.",
+      "readOnly": "Your free trial has ended. This workspace is read-only until {{ date }}, then it is paused. Its data is kept for {{ days }} days after the trial ended, then deleted.",
       "choosePlan": "Choose a plan",
       "askAdmin": "Ask an administrator to choose a plan."
     },

@@ -177,12 +177,16 @@
     </li>
     <li>
       Before your subscription ends you may export your Customer Data using the export features of the Service (for example CSV and Excel
-      exports and document downloads). We keep the Workspace and its Customer Data for {{ legal.deletionDays }} days after the subscription
-      or trial ends; during that time a paused Workspace cannot be used, but on request we will reopen it so you can choose a plan or export
-      your data. We email the Workspace administrator {{ legal.deletionWarningDays }} days before the period ends, and never delete a
-      Workspace before that email has been sent and {{ legal.deletionWarningDays }} full days have passed since. After that, we permanently
+      exports and document downloads). We keep the Workspace and its Customer Data for {{ retention().days }} days after the subscription or
+      trial ends; during that time a paused Workspace cannot be used, but on request we will reopen it so you can choose a plan or export
+      your data. We email the Workspace administrator {{ retention().warningDays }} days before the period ends, and never delete a
+      Workspace before that email has been sent and {{ retention().warningDays }} full days have passed since. After that, we permanently
       delete the Workspace — its database and stored files — from our live systems; copies in backups are overwritten within a further
       {{ legal.backupDays }} days. We may keep data longer only where the law requires it.
+      @if (retention().upcoming; as u) {
+        For subscriptions and trials that end on or after {{ u.effectiveFrom | date: 'longDate' : 'UTC' }}, the period is {{ u.days }} days
+        and the email is sent {{ u.warningDays }} days before it ends; for those that end earlier, the period above still applies.
+      }
     </li>
     <li>Sections that by their nature should survive termination — including 4 (unpaid fees), 6, 9, 10, 12, 13 and 15 — do so.</li>
   </ul>

@@ -9,6 +9,8 @@ export interface ScheduledDeletion {
   tenantStatus: string;
   subscriptionStatus: string;
   endedAt: string;
+  /** This workspace's period: the longer of the one in force when it ended and now. */
+  retentionDays: number;
   warnFrom: string;
   warningSentAt: string | null;
   /** Final once warned; before that, the earliest date (later if the warning goes out late). */
@@ -24,6 +26,37 @@ export interface ScheduledDeletions {
   days: number;
   warningDays: number;
   items: ScheduledDeletion[];
+}
+
+/** A retention period in force from `effectiveFrom`; `isDefault` for the configured one, never changed. */
+export interface RetentionPeriod {
+  effectiveFrom: string;
+  days: number;
+  warningDays: number;
+  changedBy: string | null;
+  changedAt: string | null;
+  isDefault: boolean;
+}
+
+export interface RetentionSettings {
+  enabled: boolean;
+  current: RetentionPeriod;
+  /** A shorter period scheduled, not in force yet. */
+  upcoming: RetentionPeriod | null;
+  /** Newest first, the current one included. */
+  history: RetentionPeriod[];
+  minDays: number;
+  maxDays: number;
+  maxWarningDays: number;
+  /** Days' notice a shorter period needs. */
+  shorteningNoticeDays: number;
+}
+
+/** Longer applies at once; shorter needs `effectiveFrom` (`yyyy-mm-dd`) far enough ahead. */
+export interface RetentionChange {
+  days: number;
+  warningDays: number;
+  effectiveFrom: string | null;
 }
 
 export interface NewSubprocessorNotice {

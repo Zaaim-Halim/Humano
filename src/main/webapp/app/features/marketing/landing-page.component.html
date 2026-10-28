@@ -458,7 +458,7 @@
           <h2 class="lp-h2">Questions, answered</h2>
         </div>
         <div class="lp-faq__list">
-          @for (faq of faqs; track faq.q; let i = $index) {
+          @for (faq of faqs(); track faq.q; let i = $index) {
             <div class="lp-faq__item" [class.is-open]="openFaq() === i">
               <button type="button" class="lp-faq__q" [attr.aria-expanded]="openFaq() === i" (click)="toggleFaq(i)">
                 <span>{{ faq.q }}</span>
