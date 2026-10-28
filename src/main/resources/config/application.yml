@@ -237,6 +237,14 @@ humano:
     # TenantResolutionFilter forces this tenant context for all platform requests. Override per
     # environment via PLATFORM_TENANT env var if a dedicated admin tenancy is provisioned.
     platform-tenant: ${PLATFORM_TENANT:default}
+  # The first platform console owner on a new installation, which has no users (development gets
+  # owner@humano.app from the dev seeder). Set both, start once, sign in with organization =
+  # platform-tenant, change the password under Account, then remove both. Used only while no console
+  # owner exists: after that they are ignored, so they can never reset a password. See PlatformOwnerBootstrap.
+  platform:
+    owner:
+      email: ${HUMANO_OWNER_EMAIL:}
+      password: ${HUMANO_OWNER_PASSWORD:}
   # P5.3 — Workflow scheduler bounds. DeadlineMonitorService caps auto-escalation depth
   # to prevent the hourly tick from looping forever on a stuck workflow.
   workflow:
@@ -259,6 +267,11 @@ humano:
   billing:
     # Currency the platform bills customers in (plan prices, invoices, MRR on the owner console).
     currency: ${BILLING_CURRENCY:USD}
+    # On the first start of an empty database (no plans, no features), create the default plans
+    # (Free, Starter, Growth, Enterprise) and the feature catalog, so the pricing page and sign-up work
+    # from day one. Never touches a catalog that exists. See DefaultPlanCatalog.
+    default-catalog:
+      enabled: true
     # Extra storage on sale on top of a plan: packs of pack-gb GB at monthly-price a month each,
     # for plans of these types. Billed on each renewal; price snapshotted when bought.
     addons:

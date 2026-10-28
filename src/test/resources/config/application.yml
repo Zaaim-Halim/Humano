@@ -122,6 +122,10 @@ management:
       enabled: false
 
 humano:
+  billing:
+    # Tests set up the plans they need.
+    default-catalog:
+      enabled: false
   retention:
     workspace-deletion:
       enabled: false

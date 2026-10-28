@@ -1,16 +1,13 @@
 package com.humano.dev;
 
 import com.humano.domain.billing.Coupon;
-import com.humano.domain.billing.Feature;
 import com.humano.domain.billing.Invoice;
 import com.humano.domain.billing.InvoiceLine;
-import com.humano.domain.billing.PlanFeature;
 import com.humano.domain.billing.Subscription;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.CountryCode;
 import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.billing.DiscountType;
-import com.humano.domain.enumeration.billing.FeatureLimitType;
 import com.humano.domain.enumeration.billing.InvoiceLineKind;
 import com.humano.domain.enumeration.billing.InvoiceStatus;
 import com.humano.domain.enumeration.billing.SubscriptionStatus;
@@ -19,11 +16,11 @@ import com.humano.domain.enumeration.tenant.ProvisioningStep;
 import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.repository.billing.CouponRepository;
-import com.humano.repository.billing.FeatureRepository;
 import com.humano.repository.billing.InvoiceRepository;
 import com.humano.repository.billing.SubscriptionPlanRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
+import com.humano.service.billing.DefaultPlanCatalog;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -56,7 +53,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class PlatformDemoSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(PlatformDemoSeeder.class);
-    private static final String MARKER_PLAN = "Growth";
+    private static final String MARKER_PLAN = DefaultPlanCatalog.GROWTH;
 
     private record Sample(
         String name,
@@ -243,7 +240,7 @@ public class PlatformDemoSeeder {
     private final SubscriptionRepository subscriptionRepository;
     private final InvoiceRepository invoiceRepository;
     private final CouponRepository couponRepository;
-    private final FeatureRepository featureRepository;
+    private final DefaultPlanCatalog catalog;
     private final TransactionTemplate masterTx;
     private final DataSource masterDataSource;
 
@@ -253,7 +250,7 @@ public class PlatformDemoSeeder {
         SubscriptionRepository subscriptionRepository,
         InvoiceRepository invoiceRepository,
         CouponRepository couponRepository,
-        FeatureRepository featureRepository,
+        DefaultPlanCatalog catalog,
         @Qualifier("masterTransactionManager") PlatformTransactionManager masterTransactionManager,
         @Qualifier("masterDataSource") DataSource masterDataSource
     ) {
@@ -262,7 +259,7 @@ public class PlatformDemoSeeder {
         this.subscriptionRepository = subscriptionRepository;
         this.invoiceRepository = invoiceRepository;
         this.couponRepository = couponRepository;
-        this.featureRepository = featureRepository;
+        this.catalog = catalog;
         this.masterTx = new TransactionTemplate(masterTransactionManager);
         this.masterDataSource = masterDataSource;
     }
@@ -272,23 +269,23 @@ public class PlatformDemoSeeder {
         boolean seeded = planRepository.findAll().stream().anyMatch(p -> MARKER_PLAN.equals(p.getDisplayName()));
         if (seeded) {
             masterTx.executeWithoutResult(status -> {
-                backfillPricingCopy();
-                backfillCatalog();
+                catalog.fillMissingPricingCopy();
+                catalog.addMissingFeatures();
             });
             return;
         }
         java.util.Map<UUID, Instant> joinedDates = new java.util.LinkedHashMap<>();
         masterTx.executeWithoutResult(status -> {
-            SubscriptionPlan starter = plan(SubscriptionType.BASIC, "Starter", "49");
-            SubscriptionPlan growth = plan(SubscriptionType.PRO, MARKER_PLAN, "149");
-            SubscriptionPlan enterprise = plan(SubscriptionType.ENTERPRISE, "Enterprise", "499");
-            SubscriptionPlan free = planRepository
+            SubscriptionPlan devFree = planRepository
                 .findAll()
                 .stream()
                 .filter(p -> p.getSubscriptionType() == SubscriptionType.FREE)
                 .findFirst()
                 .orElse(null);
-            seedFeatures(free, starter, growth, enterprise);
+            DefaultPlanCatalog.Plans plans = catalog.create(devFree);
+            SubscriptionPlan starter = plans.starter();
+            SubscriptionPlan growth = plans.growth();
+            SubscriptionPlan enterprise = plans.enterprise();
             Instant now = Instant.now();
 
             tenantRepository
@@ -333,315 +330,6 @@ public class PlatformDemoSeeder {
         // After commit: a separate connection must see the rows.
         joinedDates.forEach((id, when) -> backdate("tenant", id, when));
         log.info("[platform-demo] seeded plans, {} sample customers, subscriptions, invoices and coupons", SAMPLES.size());
-    }
-
-    /** One row of the comparison: the catalog feature and its value per plan (free, starter, growth, enterprise). */
-    private record Row(
-        String category,
-        String code,
-        String name,
-        String description,
-        FeatureLimitType type,
-        String unit,
-        Object[] values
-    ) {}
-
-    /** {@code true}/{@code false} = included or not; a number = limit; {@code null} = unlimited; a string = included, with that note. */
-    private static final List<Row> CATALOG = List.of(
-        new Row(
-            "Core HR",
-            "EMPLOYEES",
-            "Employees",
-            "People you can manage in Humano.",
-            FeatureLimitType.QUANTITY,
-            "employees",
-            new Object[] { 5, 25, 150, null }
-        ),
-        new Row(
-            "Core HR",
-            "ADMIN_SEATS",
-            "HR admin seats",
-            "People with HR or payroll admin access.",
-            FeatureLimitType.QUANTITY,
-            "admins",
-            new Object[] { 1, 3, 10, null }
-        ),
-        new Row(
-            "Core HR",
-            "DIRECTORY",
-            "Directory, org chart & people tree",
-            null,
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { true, true, true, true }
-        ),
-        new Row(
-            "Core HR",
-            "DOCUMENTS",
-            "Document storage",
-            "Contracts, IDs and payslips.",
-            FeatureLimitType.QUANTITY,
-            "GB",
-            // Enterprise: 1 TB included; more can be added to a workspace.
-            new Object[] { 1, 10, 100, 1024 }
-        ),
-        new Row(
-            "Core HR",
-            "DEDICATED_DB",
-            "Dedicated, isolated database",
-            "Your data never shares a database with another company.",
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { true, true, true, true }
-        ),
-        new Row(
-            "Time & leave",
-            "LEAVE",
-            "Leave requests & calendar",
-            null,
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { true, true, true, true }
-        ),
-        new Row(
-            "Time & leave",
-            "TIMESHEETS",
-            "Timesheets & time clock",
-            null,
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { false, true, true, true }
-        ),
-        new Row(
-            "Time & leave",
-            "APPROVAL_CHAINS",
-            "Multi-step approval chains",
-            null,
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { false, false, true, true }
-        ),
-        new Row(
-            "Payroll",
-            "PAYROLL",
-            "Payroll runs & payslips",
-            null,
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { false, true, true, true }
-        ),
-        new Row(
-            "Payroll",
-            "PAYROLL_TEMPLATES",
-            "Statutory payroll templates",
-            "Ready-made income tax and social contribution rules for 13 countries, updated for each new tax year.",
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { false, true, true, true }
-        ),
-        new Row(
-            "Payroll",
-            "PAYROLL_COUNTRIES",
-            "Payroll countries",
-            "Countries you can run payroll in.",
-            FeatureLimitType.QUANTITY,
-            "countries",
-            new Object[] { false, 1, 3, null }
-        ),
-        new Row(
-            "Payroll",
-            "COMPENSATION",
-            "Salary bands, bonuses & benefits",
-            null,
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { false, false, true, true }
-        ),
-        new Row(
-            "Talent",
-            "PERFORMANCE",
-            "Performance reviews",
-            "Review cycles with self-assessment, manager review, 360° feedback, calibration (9-box), goals and improvement plans.",
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { false, false, true, true }
-        ),
-        new Row(
-            "Talent",
-            "TRAINING",
-            "Training & certifications",
-            null,
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { false, false, true, true }
-        ),
-        new Row("Insights", "DASHBOARDS", "Dashboards", null, FeatureLimitType.BOOLEAN, null, new Object[] { true, true, true, true }),
-        new Row(
-            "Insights",
-            "ANALYTICS",
-            "Advanced analytics & exports",
-            null,
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { false, false, true, true }
-        ),
-        new Row("Insights", "API", "API access", null, FeatureLimitType.BOOLEAN, null, new Object[] { false, false, false, true }),
-        new Row(
-            "Security & support",
-            "AUDIT_LOG",
-            "Audit log",
-            null,
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { false, false, true, true }
-        ),
-        new Row(
-            "Security & support",
-            "SSO",
-            "Single sign-on (SAML)",
-            null,
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { false, false, false, true }
-        ),
-        new Row(
-            "Security & support",
-            "SUPPORT",
-            "Support",
-            null,
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { "Community", "Email", "Email & chat", "Dedicated manager" }
-        ),
-        new Row(
-            "Security & support",
-            "SLA",
-            "Uptime SLA",
-            null,
-            FeatureLimitType.BOOLEAN,
-            null,
-            new Object[] { false, false, false, "99.9%" }
-        )
-    );
-
-    private void seedFeatures(SubscriptionPlan... plans) {
-        int order = 0;
-        for (Row row : CATALOG) {
-            Feature f = new Feature();
-            f.setCode(row.code());
-            f.setName(row.name());
-            f.setDescription(row.description());
-            f.setCategory(row.category());
-            f.setLimitType(row.type());
-            f.setUnit(row.unit());
-            f.setSortOrder(order++);
-            f.setActive(true);
-            Feature feature = featureRepository.save(f);
-            for (int i = 0; i < plans.length; i++) {
-                SubscriptionPlan plan = plans[i];
-                if (plan == null) continue;
-                plan.getFeatures().add(planFeature(plan, feature, row.values()[i]));
-            }
-        }
-        for (SubscriptionPlan plan : plans) {
-            if (plan != null) planRepository.save(plan);
-        }
-    }
-
-    /** A plan's cell for a catalog value: {@code false} = not included, a number = limit, a string = note. */
-    private static PlanFeature planFeature(SubscriptionPlan plan, Feature feature, Object v) {
-        PlanFeature pf = new PlanFeature();
-        pf.setPlan(plan);
-        pf.setFeature(feature);
-        pf.setIncluded(!Boolean.FALSE.equals(v));
-        if (v instanceof Integer limit) pf.setLimitValue(limit);
-        if (v instanceof String note) pf.setNote(note);
-        return pf;
-    }
-
-    private SubscriptionPlan plan(SubscriptionType type, String name, String monthly) {
-        SubscriptionPlan plan = new SubscriptionPlan();
-        plan.setSubscriptionType(type);
-        plan.setDisplayName(name);
-        plan.setPrice(new BigDecimal(monthly));
-        plan.setBasePrice(new BigDecimal(monthly));
-        plan.setActive(true);
-        applyPricingCopy(plan);
-        return planRepository.save(plan);
-    }
-
-    /** The public pricing page's pitch per seeded plan; the internal dev plan stays off the page. */
-    private static void applyPricingCopy(SubscriptionPlan plan) {
-        String name = plan.getDisplayName();
-        if (plan.getSubscriptionType() == SubscriptionType.FREE) {
-            plan.setPublicListed(false);
-        } else if ("Starter".equals(name)) {
-            plan.setDescription("For small teams getting their people ops in order.");
-        } else if (MARKER_PLAN.equals(name)) {
-            plan.setDescription("For scaling companies that need payroll everywhere.");
-            plan.setFeatured(true);
-        } else if ("Enterprise".equals(name)) {
-            plan.setDescription("For groups, resellers and complex org structures.");
-        }
-    }
-
-    /**
-     * Databases seeded before a feature joined {@link #CATALOG}: add it once, in its catalog place and with
-     * its value on each seeded plan. Features already there are left as they are, edits included.
-     */
-    private void backfillCatalog() {
-        List<SubscriptionPlan> all = planRepository.findAll();
-        SubscriptionPlan[] plans = {
-            all.stream().filter(p -> p.getSubscriptionType() == SubscriptionType.FREE).findFirst().orElse(null),
-            all.stream().filter(p -> "Starter".equals(p.getDisplayName())).findFirst().orElse(null),
-            all.stream().filter(p -> MARKER_PLAN.equals(p.getDisplayName())).findFirst().orElse(null),
-            all.stream().filter(p -> "Enterprise".equals(p.getDisplayName())).findFirst().orElse(null),
-        };
-        Feature previous = null;
-        for (Row row : CATALOG) {
-            Feature existing = featureRepository.findOneByCode(row.code()).orElse(null);
-            if (existing != null) {
-                previous = existing;
-                continue;
-            }
-            // Right after the catalog row before it; later features move down one.
-            int order = previous != null ? previous.getSortOrder() + 1 : 0;
-            for (Feature later : featureRepository.findAll()) {
-                if (later.getSortOrder() >= order) {
-                    later.setSortOrder(later.getSortOrder() + 1);
-                    featureRepository.save(later);
-                }
-            }
-            Feature f = new Feature();
-            f.setCode(row.code());
-            f.setName(row.name());
-            f.setDescription(row.description());
-            f.setCategory(row.category());
-            f.setLimitType(row.type());
-            f.setUnit(row.unit());
-            f.setSortOrder(order);
-            f.setActive(true);
-            Feature feature = featureRepository.save(f);
-            for (int i = 0; i < plans.length; i++) {
-                if (plans[i] != null) {
-                    plans[i].getFeatures().add(planFeature(plans[i], feature, row.values()[i]));
-                    planRepository.save(plans[i]);
-                }
-            }
-            log.info("[dev-seed] added plan feature '{}' to the catalog", row.code());
-            previous = feature;
-        }
-    }
-
-    /** Databases seeded before plans had pricing copy: fill it in once, never over an edit. */
-    private void backfillPricingCopy() {
-        for (SubscriptionPlan plan : planRepository.findAll()) {
-            boolean untouched = plan.getDescription() == null && !plan.isFeatured() && plan.isPublicListed();
-            if (untouched) {
-                applyPricingCopy(plan);
-                planRepository.save(plan);
-            }
-        }
     }
 
     /**

@@ -4,6 +4,7 @@ import com.humano.domain.enumeration.tenant.TenantStatus;
 import com.humano.domain.tenant.Tenant;
 import com.humano.repository.tenant.TenantRepository;
 import com.humano.service.payroll.template.PayrollTemplateService;
+import com.humano.service.platform.PlatformOwnerBootstrap;
 import com.humano.tenancy.TenantContext;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -40,17 +41,20 @@ public class StartupTenantMigrator {
     private final TenantMigrationService migrationService;
     private final TenantInitializationService initializationService;
     private final PayrollTemplateService payrollTemplateService;
+    private final PlatformOwnerBootstrap ownerBootstrap;
 
     public StartupTenantMigrator(
         TenantRepository tenantRepository,
         TenantMigrationService migrationService,
         TenantInitializationService initializationService,
-        PayrollTemplateService payrollTemplateService
+        PayrollTemplateService payrollTemplateService,
+        PlatformOwnerBootstrap ownerBootstrap
     ) {
         this.tenantRepository = tenantRepository;
         this.migrationService = migrationService;
         this.initializationService = initializationService;
         this.payrollTemplateService = payrollTemplateService;
+        this.ownerBootstrap = ownerBootstrap;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -59,6 +63,12 @@ public class StartupTenantMigrator {
             initializationService.backfillPlatformTenant();
         } catch (Exception e) {
             LOG.error("Role/permission backfill failed for the platform tenant", e);
+        }
+        // After the backfill: the first console owner needs the platform roles it just seeded.
+        try {
+            ownerBootstrap.run();
+        } catch (Exception e) {
+            LOG.error("Creating the first platform console owner failed", e);
         }
         List<Tenant> tenants = tenantRepository.findByStatus(TenantStatus.ACTIVE);
         if (tenants.isEmpty()) {
