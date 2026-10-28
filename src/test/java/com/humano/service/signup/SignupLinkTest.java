@@ -29,11 +29,44 @@ class SignupLinkTest {
         UUID plan = UUID.randomUUID();
         Instant expires = Instant.now().plusSeconds(3600);
         String token = link.issue(
-            new SignupLink.Payload("a@acme.test", "Acme", "acme", CountryCode.DE, "Europe/Berlin", plan, "de-employment", expires)
+            new SignupLink.Payload(
+                "a@acme.test",
+                "Acme",
+                "acme",
+                CountryCode.DE,
+                "Europe/Berlin",
+                plan,
+                "de-employment",
+                expires,
+                null,
+                null
+            )
         );
         SignupLink.Payload read = link.read(token);
         assertThat(read.payrollTemplateId()).isEqualTo("de-employment");
         assertThat(read.planId()).isEqualTo(plan);
+    }
+
+    @Test
+    void theAcceptedTermsTravelInTheLink() {
+        Instant accepted = Instant.parse("2026-10-28T09:30:00Z");
+        String token = link.issue(
+            new SignupLink.Payload(
+                "a@acme.test",
+                "Acme",
+                "acme",
+                CountryCode.DE,
+                "Europe/Berlin",
+                UUID.randomUUID(),
+                null,
+                Instant.now().plusSeconds(3600),
+                "2026-10-28",
+                accepted
+            )
+        );
+        SignupLink.Payload read = link.read(token);
+        assertThat(read.termsVersion()).isEqualTo("2026-10-28");
+        assertThat(read.termsAcceptedAt()).isEqualTo(accepted);
     }
 
     @Test
@@ -55,6 +88,8 @@ class SignupLinkTest {
 
         assertThat(read.country()).isEqualTo(CountryCode.NL);
         assertThat(read.payrollTemplateId()).isNull();
+        assertThat(read.termsVersion()).isNull();
+        assertThat(read.termsAcceptedAt()).isNull();
         assertThat(read.expired()).isFalse();
     }
 }

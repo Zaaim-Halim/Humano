@@ -1,5 +1,6 @@
 package com.humano.service.signup;
 
+import com.humano.config.Constants;
 import com.humano.domain.billing.Feature;
 import com.humano.domain.billing.SubscriptionPlan;
 import com.humano.domain.enumeration.billing.BillingCycle;
@@ -195,6 +196,10 @@ public class SignupService {
         if (!check.available()) {
             throw new BadRequestAlertException("This workspace address cannot be used", ENTITY_NAME, "subdomain" + check.reason());
         }
+        if (!Constants.TERMS_VERSION.equals(request.termsVersion())) {
+            // The page was loaded before the Terms changed: the visitor has to see the current ones.
+            throw new BadRequestAlertException("The terms have changed since this page was loaded", ENTITY_NAME, "termsoutdated");
+        }
         SubscriptionPlan plan = masterTx.execute(tx -> planOnSale(request.planId()));
         String templateId = request.payrollTemplateId() == null || request.payrollTemplateId().isBlank()
             ? null
@@ -225,7 +230,9 @@ public class SignupService {
                 validZone(request.timezone()),
                 plan.getId(),
                 templateId,
-                Instant.now().plus(LINK_VALID_HOURS, ChronoUnit.HOURS)
+                Instant.now().plus(LINK_VALID_HOURS, ChronoUnit.HOURS),
+                Constants.TERMS_VERSION,
+                Instant.now()
             )
         );
         String url = jHipsterProperties.getMail().getBaseUrl() + "/signup/verify?token=" + token;
@@ -290,6 +297,8 @@ public class SignupService {
                 t.setStatus(TenantStatus.PENDING_SETUP);
                 t.setDemo(false);
                 t.setDemoContactEmail(p.email());
+                t.setTermsVersion(p.termsVersion());
+                t.setTermsAcceptedAt(p.termsAcceptedAt());
                 return tenantRepository.save(t);
             });
         } catch (DataIntegrityViolationException e) {

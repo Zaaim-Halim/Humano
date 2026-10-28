@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!-- The Terms of Service / DPA version accepted at self-serve sign-up, and when -->
+    <changeSet id="20261028-add-terms-acceptance-to-tenant" author="halimzaaim">
+        <addColumn tableName="tenant">
+            <column name="terms_version" type="VARCHAR(20)"/>
+            <column name="terms_accepted_at" type="${datetimeType}"/>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="tenant" columnName="terms_accepted_at"/>
+            <dropColumn tableName="tenant" columnName="terms_version"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

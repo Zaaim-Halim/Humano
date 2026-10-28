@@ -31,6 +31,13 @@
               'humano.console.customer.since' | translate: { date: (t.createdDate | date: 'mediumDate') }
             }}</span
           >
+          @if (t.termsVersion && t.termsAcceptedAt) {
+            <span
+              ><lucide-icon name="file-signature" [size]="14" />{{
+                'humano.console.customer.termsAccepted' | translate: { version: t.termsVersion, date: (t.termsAcceptedAt | date: 'medium') }
+              }}</span
+            >
+          }
         </p>
         <div class="hum-con-hero__badges">
           <hum-badge [status]="t.status" />

@@ -27,6 +27,8 @@ public record TenantResponse(
     int organizationCount,
     boolean demo,
     Instant demoExpiresAt,
+    String termsVersion,
+    Instant termsAcceptedAt,
     String createdBy,
     Instant createdDate,
     String lastModifiedBy,

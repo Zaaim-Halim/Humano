@@ -246,6 +246,8 @@ public class TenantService {
             tenant.getOrganizations().size(),
             tenant.isDemo(),
             tenant.getDemoExpiresAt(),
+            tenant.getTermsVersion(),
+            tenant.getTermsAcceptedAt(),
             tenant.getCreatedBy(),
             tenant.getCreatedDate(),
             tenant.getLastModifiedBy(),

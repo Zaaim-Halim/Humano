@@ -35,6 +35,13 @@ export const LEGAL = {
 /** Last change to any of the legal pages; shown at the top of each. */
 export const LEGAL_UPDATED = '28 October 2026';
 
+/**
+ * The version a sign-up accepts, sent with the form and recorded on the workspace. Must match the
+ * server's `Constants.TERMS_VERSION`, which refuses any other: bump both (and {@link LEGAL_UPDATED})
+ * together whenever the Terms or the Data Processing Addendum change.
+ */
+export const LEGAL_VERSION = '2026-10-28';
+
 export interface Subprocessor {
   name: string;
   purpose: string;

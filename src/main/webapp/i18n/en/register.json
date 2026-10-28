@@ -70,7 +70,8 @@
       "invalidlink": "This link is not valid. Please use the link from your email, or start again.",
       "linkexpired": "This link has expired. Please start again — it only takes a minute.",
       "payrolltemplateunavailable": "This payroll template is no longer available. Choose another one or none.",
-      "payrollnotinplan": "The plan you chose doesn't include payroll, so a payroll template can't be added."
+      "payrollnotinplan": "The plan you chose doesn't include payroll, so a payroll template can't be added.",
+      "termsoutdated": "Our Terms have been updated since this page was opened. Please reload the page, review them and try again."
     },
     "strength": {
       "label": "Password strength:",

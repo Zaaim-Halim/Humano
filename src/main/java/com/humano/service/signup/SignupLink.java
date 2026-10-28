@@ -30,7 +30,9 @@ public class SignupLink {
 
     /**
      * What the visitor filled in on the public form. {@code payrollTemplateId} is optional (null in
-     * links issued before it existed, which still read).
+     * links issued before it existed, which still read). {@code termsVersion} and
+     * {@code termsAcceptedAt} record the Terms the visitor accepted when sending the form (null in links
+     * issued before acceptance was recorded).
      */
     public record Payload(
         String email,
@@ -40,7 +42,9 @@ public class SignupLink {
         String timezone,
         UUID planId,
         String payrollTemplateId,
-        Instant expiresAt
+        Instant expiresAt,
+        String termsVersion,
+        Instant termsAcceptedAt
     ) {
         public boolean expired() {
             return expiresAt == null || expiresAt.isBefore(Instant.now());

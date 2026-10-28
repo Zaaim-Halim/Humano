@@ -14,5 +14,12 @@ public final class Constants {
     public static final int PASSWORD_MIN_LENGTH = 8;
     public static final int PASSWORD_MAX_LENGTH = 100;
 
+    /**
+     * Version of the Terms of Service and Data Processing Addendum a sign-up accepts: the date they
+     * last changed. Must match {@code LEGAL_VERSION} in {@code features/legal/legal-info.ts}; bump both
+     * together, so a form still showing older terms is refused rather than recorded as accepting these.
+     */
+    public static final String TERMS_VERSION = "2026-10-28";
+
     private Constants() {}
 }

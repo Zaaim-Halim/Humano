@@ -200,6 +200,18 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
     @Column(name = "demo_setup", length = 20)
     private DemoSetupStatus demoSetup;
 
+    /**
+     * The Terms of Service / Data Processing Addendum version accepted at self-serve sign-up, and when
+     * (the sign-up form was sent; {@link #demoContactEmail} is who confirmed it). Null for workspaces
+     * created otherwise, or before acceptance was recorded.
+     */
+    @Column(name = "terms_version", length = 20)
+    @Size(max = 20)
+    private String termsVersion;
+
+    @Column(name = "terms_accepted_at")
+    private Instant termsAcceptedAt;
+
     @Override
     public UUID getId() {
         return id;
@@ -415,6 +427,22 @@ public class Tenant extends AbstractAuditingEntity<UUID> {
 
     public void setDemoContactEmail(String demoContactEmail) {
         this.demoContactEmail = demoContactEmail;
+    }
+
+    public String getTermsVersion() {
+        return termsVersion;
+    }
+
+    public void setTermsVersion(String termsVersion) {
+        this.termsVersion = termsVersion;
+    }
+
+    public Instant getTermsAcceptedAt() {
+        return termsAcceptedAt;
+    }
+
+    public void setTermsAcceptedAt(Instant termsAcceptedAt) {
+        this.termsAcceptedAt = termsAcceptedAt;
     }
 
     public DemoSetupStatus getDemoSetup() {

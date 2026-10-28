@@ -24,6 +24,9 @@ export interface Tenant extends AuditFields {
   /** A demo workspace (listed under Demos, not customers). */
   demo: boolean;
   demoExpiresAt: string | null;
+  /** Terms of Service / DPA version accepted at self-serve sign-up, and when; null otherwise. */
+  termsVersion: string | null;
+  termsAcceptedAt: string | null;
 }
 
 /** Live Hikari pool stats attached to tenant detail (best-effort, may be null). */

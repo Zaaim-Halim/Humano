@@ -7,6 +7,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
+import { LEGAL_VERSION } from 'app/features/legal/legal-info';
 import { MarketingService, PublicPayrollTemplate, PublicPricing, SubdomainCheck } from 'app/features/marketing/marketing.service';
 import {
   AlertComponent,
@@ -209,6 +210,8 @@ export default class SignupComponent {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         planId: f.planId,
         payrollTemplateId: this.planHasPayroll() && f.payrollTemplateId ? f.payrollTemplateId : undefined,
+        acceptedTerms: f.acceptTerms,
+        termsVersion: LEGAL_VERSION,
         website: f.website || undefined,
       })
       .subscribe({
@@ -247,6 +250,7 @@ export function signupErrorKey(err: HttpErrorResponse): string {
     'payrollnotinplan',
     'invalidlink',
     'linkexpired',
+    'termsoutdated',
   ];
   return key && known.includes(key) ? `register.errors.${key}` : 'register.errors.generic';
 }

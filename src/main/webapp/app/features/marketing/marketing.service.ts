@@ -53,6 +53,9 @@ export interface SignupForm {
   planId: string;
   /** The statutory payroll template the workspace starts with; omitted when the visitor chose none. */
   payrollTemplateId?: string;
+  /** The Terms of Service and Data Processing Addendum were ticked, in this version (`LEGAL_VERSION`). */
+  acceptedTerms: boolean;
+  termsVersion: string;
   website?: string;
 }
 

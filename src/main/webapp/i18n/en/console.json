@@ -143,6 +143,7 @@
       "customer": {
         "back": "All customers",
         "since": "Customer since {{ date }}",
+        "termsAccepted": "Accepted terms v{{ version }} on {{ date }}",
         "suspend": "Suspend",
         "reactivate": "Reactivate",
         "suspendedTitle": "This workspace is suspended",
