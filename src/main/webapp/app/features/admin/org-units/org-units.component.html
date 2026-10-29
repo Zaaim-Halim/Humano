@@ -18,7 +18,7 @@
     <div class="hum-table-wrap"><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /><hum-skeleton-row /></div>
   } @else if (error(); as e) {
     <hum-alert tone="danger" [title]="e">
-      <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
+      <hum-button variant="outline" size="sm" icon="rotate-ccw" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
     </hum-alert>
   } @else if (roots().length === 0) {
     <hum-empty-state
@@ -156,7 +156,7 @@
         [title]="'humano.orgUnits.noMatch' | translate"
         [description]="'humano.orgUnits.noMatchBody' | translate"
       >
-        <hum-button variant="secondary" (click)="query.set('')">{{ 'humano.action.clearFilters' | translate }}</hum-button>
+        <hum-button variant="secondary" icon="x" (click)="query.set('')">{{ 'humano.action.clearFilters' | translate }}</hum-button>
       </hum-empty-state>
     }
   }
@@ -203,8 +203,8 @@
     </hum-form-field>
   </form>
   <div hum-drawer-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
-    <hum-button variant="secondary" (click)="formOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
-    <hum-button variant="primary" [loading]="saving()" [disabled]="form.invalid" (click)="save()">{{
+    <hum-button variant="secondary" icon="x" (click)="formOpen.set(false)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="primary" icon="check" [loading]="saving()" [disabled]="form.invalid" (click)="save()">{{
       'humano.action.save' | translate
     }}</hum-button>
   </div>
@@ -219,7 +219,9 @@
   (closed)="deleteTarget.set(null)"
 >
   <div hum-dialog-footer style="display: flex; gap: var(--space-2); justify-content: flex-end">
-    <hum-button variant="secondary" (click)="deleteTarget.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
-    <hum-button variant="destructive" [loading]="deleting()" (click)="confirmDelete()">{{ 'humano.action.delete' | translate }}</hum-button>
+    <hum-button variant="secondary" icon="x" (click)="deleteTarget.set(null)">{{ 'humano.action.cancel' | translate }}</hum-button>
+    <hum-button variant="destructive" icon="trash-2" [loading]="deleting()" (click)="confirmDelete()">{{
+      'humano.action.delete' | translate
+    }}</hum-button>
   </div>
 </hum-dialog>
