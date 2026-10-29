@@ -36,6 +36,7 @@ import com.humano.dto.payroll.request.InitiatePayrollRunRequest;
 import com.humano.dto.payroll.request.UpdateLeaveTypeRuleRequest;
 import com.humano.dto.payroll.response.LeaveTypeRuleResponse;
 import com.humano.dto.payroll.response.PayrollRunResponse;
+import com.humano.dto.payroll.response.PayrollTemplateResponse;
 import com.humano.repository.hr.LeaveRequestRepository;
 import com.humano.repository.hr.OrganizationalUnitRepository;
 import com.humano.repository.hr.PositionRepository;
@@ -587,6 +588,28 @@ class LeavePayPayrollRunIT {
                 assertThat(r.templateId()).isEqualTo(AL_TEMPLATE);
                 assertThat(r.id()).isNull();
             });
+    }
+
+    @Test
+    void aTemplateShowsWhichLeaveTypesHaveNoRuleAndArePaidInFull() {
+        leaveTypeRuleService.createRule(
+            new CreateLeaveTypeRuleRequest(country(CountryCode.EE).getId(), LeaveType.UNPAID, new BigDecimal("100"), List.of(), null)
+        );
+
+        // Estonia declares statutory sick pay; parental leave has no rule, so payroll would pay it in full.
+        assertThat(templateService.get(EE_TEMPLATE).leavePay())
+            .extracting(PayrollTemplateResponse.LeaveCoverage::leaveType, PayrollTemplateResponse.LeaveCoverage::rule)
+            .containsExactly(
+                org.assertj.core.groups.Tuple.tuple(LeaveType.SICK, "TEMPLATE"),
+                org.assertj.core.groups.Tuple.tuple(LeaveType.MATERNITY, "NONE"),
+                org.assertj.core.groups.Tuple.tuple(LeaveType.UNPAID, "WORKSPACE")
+            );
+        assertThat(templateService.get(EE_TEMPLATE).leavePay().get(0).note()).contains("Tervisekassa");
+
+        // Enabling the template says so too.
+        assertThat(templateService.configure(EE_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of())).warnings()).anySatisfy(w ->
+            assertThat(w).startsWith("No leave pay rule for parental leave in EE")
+        );
     }
 
     @Test

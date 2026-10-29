@@ -6,7 +6,9 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 
+import { Permission } from 'app/config/permission.constants';
 import { normalizeHttpError } from 'app/core/api';
+import { AccountService } from 'app/core/auth/account.service';
 import {
   AlertComponent,
   BadgeComponent,
@@ -28,12 +30,15 @@ import { templateState } from './template-state';
 /**
  * One statutory payroll template (`/payroll/templates/:id`): its employer settings, whether payroll
  * uses it, its employees' profiles ({@link TemplateEmployeesComponent}), what changed since it was
- * last reviewed, and what it covers (limitations, sources).
+ * last reviewed, how leave is paid in its country, and what it covers (limitations, sources).
  * <p>
  * Settings and the on/off switch are saved together (`PUT .../adoption`). The template's required
  * settings are only required while it is switched on — the server's rule too — so a template chosen
  * at sign-up can be saved switched off and half filled in. Enabling returns what in the workspace
  * interacts with the template (e.g. employees without a profile); those warnings are shown as sent.
+ * <p>
+ * Leave with no leave pay rule is paid in full and templates don't see it, so the leave pay section
+ * names those leave types rather than leaving them to be found on payday.
  */
 @Component({
   selector: 'hum-payroll-template',
@@ -90,6 +95,10 @@ export default class PayrollTemplateComponent {
     if (t.subdivision) return 'humano.payrollTemplates.blocked.subdivision';
     return null;
   });
+  /** Leave types with no leave pay rule in the template's country: paid in full. */
+  protected readonly unruledLeave = computed(() => (this.template()?.leavePay ?? []).filter(c => c.rule === 'NONE'));
+  /** Leave pay rules are set on their own page (`MANAGE_PAY_COMPONENTS`). */
+  protected readonly canManageLeavePay = inject(AccountService).hasPermission(Permission.MANAGE_PAY_COMPONENTS);
   /** Changelog entries newer than the version last reviewed here, newest first. */
   protected readonly newChanges = computed(() => {
     const t = this.template();

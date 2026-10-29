@@ -8,7 +8,12 @@ import { of } from 'rxjs';
 
 import { lucideIcons } from 'app/config/lucide-icons';
 
-import { ConfigurePayrollTemplateRequest, PayrollTemplate, TemplateChangelogEntry } from '../models/payroll-template.model';
+import {
+  ConfigurePayrollTemplateRequest,
+  PayrollTemplate,
+  TemplateChangelogEntry,
+  TemplateLeaveCoverage,
+} from '../models/payroll-template.model';
 import { PayrollTemplateService } from '../services/payroll-template.service';
 import PayrollTemplateComponent from './payroll-template.component';
 import { TemplateInputsGroup } from './template-inputs';
@@ -20,11 +25,13 @@ interface Page {
   settings: () => TemplateInputsGroup | null;
   warnings: () => string[];
   newChanges: () => TemplateChangelogEntry[];
+  unruledLeave: () => TemplateLeaveCoverage[];
   save: () => void;
 }
 
 describe('PayrollTemplateComponent', () => {
   let configure: jest.Mock;
+  let rendered: HTMLElement;
 
   function open(template: PayrollTemplate, warnings: string[] = []): Page {
     configure = jest.fn((id: string, body: ConfigurePayrollTemplateRequest) =>
@@ -51,6 +58,7 @@ describe('PayrollTemplateComponent', () => {
     const fixture = TestBed.createComponent(PayrollTemplateComponent);
     fixture.componentRef.setInput('id', template.id);
     fixture.detectChanges();
+    rendered = fixture.nativeElement as HTMLElement;
     return fixture.componentInstance as unknown as Page;
   }
 
@@ -128,5 +136,42 @@ describe('PayrollTemplateComponent', () => {
     );
 
     expect(page.newChanges().map(c => c.version)).toEqual(['2027.1.0', '2026.2.0']);
+  });
+
+  it('names the leave types without a leave pay rule, which payroll pays in full', () => {
+    const page = open(
+      nlTemplate({
+        leavePay: [
+          { leaveType: 'SICK', rule: 'TEMPLATE', note: 'The legal minimum: 70% of the wage for up to 104 weeks.' },
+          { leaveType: 'MATERNITY', rule: 'NONE', note: null },
+          { leaveType: 'UNPAID', rule: 'WORKSPACE', note: null },
+        ],
+      }),
+    );
+
+    expect(page.unruledLeave().map(c => c.leaveType)).toEqual(['MATERNITY']);
+    // On the page: the warning, each leave type's badge, and the statutory rule's note with when it applies.
+    const text = rendered.textContent ?? '';
+    expect(text).toContain('humano.payrollTemplates.leavePay.missingTitle');
+    expect(text).toContain('humano.payrollTemplates.leavePay.rule.NONE');
+    expect(text).toContain('humano.payrollTemplates.leavePay.rule.TEMPLATE');
+    expect(text).toContain('humano.payrollTemplates.leavePay.rule.WORKSPACE');
+    expect(text).toContain('The legal minimum: 70% of the wage for up to 104 weeks.');
+    expect(text).toContain('humano.payrollTemplates.leavePay.templateOff');
+  });
+
+  it('shows no leave pay warning when every leave type has a rule', () => {
+    const page = open(
+      nlTemplate({
+        leavePay: [
+          { leaveType: 'SICK', rule: 'WORKSPACE', note: null },
+          { leaveType: 'MATERNITY', rule: 'WORKSPACE', note: null },
+          { leaveType: 'UNPAID', rule: 'WORKSPACE', note: null },
+        ],
+      }),
+    );
+
+    expect(page.unruledLeave()).toEqual([]);
+    expect(rendered.textContent).not.toContain('humano.payrollTemplates.leavePay.missingTitle');
   });
 });

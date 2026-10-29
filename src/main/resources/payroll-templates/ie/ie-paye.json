@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "ie-paye",
   "name": "Ireland — PAYE, USC and PRSI",
-  "version": "2026.1.1",
+  "version": "2026.1.2",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "IE"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.2",
+      "date": "2026-10-29",
+      "summary": "States what the template leaves out for leave: statutory sick pay (Sick Leave Act 2022) is not calculated. Calculations are unchanged."
+    },
     {
       "version": "2026.1.1",
       "date": "2026-10-24",
@@ -586,6 +591,7 @@
     "Tax cut-off and credits per period are the yearly figures divided by the periods and rounded up to the cent, multiplied by the tax week or month on the cumulative basis; USC cut-offs per period are rounded to the cent, as in Revenue's examples. The emergency basis gives the first month (or first four weeks of pay) 1/12 (1/52) of the single cut-off and no credits; later periods and the no-PPSN case pay 40 %; USC is 8 % throughout. The first month or four weeks are counted as this employer's pay periods within the tax year (Employers' Guide 14.3); weeks of employment before 1 January are not counted.",
     "Pension and other pre-tax deductions reduce pay for income tax only; USC and PRSI are charged on gross pay.",
     "PRSI is Class A only, worked out per pay period (not cumulatively). Weekly thresholds are the statutory figures, as tabled by the Department of Social Protection; the monthly thresholds (€1,525 / €1,837, credit €52, employer €2,392) are their monthly equivalents (weekly × 52 / 12, rounded to the euro), which the acts leave to 'the equivalent' — the DSP's SW14 guide with the official monthly table could not be retrieved to confirm them. Pay under €38 a week (€165 a month) is refused; employees aged 66 or over receiving the State Pension (Contributory) (Class J), Class S, B, D and other classes, and fortnightly pay, are not modelled.",
+    "Statutory sick pay (Sick Leave Act 2022), which the employer pays at 70 % of normal daily earnings up to a daily cap, is not calculated: a leave pay rule only pays a percentage of salary for leave days, and without one approved sick and parental leave is paid as full salary. Maternity Benefit and other Department of Social Protection payments are outside payroll.",
     "The employer rate includes the 1 % National Training Fund levy; reliefs such as the JobsPlus incentive are not modelled.",
     "Not modelled: the reduced USC rate's €60,000 income test (entered via the RPN status), tax exemption and marginal relief (Employers' Guide 9.7), separate periods of employment treated as one (9.6), Local Property Tax deductions shown on the RPN, benefit-in-kind and share-based remuneration.",
     "Status LAW_DERIVED: values are cited from the acts, Revenue's Employers' Guide and USC pages, and the DSP's Class A table; one case reproduces Revenue's weekly tax worked example and one its cumulative refund example."

@@ -3,6 +3,7 @@ package com.humano.service.payroll.template;
 import com.humano.domain.enumeration.CountryCode;
 import com.humano.domain.enumeration.CurrencyCode;
 import com.humano.domain.enumeration.hr.EmployeeStatus;
+import com.humano.domain.enumeration.hr.LeaveType;
 import com.humano.domain.enumeration.payroll.Kind;
 import com.humano.domain.enumeration.payroll.Measurement;
 import com.humano.domain.enumeration.payroll.PayComponentCode;
@@ -27,6 +28,7 @@ import com.humano.dto.payroll.response.PayrollTemplateResponse;
 import com.humano.dto.payroll.response.TemplateEmployeeResponse;
 import com.humano.repository.payroll.CurrencyRepository;
 import com.humano.repository.payroll.EmployeeTemplateProfileRepository;
+import com.humano.repository.payroll.LeaveTypeRuleRepository;
 import com.humano.repository.payroll.OrganizationSettingsRepository;
 import com.humano.repository.payroll.PayComponentRepository;
 import com.humano.repository.payroll.PayrollCalendarRepository;
@@ -35,6 +37,7 @@ import com.humano.repository.payroll.PayrollResultRepository;
 import com.humano.repository.payroll.PayrollTemplateAdoptionRepository;
 import com.humano.repository.payroll.TaxBracketRepository;
 import com.humano.repository.payroll.TaxWithholdingRepository;
+import com.humano.repository.payroll.projection.LeaveRuleKey;
 import com.humano.repository.payroll.projection.TemplateYtdRow;
 import com.humano.repository.shared.EmployeeRepository;
 import com.humano.service.errors.BusinessRuleViolationException;
@@ -105,6 +108,7 @@ public class PayrollTemplateService {
     private final PayrollCalendarRepository payrollCalendarRepository;
     private final OrganizationSettingsRepository organizationSettingsRepository;
     private final CurrencyRepository currencyRepository;
+    private final LeaveTypeRuleRepository leaveTypeRuleRepository;
 
     public PayrollTemplateService(
         PayrollTemplateCatalog catalog,
@@ -118,7 +122,8 @@ public class PayrollTemplateService {
         TaxWithholdingRepository taxWithholdingRepository,
         PayrollCalendarRepository payrollCalendarRepository,
         OrganizationSettingsRepository organizationSettingsRepository,
-        CurrencyRepository currencyRepository
+        CurrencyRepository currencyRepository,
+        LeaveTypeRuleRepository leaveTypeRuleRepository
     ) {
         this.catalog = catalog;
         this.adoptionRepository = adoptionRepository;
@@ -132,6 +137,7 @@ public class PayrollTemplateService {
         this.payrollCalendarRepository = payrollCalendarRepository;
         this.organizationSettingsRepository = organizationSettingsRepository;
         this.currencyRepository = currencyRepository;
+        this.leaveTypeRuleRepository = leaveTypeRuleRepository;
     }
 
     // ---------------------------------------------------------------- catalog & adoption
@@ -142,13 +148,19 @@ public class PayrollTemplateService {
             .findAll()
             .stream()
             .collect(Collectors.toMap(PayrollTemplateAdoption::getTemplateId, a -> a));
-        return catalog.templates().stream().map(t -> toResponse(t, adoptions.get(t.id()))).toList();
+        Set<LeaveRuleKey> leaveRules = Set.copyOf(leaveTypeRuleRepository.findAllKeys());
+        return catalog.templates().stream().map(t -> toResponse(t, adoptions.get(t.id()), leaveRules)).toList();
     }
 
     @Transactional(value = "tenantTransactionManager", readOnly = true)
     public PayrollTemplateResponse get(String templateId) {
         PayrollTemplate template = template(templateId);
         return toResponse(template, adoptionRepository.findByTemplateId(templateId).orElse(null));
+    }
+
+    /** As the static {@link #toResponse(PayrollTemplate, PayrollTemplateAdoption, Set)}, reading the workspace's leave rules. */
+    private PayrollTemplateResponse toResponse(PayrollTemplate t, PayrollTemplateAdoption adoption) {
+        return toResponse(t, adoption, Set.copyOf(leaveTypeRuleRepository.findAllKeys()));
     }
 
     /** Templates in this build that failed validation or their test cases, with the problems (for administrators). */
@@ -726,6 +738,20 @@ public class PayrollTemplateService {
                 " employee(s) are missing required details for this template; payroll can't calculate them until they are filled in."
             );
         }
+        List<String> unruled = leaveCoverage(template, Set.copyOf(leaveTypeRuleRepository.findAllKeys()))
+            .stream()
+            .filter(c -> "NONE".equals(c.rule()))
+            .map(c -> c.leaveType() == LeaveType.MATERNITY ? "parental" : c.leaveType().name().toLowerCase(java.util.Locale.ROOT))
+            .toList();
+        if (!unruled.isEmpty()) {
+            warnings.add(
+                "No leave pay rule for " +
+                String.join(", ", unruled) +
+                " leave in " +
+                country +
+                ": approved leave of these types is paid in full and the template doesn't see it. Set the rules under Payroll → Leave pay."
+            );
+        }
         return warnings;
     }
 
@@ -788,7 +814,35 @@ public class PayrollTemplateService {
             .toList();
     }
 
-    private static PayrollTemplateResponse toResponse(PayrollTemplate t, PayrollTemplateAdoption adoption) {
+    /** Leave types payroll deducts by a leave pay rule; vacation is paid in full and needs none. */
+    private static final List<LeaveType> LEAVE_PAY_TYPES = List.of(LeaveType.SICK, LeaveType.MATERNITY, LeaveType.UNPAID);
+
+    /**
+     * How the template's country pays each of {@link #LEAVE_PAY_TYPES}: the workspace's rule wins over the
+     * template's statutory one (as in payroll step 3); with neither, the leave is paid in full.
+     */
+    private static List<PayrollTemplateResponse.LeaveCoverage> leaveCoverage(PayrollTemplate t, Set<LeaveRuleKey> workspaceRules) {
+        CountryCode country;
+        try {
+            country = CountryCode.valueOf(t.jurisdiction().country());
+        } catch (IllegalArgumentException e) {
+            country = null;
+        }
+        List<PayrollTemplateResponse.LeaveCoverage> coverage = new ArrayList<>();
+        for (LeaveType type : LEAVE_PAY_TYPES) {
+            Optional<PayrollTemplate.LeavePay> statutory = t.effectiveLeavePay().stream().filter(r -> r.leaveType() == type).findFirst();
+            if (workspaceRules.contains(new LeaveRuleKey(country, type))) {
+                coverage.add(new PayrollTemplateResponse.LeaveCoverage(type, "WORKSPACE", null));
+            } else if (statutory.isPresent()) {
+                coverage.add(new PayrollTemplateResponse.LeaveCoverage(type, "TEMPLATE", statutory.orElseThrow().note()));
+            } else {
+                coverage.add(new PayrollTemplateResponse.LeaveCoverage(type, "NONE", null));
+            }
+        }
+        return coverage;
+    }
+
+    private static PayrollTemplateResponse toResponse(PayrollTemplate t, PayrollTemplateAdoption adoption, Set<LeaveRuleKey> leaveRules) {
         List<PayrollTemplateResponse.Source> sources = t
             .sources()
             .entrySet()
@@ -826,6 +880,7 @@ public class PayrollTemplateService {
             ledgersOf(t).stream().sorted().toList(),
             t.limitations() != null ? t.limitations() : List.of(),
             t.testCases() != null ? t.testCases().size() : 0,
+            leaveCoverage(t, leaveRules),
             adoptionView
         );
     }

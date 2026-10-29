@@ -35,6 +35,17 @@ export interface TemplateSource {
   retrieved: string | null;
 }
 
+/**
+ * How payroll pays one leave type in the template's country: the workspace's own rule, the template's
+ * statutory rule (while it is on), or none — approved leave is then paid in full and the template doesn't see it.
+ */
+export interface TemplateLeaveCoverage {
+  leaveType: 'SICK' | 'MATERNITY' | 'UNPAID';
+  rule: 'WORKSPACE' | 'TEMPLATE' | 'NONE';
+  /** What the statutory rule leaves out, for TEMPLATE. */
+  note: string | null;
+}
+
 /** This tenant's adoption; `updateAvailable` when the shipped version differs from the one last reviewed. */
 export interface TemplateAdoption {
   enabled: boolean;
@@ -67,6 +78,8 @@ export interface PayrollTemplate {
   limitations: string[];
   /** How many worked examples the template reproduces. */
   testCases: number;
+  /** Sick, parental and unpaid leave in the template's country. */
+  leavePay: TemplateLeaveCoverage[];
   /** Null if never adopted. */
   adoption: TemplateAdoption | null;
 }

@@ -1,5 +1,6 @@
 package com.humano.dto.payroll.response;
 
+import com.humano.domain.enumeration.hr.LeaveType;
 import com.humano.domain.enumeration.payroll.Frequency;
 import com.humano.domain.enumeration.payroll.TaxType;
 import java.math.BigDecimal;
@@ -15,6 +16,7 @@ import java.util.Map;
  * @param ledgers    tax types the template produces; tenant tax brackets / withholdings of these types are
  *                   ignored for covered employees
  * @param testCases  how many worked examples the template reproduces
+ * @param leavePay   how sick, maternity and unpaid leave are paid in the template's country
  * @param adoption   this tenant's adoption, or null if never adopted
  */
 public record PayrollTemplateResponse(
@@ -37,6 +39,7 @@ public record PayrollTemplateResponse(
     List<TaxType> ledgers,
     List<String> limitations,
     int testCases,
+    List<LeaveCoverage> leavePay,
     Adoption adoption
 ) {
     public record ChangelogEntry(String version, LocalDate date, String summary) {}
@@ -55,6 +58,16 @@ public record PayrollTemplateResponse(
         String defaultValue,
         String description
     ) {}
+
+    /**
+     * How payroll pays one leave type in the template's country. Without a rule ({@code NONE}) approved
+     * leave is paid in full and templates don't see it.
+     *
+     * @param rule WORKSPACE (the workspace's own rule), TEMPLATE (this template's statutory rule, applied while
+     *             it is enabled and the workspace has none) or NONE
+     * @param note what the template's statutory rule leaves out, for TEMPLATE
+     */
+    public record LeaveCoverage(LeaveType leaveType, String rule, String note) {}
 
     /**
      * @param updateAvailable the shipped version differs from the version an admin last acknowledged

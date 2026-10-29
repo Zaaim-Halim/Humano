@@ -36,6 +36,7 @@ export function nlTemplate(extra: Partial<PayrollTemplate> = {}): PayrollTemplat
     ledgers: ['INCOME_TAX'],
     limitations: [],
     testCases: 35,
+    leavePay: [],
     adoption: null,
     ...extra,
   };

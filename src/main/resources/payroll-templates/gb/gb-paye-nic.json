@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "gb-paye-nic",
   "name": "United Kingdom — PAYE income tax and Class 1 National Insurance",
-  "version": "2026.1.1",
+  "version": "2026.1.2",
   "status": "LAW_DERIVED",
   "jurisdiction": {
     "country": "GB"
@@ -20,6 +20,11 @@
     "mode": "HALF_UP"
   },
   "changelog": [
+    {
+      "version": "2026.1.2",
+      "date": "2026-10-29",
+      "summary": "States what the template leaves out for leave: Statutory Sick Pay, Statutory Maternity Pay and the other statutory payments are not calculated. Calculations are unchanged."
+    },
     {
       "version": "2026.1.1",
       "date": "2026-10-24",
@@ -653,6 +658,7 @@
     "Directors (annual NIC earnings period), student and postgraduate loans, and pre-tax deductions (net pay pensions, salary sacrifice) are refused.",
     "Mid-year starts and adoptions need the pay and tax brought forward for the tax year (P45 and/or previous payroll) on a cumulative code.",
     "Payrolled benefits in kind are not included; the regulatory limit is applied to the whole pay for the period.",
+    "Statutory payments the employer makes through payroll are not calculated: Statutory Sick Pay and Statutory Maternity, Paternity, Adoption, Shared Parental and Parental Bereavement Pay. A leave pay rule only pays a percentage of salary for leave days, and without one approved sick and parental leave is paid as full salary; work these payments out outside Humano.",
     "Employment Allowance, the Apprenticeship Levy and Small Employers' Relief are employer-level reliefs claimed outside the payslip.",
     "The NI category letter, including employer reliefs (freeport, investment zone, veterans), is the employer's responsibility; M, Z and H are checked against age, and C, S and K are refused under 66. An employee past State Pension age left on a category with employee NICs (e.g. A) is not detected, since State Pension age depends on the exact birth date and the template does not require one.",
     "Status LAW_DERIVED: PAYE amounts of eight cases reproduce HMRC Tables B-D examples and NICs of four cases reproduce HMRC NI guidance examples; the others are derived from the same specifications."

@@ -132,6 +132,19 @@
         "OFFICIAL_VECTORS": "Against official worked examples ({{ count }})",
         "LAW_DERIVED": "Derived from the law, with {{ count }} worked examples",
         "DRAFT": "Not yet — draft"
+      },
+      "leavePay": {
+        "title": "Leave pay in {{ country }}",
+        "hint": "How payroll pays approved sick, parental and unpaid leave for employees in this country.",
+        "rule": {
+          "WORKSPACE": "Your rule",
+          "TEMPLATE": "Statutory rule from this template",
+          "NONE": "No rule: paid in full"
+        },
+        "templateOff": "Applies once the template is switched on.",
+        "missingTitle": "Leave without a rule is paid in full",
+        "missingBody": "Approved leave with no leave pay rule is paid as a normal working day, and this template doesn't see it, so it can't refuse a case it can't calculate. Set a rule for each leave type your employees can take.",
+        "manage": "Set leave pay rules"
       }
     }
   }

@@ -55,6 +55,48 @@
           }
         </section>
 
+        @if (t.leavePay.length) {
+          <section class="hum-set-card">
+            <header>
+              <h3>{{ 'humano.payrollTemplates.leavePay.title' | translate: { country: country() } }}</h3>
+              <p>{{ 'humano.payrollTemplates.leavePay.hint' | translate }}</p>
+            </header>
+            @if (unruledLeave().length) {
+              <hum-alert tone="warning" [title]="'humano.payrollTemplates.leavePay.missingTitle' | translate">
+                {{ 'humano.payrollTemplates.leavePay.missingBody' | translate }}
+              </hum-alert>
+            }
+            <dl class="hum-tpl-facts">
+              @for (c of t.leavePay; track c.leaveType) {
+                <div>
+                  <dt>
+                    {{ 'humano.leave.type.' + c.leaveType | translate }}
+                    <hum-badge
+                      [tone]="c.rule === 'NONE' ? 'warning' : c.rule === 'WORKSPACE' ? 'success' : 'info'"
+                      [label]="'humano.payrollTemplates.leavePay.rule.' + c.rule | translate"
+                    />
+                  </dt>
+                  @if (c.rule === 'TEMPLATE') {
+                    <dd>
+                      {{ c.note }}
+                      @if (!t.adoption?.enabled) {
+                        {{ 'humano.payrollTemplates.leavePay.templateOff' | translate }}
+                      }
+                    </dd>
+                  }
+                </div>
+              }
+            </dl>
+            @if (canManageLeavePay) {
+              <div>
+                <hum-button variant="outline" size="sm" icon="arrow-right" routerLink="/payroll/leave-pay">{{
+                  'humano.payrollTemplates.leavePay.manage' | translate
+                }}</hum-button>
+              </div>
+            }
+          </section>
+        }
+
         <section class="hum-set-card">
           <header>
             <h3>{{ 'humano.payrollTemplates.settings.title' | translate }}</h3>
