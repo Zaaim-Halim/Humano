@@ -374,6 +374,7 @@
                 <tr>
                   <th>{{ 'humano.console.coupons.code' | translate }}</th>
                   <th>{{ 'humano.console.coupons.discount' | translate }}</th>
+                  <th>{{ 'humano.console.coupons.appliesTo' | translate }}</th>
                   <th>{{ 'humano.console.coupons.redemptions' | translate }}</th>
                   <th>{{ 'humano.console.coupons.validUntil' | translate }}</th>
                   <th>{{ 'humano.console.invoices.status' | translate }}</th>
@@ -391,6 +392,7 @@
                     <td class="tabular-nums">
                       {{ c.type === 'PERCENT' ? (c.percentage | number: '1.0-1') + '%' : (c.discount | money: currency()) }}
                     </td>
+                    <td>{{ couponScope(c) }}</td>
                     <td>
                       <div class="hum-con-usage">
                         <span class="tabular-nums">{{ c.timesRedeemed ?? 0 }}{{ c.maxRedemptions ? ' / ' + c.maxRedemptions : '' }}</span>
@@ -676,6 +678,24 @@
         [hint]="'humano.console.coupons.maxHint' | translate"
       >
         <hum-input inputId="cp-max" type="number" [ngModel]="d.max" (ngModelChange)="patchCouponDraft({ max: $event })" />
+      </hum-form-field>
+      <hum-form-field
+        [label]="'humano.console.coupons.cycle' | translate"
+        controlId="cp-cycle"
+        [hint]="'humano.console.coupons.cycleHint' | translate"
+      >
+        <hum-select [options]="couponCycleOptions()" [ngModel]="d.cycle" (ngModelChange)="patchCouponDraft({ cycle: $event })" />
+      </hum-form-field>
+      <hum-form-field [label]="'humano.console.coupons.plans' | translate" [hint]="'humano.console.coupons.plansHint' | translate">
+        <div style="display: grid; gap: var(--space-2)">
+          @for (p of plans() ?? []; track p.id) {
+            <hum-checkbox
+              [label]="p.displayName ?? p.subscriptionType"
+              [checked]="d.planIds.includes(p.id)"
+              (checkedChange)="toggleCouponPlan(p.id, $event)"
+            />
+          }
+        </div>
       </hum-form-field>
     </div>
   }

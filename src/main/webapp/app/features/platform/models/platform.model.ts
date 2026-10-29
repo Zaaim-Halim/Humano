@@ -91,6 +91,10 @@ export interface Coupon {
   active: boolean;
   maxRedemptions: number | null;
   timesRedeemed: number | null;
+  /** The only billing cycle it applies to; null for any. */
+  billingCycle: 'MONTHLY' | 'YEARLY' | null;
+  /** The plans it applies to; empty for any plan. */
+  planIds: string[];
   createdDate: string | null;
 }
 
@@ -103,6 +107,8 @@ export interface CreateCouponRequest {
   expiryDate: string;
   startDate?: string;
   maxRedemptions?: number;
+  billingCycle?: 'MONTHLY' | 'YEARLY';
+  planIds?: string[];
 }
 
 /** A catalog feature plans can include (`BOOLEAN`: has it or not; `QUANTITY`: a limit in `unit`). */

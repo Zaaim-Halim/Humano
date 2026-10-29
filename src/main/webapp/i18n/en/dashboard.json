@@ -59,6 +59,11 @@
           "hint": "Build your directory, one profile at a time.",
           "action": "Add an employee"
         },
+        "template": {
+          "title": "Switch on your payroll template",
+          "hint": "Fill in the {{ country }} template's employer settings and switch it on, so payroll calculates taxes and contributions.",
+          "action": "Set up the template"
+        },
         "payroll": {
           "title": "Run your first payroll",
           "hint": "Start a draft run; nothing is paid until you post it.",

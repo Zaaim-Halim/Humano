@@ -1,5 +1,5 @@
 import { PublicFeature, PublicPricing } from './marketing.service';
-import { planHighlights } from './plan-highlights';
+import { planAdditions, planHighlights } from './plan-highlights';
 
 const feature = (code: string, limitType: PublicFeature['limitType'] = 'BOOLEAN'): PublicFeature => ({
   id: code,
@@ -80,5 +80,18 @@ describe('planHighlights', () => {
       plans: [plan('Only', [{ ...item('PAYROLL'), included: false }, item('UNKNOWN'), item('DIRECTORY')])],
     };
     expect(planHighlights(pricing, 0).map(h => h.feature.code)).toEqual(['DIRECTORY']);
+  });
+});
+
+describe('planAdditions', () => {
+  it('lists what each plan includes or adds in catalog order, as the platform console does', () => {
+    expect(planAdditions(PRICING, 0).map(h => h.feature.code)).toEqual(['EMPLOYEES', 'ADMIN_SEATS', 'DIRECTORY', 'PAYROLL', 'SUPPORT']);
+    expect(planAdditions(PRICING, 1).map(h => h.feature.code)).toEqual([
+      'EMPLOYEES',
+      'ADMIN_SEATS',
+      'APPROVAL_CHAINS',
+      'PERFORMANCE',
+      'SUPPORT',
+    ]);
   });
 });

@@ -79,7 +79,12 @@ public class InvoiceService {
         BigDecimal discountAmount = BigDecimal.ZERO;
         String couponCode = null;
         if (request.couponCode() != null && !request.couponCode().isBlank()) {
-            CouponService.CouponApplication applied = couponService.applyToAmount(request.couponCode(), request.amount());
+            CouponService.CouponApplication applied = couponService.applyToAmount(
+                request.couponCode(),
+                request.amount(),
+                subscription.getSubscriptionPlan().getId(),
+                subscription.getBillingCycle()
+            );
             discountAmount = applied.discountAmount();
             couponCode = applied.coupon().getCode();
         }

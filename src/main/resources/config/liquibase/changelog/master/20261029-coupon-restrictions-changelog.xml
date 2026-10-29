@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd"
+    objectQuotingStrategy="QUOTE_ONLY_RESERVED_WORDS">
+
+    <!--
+        Coupons limited to a billing cycle (e.g. a founding offer on yearly billing only) and to some
+        plans. A null cycle and no plan rows mean the coupon applies to any subscription, as before.
+    -->
+    <changeSet id="20261029-coupon-restrictions" author="halimzaaim">
+        <addColumn tableName="billing_coupon">
+            <column name="billing_cycle" type="VARCHAR(20)"/>
+        </addColumn>
+        <createTable tableName="billing_coupon_plan">
+            <column name="coupon_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="plan_id" type="${uuidType}">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="billing_coupon_plan" columnNames="coupon_id, plan_id" constraintName="pk_billing_coupon_plan"/>
+        <addForeignKeyConstraint baseTableName="billing_coupon_plan" baseColumnNames="coupon_id"
+                                 constraintName="fk_billing_coupon_plan_coupon"
+                                 referencedTableName="billing_coupon" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="billing_coupon_plan" baseColumnNames="plan_id"
+                                 constraintName="fk_billing_coupon_plan_plan"
+                                 referencedTableName="billing_subscription_plan" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

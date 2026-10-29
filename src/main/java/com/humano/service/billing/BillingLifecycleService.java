@@ -363,7 +363,12 @@ public class BillingLifecycleService {
         String couponCodeOnInvoice = null;
         if (couponSnapshot != null && !couponSnapshot.isBlank()) {
             try {
-                CouponService.CouponApplication applied = couponService.applyToAmount(couponSnapshot, planAmount);
+                CouponService.CouponApplication applied = couponService.applyToAmount(
+                    couponSnapshot,
+                    planAmount,
+                    subscription.getSubscriptionPlan().getId(),
+                    subscription.getBillingCycle()
+                );
                 discountAmount = applied.discountAmount();
                 couponCodeOnInvoice = applied.coupon().getCode();
                 log.info("Renewal coupon {} applied to subscription {}: -{}", couponSnapshot, subscription.getId(), discountAmount);

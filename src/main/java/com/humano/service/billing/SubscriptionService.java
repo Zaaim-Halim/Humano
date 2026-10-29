@@ -91,7 +91,7 @@ public class SubscriptionService {
         // the first invoice issuance via CouponService.applyToAmount.
         String snapshotCouponCode = null;
         if (request.couponCode() != null && !request.couponCode().isBlank()) {
-            var validated = couponService.validateOnly(request.couponCode());
+            var validated = couponService.validateOnly(request.couponCode(), plan.getId(), request.billingCycle());
             snapshotCouponCode = validated.code();
         }
 

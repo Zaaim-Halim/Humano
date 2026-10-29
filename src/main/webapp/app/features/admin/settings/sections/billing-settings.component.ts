@@ -8,7 +8,7 @@ import { Permission } from 'app/config/permission.constants';
 import { normalizeHttpError } from 'app/core/api';
 import { AccountService } from 'app/core/auth/account.service';
 import { PublicPricing } from 'app/features/marketing/marketing.service';
-import { planHighlights } from 'app/features/marketing/plan-highlights';
+import { planAdditions } from 'app/features/marketing/plan-highlights';
 import {
   BillingCycle,
   CurrentTenantService,
@@ -50,8 +50,14 @@ interface PlanOption {
   description: string | null;
   monthlyPrice: number;
   featured: boolean;
+  /** The next cheaper plan, whose features this one also has; null for the first. */
+  previous: string | null;
+  /** What it includes (the first plan) or adds over `previous`, as the platform console lists it. */
   highlights: string[];
 }
+
+/** Lines a plan card shows before "+N more", as in the platform console. */
+const SHOWN_HIGHLIGHTS = 6;
 
 /**
  * Settings → Plan & billing: the company's Humano subscription and its invoices. Billing admins
@@ -104,6 +110,9 @@ export class BillingSettingsComponent {
   protected readonly storageAddon = signal<StorageAddon | null>(null);
   /** Packs being chosen in the storage dialog; null when it is closed. */
   protected readonly storagePacks = signal<number | null>(null);
+  /** Plans whose whole feature list is shown. */
+  protected readonly expanded = signal<Set<string>>(new Set());
+  protected readonly shownHighlights = SHOWN_HIGHLIGHTS;
   protected readonly confirming = signal<{ kind: 'change'; option: PlanOption } | { kind: 'cancel' } | null>(null);
 
   protected readonly isDemo = computed(() => !!this.tenant()?.demo);
@@ -178,26 +187,24 @@ export class BillingSettingsComponent {
     const p = this.pricing();
     if (!p) return [];
     return p.plans.map((plan, i) => {
-      const highlights = planHighlights(p, i)
-        .slice(0, 4)
-        .map(({ feature: f, item: it }) => {
-          if (f.limitType === 'QUANTITY') {
-            const unit = f.unit ?? f.name.toLowerCase();
-            return it.limitValue === null
-              ? this.t('humano.settings.billing.unlimited', { unit })
-              : this.t('humano.settings.billing.upTo', {
-                  n: formatPlanAmount(it.limitValue, f.unit).value,
-                  unit: f.unit ? formatPlanAmount(it.limitValue, f.unit).unit : unit,
-                });
-          }
-          return f.name;
-        });
+      const highlights = planAdditions(p, i).map(({ feature: f, item: it }) => {
+        if (f.limitType === 'QUANTITY') {
+          const unit = f.unit ?? f.name.toLowerCase();
+          if (it.limitValue === null) return this.t('humano.settings.billing.unlimited', { unit });
+          const amount = formatPlanAmount(it.limitValue, unit);
+          // "Up to 1 country", as the console says it (English units).
+          const shown = amount.value === '1' ? amount.unit.replace(/ies$/, 'y').replace(/(?<!s)s$/, '') : amount.unit;
+          return this.t('humano.settings.billing.upTo', { n: amount.value, unit: shown });
+        }
+        return it.note ? `${f.name}: ${it.note}` : f.name;
+      });
       return {
         id: plan.id,
         name: plan.name,
         description: plan.description,
         monthlyPrice: plan.monthlyPrice,
         featured: plan.featured,
+        previous: i > 0 ? p.plans[i - 1].name : null,
         highlights,
       };
     });
@@ -230,6 +237,14 @@ export class BillingSettingsComponent {
         this.error.set(normalizeHttpError(err));
         this.invoices.set([]);
       },
+    });
+  }
+
+  protected toggleExpanded(id: string): void {
+    this.expanded.update(s => {
+      const next = new Set(s);
+      if (!next.delete(id)) next.add(id);
+      return next;
     });
   }
 

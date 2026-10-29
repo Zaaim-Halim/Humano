@@ -20,6 +20,9 @@ import { AvatarComponent, PageHeaderComponent, ProgressComponent, SkeletonCompon
 import { MoneyPipe, PayPeriodPipe, RunMoneyPipe } from 'app/shared/util/format.pipes';
 
 import { PayrollRun, PayrollRunService, RunStatus } from '../index';
+import { PayrollTemplate } from '../models/payroll-template.model';
+import { PayrollTemplateService } from '../services/payroll-template.service';
+import { setupSteps } from './setup-steps';
 
 const SETUP_DISMISSED_KEY = 'humano-setup-dismissed';
 
@@ -94,6 +97,10 @@ export default class DashboardComponent {
   private readonly approvals = inject(ApprovalService);
   private readonly currentEmployee = inject(CurrentEmployeeService);
   private readonly translate = inject(TranslateService);
+  private readonly templateService = inject(PayrollTemplateService);
+  private readonly canTemplates = this.account.hasPermission(Permission.MANAGE_TAX_BRACKETS);
+  /** Payroll templates with this workspace's adoption, for the Get started template step (the one chosen at sign-up). */
+  private readonly templates = signal<PayrollTemplate[] | null>(null);
 
   protected readonly canPayroll = this.account.hasPermission(Permission.VIEW_PAYROLL_RUN);
   protected readonly canLeave = this.account.hasPermission(Permission.VIEW_LEAVE_REQUESTS);
@@ -186,20 +193,14 @@ export default class DashboardComponent {
 
   /** Each step is done when the workspace data says so; nothing is tracked separately. */
   protected readonly setupSteps = computed(() => {
-    const profile = this.company.profile();
     const sub = this.meBilling.current();
-    const steps = [
-      { id: 'company', icon: 'building-2', link: '/settings/company', done: !!profile && (!!profile.logo || !!profile.defaultCurrencyId) },
-      { id: 'people', icon: 'user-plus', link: '/employees/new', done: (this.stats()?.total ?? 0) > 0 },
-      ...(this.canPayroll ? [{ id: 'payroll', icon: 'wallet', link: '/payroll/runs', done: (this.runs()?.length ?? 0) > 0 }] : []),
-      {
-        id: 'plan',
-        icon: 'credit-card',
-        link: '/settings/billing',
-        done: !!sub && (sub.status !== SubscriptionStatus.TRIAL || !!sub.autoRenew),
-      },
-    ];
-    return steps;
+    return setupSteps({
+      profile: this.company.profile(),
+      employees: this.stats()?.total ?? 0,
+      runs: this.canPayroll ? (this.runs()?.length ?? 0) : null,
+      templates: this.templates(),
+      planChosen: !!sub && (sub.status !== SubscriptionStatus.TRIAL || !!sub.autoRenew),
+    });
   });
   protected readonly setupDone = computed(() => this.setupSteps().filter(s => s.done).length);
   protected readonly showSetup = computed(
@@ -240,6 +241,9 @@ export default class DashboardComponent {
     this.meWork.teamAttendance().subscribe({ next: a => this.attendance.set(a), error: () => this.attendance.set(null) });
     if (this.canPayroll) {
       this.runService.list({ page: 0, size: 12 }).subscribe({ next: p => this.runs.set(p.content), error: () => this.runs.set([]) });
+    }
+    if (this.canConfigure && this.canTemplates && !this.setupDismissed()) {
+      this.templateService.list().subscribe({ next: t => this.templates.set(t), error: () => this.templates.set(null) });
     }
     effect(() => {
       const me = this.currentEmployee.currentEmployeeId();

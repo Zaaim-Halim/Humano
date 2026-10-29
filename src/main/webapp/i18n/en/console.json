@@ -334,7 +334,16 @@
         "deleteBody": "The code stops working. Invoices that already used it are unaffected.",
         "created": "Coupon created.",
         "deactivated": "Coupon deactivated.",
-        "deleted": "Coupon deleted."
+        "deleted": "Coupon deleted.",
+        "appliesTo": "Applies to",
+        "anyPlan": "Any plan",
+        "cycle": "Billing cycle",
+        "cycleHint": "E.g. a founding offer on yearly billing only.",
+        "anyCycle": "Monthly and yearly",
+        "monthlyOnly": "Monthly only",
+        "yearlyOnly": "Yearly only",
+        "plans": "Plans",
+        "plansHint": "Leave all unticked for every plan."
       },
       "team": {
         "title": "Team",

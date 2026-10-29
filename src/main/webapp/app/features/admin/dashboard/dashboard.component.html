@@ -24,7 +24,7 @@
               <span class="hum-person__name" [style.textDecoration]="step.done ? 'line-through' : null">{{
                 'humano.dashboard.setup.' + step.id + '.title' | translate
               }}</span>
-              <span class="hum-person__sub">{{ 'humano.dashboard.setup.' + step.id + '.hint' | translate }}</span>
+              <span class="hum-person__sub">{{ 'humano.dashboard.setup.' + step.id + '.hint' | translate: step.params }}</span>
             </span>
             @if (!step.done) {
               <a class="hum-linkbtn" [routerLink]="step.link">{{ 'humano.dashboard.setup.' + step.id + '.action' | translate }}</a>

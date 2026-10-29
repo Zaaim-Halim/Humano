@@ -1,15 +1,19 @@
 package com.humano.service.billing;
 
 import com.humano.domain.billing.Coupon;
+import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.billing.DiscountType;
 import com.humano.dto.billing.requests.CreateCouponRequest;
 import com.humano.dto.billing.responses.CouponResponse;
 import com.humano.repository.billing.CouponRepository;
+import com.humano.repository.billing.SubscriptionPlanRepository;
 import com.humano.service.errors.BadRequestAlertException;
 import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +33,11 @@ public class CouponService {
     private static final String ENTITY_NAME = "coupon";
 
     private final CouponRepository couponRepository;
+    private final SubscriptionPlanRepository planRepository;
 
-    public CouponService(CouponRepository couponRepository) {
+    public CouponService(CouponRepository couponRepository, SubscriptionPlanRepository planRepository) {
         this.couponRepository = couponRepository;
+        this.planRepository = planRepository;
     }
 
     /**
@@ -54,6 +60,14 @@ public class CouponService {
         coupon.setMaxRedemptions(request.maxRedemptions());
         coupon.setTimesRedeemed(0);
         coupon.setActive(true);
+        coupon.setBillingCycle(request.billingCycle());
+        Set<UUID> planIds = request.planIds() == null ? Set.of() : request.planIds();
+        for (UUID planId : planIds) {
+            if (!planRepository.existsById(planId)) {
+                throw new BadRequestAlertException("Unknown plan " + planId, ENTITY_NAME, "couponunknownplan");
+            }
+        }
+        coupon.setPlanIds(new HashSet<>(planIds));
 
         Coupon savedCoupon = couponRepository.save(coupon);
         log.info("Created coupon with ID: {}", savedCoupon.getId());
@@ -122,16 +136,19 @@ public class CouponService {
      *       {@code subtotal × (percentage/100)} at scale 4 HALF_UP.</li>
      * </ul>
      *
+     * @param planId       the subscription's plan; a coupon limited to other plans is refused
+     * @param billingCycle the subscription's billing cycle; a coupon limited to the other cycle is refused
      * @throws BadRequestAlertException (mapped to HTTP 400) for any validation failure
      *         or {@code subtotal <= 0}.
      */
     @Transactional
-    public CouponApplication applyToAmount(String code, BigDecimal subtotal) {
+    public CouponApplication applyToAmount(String code, BigDecimal subtotal, UUID planId, BillingCycle billingCycle) {
         log.debug("Applying coupon {} to subtotal {}", code, subtotal);
         if (subtotal == null || subtotal.signum() <= 0) {
             throw new BadRequestAlertException("Cannot apply coupon to non-positive subtotal", ENTITY_NAME, "couponbadsubtotal");
         }
         Coupon coupon = findAndValidate(code);
+        checkScope(coupon, planId, billingCycle);
         BigDecimal discount = computeDiscount(coupon, subtotal);
         coupon.setTimesRedeemed(coupon.getTimesRedeemed() + 1);
         couponRepository.save(coupon);
@@ -139,13 +156,34 @@ public class CouponService {
     }
 
     /**
-     * Same validation as {@link #applyToAmount} but without redemption or computation.
+     * Same validation as {@link #applyToAmount}, including the plan and billing cycle, but without
+     * redemption or computation.
      * Use to pre-validate a code (e.g. on a checkout form's "apply coupon" preview
      * before the user commits to the purchase).
      */
     @Transactional(readOnly = true)
-    public CouponResponse validateOnly(String code) {
-        return mapToResponse(findAndValidate(code));
+    public CouponResponse validateOnly(String code, UUID planId, BillingCycle billingCycle) {
+        Coupon coupon = findAndValidate(code);
+        checkScope(coupon, planId, billingCycle);
+        return mapToResponse(coupon);
+    }
+
+    /** Refuses a coupon limited to other plans or to the other billing cycle than the subscription's. */
+    private void checkScope(Coupon coupon, UUID planId, BillingCycle billingCycle) {
+        if (coupon.getBillingCycle() != null && coupon.getBillingCycle() != billingCycle) {
+            throw new BadRequestAlertException(
+                "Coupon " + coupon.getCode() + " only applies to " + coupon.getBillingCycle().name().toLowerCase() + " billing",
+                ENTITY_NAME,
+                "couponwrongcycle"
+            );
+        }
+        if (!coupon.getPlanIds().isEmpty() && !coupon.getPlanIds().contains(planId)) {
+            throw new BadRequestAlertException(
+                "Coupon " + coupon.getCode() + " doesn't apply to this plan",
+                ENTITY_NAME,
+                "couponwrongplan"
+            );
+        }
     }
 
     /**
@@ -242,6 +280,8 @@ public class CouponService {
             coupon.isActive(),
             coupon.getMaxRedemptions(),
             coupon.getTimesRedeemed(),
+            coupon.getBillingCycle(),
+            Set.copyOf(coupon.getPlanIds()),
             coupon.getCreatedBy(),
             coupon.getCreatedDate(),
             coupon.getLastModifiedBy(),

@@ -1,5 +1,6 @@
 package com.humano.dto.billing.requests;
 
+import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.billing.DiscountType;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -8,6 +9,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * DTO record for creating a new coupon.
@@ -31,5 +34,11 @@ public record CreateCouponRequest(
 
     Instant startDate,
 
-    Integer maxRedemptions
+    Integer maxRedemptions,
+
+    /** The only billing cycle the coupon applies to; null for any. */
+    BillingCycle billingCycle,
+
+    /** The plans the coupon applies to; null or empty for any plan. */
+    Set<UUID> planIds
 ) {}

@@ -1,6 +1,7 @@
 package com.humano.domain.billing;
 
 import com.humano.domain.enumeration.CurrencyCode;
+import com.humano.domain.enumeration.billing.BillingCycle;
 import com.humano.domain.enumeration.billing.DiscountType;
 import com.humano.domain.shared.AbstractAuditingEntity;
 import jakarta.persistence.*;
@@ -11,7 +12,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -31,6 +34,8 @@ import org.hibernate.annotations.UuidGenerator;
  *   <li><b>active</b>: Whether the coupon can currently be used.</li>
  *   <li><b>maxRedemptions</b>: The maximum number of times this coupon can be used.</li>
  *   <li><b>timesRedeemed</b>: How many times this coupon has been used.</li>
+ *   <li><b>billingCycle</b>: The only billing cycle it applies to (e.g. yearly), or null for any.</li>
+ *   <li><b>planIds</b>: The plans it applies to; empty for any plan.</li>
  * </ul>
  * <p>
  * Coupons can be applied during subscription creation or renewal to provide
@@ -145,6 +150,25 @@ public class Coupon extends AbstractAuditingEntity<UUID> {
      */
     @Column(name = "times_redeemed")
     private Integer timesRedeemed = 0;
+
+    /**
+     * The only billing cycle the coupon applies to, e.g. a founding offer on yearly billing.
+     * <p>
+     * If null, it applies to monthly and yearly subscriptions.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "billing_cycle", length = 20)
+    private BillingCycle billingCycle;
+
+    /**
+     * The subscription plans the coupon applies to.
+     * <p>
+     * If empty, it applies to every plan.
+     */
+    @ElementCollection
+    @CollectionTable(name = "billing_coupon_plan", joinColumns = @JoinColumn(name = "coupon_id"))
+    @Column(name = "plan_id")
+    private Set<UUID> planIds = new HashSet<>();
 
     /**
      * Optimistic locking version for concurrent modifications.
@@ -289,6 +313,22 @@ public class Coupon extends AbstractAuditingEntity<UUID> {
 
     public void setTimesRedeemed(Integer timesRedeemed) {
         this.timesRedeemed = timesRedeemed;
+    }
+
+    public BillingCycle getBillingCycle() {
+        return billingCycle;
+    }
+
+    public void setBillingCycle(BillingCycle billingCycle) {
+        this.billingCycle = billingCycle;
+    }
+
+    public Set<UUID> getPlanIds() {
+        return planIds;
+    }
+
+    public void setPlanIds(Set<UUID> planIds) {
+        this.planIds = planIds;
     }
 
     public Long getVersion() {

@@ -189,11 +189,27 @@
               <strong class="tabular-nums">{{ price(o) | money: currency() }}</strong>
               <span>{{ (cycle() === 'YEARLY' ? 'humano.settings.billing.perYear' : 'humano.settings.billing.perMonth') | translate }}</span>
             </div>
+            <div class="hum-kpi__label">
+              @if (o.previous) {
+                {{ 'humano.console.plans.everythingIn' | translate: { plan: o.previous } }}
+              } @else {
+                {{ 'humano.console.plans.includes' | translate }}
+              }
+            </div>
             <ul>
-              @for (h of o.highlights; track h) {
-                <li><lucide-icon name="check" [size]="14" /> {{ h }}</li>
+              @for (h of expanded().has(o.id) ? o.highlights : o.highlights.slice(0, shownHighlights); track h) {
+                <li><lucide-icon [name]="o.previous ? 'plus' : 'check'" [size]="14" /> {{ h }}</li>
               }
             </ul>
+            @if (o.highlights.length > shownHighlights) {
+              <button type="button" class="hum-linkbtn" (click)="toggleExpanded(o.id)">
+                {{
+                  expanded().has(o.id)
+                    ? ('humano.console.plans.showLess' | translate)
+                    : ('humano.console.plans.showMore' | translate: { n: o.highlights.length - shownHighlights })
+                }}
+              </button>
+            }
             @if (rel !== 'current') {
               <hum-button
                 [variant]="rel === 'upgrade' || (rel === 'choose' && o.featured) ? 'primary' : 'secondary'"

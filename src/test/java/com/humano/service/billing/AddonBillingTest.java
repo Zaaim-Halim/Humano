@@ -20,6 +20,7 @@ import com.humano.repository.billing.InvoiceRepository;
 import com.humano.repository.billing.SubscriptionAddonRepository;
 import com.humano.repository.billing.SubscriptionRepository;
 import com.humano.repository.tenant.TenantRepository;
+import com.humano.service.errors.BadRequestAlertException;
 import com.humano.tenancy.TenantAccessGuard;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.math.BigDecimal;
@@ -66,6 +67,7 @@ class AddonBillingTest {
         SubscriptionPlan enterprise = new SubscriptionPlan();
         enterprise.setBasePrice(new BigDecimal("499"));
         enterprise.setDisplayName("Enterprise");
+        enterprise.setId(UUID.randomUUID());
         subscription.setId(UUID.randomUUID());
         subscription.setTenant(tenant);
         subscription.setSubscriptionPlan(enterprise);
@@ -130,13 +132,31 @@ class AddonBillingTest {
         subscription.setCouponCode("SAVE10");
         Coupon coupon = new Coupon();
         coupon.setCode("SAVE10");
-        when(coupons.applyToAmount(eq("SAVE10"), any())).thenReturn(new CouponService.CouponApplication(coupon, new BigDecimal("49.90")));
+        when(coupons.applyToAmount(eq("SAVE10"), any(), any(), any())).thenReturn(
+            new CouponService.CouponApplication(coupon, new BigDecimal("49.90"))
+        );
 
         Invoice invoice = lifecycle.issueFirstInvoice(subscription.getId());
 
-        verify(coupons).applyToAmount(eq("SAVE10"), argThat(amount -> amount.compareTo(new BigDecimal("499")) == 0));
+        verify(coupons).applyToAmount(eq("SAVE10"), argThat(amount -> amount.compareTo(new BigDecimal("499")) == 0), any(), any());
         assertThat(invoice.getAmount()).isEqualByComparingTo("549");
         assertThat(invoice.getDiscountAmount()).isEqualByComparingTo("49.90");
         assertThat(invoice.getTotalAmount()).isEqualByComparingTo("499.10");
+    }
+
+    @Test
+    void aCouponForAnotherCycleOrPlanRenewsAtFullPriceAndIsDropped() {
+        subscription.setBillingCycle(BillingCycle.MONTHLY);
+        subscription.setCouponCode("YEARLY30");
+        when(
+            coupons.applyToAmount(eq("YEARLY30"), any(), eq(subscription.getSubscriptionPlan().getId()), eq(BillingCycle.MONTHLY))
+        ).thenThrow(new BadRequestAlertException("Coupon YEARLY30 only applies to yearly billing", "coupon", "couponwrongcycle"));
+
+        Invoice invoice = lifecycle.issueFirstInvoice(subscription.getId());
+
+        assertThat(invoice.getTotalAmount()).isEqualByComparingTo("549");
+        assertThat(invoice.getCouponCode()).isNull();
+        assertThat(subscription.getCouponCode()).isNull();
+        verify(subscriptions).save(subscription);
     }
 }

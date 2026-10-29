@@ -73,6 +73,7 @@
     <include file="config/liquibase/changelog/master/20261028-tenant-deletion-warning-changelog.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/master/20261028-subprocessor-notice-changelog.xml" relativeToChangelogFile="false"/>
     <include file="config/liquibase/changelog/master/20261028-retention-period-changelog.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/master/20261029-coupon-restrictions-changelog.xml" relativeToChangelogFile="false"/>
 
     <!--  will add incremental liquibase changelogs here -->
 </databaseChangeLog>

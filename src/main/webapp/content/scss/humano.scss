@@ -10823,6 +10823,7 @@ button.hum-records__empty:hover {
 .hum-bill-plan ul {
   display: grid;
   flex: 1;
+  align-content: start;
   gap: var(--space-1);
   margin: 0;
   padding: 0;
@@ -10834,6 +10835,10 @@ button.hum-records__empty:hover {
   display: flex;
   gap: var(--space-1_5, 6px);
   align-items: center;
+}
+
+.hum-bill-plan .hum-linkbtn {
+  align-self: flex-start;
 }
 
 .hum-bill-cancel {
@@ -11290,6 +11295,16 @@ button.hum-records__empty:hover {
   .hum-tpl-detail {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Leave pay card: warning, leave types and action spaced apart. */
+.hum-tpl-leave {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.hum-tpl-leave > header {
+  margin-bottom: 0;
 }
 
 .hum-tpl-change {

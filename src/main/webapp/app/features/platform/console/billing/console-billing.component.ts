@@ -42,6 +42,18 @@ import { SubscriptionPlanService } from '../../services/subscription-plan.servic
 
 type Tab = 'invoices' | 'plans' | 'coupons' | 'addons';
 
+interface CouponDraft {
+  code: string;
+  type: 'PERCENT' | 'FIXED';
+  value: string;
+  expiry: string;
+  max: string;
+  /** '' for any billing cycle. */
+  cycle: '' | 'MONTHLY' | 'YEARLY';
+  /** Empty for any plan. */
+  planIds: string[];
+}
+
 type PlanDraft = {
   id: string | null;
   name: string;
@@ -237,13 +249,16 @@ export default class ConsoleBillingComponent {
 
   // ---- Coupons
   protected readonly coupons = signal<Coupon[] | null>(null);
-  protected readonly couponDraft = signal<{ code: string; type: 'PERCENT' | 'FIXED'; value: string; expiry: string; max: string } | null>(
-    null,
-  );
+  protected readonly couponDraft = signal<CouponDraft | null>(null);
   protected readonly couponDelete = signal<Coupon | null>(null);
   protected readonly couponTypeOptions = computed(() => [
     { value: 'PERCENT', label: this.t('humano.console.coupons.percent') },
     { value: 'FIXED', label: this.t('humano.console.coupons.fixed') },
+  ]);
+  protected readonly couponCycleOptions = computed(() => [
+    { value: '', label: this.t('humano.console.coupons.anyCycle') },
+    { value: 'MONTHLY', label: this.t('humano.console.coupons.monthlyOnly') },
+    { value: 'YEARLY', label: this.t('humano.console.coupons.yearlyOnly') },
   ]);
 
   constructor() {
@@ -253,6 +268,8 @@ export default class ConsoleBillingComponent {
       if (t === 'invoices' && this.invoices() === null) this.loadInvoices();
       if (t === 'plans' && this.plans() === null) this.loadPlans();
       if (t === 'coupons' && this.coupons() === null) this.loadCoupons();
+      // Coupon limits show plan names.
+      if (t === 'coupons' && this.plans() === null) this.loadPlans();
       if (t === 'addons' && this.addons() === null) this.loadAddons();
     });
   }
@@ -540,13 +557,32 @@ export default class ConsoleBillingComponent {
 
   protected newCoupon(): void {
     const expiry = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
-    this.couponDraft.set({ code: '', type: 'PERCENT', value: '', expiry, max: '' });
+    this.couponDraft.set({ code: '', type: 'PERCENT', value: '', expiry, max: '', cycle: '', planIds: [] });
+    // The plans a coupon can be limited to.
+    if (this.plans() === null) this.loadPlans();
   }
 
-  protected patchCouponDraft(
-    patch: Partial<{ code: string; type: 'PERCENT' | 'FIXED'; value: string; expiry: string; max: string }>,
-  ): void {
+  protected patchCouponDraft(patch: Partial<CouponDraft>): void {
     this.couponDraft.update(d => (d ? { ...d, ...patch } : d));
+  }
+
+  protected toggleCouponPlan(planId: string, on: boolean): void {
+    this.couponDraft.update(d =>
+      d ? { ...d, planIds: on ? [...d.planIds.filter(id => id !== planId), planId] : d.planIds.filter(id => id !== planId) } : d,
+    );
+  }
+
+  /** "Yearly · Growth, Enterprise", or "Any plan" for a coupon without limits. */
+  protected couponScope(c: Coupon): string {
+    const names = new Map((this.plans() ?? []).map(p => [p.id, p.displayName ?? p.subscriptionType]));
+    const plans = c.planIds.map(id => names.get(id) ?? '?').join(', ');
+    const parts = [
+      c.billingCycle
+        ? this.t(c.billingCycle === 'YEARLY' ? 'humano.console.coupons.yearlyOnly' : 'humano.console.coupons.monthlyOnly')
+        : '',
+      plans,
+    ].filter(Boolean);
+    return parts.length ? parts.join(' · ') : this.t('humano.console.coupons.anyPlan');
   }
 
   protected couponDraftValid(): boolean {
@@ -568,6 +604,8 @@ export default class ConsoleBillingComponent {
         percentage: d.type === 'PERCENT' ? value : undefined,
         expiryDate: new Date(`${d.expiry}T23:59:59`).toISOString(),
         maxRedemptions: d.max ? Number(d.max) : undefined,
+        billingCycle: d.cycle || undefined,
+        planIds: d.planIds.length ? d.planIds : undefined,
       }),
       'humano.console.coupons.created',
       () => {
