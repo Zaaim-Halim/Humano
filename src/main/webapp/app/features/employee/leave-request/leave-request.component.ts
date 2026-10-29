@@ -107,13 +107,13 @@ export default class LeaveRequestComponent {
 
   protected readonly submitting = signal(false);
 
+  constructor() {
+    this.currentEmployee.resolve();
+  }
+
   protected invalid(control: string): boolean {
     const c = this.form.get(control);
     return !!c && c.invalid && (c.dirty || c.touched);
-  }
-
-  constructor() {
-    this.currentEmployee.resolve();
   }
 
   protected submit(): void {

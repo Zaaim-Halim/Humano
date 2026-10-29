@@ -285,6 +285,7 @@ public class SubscriptionService {
                 .stream()
                 .map(SubscriptionAddon::monthlyPrice)
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add),
+            subscription.getCouponCode(),
             subscription.getCreatedBy(),
             subscription.getCreatedDate(),
             subscription.getLastModifiedBy(),

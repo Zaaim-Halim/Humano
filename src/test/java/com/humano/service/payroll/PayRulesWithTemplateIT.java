@@ -1,6 +1,7 @@
 package com.humano.service.payroll;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.humano.IntegrationTest;
 import com.humano.domain.enumeration.CountryCode;
@@ -19,6 +20,7 @@ import com.humano.domain.payroll.Compensation;
 import com.humano.domain.payroll.PayComponent;
 import com.humano.domain.payroll.PayRule;
 import com.humano.domain.payroll.PayrollCalendar;
+import com.humano.domain.payroll.PayrollInput;
 import com.humano.domain.payroll.PayrollLine;
 import com.humano.domain.payroll.PayrollPeriod;
 import com.humano.domain.payroll.PayrollResult;
@@ -37,12 +39,14 @@ import com.humano.repository.payroll.EmployeeTemplateProfileRepository;
 import com.humano.repository.payroll.PayComponentRepository;
 import com.humano.repository.payroll.PayRuleRepository;
 import com.humano.repository.payroll.PayrollCalendarRepository;
+import com.humano.repository.payroll.PayrollInputRepository;
 import com.humano.repository.payroll.PayrollLineRepository;
 import com.humano.repository.payroll.PayrollPeriodRepository;
 import com.humano.repository.payroll.PayrollResultRepository;
 import com.humano.repository.payroll.PayrollRunRepository;
 import com.humano.repository.payroll.PayrollTemplateAdoptionRepository;
 import com.humano.repository.shared.EmployeeRepository;
+import com.humano.service.errors.BusinessRuleViolationException;
 import com.humano.service.payroll.template.PayrollTemplateService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -107,6 +111,9 @@ class PayRulesWithTemplateIT {
 
     @Autowired
     private PayRuleRepository rules;
+
+    @Autowired
+    private PayrollInputRepository inputs;
 
     @Autowired
     private PayrollCalendarRepository calendars;
@@ -233,6 +240,11 @@ class PayRulesWithTemplateIT {
                 );
             }
             runs.deleteAll(ours);
+            inputs.deleteAll(
+                inputs.findAll(
+                    (Specification<PayrollInput>) (root, q, cb) -> cb.equal(root.get("period").get("calendar").get("id"), calendar.getId())
+                )
+            );
             periods.deleteAll(
                 periods.findAll((Specification<PayrollPeriod>) (root, q, cb) -> cb.equal(root.get("calendar").get("id"), calendar.getId()))
             );
@@ -314,6 +326,57 @@ class PayRulesWithTemplateIT {
         assertThat(pensionBase(mayLines)).isEqualByComparingTo("2000");
     }
 
+    @Test
+    void hoursRecordedWithoutARateArePricedByTheComponentsFormula() {
+        // 10 hours at the hourly rate (2000 / standardMonthlyHours) times the overtime multiplier.
+        rule(PayComponentCode.OT, "#OT_QTY * #baseSalary / #standardMonthlyHours * #overtimeMultiplier");
+        PayrollPeriod june = month(2026, 6);
+        input(june, PayComponentCode.OT, new BigDecimal("10"), null);
+        com.humano.domain.payroll.OrganizationSettings settings = tx.execute(s ->
+            organizationSettings.findAll().stream().findFirst().orElseGet(com.humano.domain.payroll.OrganizationSettings::new)
+        );
+        BigDecimal expectedOvertime = new BigDecimal("20000")
+            .divide(settings.getStandardMonthlyHours(), java.math.MathContext.DECIMAL64)
+            .multiply(settings.getDefaultOvertimeMultiplier())
+            .setScale(2, java.math.RoundingMode.HALF_UP);
+
+        assertThat(ourLines(calculate(june)))
+            .filteredOn(l -> l.getComponent().getCode() == PayComponentCode.OT)
+            .singleElement()
+            .satisfies(l -> assertThat(l.getAmount()).isEqualByComparingTo(expectedOvertime));
+    }
+
+    @Test
+    void anAmountRecordedForTheMonthIsPaidInsteadOfTheFormula() {
+        rule(PayComponentCode.OT, "100");
+        PayrollPeriod july = month(2026, 7);
+        input(july, PayComponentCode.OT, null, new BigDecimal("80"));
+
+        assertThat(ourLines(calculate(july)))
+            .filteredOn(l -> l.getComponent().getCode() == PayComponentCode.OT)
+            .singleElement()
+            .satisfies(l -> assertThat(l.getAmount()).isEqualByComparingTo("80"));
+    }
+
+    @Test
+    void baseSalaryCantHaveARuleBecauseTheRunNeverEvaluatesIt() {
+        UUID basicId = tx.execute(s ->
+            components.findAll().stream().filter(c -> c.getCode() == PayComponentCode.BASIC).findFirst().orElseThrow().getId()
+        );
+        UUID otId = tx.execute(s ->
+            components.findAll().stream().filter(c -> c.getCode() == PayComponentCode.OT).findFirst().orElseThrow().getId()
+        );
+
+        assertThatThrownBy(() ->
+            payComponentService.createRule(new CreatePayRuleRequest(basicId, "2500", MARKER, null, null, null, null, true))
+        )
+            .isInstanceOf(BusinessRuleViolationException.class)
+            .hasMessageContaining("compensation");
+        assertThatThrownBy(() -> payComponentService.copyRules(otId, basicId)).isInstanceOf(BusinessRuleViolationException.class);
+        long basicRules = tx.execute(s -> rules.findAll().stream().filter(r -> r.getPayComponent().getId().equals(basicId)).count());
+        assertThat(basicRules).isZero();
+    }
+
     /** The pay component with this code, created for the test if missing; its switches are put back afterwards. */
     private void component(PayComponentCode code, Kind kind, boolean taxableAndSocial) {
         PayComponent existing = components.findAll().stream().filter(pc -> pc.getCode() == code).findFirst().orElse(null);
@@ -344,6 +407,20 @@ class PayRulesWithTemplateIT {
                     components.save(c);
                 })
         );
+    }
+
+    /** A payroll input for our employee: hours (no rate), or an amount. */
+    private void input(PayrollPeriod period, PayComponentCode code, BigDecimal hours, BigDecimal amount) {
+        tx.executeWithoutResult(s -> {
+            PayrollInput in = new PayrollInput();
+            in.setEmployee(employees.findById(employee.getId()).orElseThrow());
+            in.setPeriod(periods.findById(period.getId()).orElseThrow());
+            in.setComponent(components.findAll().stream().filter(c -> c.getCode() == code).findFirst().orElseThrow());
+            in.setQuantity(hours);
+            in.setAmount(amount);
+            in.setSource("MANUAL");
+            inputs.saveAndFlush(in);
+        });
     }
 
     /** Adds an active rule with this formula; returns its id. */

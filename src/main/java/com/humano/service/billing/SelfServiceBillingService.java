@@ -65,6 +65,7 @@ public class SelfServiceBillingService {
     private final EntitlementService entitlementService;
     private final SubscriptionAddonRepository addonRepository;
     private final StorageAddonOffer storageAddonOffer;
+    private final CouponService couponService;
 
     public SelfServiceBillingService(
         TenantRepository tenantRepository,
@@ -75,7 +76,8 @@ public class SelfServiceBillingService {
         TenantAccessGuard accessGuard,
         EntitlementService entitlementService,
         SubscriptionAddonRepository addonRepository,
-        StorageAddonOffer storageAddonOffer
+        StorageAddonOffer storageAddonOffer,
+        CouponService couponService
     ) {
         this.tenantRepository = tenantRepository;
         this.subscriptionRepository = subscriptionRepository;
@@ -86,6 +88,7 @@ public class SelfServiceBillingService {
         this.entitlementService = entitlementService;
         this.addonRepository = addonRepository;
         this.storageAddonOffer = storageAddonOffer;
+        this.couponService = couponService;
     }
 
     public SubscriptionResponse changePlan(UUID tenantId, ChangeMyPlanRequest request) {
@@ -97,12 +100,18 @@ public class SelfServiceBillingService {
             .findById(request.planId())
             .filter(p -> (p.isActive() && p.isPublicListed()) || p.getId().equals(currentPlanId))
             .orElseThrow(() -> new BadRequestAlertException("This plan is not available", ENTITY_NAME, "planunavailable"));
+        String coupon = enteredCoupon(
+            request.couponCode(),
+            plan,
+            request.billingCycle(),
+            existing.map(Subscription::getCouponCode).orElse(null)
+        );
         if (existing.isEmpty()) {
             tenant.setSubscriptionPlan(plan);
             tenantRepository.save(tenant);
             log.info("Tenant {} subscribed to {}", tenant.getSubdomain(), plan.getDisplayName());
             SubscriptionResponse created = subscriptionService.createSubscription(
-                new CreateSubscriptionRequest(tenantId, plan.getId(), request.billingCycle(), true, null, null)
+                new CreateSubscriptionRequest(tenantId, plan.getId(), request.billingCycle(), true, null, coupon)
             );
             lifecycleService.issueFirstInvoice(created.id());
             return subscriptionService.getSubscriptionById(created.id());
@@ -134,6 +143,9 @@ public class SelfServiceBillingService {
         adjustAddons(sub, plan, toYearly);
         sub.setCancelAtPeriodEnd(false);
         sub.setAutoRenew(true);
+        if (coupon != null) {
+            sub.setCouponCode(coupon);
+        }
         subscriptionRepository.save(sub);
         tenant.setSubscriptionPlan(plan);
         tenantRepository.save(tenant);
@@ -161,6 +173,34 @@ public class SelfServiceBillingService {
                 addonRepository.save(addon);
             }
         }
+    }
+
+    /**
+     * A coupon code the customer entered for its running subscription (or trial): checked against its
+     * plan and billing cycle, and taken off from the next invoice. Each invoice checks it again.
+     */
+    public SubscriptionResponse applyCoupon(UUID tenantId, String code) {
+        Subscription sub = running(tenantId);
+        sub.setCouponCode(enteredCoupon(code, sub.getSubscriptionPlan(), sub.getBillingCycle(), sub.getCouponCode()));
+        subscriptionRepository.save(sub);
+        log.info("Tenant {} entered coupon {}", sub.getTenant().getSubdomain(), sub.getCouponCode());
+        return subscriptionService.getSubscriptionById(sub.getId());
+    }
+
+    /**
+     * The coupon a customer entered, valid for this plan and cycle; null when none was entered. A
+     * subscription has one coupon: another one already on it (e.g. a founding offer the platform team
+     * applied) is not replaced.
+     */
+    private String enteredCoupon(String code, SubscriptionPlan plan, BillingCycle cycle, String current) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        String entered = couponService.validateOnly(code.trim(), plan.getId(), cycle).code();
+        if (current != null && !current.isBlank() && !current.equalsIgnoreCase(entered)) {
+            throw new BadRequestAlertException("Your subscription already has coupon " + current, ENTITY_NAME, "couponalreadyapplied");
+        }
+        return entered;
     }
 
     /** Ends the subscription when the current period (or trial) ends; the workspace runs until then. */

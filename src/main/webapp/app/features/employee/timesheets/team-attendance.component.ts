@@ -85,7 +85,6 @@ export class TeamAttendanceComponent {
   private readonly tick = signal(Date.now());
 
   protected readonly isToday = computed(() => this.date() === iso(new Date()));
-  protected readonly presenceStyle = (p: TeamPresence) => PRESENCE[p];
   protected readonly duration = clockDuration;
   protected readonly hm = hm;
 
@@ -134,6 +133,7 @@ export class TeamAttendanceComponent {
     }, 60_000);
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
+  protected readonly presenceStyle = (p: TeamPresence) => PRESENCE[p];
 
   protected load(date = this.date(), quiet = false): void {
     if (!quiet) this.data.set(null);

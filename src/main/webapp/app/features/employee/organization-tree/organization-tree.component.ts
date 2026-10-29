@@ -83,7 +83,6 @@ function walk(node: OrganizationalUnitTreeNode, visit: (n: OrganizationalUnitTre
 export class OrganizationTreeComponent implements OnInit {
   /** HR opens the person's profile; everyone else sees them in context in the people tree. */
   private readonly canOpenProfiles = inject(AccountService).hasPermission(Permission.READ_EMPLOYEE);
-  protected readonly personLink = (id: string): string[] => (this.canOpenProfiles ? ['/employees', id] : ['/people-tree', id]);
 
   /** Root unit id when embedded; the route param wins for the routed page. */
   readonly rootUnitId = input<string>();
@@ -119,15 +118,6 @@ export class OrganizationTreeComponent implements OnInit {
     return [...groups.entries()].sort(([a], [b]) => (a === unit.id ? -1 : b === unit.id ? 1 : 0)).map(([, g]) => g);
   });
 
-  protected readonly tone = (node: OrganizationalUnitTreeNode): BadgeTone => TYPE_TONE[node.type] ?? 'neutral';
-  protected readonly typeLabel = (type: string): string => type.charAt(0) + type.slice(1).toLowerCase();
-  protected readonly subUnitsLabel = (node: OrganizationalUnitTreeNode): string =>
-    this.subUnitsText(node.childCount ?? node.children?.length ?? 0);
-
-  private subUnitsText(count: number): string {
-    return String(this.translate.instant(pluralKey('humano.organizationTree.subUnits', count), { count }));
-  }
-
   private readonly hierarchy = inject(HrHierarchyService);
   private readonly translate = inject(TranslateService);
   private readonly route = inject(ActivatedRoute);
@@ -137,6 +127,12 @@ export class OrganizationTreeComponent implements OnInit {
   ngOnInit(): void {
     this.reload();
   }
+  protected readonly personLink = (id: string): string[] => (this.canOpenProfiles ? ['/employees', id] : ['/people-tree', id]);
+
+  protected readonly tone = (node: OrganizationalUnitTreeNode): BadgeTone => TYPE_TONE[node.type] ?? 'neutral';
+  protected readonly typeLabel = (type: string): string => type.charAt(0) + type.slice(1).toLowerCase();
+  protected readonly subUnitsLabel = (node: OrganizationalUnitTreeNode): string =>
+    this.subUnitsText(node.childCount ?? node.children?.length ?? 0);
 
   protected reload(): void {
     const unitId = this.rootUnitId() ?? this.route.snapshot.paramMap.get('unitId');
@@ -185,5 +181,9 @@ export class OrganizationTreeComponent implements OnInit {
 
   protected showWholeOrganization(): void {
     void this.router.navigate(['/organization-tree']).then(() => this.reload());
+  }
+
+  private subUnitsText(count: number): string {
+    return String(this.translate.instant(pluralKey('humano.organizationTree.subUnits', count), { count }));
   }
 }

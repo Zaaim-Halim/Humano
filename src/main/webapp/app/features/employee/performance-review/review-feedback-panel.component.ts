@@ -104,10 +104,6 @@ export class ReviewFeedbackPanelComponent {
     value: r,
     label: this.label(`humano.performance.feedback.relationship.${r}`),
   }));
-  protected readonly searchColleagues = (term: string): Observable<AutocompleteOption[]> => {
-    const r = this.review();
-    return this.feedbackService.candidates(r.cycleId!, r.id, term);
-  };
 
   // Turning a nomination down.
   protected readonly declining = signal<ReviewFeedback | null>(null);
@@ -119,6 +115,10 @@ export class ReviewFeedbackPanelComponent {
       .pipe(distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => this.load());
   }
+  protected readonly searchColleagues = (term: string): Observable<AutocompleteOption[]> => {
+    const r = this.review();
+    return this.feedbackService.candidates(r.cycleId!, r.id, term);
+  };
 
   protected load(): void {
     const r = this.review();

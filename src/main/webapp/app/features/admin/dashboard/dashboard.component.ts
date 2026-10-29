@@ -146,7 +146,6 @@ export default class DashboardComponent {
       .filter(e => !seen.has(e.employeeId) && seen.add(e.employeeId))
       .slice(0, 6);
   });
-  protected readonly leaveColor = (t: string | null): string => (t ? (LEAVE_TYPE_COLOR[t] ?? 'var(--info-solid)') : 'var(--slate-400)');
 
   // Attendance
   protected readonly attendance = signal<TeamAttendance | null>(null);
@@ -211,15 +210,6 @@ export default class DashboardComponent {
       this.setupDone() < this.setupSteps().length,
   );
 
-  protected dismissSetup(): void {
-    this.setupDismissed.set(true);
-    try {
-      localStorage.setItem(SETUP_DISMISSED_KEY, '1');
-    } catch {
-      // Private mode / blocked storage: hidden for this visit only.
-    }
-  }
-
   constructor() {
     this.currentEmployee.resolve();
     this.employeeService.stats().subscribe({ next: s => this.stats.set(s), error: () => this.stats.set(null) });
@@ -255,6 +245,16 @@ export default class DashboardComponent {
         );
       }
     });
+  }
+  protected readonly leaveColor = (t: string | null): string => (t ? (LEAVE_TYPE_COLOR[t] ?? 'var(--info-solid)') : 'var(--slate-400)');
+
+  protected dismissSetup(): void {
+    this.setupDismissed.set(true);
+    try {
+      localStorage.setItem(SETUP_DISMISSED_KEY, '1');
+    } catch {
+      // Private mode / blocked storage: hidden for this visit only.
+    }
   }
 
   protected stageIndex(status: RunStatus): number {

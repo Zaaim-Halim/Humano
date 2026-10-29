@@ -82,11 +82,6 @@ export default class MyProfileComponent {
     { id: 'details', label: this.t('humano.myProfile.detailsTab'), icon: 'folder' },
   ]);
 
-  protected onImageChanged(imageUrl: string | null): void {
-    const p = this.profile();
-    if (p) this.currentEmployee.currentEmployee.set({ ...p, imageUrl });
-  }
-
   /**
    * The two collections an employee maintains themselves, via `/api/me/**`. Kept to
    * addresses and emergency contacts deliberately — everything else on the record is
@@ -149,11 +144,16 @@ export default class MyProfileComponent {
     this.currentEmployee.resolve();
   }
 
-  private t(key: string): string {
-    return String(this.translate.instant(key));
+  protected onImageChanged(imageUrl: string | null): void {
+    const p = this.profile();
+    if (p) this.currentEmployee.currentEmployee.set({ ...p, imageUrl });
   }
 
   protected retry(): void {
     this.currentEmployee.resolve(true);
+  }
+
+  private t(key: string): string {
+    return String(this.translate.instant(key));
   }
 }

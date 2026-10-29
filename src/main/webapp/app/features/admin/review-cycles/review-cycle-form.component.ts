@@ -107,11 +107,6 @@ export class ReviewCycleFormComponent {
   /** Bumped after each pick, so the search box starts empty again. */
   protected readonly pickerKey = signal(0);
   private readonly seen = new Map<string, string>();
-  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> =>
-    this.employeeService.searchOptions(term).pipe(
-      map(options => options.filter(o => !this.people().some(p => p.id === o.value))),
-      tap(options => options.forEach(o => this.seen.set(o.value, o.label))),
-    );
   protected readonly typeOptions: SelectOption[] = REVIEW_CYCLE_TYPES.map(t => ({
     value: t,
     label: this.label(`humano.performance.cycleType.${t}`),
@@ -200,6 +195,11 @@ export class ReviewCycleFormComponent {
       untracked(() => this.reset());
     });
   }
+  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> =>
+    this.employeeService.searchOptions(term).pipe(
+      map(options => options.filter(o => !this.people().some(p => p.id === o.value))),
+      tap(options => options.forEach(o => this.seen.set(o.value, o.label))),
+    );
 
   protected invalid(control: string): boolean {
     const c = this.form.get(control);

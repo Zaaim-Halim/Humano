@@ -338,6 +338,8 @@ export default class PerformanceReviewComponent {
     return r && this.known() && this.canSeeCycles && !this.isEmployee() ? `${r.id}|${r.rating}` : null;
   });
 
+  protected readonly downloading = signal(false);
+
   constructor() {
     this.currentEmployee.resolve();
     toObservable(this.historyKey)
@@ -619,6 +621,35 @@ export default class PerformanceReviewComponent {
     });
   }
 
+  protected planStarted(plan: { id: string }): void {
+    this.planFormOpen.set(false);
+    this.toast.success(this.label('humano.improvementPlans.drafted'));
+    void this.router.navigate(['/improvement-plans', plan.id]);
+  }
+
+  /** Downloads the shared review as a PDF — the employee's view, whoever asks. */
+  protected downloadPdf(): void {
+    const r = this.review();
+    if (!r) return;
+    this.downloading.set(true);
+    this.reviewCycleService.reviewPdf(r.id).subscribe({
+      next: res => {
+        this.downloading.set(false);
+        if (!res.body) return;
+        const url = URL.createObjectURL(res.body);
+        const a = this.document.createElement('a');
+        a.href = url;
+        a.download = filenameOf(res.headers.get('Content-Disposition')) ?? 'performance-review.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (err: unknown) => {
+        this.downloading.set(false);
+        this.toast.danger(normalizeHttpError(err));
+      },
+    });
+  }
+
   /** Starts the template drafts from what was saved. */
   private seedForm(r: PerformanceReview | null): void {
     const answers: Record<string, string> = {};
@@ -671,39 +702,8 @@ export default class PerformanceReviewComponent {
     });
   }
 
-  protected planStarted(plan: { id: string }): void {
-    this.planFormOpen.set(false);
-    this.toast.success(this.label('humano.improvementPlans.drafted'));
-    void this.router.navigate(['/improvement-plans', plan.id]);
-  }
-
   private label(key: string, params?: Record<string, unknown>): string {
     return String(this.translate.instant(key, params));
-  }
-
-  protected readonly downloading = signal(false);
-
-  /** Downloads the shared review as a PDF — the employee's view, whoever asks. */
-  protected downloadPdf(): void {
-    const r = this.review();
-    if (!r) return;
-    this.downloading.set(true);
-    this.reviewCycleService.reviewPdf(r.id).subscribe({
-      next: res => {
-        this.downloading.set(false);
-        if (!res.body) return;
-        const url = URL.createObjectURL(res.body);
-        const a = this.document.createElement('a');
-        a.href = url;
-        a.download = filenameOf(res.headers.get('Content-Disposition')) ?? 'performance-review.pdf';
-        a.click();
-        URL.revokeObjectURL(url);
-      },
-      error: (err: unknown) => {
-        this.downloading.set(false);
-        this.toast.danger(normalizeHttpError(err));
-      },
-    });
   }
 }
 

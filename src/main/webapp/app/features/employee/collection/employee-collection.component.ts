@@ -157,20 +157,6 @@ export class EmployeeCollectionComponent {
     return String(v);
   }
 
-  private fallbackView(row: CollectionRecord): RecordView {
-    const [first, ...rest] = this.columns();
-    return {
-      title: first ? this.cell(row, first.key) : '—',
-      facts: rest
-        .filter(c => row[c.key] !== null && row[c.key] !== undefined && row[c.key] !== '')
-        .map(c => ({ icon: 'dot', text: `${this.t(c.label)}: ${this.cell(row, c.key)}` })),
-    };
-  }
-
-  private t(key: string, params?: Record<string, unknown>): string {
-    return String(this.translate.instant(key, params));
-  }
-
   protected load(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -187,16 +173,6 @@ export class EmployeeCollectionComponent {
           this.loading.set(false);
         },
       });
-  }
-
-  private buildForm(record: CollectionRecord | null): void {
-    const group: Record<string, FormControl> = {};
-    for (const f of this.fields()) {
-      const fallback = f.type === 'checkbox' ? false : '';
-      const initial = record ? (record[f.key] ?? fallback) : fallback;
-      group[f.key] = new FormControl(initial, { nonNullable: true, validators: f.required ? [Validators.required] : [] });
-    }
-    this.form = new FormGroup(group);
   }
 
   protected invalid(key: string): boolean {
@@ -269,5 +245,29 @@ export class EmployeeCollectionComponent {
           this.deleting.set(false);
         },
       });
+  }
+
+  private fallbackView(row: CollectionRecord): RecordView {
+    const [first, ...rest] = this.columns();
+    return {
+      title: first ? this.cell(row, first.key) : '—',
+      facts: rest
+        .filter(c => row[c.key] !== null && row[c.key] !== undefined && row[c.key] !== '')
+        .map(c => ({ icon: 'dot', text: `${this.t(c.label)}: ${this.cell(row, c.key)}` })),
+    };
+  }
+
+  private t(key: string, params?: Record<string, unknown>): string {
+    return String(this.translate.instant(key, params));
+  }
+
+  private buildForm(record: CollectionRecord | null): void {
+    const group: Record<string, FormControl> = {};
+    for (const f of this.fields()) {
+      const fallback = f.type === 'checkbox' ? false : '';
+      const initial = record ? (record[f.key] ?? fallback) : fallback;
+      group[f.key] = new FormControl(initial, { nonNullable: true, validators: f.required ? [Validators.required] : [] });
+    }
+    this.form = new FormGroup(group);
   }
 }

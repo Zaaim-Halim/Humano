@@ -27,7 +27,6 @@ const hm = (h: number, m = 0): number => h * 60 + m;
 })
 export class LandingShowcaseComponent {
   protected readonly tab = signal<Tab>('payroll');
-  protected readonly money = (n: number): string => money.format(n);
 
   protected readonly tabs: { id: Tab; label: string; icon: string; path: string }[] = [
     { id: 'payroll', label: 'Payroll run', icon: 'wallet', path: 'payroll/runs/march-2026' },
@@ -35,25 +34,6 @@ export class LandingShowcaseComponent {
     { id: 'approvals', label: 'Approvals', icon: 'check-check', path: 'approvals' },
     { id: 'insights', label: 'Insights', icon: 'chart-line', path: 'dashboard' },
   ];
-
-  protected select(id: Tab): void {
-    this.tab.set(id);
-  }
-
-  /** Arrow keys move between tabs, as in any tab list. */
-  protected onKey(event: KeyboardEvent): void {
-    const i = this.tabs.findIndex(t => t.id === this.tab());
-    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-    if (!step) return;
-    event.preventDefault();
-    const next = this.tabs[(i + step + this.tabs.length) % this.tabs.length];
-    this.tab.set(next.id);
-    (event.currentTarget as HTMLElement).querySelector<HTMLElement>(`[data-tab="${next.id}"]`)?.focus();
-  }
-
-  protected path(): string {
-    return this.tabs.find(t => t.id === this.tab())!.path;
-  }
 
   // ---- Payroll run
   protected readonly run = {
@@ -226,8 +206,6 @@ export class LandingShowcaseComponent {
   ];
   private readonly maxTrend = Math.max(...this.netTrend.map(t => t.value));
   private readonly minTrend = Math.min(...this.netTrend.map(t => t.value));
-  /** Bars start from a baseline so month-to-month differences are visible (25%–80% of the chart). */
-  protected readonly barHeight = (v: number): number => 25 + ((v - this.minTrend) / (this.maxTrend - this.minTrend)) * 55;
   protected readonly headcount = [
     { label: 'Engineering', count: 96, color: 'var(--brand)' },
     { label: 'Operations', count: 72, color: 'var(--info-solid)' },
@@ -241,5 +219,27 @@ export class LandingShowcaseComponent {
     { label: 'Remote', count: 47, color: 'var(--info-solid)' },
   ];
   protected readonly total = 312;
+  protected readonly money = (n: number): string => money.format(n);
+
+  protected select(id: Tab): void {
+    this.tab.set(id);
+  }
+
+  /** Arrow keys move between tabs, as in any tab list. */
+  protected onKey(event: KeyboardEvent): void {
+    const i = this.tabs.findIndex(t => t.id === this.tab());
+    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    if (!step) return;
+    event.preventDefault();
+    const next = this.tabs[(i + step + this.tabs.length) % this.tabs.length];
+    this.tab.set(next.id);
+    (event.currentTarget as HTMLElement).querySelector<HTMLElement>(`[data-tab="${next.id}"]`)?.focus();
+  }
+
+  protected path(): string {
+    return this.tabs.find(t => t.id === this.tab())!.path;
+  }
+  /** Bars start from a baseline so month-to-month differences are visible (25%–80% of the chart). */
+  protected readonly barHeight = (v: number): number => 25 + ((v - this.minTrend) / (this.maxTrend - this.minTrend)) * 55;
   protected readonly pct = (n: number): number => (n / this.total) * 100;
 }

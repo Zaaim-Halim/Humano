@@ -24,6 +24,8 @@ export interface Subscription extends AuditFields {
   readOnlyUntil: string | null;
   /** What its add-ons (extra storage) add per month, on top of the plan. */
   addonsMonthly: number | null;
+  /** The coupon taken off its invoices from the next one, re-checked at each invoice; null when none. */
+  couponCode: string | null;
 }
 
 export interface UpdateSubscriptionRequest {

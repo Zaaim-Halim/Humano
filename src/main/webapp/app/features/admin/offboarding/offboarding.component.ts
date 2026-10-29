@@ -145,13 +145,13 @@ export default class OffboardingComponent {
     return last ? daysBetween(this.today, last) : null;
   });
   protected readonly exitInterview = computed(() => this.formValue().conductExitInterview === true);
-  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
 
   constructor() {
     this.load();
     const startId = this.route.snapshot.queryParamMap.get('start');
     if (this.canStart && startId) this.openStartFor(startId);
   }
+  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
 
   /** Past the last working day (employment has ended) while the checklist is still open. */
   protected hasLeft(row: EmployeeProcessSummary): boolean {

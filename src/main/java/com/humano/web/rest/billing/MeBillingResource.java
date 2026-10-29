@@ -1,6 +1,7 @@
 package com.humano.web.rest.billing;
 
 import com.humano.dto.billing.requests.AcceptTermsRequest;
+import com.humano.dto.billing.requests.ApplyCouponRequest;
 import com.humano.dto.billing.requests.ChangeMyPlanRequest;
 import com.humano.dto.billing.requests.SetStorageAddonRequest;
 import com.humano.dto.billing.responses.EntitlementsResponse;
@@ -105,6 +106,13 @@ public class MeBillingResource {
     @RequirePermission(PermissionsConstants.MANAGE_SUBSCRIPTIONS)
     public SubscriptionResponse changePlan(@Valid @RequestBody ChangeMyPlanRequest request) {
         return selfService.changePlan(tenantIdResolver.requireCurrentTenantId(), request);
+    }
+
+    /** Enters a coupon code for the running subscription; it comes off from the next invoice. */
+    @PostMapping("/coupon")
+    @RequirePermission(PermissionsConstants.MANAGE_SUBSCRIPTIONS)
+    public SubscriptionResponse applyCoupon(@Valid @RequestBody ApplyCouponRequest request) {
+        return selfService.applyCoupon(tenantIdResolver.requireCurrentTenantId(), request.code());
     }
 
     /** Ends the subscription at the end of the current period. */

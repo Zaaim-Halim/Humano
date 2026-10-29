@@ -243,15 +243,6 @@ export default class EmployeeFormComponent implements OnInit {
   /** Unsaved changes: any field, or the role selection. */
   protected readonly rolesChanged = computed(() => [...this.selectedRoles()].sort().join() !== this.initialRoles());
 
-  protected jump(id: string): void {
-    document.getElementById(`emp-section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  /** Last four characters of a stored government id ("•••• 1234"). */
-  protected masked(value: string | null | undefined): string {
-    return value ? `•••• ${value.slice(-4)}` : '';
-  }
-
   protected readonly form = this.fb.nonNullable.group(
     {
       // Account / identity — create mode only (cleared in edit; the account is fixed).
@@ -296,13 +287,8 @@ export default class EmployeeFormComponent implements OnInit {
     { validators: dateOrder },
   );
 
-  /**
-   * Manager picker source — employees are unbounded, so this hits the backend
-   * search per keystroke rather than pre-loading a page. `query` matches (OR) on
-   * first name, last name, and job title; the option labels on the person's name
-   * (falling back to job title) with the job title as sublabel.
-   */
-  protected readonly searchManagers = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
+  /** "ROLE_HR_MANAGER" → "HR manager" (same names as Settings → Users & access). */
+  protected readonly roleLabel = humanizeCode;
 
   ngOnInit(): void {
     this.loadOptions();
@@ -322,8 +308,22 @@ export default class EmployeeFormComponent implements OnInit {
     }
   }
 
-  /** "ROLE_HR_MANAGER" → "HR manager" (same names as Settings → Users & access). */
-  protected readonly roleLabel = humanizeCode;
+  protected jump(id: string): void {
+    document.getElementById(`emp-section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /** Last four characters of a stored government id ("•••• 1234"). */
+  protected masked(value: string | null | undefined): string {
+    return value ? `•••• ${value.slice(-4)}` : '';
+  }
+
+  /**
+   * Manager picker source — employees are unbounded, so this hits the backend
+   * search per keystroke rather than pre-loading a page. `query` matches (OR) on
+   * first name, last name, and job title; the option labels on the person's name
+   * (falling back to job title) with the job title as sublabel.
+   */
+  protected readonly searchManagers = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
 
   /** Toggle a role in the selection (immutably, so OnPush picks up the change). */
   protected toggleRole(role: string, checked: boolean): void {
@@ -340,13 +340,6 @@ export default class EmployeeFormComponent implements OnInit {
 
   protected isRoleSelected(role: string): boolean {
     return this.selectedRoles().has(role);
-  }
-
-  private loadAssignableRoles(): void {
-    this.employeeService
-      .getAssignableRoles()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(roles => this.assignableRoles.set(roles));
   }
 
   protected invalid(control: string): boolean {
@@ -404,26 +397,6 @@ export default class EmployeeFormComponent implements OnInit {
     if (id) this.loadAttributes(id);
   }
 
-  private loadAttributes(id: string): void {
-    this.attributesLoading.set(true);
-    this.attributesLoadError.set(null);
-    this.attributeService
-      .getForEmployee(id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: attrs => {
-          this.attributes.clear();
-          attrs.forEach(a => this.addAttribute(a.key, a.value));
-          this.attributesLoading.set(false);
-        },
-        error: (err: unknown) => {
-          // Leave the editor unrendered so an empty list can't be saved over the real data.
-          this.attributesLoadError.set(normalizeHttpError(err));
-          this.attributesLoading.set(false);
-        },
-      });
-  }
-
   protected cancel(): void {
     const id = this.employeeId();
     void this.router.navigate(id ? ['/employees', id] : ['/employees']);
@@ -455,6 +428,33 @@ export default class EmployeeFormComponent implements OnInit {
         this.saving.set(false);
       },
     });
+  }
+
+  private loadAssignableRoles(): void {
+    this.employeeService
+      .getAssignableRoles()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(roles => this.assignableRoles.set(roles));
+  }
+
+  private loadAttributes(id: string): void {
+    this.attributesLoading.set(true);
+    this.attributesLoadError.set(null);
+    this.attributeService
+      .getForEmployee(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: attrs => {
+          this.attributes.clear();
+          attrs.forEach(a => this.addAttribute(a.key, a.value));
+          this.attributesLoading.set(false);
+        },
+        error: (err: unknown) => {
+          // Leave the editor unrendered so an empty list can't be saved over the real data.
+          this.attributesLoadError.set(normalizeHttpError(err));
+          this.attributesLoading.set(false);
+        },
+      });
   }
 
   /**

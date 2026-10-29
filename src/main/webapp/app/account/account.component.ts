@@ -266,19 +266,6 @@ export default class AccountComponent {
     });
   }
 
-  private photoDone(key: string): void {
-    this.photoBusy.set(false);
-    // The account and the employee record share the photo: refresh both so the shell updates.
-    this.accountService.identity(true).subscribe();
-    this.currentEmployee.resolve(true);
-    this.toast.success(this.t(key));
-  }
-
-  private photoFailed(err: unknown): void {
-    this.photoBusy.set(false);
-    this.toast.danger(normalizeHttpError(err));
-  }
-
   // ---- Preferences
 
   protected setLanguage(langKey: string): void {
@@ -344,6 +331,19 @@ export default class AccountComponent {
     const list = this.sessions() ?? [];
     this.confirmSignOutAll.set(false);
     for (const s of list) this.revoke(s.series);
+  }
+
+  private photoDone(key: string): void {
+    this.photoBusy.set(false);
+    // The account and the employee record share the photo: refresh both so the shell updates.
+    this.accountService.identity(true).subscribe();
+    this.currentEmployee.resolve(true);
+    this.toast.success(this.t(key));
+  }
+
+  private photoFailed(err: unknown): void {
+    this.photoBusy.set(false);
+    this.toast.danger(normalizeHttpError(err));
   }
 
   private isWrongPassword(err: unknown): boolean {

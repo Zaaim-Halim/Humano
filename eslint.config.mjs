@@ -61,13 +61,11 @@ export default tseslint.config(
       '@typescript-eslint/member-ordering': [
         'error',
         {
+          // Fields aren't grouped by access: a field initialised from an inject()ed one, e.g.
+          // `protected readonly canManage = this.account.hasPermission(...)`, must stay below it.
           default: [
-            'public-static-field',
-            'protected-static-field',
-            'private-static-field',
-            'public-instance-field',
-            'protected-instance-field',
-            'private-instance-field',
+            'static-field',
+            'instance-field',
             'constructor',
             'public-static-method',
             'protected-static-method',

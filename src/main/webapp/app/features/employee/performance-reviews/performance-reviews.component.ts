@@ -175,10 +175,6 @@ export default class PerformanceReviewsComponent {
     return this.label('humano.performance.list.queue.missed');
   }
 
-  private toAcknowledge(r: PerformanceReview): boolean {
-    return r.status === 'SHARED' && !r.acknowledgement && r.cyclePhase !== 'ARCHIVED';
-  }
-
   /** A feedback request still waiting for the signed-in employee's answer. */
   protected toAnswer(f: ReviewFeedback): boolean {
     return f.open && f.status === 'REQUESTED';
@@ -191,6 +187,10 @@ export default class PerformanceReviewsComponent {
       return this.label(f.open ? 'humano.performance.list.asked.givenEditable' : 'humano.performance.list.asked.given');
     }
     return this.label('humano.performance.list.asked.closed');
+  }
+
+  private toAcknowledge(r: PerformanceReview): boolean {
+    return r.status === 'SHARED' && !r.acknowledgement && r.cyclePhase !== 'ARCHIVED';
   }
 
   private label(key: string, params?: Record<string, unknown>): string {

@@ -59,8 +59,6 @@ export class EmployeeLeaveComponent {
 
   protected readonly requests = signal<LeaveRequest[] | null>(null);
   protected readonly error = signal<string | null>(null);
-  protected readonly typeColor = (t: string): string => LEAVE_TYPE_COLOR[t] ?? 'var(--info-solid)';
-  protected readonly typeIcon = (t: string): string => LEAVE_TYPE_ICON[t] ?? 'calendar';
 
   private readonly todayIso = iso(new Date());
 
@@ -137,6 +135,8 @@ export class EmployeeLeaveComponent {
       untracked(() => this.load(id));
     });
   }
+  protected readonly typeColor = (t: string): string => LEAVE_TYPE_COLOR[t] ?? 'var(--info-solid)';
+  protected readonly typeIcon = (t: string): string => LEAVE_TYPE_ICON[t] ?? 'calendar';
 
   protected load(id = this.employeeId()): void {
     this.error.set(null);

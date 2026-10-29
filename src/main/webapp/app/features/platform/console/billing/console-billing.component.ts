@@ -376,34 +376,6 @@ export default class ConsoleBillingComponent {
     });
   }
 
-  private highlightLabel(f: PlanFeatureDef, cell: PlanFeatureCell): string {
-    if (f.limitType === 'QUANTITY') {
-      return cell.limitValue === null
-        ? String(this.translate.instant('humano.console.plans.unlimitedOf', { name: this.lowerFirst(f.name) }))
-        : this.quantity(cell.limitValue, f.unit ?? this.lowerFirst(f.name));
-    }
-    return cell.note ? `${f.name}: ${cell.note}` : f.name;
-  }
-
-  /** "1 admin", "25 employees", "1 country" — singular for one (English units). */
-  private quantity(n: number, unit: string | null): string {
-    if (!unit) return n.toLocaleString();
-    const singular = n === 1 ? unit.replace(/ies$/, 'y').replace(/(?<!s)s$/, '') : unit;
-    return `${n.toLocaleString()} ${singular}`;
-  }
-
-  /** "Document storage" → "document storage", but "HR admin seats" stays. */
-  private lowerFirst(text: string): string {
-    return /^[A-Z][a-z]/.test(text) ? text.charAt(0).toLowerCase() + text.slice(1) : text;
-  }
-
-  /** Higher = better: not included < limit (by size) < unlimited. */
-  private rank(f: PlanFeatureDef, cell: PlanFeatureCell | undefined): number {
-    if (!cell?.included) return -1;
-    if (f.limitType !== 'QUANTITY') return 0;
-    return cell.limitValue === null ? Number.MAX_SAFE_INTEGER : cell.limitValue;
-  }
-
   protected newPlan(): void {
     this.planDraft.set({
       id: null,
@@ -430,27 +402,8 @@ export default class ConsoleBillingComponent {
     this.loadDraftItems(p.id);
   }
 
-  private loadDraftItems(planId: string | null): void {
-    const cells = planId ? this.planColumns().find(c => c.plan.id === planId)?.cells : undefined;
-    const draft: Record<string, { included: boolean; limit: string; note: string }> = {};
-    for (const f of this.comparison()?.features ?? []) {
-      const c = cells?.get(f.id);
-      draft[f.id] = { included: !!c?.included, limit: c?.limitValue != null ? String(c.limitValue) : '', note: c?.note ?? '' };
-    }
-    this.draftItems.set(draft);
-  }
-
   protected patchItem(featureId: string, patch: Partial<{ included: boolean; limit: string; note: string }>): void {
     this.draftItems.update(d => ({ ...d, [featureId]: { ...d[featureId], ...patch } }));
-  }
-
-  private draftCells(): PlanFeatureCell[] {
-    return Object.entries(this.draftItems()).map(([featureId, v]) => ({
-      featureId,
-      included: v.included,
-      limitValue: v.included && v.limit !== '' ? Math.max(0, Math.round(Number(v.limit))) : null,
-      note: v.note.trim() || null,
-    }));
   }
 
   protected patchPlanDraft(patch: Partial<PlanDraft>): void {
@@ -634,6 +587,53 @@ export default class ConsoleBillingComponent {
 
   protected couponUsage(c: Coupon): number {
     return c.maxRedemptions ? Math.min(100, ((c.timesRedeemed ?? 0) / c.maxRedemptions) * 100) : 0;
+  }
+
+  private highlightLabel(f: PlanFeatureDef, cell: PlanFeatureCell): string {
+    if (f.limitType === 'QUANTITY') {
+      return cell.limitValue === null
+        ? String(this.translate.instant('humano.console.plans.unlimitedOf', { name: this.lowerFirst(f.name) }))
+        : this.quantity(cell.limitValue, f.unit ?? this.lowerFirst(f.name));
+    }
+    return cell.note ? `${f.name}: ${cell.note}` : f.name;
+  }
+
+  /** "1 admin", "25 employees", "1 country" — singular for one (English units). */
+  private quantity(n: number, unit: string | null): string {
+    if (!unit) return n.toLocaleString();
+    const singular = n === 1 ? unit.replace(/ies$/, 'y').replace(/(?<!s)s$/, '') : unit;
+    return `${n.toLocaleString()} ${singular}`;
+  }
+
+  /** "Document storage" → "document storage", but "HR admin seats" stays. */
+  private lowerFirst(text: string): string {
+    return /^[A-Z][a-z]/.test(text) ? text.charAt(0).toLowerCase() + text.slice(1) : text;
+  }
+
+  /** Higher = better: not included < limit (by size) < unlimited. */
+  private rank(f: PlanFeatureDef, cell: PlanFeatureCell | undefined): number {
+    if (!cell?.included) return -1;
+    if (f.limitType !== 'QUANTITY') return 0;
+    return cell.limitValue === null ? Number.MAX_SAFE_INTEGER : cell.limitValue;
+  }
+
+  private loadDraftItems(planId: string | null): void {
+    const cells = planId ? this.planColumns().find(c => c.plan.id === planId)?.cells : undefined;
+    const draft: Record<string, { included: boolean; limit: string; note: string }> = {};
+    for (const f of this.comparison()?.features ?? []) {
+      const c = cells?.get(f.id);
+      draft[f.id] = { included: !!c?.included, limit: c?.limitValue != null ? String(c.limitValue) : '', note: c?.note ?? '' };
+    }
+    this.draftItems.set(draft);
+  }
+
+  private draftCells(): PlanFeatureCell[] {
+    return Object.entries(this.draftItems()).map(([featureId, v]) => ({
+      featureId,
+      included: v.included,
+      limitValue: v.included && v.limit !== '' ? Math.max(0, Math.round(Number(v.limit))) : null,
+      note: v.note.trim() || null,
+    }));
   }
 
   private run(call: Observable<unknown>, doneKey: string, after: () => void): void {

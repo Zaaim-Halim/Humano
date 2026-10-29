@@ -204,10 +204,6 @@ export default class ConsoleComplianceComponent {
     });
   }
 
-  private reloadDeletions(): void {
-    this.api.deletions().subscribe({ next: d => this.deletions.set(d), error: () => undefined });
-  }
-
   protected stateTone(state: DeletionState, overdue: boolean): BadgeTone {
     if (overdue) return 'danger';
     return state === 'WARNED' ? 'warning' : state === 'WARNING_DUE' ? 'info' : 'neutral';
@@ -248,6 +244,10 @@ export default class ConsoleComplianceComponent {
         this.toast.show({ tone: 'danger', title: normalizeHttpError(err) });
       },
     });
+  }
+
+  private reloadDeletions(): void {
+    this.api.deletions().subscribe({ next: d => this.deletions.set(d), error: () => undefined });
   }
 
   private t(key: string, params?: Record<string, unknown>): string {

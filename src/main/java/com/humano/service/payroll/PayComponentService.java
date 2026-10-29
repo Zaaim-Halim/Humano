@@ -2,6 +2,7 @@ package com.humano.service.payroll;
 
 import com.humano.domain.enumeration.payroll.Kind;
 import com.humano.domain.enumeration.payroll.PayComponentCode;
+import com.humano.domain.payroll.OrganizationSettings;
 import com.humano.domain.payroll.PayComponent;
 import com.humano.domain.payroll.PayRule;
 import com.humano.dto.payroll.request.CreatePayComponentRequest;
@@ -15,6 +16,8 @@ import com.humano.service.errors.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +43,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class PayComponentService {
 
     private static final Logger log = LoggerFactory.getLogger(PayComponentService.class);
+
+    /** A variable a formula reads, {@code #name}, not a function call {@code #name(…)}. */
+    private static final Pattern VARIABLE_REFERENCE = Pattern.compile("#([A-Za-z_][A-Za-z0-9_]*)(?!\\s*\\()");
 
     private final PayComponentRepository componentRepository;
     private final PayRuleRepository ruleRepository;
@@ -95,6 +101,7 @@ public class PayComponentService {
         PayComponent component = componentRepository
             .findById(request.payComponentId())
             .orElseThrow(() -> new EntityNotFoundException("PayComponent", request.payComponentId()));
+        requireRulesAllowed(component);
 
         // Validate formula syntax
         validateFormula(request.formula());
@@ -299,11 +306,21 @@ public class PayComponentService {
         try {
             // Try to parse the formula with sample variables
             Map<String, Object> sampleContext = new HashMap<>();
-            sampleContext.put("baseSalary", java.math.BigDecimal.valueOf(5000));
-            sampleContext.put("grossSalary", java.math.BigDecimal.valueOf(5000));
+            // Amounts carry cents, as in a run: the engine divides to the dividend's scale.
+            sampleContext.put("baseSalary", new BigDecimal("5000.00"));
+            sampleContext.put("grossSalary", new BigDecimal("5000.00"));
             sampleContext.put("workDays", 22);
-            sampleContext.put("OT_HOURS", java.math.BigDecimal.valueOf(10));
-            sampleContext.put("OT_RATE", java.math.BigDecimal.valueOf(1.5));
+            // Every other variable the formula names (#OT_QTY, #standardMonthlyHours, #YTD_…) gets a
+            // sample too: a missing one would fail the arithmetic although the run provides it.
+            Pattern dynamicName = Pattern.compile(formulaEngine.dynamicVariablePattern());
+            Matcher reference = VARIABLE_REFERENCE.matcher(formula == null ? "" : formula);
+            while (reference.find()) {
+                String name = reference.group(1);
+                boolean variable = formulaEngine.allowedVariableNames().contains(name) || dynamicName.matcher(name).matches();
+                if (variable && !formulaEngine.constantNames().contains(name)) {
+                    sampleContext.putIfAbsent(name, sampleValue(name));
+                }
+            }
 
             BigDecimal testResult = formulaEngine.evaluateFormula(formula, sampleContext, BigDecimal.class);
 
@@ -320,6 +337,40 @@ public class PayComponentService {
     }
 
     /**
+     * A value of the type the payroll run gives this variable, for trying a formula: the payroll
+     * settings' defaults for hours and overtime, so an overtime formula gives a believable result.
+     */
+    private static Object sampleValue(String name) {
+        if (name.endsWith("Date")) {
+            return java.time.LocalDate.of(2026, 1, 31);
+        }
+        OrganizationSettings defaults = new OrganizationSettings();
+        return switch (name) {
+            case "standardHoursPerDay" -> defaults.getStandardHoursPerDay();
+            case "standardHoursPerWeek" -> defaults.getStandardHoursPerWeek();
+            case "standardMonthlyHours" -> defaults.getStandardMonthlyHours();
+            case "overtimeMultiplier" -> defaults.getDefaultOvertimeMultiplier();
+            case "employeeId" -> new UUID(0, 0);
+            case "employeeCountry" -> "NL";
+            case "currencyCode" -> "EUR";
+            case "employeeMaritalStatus" -> "SINGLE";
+            default -> new BigDecimal("10.00");
+        };
+    }
+
+    /**
+     * Base salary comes from each employee's compensation: the payroll run never evaluates a rule on
+     * BASIC (PayrollProcessingService, Step 1), so one would be stored and silently ignored.
+     */
+    private static void requireRulesAllowed(PayComponent component) {
+        if (component.getCode() == PayComponentCode.BASIC) {
+            throw new BusinessRuleViolationException(
+                "Base salary comes from each employee's compensation and can't have a formula; change their compensation instead"
+            );
+        }
+    }
+
+    /**
      * Copies rules from one component to another.
      */
     public PayComponentResponse copyRules(UUID sourceComponentId, UUID targetComponentId) {
@@ -330,6 +381,7 @@ public class PayComponentService {
         PayComponent target = componentRepository
             .findById(targetComponentId)
             .orElseThrow(() -> new EntityNotFoundException("PayComponent (target)", targetComponentId));
+        requireRulesAllowed(target);
 
         List<PayRule> sourceRules = ruleRepository.findAll(
             (Specification<PayRule>) (root, query, cb) -> cb.equal(root.get("payComponent").get("id"), sourceComponentId)

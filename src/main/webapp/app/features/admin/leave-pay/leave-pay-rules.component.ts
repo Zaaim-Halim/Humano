@@ -367,17 +367,17 @@ export default class LeavePayRulesComponent {
     });
   }
 
+  /** Reads a number input: '' → null. */
+  protected num(value: unknown): number | null {
+    return value === '' || value === null || value === undefined ? null : Number(value);
+  }
+
   /** Reloads the rules without the loading state. */
   private refresh(): void {
     this.leavePayService.list().subscribe({
       next: rules => this.rules.set(rules),
       error: (err: unknown) => this.toast.danger(normalizeHttpError(err)),
     });
-  }
-
-  /** Reads a number input: '' → null. */
-  protected num(value: unknown): number | null {
-    return value === '' || value === null || value === undefined ? null : Number(value);
   }
 
   private paidText(deductionPercentage: number): string {

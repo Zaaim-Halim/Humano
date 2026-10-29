@@ -49,6 +49,11 @@
                 }}</span
               >
             }
+            @if (s.couponCode) {
+              <span
+                ><lucide-icon name="ticket" [size]="14" />{{ 'humano.settings.billing.couponOn' | translate: { code: s.couponCode } }}</span
+              >
+            }
             @if (s.trialEnd && s.status === 'TRIAL') {
               <span
                 ><lucide-icon name="hourglass" [size]="14" />{{
@@ -76,6 +81,28 @@
         </hum-alert>
       } @else if (!running()) {
         <hum-alert tone="info" [title]="'humano.settings.billing.ended' | translate" style="margin-top: var(--space-4)" />
+      }
+
+      @if (canManage() && running() && !s.couponCode && confirming() === null) {
+        <div class="hum-bill-cancel">
+          <div>
+            <strong>{{ 'humano.settings.billing.couponTitle' | translate }}</strong>
+            <p class="hum-kpi__hint">{{ 'humano.settings.billing.couponEnterHint' | translate }}</p>
+          </div>
+          <div class="hum-bill-coupon">
+            <hum-input
+              mono
+              autocomplete="off"
+              [placeholder]="'humano.settings.billing.couponTitle' | translate"
+              [ngModel]="couponCode()"
+              (ngModelChange)="couponCode.set($event)"
+              (keydown.enter)="applyCoupon()"
+            />
+            <hum-button variant="secondary" icon="ticket" [loading]="busy()" [disabled]="!couponCode().trim()" (click)="applyCoupon()">{{
+              'humano.settings.billing.couponApply' | translate
+            }}</hum-button>
+          </div>
+        </div>
       }
     } @else {
       <p class="hum-insights__note">{{ 'humano.settings.billing.noSubscription' | translate }}</p>
@@ -214,7 +241,7 @@
               <hum-button
                 [variant]="rel === 'upgrade' || (rel === 'choose' && o.featured) ? 'primary' : 'secondary'"
                 [icon]="rel === 'upgrade' ? 'trending-up' : rel === 'downgrade' ? 'trending-down' : 'check'"
-                (click)="confirming.set({ kind: 'change', option: o })"
+                (click)="openChange(o)"
                 >{{ 'humano.settings.billing.action.' + rel | translate }}</hum-button
               >
             }
@@ -324,6 +351,14 @@
   (closed)="confirming.set(null)"
 >
   @if (confirming()?.kind === 'change') {
+    <hum-form-field
+      style="display: block; margin-bottom: var(--space-4)"
+      controlId="bill-coupon"
+      [label]="'humano.settings.billing.couponLabel' | translate"
+      [hint]="'humano.settings.billing.couponHint' | translate"
+    >
+      <hum-input inputId="bill-coupon" mono autocomplete="off" [ngModel]="planCoupon()" (ngModelChange)="planCoupon.set($event)" />
+    </hum-form-field>
     @let warnings = downgradeWarnings($any(confirming()).option.id);
     @if (warnings.length) {
       <hum-alert tone="warning" [title]="'humano.plan.downgradeTitle' | translate">

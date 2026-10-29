@@ -104,7 +104,6 @@ export default class PortalComponent {
       next: approved.filter(r => r.startDate > todayIso).sort((a, b) => a.startDate.localeCompare(b.startDate))[0] ?? null,
     };
   });
-  protected readonly leaveColor = (t: string): string => LEAVE_TYPE_COLOR[t] ?? 'var(--info-solid)';
 
   // Approvals / team
   protected readonly waitingOnMe = signal<number>(0);
@@ -168,6 +167,7 @@ export default class PortalComponent {
       });
     });
   }
+  protected readonly leaveColor = (t: string): string => LEAVE_TYPE_COLOR[t] ?? 'var(--info-solid)';
 
   protected clockIn(): void {
     this.clockBusy.set(true);

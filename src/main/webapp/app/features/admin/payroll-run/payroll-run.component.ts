@@ -235,6 +235,14 @@ export default class PayrollRunComponent {
   });
   protected readonly maxGross = computed(() => Math.max(1, ...(this.results().data ?? []).map(r => Number(r.gross))));
 
+  constructor() {
+    this.currentEmployee.resolve();
+    effect(() => {
+      const id = this.id();
+      if (id) untracked(() => this.load(id));
+    });
+  }
+
   protected pct(value: number | null | undefined): string {
     const n = Number(value ?? 0);
     return `${n > 0 ? '+' : ''}${n.toFixed(1)}%`;
@@ -242,23 +250,6 @@ export default class PayrollRunComponent {
 
   protected share(part: number, whole: number): string {
     return whole ? ((Number(part) / Number(whole)) * 100).toFixed(0) : '0';
-  }
-
-  /** Components largest first within each currency; bar widths relative to the largest in the same currency. */
-  private components(totals: ComponentTotal[] | undefined): { name: string; currencyCode: string; amount: number; pct: number }[] {
-    const list = (totals ?? [])
-      .map(c => ({ name: c.name, currencyCode: c.currencyCode, amount: c.amount }))
-      .sort((a, b) => a.currencyCode.localeCompare(b.currencyCode) || b.amount - a.amount);
-    const max = maxByCurrency(list, c => c.amount);
-    return list.map(c => ({ ...c, pct: (c.amount / max(c.currencyCode)) * 100 }));
-  }
-
-  constructor() {
-    this.currentEmployee.resolve();
-    effect(() => {
-      const id = this.id();
-      if (id) untracked(() => this.load(id));
-    });
   }
 
   protected load(id: string): void {
@@ -386,6 +377,15 @@ export default class PayrollRunComponent {
       this.act(this.runService.postRun(this.id()), 'humano.payrollRun.posted');
     }
     this.confirm.set(null);
+  }
+
+  /** Components largest first within each currency; bar widths relative to the largest in the same currency. */
+  private components(totals: ComponentTotal[] | undefined): { name: string; currencyCode: string; amount: number; pct: number }[] {
+    const list = (totals ?? [])
+      .map(c => ({ name: c.name, currencyCode: c.currencyCode, amount: c.amount }))
+      .sort((a, b) => a.currencyCode.localeCompare(b.currencyCode) || b.amount - a.amount);
+    const max = maxByCurrency(list, c => c.amount);
+    return list.map(c => ({ ...c, pct: (c.amount / max(c.currencyCode)) * 100 }));
   }
 
   private act(call: Observable<PayrollRun>, successKey: string): void {

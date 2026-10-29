@@ -80,18 +80,6 @@ export default class PayslipComponent {
     });
   }
 
-  private loadYtd(p: Payslip): void {
-    // The year of the period this payslip covers, up to its end: later payslips don't count.
-    const through = p.periodEnd ?? undefined;
-    const year = Number((p.periodEnd ?? p.paymentDate ?? '').slice(0, 4));
-    if (!p.employeeId || !year) return;
-    // YTD is supplementary; its failure must not break the payslip view.
-    (this.self() ? this.meWork.payslipYtd(year, through) : this.payslipService.ytdForEmployee(p.employeeId, year, through)).subscribe({
-      next: data => this.ytd.set(data),
-      error: () => this.ytd.set(null),
-    });
-  }
-
   protected print(): void {
     this.document.defaultView?.print();
   }
@@ -111,6 +99,18 @@ export default class PayslipComponent {
         URL.revokeObjectURL(url);
       },
       error: (err: unknown) => this.toast.danger(normalizeHttpError(err)),
+    });
+  }
+
+  private loadYtd(p: Payslip): void {
+    // The year of the period this payslip covers, up to its end: later payslips don't count.
+    const through = p.periodEnd ?? undefined;
+    const year = Number((p.periodEnd ?? p.paymentDate ?? '').slice(0, 4));
+    if (!p.employeeId || !year) return;
+    // YTD is supplementary; its failure must not break the payslip view.
+    (this.self() ? this.meWork.payslipYtd(year, through) : this.payslipService.ytdForEmployee(p.employeeId, year, through)).subscribe({
+      next: data => this.ytd.set(data),
+      error: () => this.ytd.set(null),
     });
   }
 }

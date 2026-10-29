@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { Observable } from 'rxjs';
@@ -29,7 +30,9 @@ import {
   BadgeComponent,
   ButtonComponent,
   DialogComponent,
+  FormFieldComponent,
   IconButtonComponent,
+  InputComponent,
   ProgressComponent,
   SkeletonRowComponent,
   ToastService,
@@ -71,6 +74,7 @@ const SHOWN_HIGHLIGHTS = 6;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
+    FormsModule,
     TranslatePipe,
     LucideAngularModule,
     AlertComponent,
@@ -80,6 +84,8 @@ const SHOWN_HIGHLIGHTS = 6;
     SkeletonRowComponent,
     ProgressComponent,
     IconButtonComponent,
+    FormFieldComponent,
+    InputComponent,
     MoneyPipe,
   ],
   templateUrl: './billing-settings.component.html',
@@ -114,6 +120,10 @@ export class BillingSettingsComponent {
   protected readonly expanded = signal<Set<string>>(new Set());
   protected readonly shownHighlights = SHOWN_HIGHLIGHTS;
   protected readonly confirming = signal<{ kind: 'change'; option: PlanOption } | { kind: 'cancel' } | null>(null);
+  /** A coupon code typed on the subscription card. */
+  protected readonly couponCode = signal('');
+  /** A coupon code typed in the plan dialog, for the plan and cycle being chosen. */
+  protected readonly planCoupon = signal('');
 
   protected readonly isDemo = computed(() => !!this.tenant()?.demo);
 
@@ -294,7 +304,21 @@ export class BillingSettingsComponent {
   protected confirmChange(): void {
     const c = this.confirming();
     if (c?.kind !== 'change') return;
-    this.run(this.meBilling.changePlan(c.option.id, this.cycle()), 'humano.settings.billing.changed');
+    this.run(
+      this.meBilling.changePlan(c.option.id, this.cycle(), this.planCoupon().trim() || undefined),
+      'humano.settings.billing.changed',
+    );
+  }
+
+  protected openChange(option: PlanOption): void {
+    this.planCoupon.set('');
+    this.confirming.set({ kind: 'change', option });
+  }
+
+  protected applyCoupon(): void {
+    const code = this.couponCode().trim();
+    if (!code) return;
+    this.run(this.meBilling.applyCoupon(code), 'humano.settings.billing.couponApplied');
   }
 
   /** The storage limit with `packs` packs instead of today's (null = unlimited). */
@@ -368,6 +392,7 @@ export class BillingSettingsComponent {
       next: () => {
         this.busy.set(false);
         this.confirming.set(null);
+        this.couponCode.set('');
         this.toast.success(this.t(doneKey));
         this.load();
       },

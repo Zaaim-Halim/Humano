@@ -120,6 +120,9 @@ export class TimeClockComponent {
   /** The company's weekly hours (Settings → Payroll & time), in minutes. */
   protected readonly weekTarget = computed(() => this.company.hoursPerWeek() * 60);
 
+  protected readonly duration = clockDuration;
+  protected readonly hm = hm;
+
   constructor() {
     this.loadToday();
     const timer = setInterval(() => this.tick.set(Date.now()), 20_000);
@@ -153,9 +156,6 @@ export class TimeClockComponent {
       error: (err: unknown) => this.todayError.set(normalizeHttpError(err)),
     });
   }
-
-  protected readonly duration = clockDuration;
-  protected readonly hm = hm;
 
   /** Position on the shared scale, in %. */
   protected pos(min: number): number {

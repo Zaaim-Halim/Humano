@@ -140,6 +140,11 @@ export default class SignupComponent {
     { initialValue: null },
   );
 
+  protected readonly subdomainUnavailable = computed(() => {
+    const c = this.check();
+    return !!c && !c.available;
+  });
+
   constructor() {
     const planParam = this.route.snapshot.queryParamMap.get('plan');
     this.marketing
@@ -187,11 +192,6 @@ export default class SignupComponent {
     const c = this.form.controls[control];
     return c.invalid && (c.dirty || c.touched);
   }
-
-  protected readonly subdomainUnavailable = computed(() => {
-    const c = this.check();
-    return !!c && !c.available;
-  });
 
   protected submit(): void {
     if (this.form.invalid || this.subdomainUnavailable()) {

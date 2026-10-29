@@ -444,11 +444,11 @@ export default class LandingPageComponent {
       });
   }
 
-  private emptyDemoForm(): Required<DemoRequestForm> {
-    return { fullName: '', workEmail: '', companyName: '', companySize: '', country: '', phone: '', message: '', website: '' };
-  }
-
   protected toggleFaq(index: number): void {
     this.openFaq.update(open => (open === index ? -1 : index));
+  }
+
+  private emptyDemoForm(): Required<DemoRequestForm> {
+    return { fullName: '', workEmail: '', companyName: '', companySize: '', country: '', phone: '', message: '', website: '' };
   }
 }

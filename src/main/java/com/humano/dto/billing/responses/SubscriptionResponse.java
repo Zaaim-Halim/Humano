@@ -28,6 +28,8 @@ public record SubscriptionResponse(
     Instant readOnlyUntil,
     /** What its add-ons (extra storage) add per month, on top of the plan. */
     java.math.BigDecimal addonsMonthly,
+    /** The coupon taken off its invoices from the next one, re-checked at each invoice; null when none. */
+    String couponCode,
     String createdBy,
     Instant createdDate,
     String lastModifiedBy,

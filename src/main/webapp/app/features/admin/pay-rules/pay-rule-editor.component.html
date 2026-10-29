@@ -157,11 +157,13 @@
                   </p>
                 }
               </div>
-              <div class="hum-rule-row__action">
-                <hum-button variant="ghost" size="sm" icon="plus" (click)="addRuleFor(item.component.id)">{{
-                  'humano.payRules.addRule' | translate
-                }}</hum-button>
-              </div>
+              @if (canHaveRules(item.component)) {
+                <div class="hum-rule-row__action">
+                  <hum-button variant="ghost" size="sm" icon="plus" (click)="addRuleFor(item.component.id)">{{
+                    'humano.payRules.addRule' | translate
+                  }}</hum-button>
+                </div>
+              }
             </div>
           }
         </section>

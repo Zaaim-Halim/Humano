@@ -158,7 +158,6 @@ export default class OnboardingComponent {
     const { startDate, targetDate } = this.formValue();
     return startDate && targetDate ? daysBetween(startDate, targetDate) : null;
   });
-  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
   /** Pre-picked employee when opened from a profile (`?start=`). */
   protected readonly startFor = signal<AutocompleteOption | null>(null);
 
@@ -190,6 +189,7 @@ export default class OnboardingComponent {
         if (before && after && target) this.form.controls.targetDate.setValue(addDays(target, daysBetween(before, after)));
       });
   }
+  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
 
   /** "1 week", "2 weeks", "30 days", else "N days"; the company default is marked. */
   protected presetLabel(days: number): string {

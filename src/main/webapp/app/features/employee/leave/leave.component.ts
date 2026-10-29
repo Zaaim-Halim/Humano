@@ -106,11 +106,6 @@ export default class LeaveComponent {
       ? [{ id: 'requests', label: this.label('humano.leave.tabRequests'), icon: 'inbox', count: this.overview()?.pending ?? undefined }]
       : []),
   ]);
-
-  /** Colour per leave type; a hidden type (a colleague's leave, for non-HR) is neutral. */
-  protected readonly typeColor = (type: string | null): string =>
-    type ? (LEAVE_TYPE_COLOR[type] ?? 'var(--info-solid)') : 'var(--slate-400)';
-  protected readonly typeLabel = (type: string | null): string => this.label(type ? `humano.leave.type.${type}` : 'humano.leave.timeOff');
   protected readonly types = Object.values(LeaveType);
   protected readonly today = iso(new Date());
 
@@ -220,6 +215,11 @@ export default class LeaveComponent {
       if (this.canViewAll) untracked(() => this.loadRequests());
     });
   }
+
+  /** Colour per leave type; a hidden type (a colleague's leave, for non-HR) is neutral. */
+  protected readonly typeColor = (type: string | null): string =>
+    type ? (LEAVE_TYPE_COLOR[type] ?? 'var(--info-solid)') : 'var(--slate-400)';
+  protected readonly typeLabel = (type: string | null): string => this.label(type ? `humano.leave.type.${type}` : 'humano.leave.timeOff');
 
   protected setTab(id: string | undefined): void {
     if (id) this.tab.set(id as Tab);

@@ -149,21 +149,6 @@ export class AccessSettingsComponent {
     this.page.set(Math.min(Math.max(0, page), this.lastPage()));
   }
 
-  private loadPage(params: { page: number; size: number; q: string; role: string }): void {
-    this.loadingPage.set(true);
-    this.userAdmin.page(params).subscribe({
-      next: ({ users, total }) => {
-        this.users.set(users);
-        this.total.set(total);
-        this.loadingPage.set(false);
-      },
-      error: (err: unknown) => {
-        this.loadingPage.set(false);
-        this.error.set(normalizeHttpError(err));
-      },
-    });
-  }
-
   protected setTab(id: string | undefined): void {
     if (id === 'users' || id === 'roles') this.tab.set(id);
   }
@@ -219,6 +204,21 @@ export class AccessSettingsComponent {
   /** Roles are shown first by their permission weight; the full list explains each. */
   protected permissionsOf(role: string): string[] {
     return this.roles().find(r => r.name === role)?.permissions ?? [];
+  }
+
+  private loadPage(params: { page: number; size: number; q: string; role: string }): void {
+    this.loadingPage.set(true);
+    this.userAdmin.page(params).subscribe({
+      next: ({ users, total }) => {
+        this.users.set(users);
+        this.total.set(total);
+        this.loadingPage.set(false);
+      },
+      error: (err: unknown) => {
+        this.loadingPage.set(false);
+        this.error.set(normalizeHttpError(err));
+      },
+    });
   }
 
   private persist(u: AdminUser, change: { activated: boolean; authorities: string[] }, done?: () => void): void {

@@ -215,16 +215,6 @@ export default class ConsoleDemosComponent {
     this.loadDemos();
   }
 
-  private loadDemos(): void {
-    this.api.demos().subscribe({
-      next: list => {
-        this.now.set(Date.now());
-        this.demos.set(list);
-      },
-      error: (err: unknown) => this.error.set(normalizeHttpError(err)),
-    });
-  }
-
   protected setTab(id: string | undefined): void {
     if (id) void this.router.navigate(['/platform/demos', id]);
   }
@@ -432,6 +422,16 @@ export default class ConsoleDemosComponent {
 
   protected countryName(code: string | null): string {
     return countryName(code, this.translate.currentLang || 'en');
+  }
+
+  private loadDemos(): void {
+    this.api.demos().subscribe({
+      next: list => {
+        this.now.set(Date.now());
+        this.demos.set(list);
+      },
+      error: (err: unknown) => this.error.set(normalizeHttpError(err)),
+    });
   }
 
   private run(call: Observable<unknown>, doneKey: string, after?: () => void): void {

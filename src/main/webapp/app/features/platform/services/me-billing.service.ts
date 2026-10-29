@@ -86,8 +86,14 @@ export class MeBillingService {
     return this.http.get<PublicPricing>(this.config.getEndpointFor('api/public/pricing'));
   }
 
-  changePlan(planId: string, billingCycle: BillingCycle): Observable<Subscription> {
-    return this.http.post<Subscription>(`${this.resourceUrl}/change-plan`, { planId, billingCycle });
+  /** `couponCode` is optional: checked against the chosen plan and cycle, it comes off from the next invoice. */
+  changePlan(planId: string, billingCycle: BillingCycle, couponCode?: string): Observable<Subscription> {
+    return this.http.post<Subscription>(`${this.resourceUrl}/change-plan`, { planId, billingCycle, couponCode });
+  }
+
+  /** Enters a coupon code for the running subscription; it comes off from the next invoice. */
+  applyCoupon(code: string): Observable<Subscription> {
+    return this.http.post<Subscription>(`${this.resourceUrl}/coupon`, { code });
   }
 
   cancel(): Observable<Subscription> {

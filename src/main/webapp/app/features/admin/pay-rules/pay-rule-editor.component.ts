@@ -26,6 +26,7 @@ import {
   ToastService,
 } from 'app/shared/ui';
 
+import { PayComponentCode } from '../models/enums/pay-component-code.enum';
 import { PayRuleService } from '../services/pay-rule.service';
 import { CreatePayRuleRequest, FormulaMetadata, FormulaValidationResult, PayComponent, PayRuleSummary } from '../models/pay-rule.model';
 import {
@@ -186,7 +187,9 @@ export default class PayRuleEditorComponent {
   private readonly components = signal<PayComponent[]>([]);
   protected readonly componentOptions = computed<SelectOption[]>(() => [
     { value: '', label: this.translate.instant('humano.payRules.selectComponent') },
-    ...this.components().map(c => ({ value: c.id, label: `${c.code} — ${c.name}` })),
+    ...this.components()
+      .filter(c => this.canHaveRules(c))
+      .map(c => ({ value: c.id, label: `${c.code} — ${c.name}` })),
   ]);
 
   protected readonly form = this.fb.nonNullable.group({
@@ -359,6 +362,11 @@ export default class PayRuleEditorComponent {
     return kind === 'EARNING' ? 'trending-up' : kind === 'DEDUCTION' ? 'trending-down' : 'building-2';
   }
 
+  /** Base salary comes from compensation: the run never evaluates a rule on it, and the server refuses one. */
+  protected canHaveRules(component: PayComponent): boolean {
+    return component.code !== PayComponentCode.BASIC;
+  }
+
   /** Open the editor with a component preselected. */
   protected addRuleFor(componentId: string): void {
     this.form.controls.payComponentId.setValue(componentId);
@@ -407,18 +415,6 @@ export default class PayRuleEditorComponent {
     });
   }
 
-  /** Read with this page's own permission, so everyone who edits pay rules is told. A failed read is not this page's error. */
-  private loadTemplatesInUse(): void {
-    this.service.templatesInUse().subscribe({
-      next: list => this.templatesInUse.set(list),
-      error: () => this.templatesInUse.set([]),
-    });
-  }
-
-  private setLocalActive(ruleId: string, active: boolean): void {
-    this.allRules.update(map => new Map([...map].map(([id, list]) => [id, list.map(r => (r.id === ruleId ? { ...r, active } : r))])));
-  }
-
   /** Insert a function call (`#name()`, cursor between the parens) at the caret. */
   protected insertFunction(name: string): void {
     this.insertAtCursor(`#${name}()`, 1);
@@ -448,48 +444,9 @@ export default class PayRuleEditorComponent {
     this.setFormula(formula);
   }
 
-  /**
-   * Insert `snippet` at the last-known caret (replacing any selection), leaving the
-   * cursor `caretBack` chars from its end. Adds a leading space when it would butt up
-   * against an existing token so the formula stays legible.
-   */
-  private insertAtCursor(snippet: string, caretBack: number): void {
-    const value = this.form.controls.formula.value;
-    const start = Math.min(this.lastSelStart ?? value.length, value.length);
-    const end = Math.min(this.lastSelEnd ?? value.length, value.length);
-    const before = value.slice(0, start);
-    const after = value.slice(end);
-    const needsSpace = /[\w)#]$/.test(before);
-    const insert = (needsSpace ? ' ' : '') + snippet;
-    const next = before + insert + after;
-    const caret = before.length + insert.length - caretBack;
-    this.form.controls.formula.setValue(next);
-    this.form.controls.formula.markAsDirty();
-    this.lastSelStart = this.lastSelEnd = caret;
-    this.focusCaret(caret);
-  }
-
   protected clearFormula(): void {
     this.setFormula('');
     this.validation.set(null);
-  }
-
-  private setFormula(text: string): void {
-    this.form.controls.formula.setValue(text);
-    this.form.controls.formula.markAsDirty();
-    this.lastSelStart = this.lastSelEnd = text.length;
-    this.focusCaret(text.length);
-  }
-
-  /** Focus the textarea and place the caret, after Angular writes the new value back. */
-  private focusCaret(caret: number): void {
-    setTimeout(() => {
-      const node = this.formulaField()?.nativeElement;
-      if (node) {
-        node.focus();
-        node.setSelectionRange(caret, caret);
-      }
-    });
   }
 
   protected validate(): void {
@@ -552,5 +509,56 @@ export default class PayRuleEditorComponent {
   protected invalid(control: string): boolean {
     const c = this.form.get(control);
     return !!c && c.invalid && (c.dirty || c.touched);
+  }
+
+  /** Read with this page's own permission, so everyone who edits pay rules is told. A failed read is not this page's error. */
+  private loadTemplatesInUse(): void {
+    this.service.templatesInUse().subscribe({
+      next: list => this.templatesInUse.set(list),
+      error: () => this.templatesInUse.set([]),
+    });
+  }
+
+  private setLocalActive(ruleId: string, active: boolean): void {
+    this.allRules.update(map => new Map([...map].map(([id, list]) => [id, list.map(r => (r.id === ruleId ? { ...r, active } : r))])));
+  }
+
+  /**
+   * Insert `snippet` at the last-known caret (replacing any selection), leaving the
+   * cursor `caretBack` chars from its end. Adds a leading space when it would butt up
+   * against an existing token so the formula stays legible.
+   */
+  private insertAtCursor(snippet: string, caretBack: number): void {
+    const value = this.form.controls.formula.value;
+    const start = Math.min(this.lastSelStart ?? value.length, value.length);
+    const end = Math.min(this.lastSelEnd ?? value.length, value.length);
+    const before = value.slice(0, start);
+    const after = value.slice(end);
+    const needsSpace = /[\w)#]$/.test(before);
+    const insert = (needsSpace ? ' ' : '') + snippet;
+    const next = before + insert + after;
+    const caret = before.length + insert.length - caretBack;
+    this.form.controls.formula.setValue(next);
+    this.form.controls.formula.markAsDirty();
+    this.lastSelStart = this.lastSelEnd = caret;
+    this.focusCaret(caret);
+  }
+
+  private setFormula(text: string): void {
+    this.form.controls.formula.setValue(text);
+    this.form.controls.formula.markAsDirty();
+    this.lastSelStart = this.lastSelEnd = text.length;
+    this.focusCaret(text.length);
+  }
+
+  /** Focus the textarea and place the caret, after Angular writes the new value back. */
+  private focusCaret(caret: number): void {
+    setTimeout(() => {
+      const node = this.formulaField()?.nativeElement;
+      if (node) {
+        node.focus();
+        node.setSelectionRange(caret, caret);
+      }
+    });
   }
 }

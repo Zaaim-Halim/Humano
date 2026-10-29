@@ -10883,6 +10883,19 @@ button.hum-records__empty:hover {
   margin: 2px 0 0;
 }
 
+/* Coupon code entry on the subscription card: the field and its Apply button side by side. */
+.hum-bill-coupon {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  width: min(100%, 320px);
+}
+
+.hum-bill-coupon hum-input {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Owner console — demos */
 .hum-demo-row {
   cursor: pointer;

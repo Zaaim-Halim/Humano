@@ -354,10 +354,6 @@ export class OrgChartComponent {
     this.setOverride(node.id, open);
   }
 
-  private setOverride(id: string, open: boolean): void {
-    this.overrides.update(m => new Map(m).set(id, open));
-  }
-
   /** Sets the zoom, keeping the given viewport point (default: the centre) fixed on screen. */
   protected setZoom(value: number, anchor?: { x: number; y: number }): void {
     const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(value * 100) / 100));
@@ -475,6 +471,10 @@ export class OrgChartComponent {
     if (!n) return;
     this.current.set((this.current() + direction + n) % n);
     this.highlightCurrent();
+  }
+
+  private setOverride(id: string, open: boolean): void {
+    this.overrides.update(m => new Map(m).set(id, open));
   }
 
   private applySearch(q: string): void {

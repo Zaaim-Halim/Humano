@@ -180,14 +180,14 @@ export default class OrgUnitsComponent {
     managerId: [''],
   });
 
-  /** Manager picker — employees are unbounded, so search the backend per keystroke. */
-  protected readonly searchManagers = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
-
   private readonly hierarchy = inject(HrHierarchyService);
 
   constructor() {
     this.load();
   }
+
+  /** Manager picker — employees are unbounded, so search the backend per keystroke. */
+  protected readonly searchManagers = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
 
   protected tone(type: string): BadgeTone {
     return TYPE_TONE[type] ?? 'neutral';

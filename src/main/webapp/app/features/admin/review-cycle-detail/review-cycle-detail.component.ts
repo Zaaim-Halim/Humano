@@ -298,7 +298,6 @@ export default class ReviewCycleDetailComponent {
   protected readonly formOpen = signal(false);
   protected readonly assigning = signal<PerformanceReview | null>(null);
   protected readonly reviewerId = signal('');
-  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
   protected readonly reasonMax = REASON_MAX;
   protected readonly excluding = signal<PerformanceReview | null>(null);
   protected readonly reason = signal('');
@@ -307,15 +306,6 @@ export default class ReviewCycleDetailComponent {
   /** Bumped after each pick, so the search box starts empty again. */
   protected readonly pickerKey = signal(0);
   private readonly seen = new Map<string, string>();
-  protected readonly searchAddable = (term: string): Observable<AutocompleteOption[]> =>
-    this.reviewCycleService.addableEmployees(this.id(), term).pipe(
-      map(list =>
-        list
-          .filter(e => !this.people().some(p => p.id === e.id))
-          .map(e => ({ value: e.id, label: e.name, sublabel: e.jobTitle ?? e.departmentName })),
-      ),
-      tap(options => options.forEach(o => this.seen.set(o.value, o.label))),
-    );
   protected readonly movingBack = signal(false);
   /** The deadlines going back sets: the reopened phase's and the later ones the cycle has, prefilled. */
   protected readonly backDeadlines = signal<{ field: DeadlineField; label: string; value: string }[]>([]);
@@ -325,6 +315,16 @@ export default class ReviewCycleDetailComponent {
       .pipe(takeUntilDestroyed())
       .subscribe(id => this.load(id));
   }
+  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
+  protected readonly searchAddable = (term: string): Observable<AutocompleteOption[]> =>
+    this.reviewCycleService.addableEmployees(this.id(), term).pipe(
+      map(list =>
+        list
+          .filter(e => !this.people().some(p => p.id === e.id))
+          .map(e => ({ value: e.id, label: e.name, sublabel: e.jobTitle ?? e.departmentName })),
+      ),
+      tap(options => options.forEach(o => this.seen.set(o.value, o.label))),
+    );
 
   protected load(id = this.id()): void {
     this.error.set(null);

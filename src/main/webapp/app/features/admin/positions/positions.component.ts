@@ -211,9 +211,6 @@ export default class PositionsComponent {
     return s ? this.positions().filter(p => p.parentPositionId === s.id) : [];
   });
 
-  protected readonly childCountLabel = (node: PositionNode): string =>
-    this.label(pluralKey('humano.positions.subPositions', node.children.length), { count: node.children.length });
-
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(255)]],
     level: ['', [Validators.required]],
@@ -227,6 +224,9 @@ export default class PositionsComponent {
     this.unitService.query({ page: 0, size: 500, sort: ['name,asc'] }).subscribe({ next: res => this.units.set(res.content) });
     this.jobLevelService.query({ page: 0, size: 100 }).subscribe({ next: res => this.levels.set(res.content) });
   }
+
+  protected readonly childCountLabel = (node: PositionNode): string =>
+    this.label(pluralKey('humano.positions.subPositions', node.children.length), { count: node.children.length });
 
   protected levelLabel(code: string): string {
     return this.levels().find(l => l.code === code)?.name ?? code.charAt(0) + code.slice(1).toLowerCase();

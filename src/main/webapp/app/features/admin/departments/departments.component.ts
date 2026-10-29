@@ -136,12 +136,12 @@ export default class DepartmentsComponent {
     headId: [''],
   });
 
-  /** Head picker — employees are unbounded, so search the backend per keystroke. */
-  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
-
   constructor() {
     this.load();
   }
+
+  /** Head picker — employees are unbounded, so search the backend per keystroke. */
+  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
 
   protected invalid(control: string): boolean {
     const c = this.form.get(control);
@@ -233,10 +233,6 @@ export default class DepartmentsComponent {
     });
   }
 
-  private label(key: string, params?: Record<string, unknown>): string {
-    return String(this.translate.instant(key, params));
-  }
-
   protected load(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -251,5 +247,9 @@ export default class DepartmentsComponent {
         this.loading.set(false);
       },
     });
+  }
+
+  private label(key: string, params?: Record<string, unknown>): string {
+    return String(this.translate.instant(key, params));
   }
 }

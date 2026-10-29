@@ -164,11 +164,11 @@ export default class GoalsComponent {
   protected readonly cancelReason = signal('');
   protected readonly deleting = signal<Goal | null>(null);
 
-  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
-
   constructor() {
     this.load();
   }
+
+  protected readonly searchEmployees = (term: string): Observable<AutocompleteOption[]> => this.employeeService.searchOptions(term);
 
   protected load(): void {
     this.error.set(null);

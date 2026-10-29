@@ -73,7 +73,6 @@ interface TreeStats {
 export class PeopleTreeComponent implements OnInit {
   /** HR opens the person's profile; everyone else sees them in context in the people tree. */
   private readonly canOpenProfiles = inject(AccountService).hasPermission(Permission.READ_EMPLOYEE);
-  protected readonly personLink = (id: string): string[] => (this.canOpenProfiles ? ['/employees', id] : ['/people-tree', id]);
 
   protected readonly expandOptions = [
     { depth: 1, label: 'humano.peopleTree.expandLeaders' },
@@ -104,13 +103,6 @@ export class PeopleTreeComponent implements OnInit {
     );
   });
 
-  /** Fetches one level of reports for a node whose children were trimmed. */
-  protected readonly loadReports = (node: PersonNode): Observable<PersonNode[]> =>
-    this.hierarchy.getEmployeeSubtree(node.id, 1).pipe(map(r => (r.root.children ?? []).map(toPersonNode)));
-
-  protected readonly reportsLabel = (node: PersonNode): string =>
-    String(this.translate.instant('humano.peopleTree.reports', { direct: node.directReports ?? 0, total: node.totalReports ?? 0 }));
-
   /** Deepest level already fetched; selecting a deeper level re-fetches once. */
   private loadedDepth = -1;
 
@@ -123,6 +115,14 @@ export class PeopleTreeComponent implements OnInit {
   ngOnInit(): void {
     this.reload();
   }
+  protected readonly personLink = (id: string): string[] => (this.canOpenProfiles ? ['/employees', id] : ['/people-tree', id]);
+
+  /** Fetches one level of reports for a node whose children were trimmed. */
+  protected readonly loadReports = (node: PersonNode): Observable<PersonNode[]> =>
+    this.hierarchy.getEmployeeSubtree(node.id, 1).pipe(map(r => (r.root.children ?? []).map(toPersonNode)));
+
+  protected readonly reportsLabel = (node: PersonNode): string =>
+    String(this.translate.instant('humano.peopleTree.reports', { direct: node.directReports ?? 0, total: node.totalReports ?? 0 }));
 
   protected setDepth(depth: number): void {
     this.expandDepth.set(depth);
@@ -178,15 +178,6 @@ export class PeopleTreeComponent implements OnInit {
       });
   }
 
-  private findPerson(nodes: PersonNode[], id: string): PersonNode | null {
-    for (const n of nodes) {
-      if (n.id === id) return n;
-      const found = this.findPerson(n.children ?? [], id);
-      if (found) return found;
-    }
-    return null;
-  }
-
   protected showWholeCompany(): void {
     void this.router.navigate(['/people-tree']).then(() => {
       this.roots.set([]);
@@ -196,5 +187,14 @@ export class PeopleTreeComponent implements OnInit {
 
   protected goToDirectory(): void {
     void this.router.navigate(['/employees']);
+  }
+
+  private findPerson(nodes: PersonNode[], id: string): PersonNode | null {
+    for (const n of nodes) {
+      if (n.id === id) return n;
+      const found = this.findPerson(n.children ?? [], id);
+      if (found) return found;
+    }
+    return null;
   }
 }

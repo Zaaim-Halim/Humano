@@ -236,15 +236,6 @@ export default class EmployeeDetailComponent {
     });
   }
 
-  private loadIdentity(id: string): void {
-    this.compHistory.set(null);
-    this.identity.set({ data: null, loading: true, error: null });
-    this.employeeService.find(id).subscribe({
-      next: data => this.identity.set({ data, loading: false, error: null }),
-      error: (err: unknown) => this.identity.set({ data: null, loading: false, error: normalizeHttpError(err) }),
-    });
-  }
-
   protected retryIdentity(): void {
     this.loadIdentity(this.id());
   }
@@ -309,22 +300,6 @@ export default class EmployeeDetailComponent {
     }
   }
 
-  private submitCompensation(request$: Observable<unknown>): void {
-    this.compSaving.set(true);
-    request$.subscribe({
-      next: () => {
-        this.toast.success(this.translate.instant('humano.compensationEditor.saved'));
-        this.compFormOpen.set(false);
-        this.compSaving.set(false);
-        this.compReload.update(n => n + 1);
-      },
-      error: (err: unknown) => {
-        this.toast.danger(normalizeHttpError(err));
-        this.compSaving.set(false);
-      },
-    });
-  }
-
   protected openPositionChange(): void {
     this.changeForm.reset({
       changeType: 'PROMOTION',
@@ -387,16 +362,6 @@ export default class EmployeeDetailComponent {
     });
   }
 
-  private loadPositions(): void {
-    this.positionService.query({ page: 0, size: 200, sort: ['name,asc'] }).subscribe({
-      next: res => this.positions.set(res.content),
-    });
-  }
-
-  private loadCurrencies(): void {
-    this.currencyService.list().subscribe({ next: res => this.currencies.set(res) });
-  }
-
   /** Can change this person's photo: HR with update rights, or the person themselves. */
   protected canChangePhoto(e: EmployeeProfile): boolean {
     return this.canEdit || this.currentEmployee.currentEmployeeId() === e.id;
@@ -412,5 +377,40 @@ export default class EmployeeDetailComponent {
 
   protected goEdit(): void {
     void this.router.navigate(['/employees', this.id(), 'edit']);
+  }
+
+  private loadIdentity(id: string): void {
+    this.compHistory.set(null);
+    this.identity.set({ data: null, loading: true, error: null });
+    this.employeeService.find(id).subscribe({
+      next: data => this.identity.set({ data, loading: false, error: null }),
+      error: (err: unknown) => this.identity.set({ data: null, loading: false, error: normalizeHttpError(err) }),
+    });
+  }
+
+  private submitCompensation(request$: Observable<unknown>): void {
+    this.compSaving.set(true);
+    request$.subscribe({
+      next: () => {
+        this.toast.success(this.translate.instant('humano.compensationEditor.saved'));
+        this.compFormOpen.set(false);
+        this.compSaving.set(false);
+        this.compReload.update(n => n + 1);
+      },
+      error: (err: unknown) => {
+        this.toast.danger(normalizeHttpError(err));
+        this.compSaving.set(false);
+      },
+    });
+  }
+
+  private loadPositions(): void {
+    this.positionService.query({ page: 0, size: 200, sort: ['name,asc'] }).subscribe({
+      next: res => this.positions.set(res.content),
+    });
+  }
+
+  private loadCurrencies(): void {
+    this.currencyService.list().subscribe({ next: res => this.currencies.set(res) });
   }
 }

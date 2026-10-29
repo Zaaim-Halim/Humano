@@ -1951,14 +1951,20 @@ public class PayrollProcessingService {
         context.put("standardMonthlyHours", settings.getStandardMonthlyHours());
         context.put("overtimeMultiplier", settings.getDefaultOvertimeMultiplier());
 
-        // Add inputs to context
+        // Add inputs to context. An input with an amount, or hours and a rate, pays its component
+        // directly (Step 2a) instead of the component's formula; one with only hours (e.g. an
+        // attendance import without a rate) leaves the formula to price them through #<CODE>_QTY.
         for (PayrollInput input : inputs) {
             String key = input.getComponent().getCode().name();
+            if (input.getQuantity() != null) {
+                context.put(key + "_QTY", input.getQuantity());
+            }
+            if (input.getRate() != null) {
+                context.put(key + "_RATE", input.getRate());
+            }
             if (input.getAmount() != null) {
                 context.put(key, input.getAmount());
             } else if (input.getQuantity() != null && input.getRate() != null) {
-                context.put(key + "_QTY", input.getQuantity());
-                context.put(key + "_RATE", input.getRate());
                 context.put(key, input.getQuantity().multiply(input.getRate()));
             }
         }
