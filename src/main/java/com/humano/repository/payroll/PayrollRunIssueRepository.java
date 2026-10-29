@@ -19,7 +19,8 @@ public interface PayrollRunIssueRepository extends JpaRepository<PayrollRunIssue
     )
     List<PayrollRunIssue> findByRunId(@Param("runId") UUID runId);
 
-    long countByRunId(UUID runId);
+    /** Issues of one severity: {@code PayrollRunIssue.ERROR} counts the employees the run doesn't pay. */
+    long countByRunIdAndSeverity(UUID runId, String severity);
 
     @Modifying
     @Query("DELETE FROM PayrollRunIssue i WHERE i.run.id = :runId")

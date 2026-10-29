@@ -123,6 +123,9 @@
     <!-- Performance reviews: cycle membership (excluding and putting back reviews, leavers) -->
     <include file="config/liquibase/changelog/tenant/20261028-performance-review-phase5-changelog.xml" relativeToChangelogFile="false"/>
 
+    <!-- Payroll run issues: errors block approval, warnings don't -->
+    <include file="config/liquibase/changelog/tenant/20261029-payroll-run-issue-severity-changelog.xml" relativeToChangelogFile="false"/>
+
     <!--  will add tenant liquibase changelogs here -->
 
 </databaseChangeLog>

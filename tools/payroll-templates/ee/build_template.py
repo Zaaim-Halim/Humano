@@ -246,7 +246,13 @@ LEAVE_SOURCES = {'tooelu-sick-pay': {'title': "Labour Inspectorate (Tööinspekt
                               "Fund), 'Benefit for temporary incapacity for work': 'EHIF pays from day 9, the benefit "
                               "rate is 70%'",
                      'url': 'https://www.tooelu.ee/en/174/other-remuneration-and-benefits',
-                     'retrieved': '2026-10-26'}}
+                     'retrieved': '2026-10-26'},
+                 'ska-maternity-benefit': {'title': "Social Insurance Board (Sotsiaalkindlustusamet), 'Maternity benefit and "
+                              "maternity leave': 'the Social Insurance Board pays maternity benefit on a monthly basis', "
+                              "for a working mother 'up to 100 consecutive calendar days'; while receiving it the mother is "
+                              "'not allowed to work on the basis of an employment contract'",
+                     'url': 'https://sotsiaalkindlustusamet.ee/en/family-benefits-and-allowances/family-benefits-overview/maternity-benefit-and-maternity-leave',
+                     'retrieved': '2026-10-29'}}
 
 LEAVE_PAY = [{'leaveType': 'SICK',
   'deductionPercentage': '100',
@@ -254,7 +260,15 @@ LEAVE_PAY = [{'leaveType': 'SICK',
                {'fromDay': 4, 'toDay': 8, 'deductionPercentage': '30'}],
   'source': 'tooelu-sick-pay',
   'note': 'Days 1-3 unpaid; days 4-8 the employer pays 70% of the average wage of the last six months (the rule pays '
-          '70% of the salary); from day 9 Tervisekassa pays, outside payroll.'}]
+          '70% of the salary); from day 9 Tervisekassa pays, outside payroll.'},
+ {'leaveType': 'MATERNITY',
+  'deductionPercentage': '100',
+  'payBands': [],
+  'source': 'ska-maternity-benefit',
+  'note': 'Unpaid by the employer: the Social Insurance Board pays maternity and parental benefit, outside payroll. In '
+          'part of a month away the social tax minimum still applies (SMS § 2 lg 3), unless the employee is exempt, '
+          'e.g. as the parent of a child under 3 (socialTaxMinimumExempt). An employer paying on top of the benefit '
+          'needs a workspace rule.'}]
 
 LEAVE_CHANGE = {'version': '2026.1.2',
  'date': '2026-10-26',
@@ -268,7 +282,7 @@ def main():
         "schemaVersion": 1,
         "id": "ee-employment",
         "name": "Estonia — employment (tööleping)",
-        "version": "2026.1.3",
+        "version": "2026.1.4",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "EE"},
         "validity": {"from": FROM, "to": TO},
@@ -278,6 +292,8 @@ def main():
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.4", "date": "2026-10-29",
+             "summary": "Statutory parental leave as a leave pay rule: unpaid by the employer, as the Social Insurance Board pays maternity and parental benefit; applied where the workspace has no parental leave rule of its own. Before, parental leave was paid in full unless a rule was added."},
             {"version": "2026.1.3", "date": "2026-10-26",
              "summary": "A month employment starts or ends: the social tax minimum is 886 x calendar days employed / 30 (SMS § 2 lg 3; määrus nr 17 § 6 lg 2); before, pay below the minimum was refused until the prorated base was entered. A refusal of work under TLS § 19, and pay certified by another employer, still need socialTaxMinimumBase."},
             LEAVE_CHANGE,
@@ -353,7 +369,7 @@ def main():
             "Employment contracts paid monthly in EUR in 2026, one payment per employee per month; taxation follows the payment date (EMTA: kassapõhine), and the tax-free amount and the social tax minimum are applied to this payment. A second run in the same month would apply them again.",
             "The tax-free amount, pension age, the end of employee unemployment insurance, the funded-pension rate, other employment and the social tax minimum exemptions are entered per employee from the employee's application and the registers; they are not checked.",
             "In a month the employee started or left, the social tax minimum is prorated (886 x calendar days employed / 30, määrus nr 17 § 6); for a refusal of work under TLS § 19 the prorated base must be entered; unpaid leave agreed by the parties does not reduce the minimum (SMS § 2 lg 3 p 1). The minimum belongs to the month containing the agreed pay day (määrus nr 17 § 2); pay made earlier or later than agreed (§ 3-4) and the final settlement (§ 7) are not reconciled across months.",
-            "Leave pay rules: pay kept for sick days is the employer's sickness benefit, taxed with income tax only (EMTA, payment type 24), assumed within the limit of the average wage; pay kept for other leave is wage. The social tax minimum is not applied for a month away on sick, maternity or other paid leave with a leave pay rule (EMTA), and applies in full for part of a month away and for unpaid leave by agreement (SMS § 2 lg 3). Leave of a type without a leave pay rule is not seen.",
+            "Leave pay rules: pay kept for sick days is the employer's sickness benefit, taxed with income tax only (EMTA, payment type 24), assumed within the limit of the average wage; pay kept for other leave is wage. The social tax minimum is not applied for a month away on sick, maternity or other paid leave with a leave pay rule (EMTA), and applies in full for part of a month away and for unpaid leave by agreement (SMS § 2 lg 3). Leave of a type without a leave pay rule is not seen. Parental leave is unpaid by default: the Social Insurance Board pays the benefit, outside payroll.",
             "Not modelled: the state-paid social tax for employees with partial or no work ability (SMS § 6 lg 1 p 5, refused), fringe benefits (erisoodustused), III pillar contributions paid by the employer, non-residents, seafarers and board members' fees, and other payments exempt from social tax (SMS § 3).",
             "Contributions and the tax are rounded to the cent, half up, per line (TKindlS § 42 lg 3; EMTA examples).",
             "Status LAW_DERIVED: values are cited from the consolidated acts, the 2026 State Budget Act and Government regulation nr 78/2025; the cases are derived from them.",

@@ -74,7 +74,24 @@
       "sortNet": "Highest net first",
       "sortGross": "Highest gross first",
       "sortName": "Name A–Z",
-      "noMatch": "No employee matches."
+      "noMatch": "No employee matches.",
+      "warningsTitle": {
+        "one": "1 thing to check before approving",
+        "other": "{{ count }} things to check before approving"
+      },
+      "warningsHint": "These employees are paid, but some of their leave was paid as full salary because no leave pay rule covers it. Set the rule and recalculate, or approve if full pay is right.",
+      "setLeavePay": "Set leave pay rules",
+      "employeeCount": {
+        "one": "1 employee",
+        "other": "{{ count }} employees"
+      },
+      "showAllEmployees": "Show all {{ count }}",
+      "showFewer": "Show fewer",
+      "showMoreReasons": {
+        "one": "Show 1 more reason",
+        "other": "Show {{ count }} more reasons"
+      },
+      "showFewerReasons": "Show fewer reasons"
     }
   }
 }

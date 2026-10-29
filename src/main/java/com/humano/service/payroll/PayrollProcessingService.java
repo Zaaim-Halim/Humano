@@ -141,6 +141,12 @@ public class PayrollProcessingService {
     /** Rate scale for ratio intermediates (e.g. percentage / 100) before re-scaling money. */
     private static final int RATE_SCALE = 6;
 
+    /**
+     * Leave the law usually pays apart from salary (sick pay, maternity benefit) or not at all. Approved
+     * leave of these types that no leave pay rule covers is paid in full, so the run warns about it.
+     */
+    private static final Set<LeaveType> STATUTORY_LEAVE_TYPES = EnumSet.of(LeaveType.SICK, LeaveType.MATERNITY, LeaveType.UNPAID);
+
     private final PayrollRunRepository payrollRunRepository;
     private final EmployeeRoleHistory roleHistory;
     private final PayrollPeriodRepository payrollPeriodRepository;
@@ -426,6 +432,9 @@ public class PayrollProcessingService {
         int processedCount = 0;
         for (Employee employee : employees) {
             UUID employeeId = employee.getId();
+            String name = employee.getFirstName() + " " + employee.getLastName();
+            // Warnings about someone the calculation then fails for are dropped: they get the error instead.
+            List<String> warnings = new ArrayList<>();
             try {
                 // REQUIRES_NEW: the executor suspends this orchestration transaction and runs
                 // the work in its own, so a failure rolls back only that employee. Run + employee
@@ -438,12 +447,23 @@ public class PayrollProcessingService {
                     Employee freshEmployee = employeeRepository
                         .findById(employeeId)
                         .orElseThrow(() -> new EntityNotFoundException("Employee", employeeId));
-                    calculateEmployeePayroll(freshRun, freshRun.getPeriod(), freshEmployee, componentsByCode);
+                    calculateEmployeePayroll(freshRun, freshRun.getPeriod(), freshEmployee, componentsByCode, warnings);
                 });
                 calculated.add(employeeId);
                 processedCount++;
+                for (String warning : warnings) {
+                    errors.add(
+                        new PayrollRunResponse.PayrollValidationError(
+                            employeeId,
+                            name,
+                            "LEAVE_WITHOUT_RULE",
+                            warning,
+                            PayrollRunIssue.WARNING,
+                            null
+                        )
+                    );
+                }
             } catch (Exception e) {
-                String name = employee.getFirstName() + " " + employee.getLastName();
                 TemplateProfileIncompleteException incomplete = causeOfType(e, TemplateProfileIncompleteException.class);
                 if (incomplete != null) {
                     // Expected until an administrator fills in the details: no stack trace, and the
@@ -525,13 +545,14 @@ public class PayrollProcessingService {
                     issue.setErrorCode(e.errorCode());
                     issue.setMessage(e.message());
                     issue.setTemplateId(e.templateId());
+                    issue.setSeverity(e.severity());
                     return issue;
                 })
                 .toList()
         );
     }
 
-    /** The employees the run's latest calculation could not pay, as on the calculation response. */
+    /** What the run's latest calculation found: employees it could not pay, and warnings, as on the calculation response. */
     private List<PayrollRunResponse.PayrollValidationError> issuesOf(PayrollRun run) {
         return payrollRunIssueRepository
             .findByRunId(run.getId())
@@ -542,7 +563,7 @@ public class PayrollProcessingService {
                     i.getEmployee().getFirstName() + " " + i.getEmployee().getLastName(),
                     i.getErrorCode(),
                     i.getMessage(),
-                    "ERROR",
+                    i.getSeverity(),
                     i.getTemplateId()
                 )
             )
@@ -557,7 +578,8 @@ public class PayrollProcessingService {
         PayrollRun run,
         PayrollPeriod period,
         Employee employee,
-        Map<PayComponentCode, PayComponent> componentsByCode
+        Map<PayComponentCode, PayComponent> componentsByCode,
+        List<String> warnings
     ) {
         log.debug("Calculating payroll for employee: {}", employee.getId());
 
@@ -862,6 +884,11 @@ public class PayrollProcessingService {
                 leftToDeduct = leftToDeduct.subtract(amount);
                 if (amount.signum() > 0) leavePayByType.put(paid.getKey().name(), amount);
             }
+        }
+
+        // Sick, parental or unpaid leave no rule covers is paid in full above: say so on the run.
+        if (employee.getCountry() != null) {
+            warnings.addAll(leaveWithoutRule(employee, period, leaveRules.keySet()));
         }
 
         // ============================================================
@@ -1289,7 +1316,7 @@ public class PayrollProcessingService {
 
         // Employees the calculation could not pay are not paid by this run: approving it anyway
         // takes an explicit override with a reason, recorded on the run.
-        long issues = payrollRunIssueRepository.countByRunId(run.getId());
+        long issues = payrollRunIssueRepository.countByRunIdAndSeverity(run.getId(), PayrollRunIssue.ERROR);
         String overrideReason = request.issueOverrideReason() != null ? request.issueOverrideReason().trim() : "";
         if (issues > 0 && (!request.approveDespiteIssues() || overrideReason.isEmpty())) {
             throw new BusinessRuleViolationException(
@@ -1531,7 +1558,7 @@ public class PayrollProcessingService {
             run.getPeriod().getCode(),
             results.size(),
             results.size(),
-            (int) payrollRunIssueRepository.countByRunId(runId),
+            (int) payrollRunIssueRepository.countByRunIdAndSeverity(runId, PayrollRunIssue.ERROR),
             total != null ? total.totalGross() : null,
             total != null ? total.totalDeductions() : null,
             total != null ? total.totalNet() : null,
@@ -2409,6 +2436,46 @@ public class PayrollProcessingService {
             }
         }
         return rules;
+    }
+
+    /**
+     * Approved sick, parental or unpaid leave in the period of a type no leave pay rule covers (neither
+     * the workspace's nor a template's): paid in full, as if worked. One warning per type, with its
+     * working days.
+     */
+    private List<String> leaveWithoutRule(Employee employee, PayrollPeriod period, Set<LeaveType> ruled) {
+        Set<LeaveType> unruled = EnumSet.noneOf(LeaveType.class);
+        unruled.addAll(STATUTORY_LEAVE_TYPES);
+        unruled.removeAll(ruled);
+        Map<LeaveType, Integer> workingDays = new EnumMap<>(LeaveType.class);
+        for (LeaveDay day : approvedLeaveDays(employee, period, unruled)) {
+            if (day.workingDay()) workingDays.merge(day.type(), 1, Integer::sum);
+        }
+        String country = employee.getCountry().getName() != null ? employee.getCountry().getName() : employee.getCountry().getCode().name();
+        return workingDays
+            .entrySet()
+            .stream()
+            .map(e -> {
+                String type =
+                    switch (e.getKey()) {
+                        case SICK -> "sick";
+                        case MATERNITY -> "parental";
+                        default -> "unpaid";
+                    };
+                return (
+                    Character.toUpperCase(type.charAt(0)) +
+                    type.substring(1) +
+                    " leave paid in full (" +
+                    e.getValue() +
+                    (e.getValue() == 1 ? " working day" : " working days") +
+                    "): no leave pay rule for " +
+                    type +
+                    " leave in " +
+                    country +
+                    ". Set one under Payroll → Leave pay and recalculate."
+                );
+            })
+            .toList();
     }
 
     /** One day of approved leave in a pay period, and which calendar day of its absence it is (1 = the first). */

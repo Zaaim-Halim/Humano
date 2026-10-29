@@ -281,6 +281,24 @@ def parameter(spec):
     return [{"from": f, "to": t, "value": v, "source": s} for f, t, v, s in spec]
 
 
+# Statutory leave pay (PayrollTemplate.leavePay): applied as a leave pay rule where the workspace has none of its own.
+LEAVE_SOURCES = {"mpa-1994-s22": {
+    "title": "Maternity Protection Act 1994 (No. 34 of 1994), s. 22(1), revised: absence on maternity leave keeps the "
+             "employee's employment rights 'other than, except in the case of natal care absence, the employee's right "
+             "to remuneration during such absence'; Maternity Benefit is a Department of Social Protection payment",
+    "url": "https://revisedacts.lawreform.ie/eli/1994/act/34/section/22/revised/en/html",
+    "retrieved": "2026-10-29"}}
+
+LEAVE_PAY = [{"leaveType": "MATERNITY",
+              "deductionPercentage": "100",
+              "payBands": [],
+              "source": "mpa-1994-s22",
+              "note": "Unpaid by the employer: maternity leave carries no right to pay (Maternity Protection Act 1994 s. 22(1)); "
+                      "Maternity Benefit is paid by the Department of Social Protection, outside payroll. An employer that keeps "
+                      "paying salary (and may have the benefit paid to it) needs a workspace rule. Paternity or parent's leave recorded as "
+                      "parental leave is treated the same: add a rule if the employer pays it."}]
+
+
 def main():
     weekly = "#frequency == 'WEEKLY'"
     basis = "#employee['taxBasis']"
@@ -295,7 +313,7 @@ def main():
         "schemaVersion": 1,
         "id": "ie-paye",
         "name": "Ireland — PAYE, USC and PRSI",
-        "version": "2026.1.2",
+        "version": "2026.1.3",
         "status": "LAW_DERIVED",
         "jurisdiction": {"country": "IE"},
         "validity": {"from": FROM, "to": TO},
@@ -305,6 +323,8 @@ def main():
         "dateBasis": "PAYMENT_DATE",
         "rounding": {"scale": 2, "mode": "HALF_UP"},
         "changelog": [
+            {"version": "2026.1.3", "date": "2026-10-29",
+             "summary": "Statutory parental leave as a leave pay rule: unpaid by the employer (Maternity Protection Act 1994 s. 22(1); Maternity Benefit is paid by the Department of Social Protection); applied where the workspace has no parental leave rule of its own. Before, parental leave was paid in full unless a rule was added."},
             {"version": "2026.1.2", "date": "2026-10-29",
              "summary": "States what the template leaves out for leave: statutory sick pay (Sick Leave Act 2022) is not calculated. Calculations are unchanged."},
             {"version": "2026.1.1", "date": "2026-10-24",
@@ -312,7 +332,7 @@ def main():
             {"version": "2026.1.0", "date": RETRIEVED,
              "summary": "2026: PAYE 20 % / 40 % from the RPN on the cumulative, week 1/month 1 or emergency basis; USC 0.5 / 2 / 3 / 8 % (Finance Act 2025); Class A PRSI 4.2 % rising to 4.35 % on 1 October 2026 with the PRSI credit; employer 9 % / 11.25 % rising to 9.15 % / 11.4 % (incl. 1 % NTF levy), threshold €552 a week."}
         ],
-        "sources": SOURCES,
+        "sources": {**SOURCES, **LEAVE_SOURCES},
         "inputs": {
             "employer": [],
             "employee": [
@@ -401,13 +421,14 @@ def main():
                        " + #round(#pos(#min(#payForUsc, #uscCut3) - #uscCut2) * #p['uscRate3'], 2, 'HALF_UP') + #round(#pos(#payForUsc - #uscCut3) * #p['uscRate4'], 2, 'HALF_UP')"
                        ") - #uscPaid"},
         ],
+        "leavePay": LEAVE_PAY,
         "limitations": [
             "PAYE employment paid weekly or monthly (whole calendar months) in EUR in 2026; the tax year, the tax week or month and the rates are taken from the payment date (Employers' Guide ch. 9). A payment in week 53 (pay day 31 December) uses the week 1 basis figures (Employers' Guide 14.3); pay dated in 2027 is refused. The tax week follows the payment date: where a weekly pay day is moved (e.g. Friday paid on Thursday), the guide (10.2) keeps the normal pay day for the tax week, so enter the normal pay day as the payment date.",
             "Income tax and USC follow the Revenue Payroll Notification entered on the employee: basis, yearly cut-off point and tax credits, USC status and any non-standard USC cut-offs, and pay, tax and USC from previous employments. The template does not fetch or check RPNs; without one, use the emergency basis.",
             "Tax cut-off and credits per period are the yearly figures divided by the periods and rounded up to the cent, multiplied by the tax week or month on the cumulative basis; USC cut-offs per period are rounded to the cent, as in Revenue's examples. The emergency basis gives the first month (or first four weeks of pay) 1/12 (1/52) of the single cut-off and no credits; later periods and the no-PPSN case pay 40 %; USC is 8 % throughout. The first month or four weeks are counted as this employer's pay periods within the tax year (Employers' Guide 14.3); weeks of employment before 1 January are not counted.",
             "Pension and other pre-tax deductions reduce pay for income tax only; USC and PRSI are charged on gross pay.",
             "PRSI is Class A only, worked out per pay period (not cumulatively). Weekly thresholds are the statutory figures, as tabled by the Department of Social Protection; the monthly thresholds (€1,525 / €1,837, credit €52, employer €2,392) are their monthly equivalents (weekly × 52 / 12, rounded to the euro), which the acts leave to 'the equivalent' — the DSP's SW14 guide with the official monthly table could not be retrieved to confirm them. Pay under €38 a week (€165 a month) is refused; employees aged 66 or over receiving the State Pension (Contributory) (Class J), Class S, B, D and other classes, and fortnightly pay, are not modelled.",
-            "Statutory sick pay (Sick Leave Act 2022), which the employer pays at 70 % of normal daily earnings up to a daily cap, is not calculated: a leave pay rule only pays a percentage of salary for leave days, and without one approved sick and parental leave is paid as full salary. Maternity Benefit and other Department of Social Protection payments are outside payroll.",
+            "Statutory sick pay (Sick Leave Act 2022), which the employer pays at 70 % of normal daily earnings up to a daily cap, is not calculated: a leave pay rule only pays a percentage of salary for leave days, and without one approved sick leave is paid as full salary. Parental leave is unpaid by default (Maternity Protection Act 1994 s. 22(1)); Maternity Benefit and other Department of Social Protection payments are outside payroll.",
             "The employer rate includes the 1 % National Training Fund levy; reliefs such as the JobsPlus incentive are not modelled.",
             "Not modelled: the reduced USC rate's €60,000 income test (entered via the RPN status), tax exemption and marginal relief (Employers' Guide 9.7), separate periods of employment treated as one (9.6), Local Property Tax deductions shown on the RPN, benefit-in-kind and share-based remuneration.",
             "Status LAW_DERIVED: values are cited from the acts, Revenue's Employers' Guide and USC pages, and the DSP's Class A table; one case reproduces Revenue's weekly tax worked example and one its cumulative refund example.",

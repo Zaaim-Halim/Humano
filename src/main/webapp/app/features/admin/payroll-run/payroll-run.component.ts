@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { MoneyPipe, PayPeriodPipe, PluralPipe } from 'app/shared/util/format.pipes';
-import { DatePipe, DecimalPipe, DOCUMENT } from '@angular/common';
+import { DatePipe, DecimalPipe, DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { Observable } from 'rxjs';
+
+import { IssueGroup, groupIssues } from './issue-groups';
 
 import { Permission } from 'app/config/permission.constants';
 import { normalizeHttpError } from 'app/core/api';
@@ -65,6 +67,7 @@ function maxByCurrency<T extends { currencyCode: string | null }>(list: T[], val
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,
+    NgTemplateOutlet,
     FormsModule,
     DecimalPipe,
     DatePipe,
@@ -96,6 +99,7 @@ export default class PayrollRunComponent {
 
   /** Who may fill in employees' payroll template details (and so follow a refused employee's link). */
   protected readonly canEditTemplateDetails = inject(AccountService).hasPermission(Permission.MANAGE_TAX_BRACKETS);
+  protected readonly canManageLeavePay = inject(AccountService).hasPermission(Permission.MANAGE_PAY_COMPONENTS);
   /** Who may move the period's payment date (the payroll-calendar endpoint). */
   private readonly canConfigureCalendar = inject(AccountService).hasPermission(Permission.CONFIGURE_PAYROLL_CALENDAR);
 
@@ -126,7 +130,19 @@ export default class PayrollRunComponent {
   ]);
 
   /** Employees the latest calculation could not pay: approving leaves them unpaid, so it takes an override and a reason. */
-  protected readonly issueCount = computed(() => this.run()?.validationErrors.length ?? 0);
+  protected readonly unpaid = computed(() => (this.run()?.validationErrors ?? []).filter(v => v.severity !== 'WARNING'));
+  protected readonly issueCount = computed(() => this.unpaid().length);
+  /** Paid, but to check before approving: e.g. sick or unpaid leave paid in full because no leave pay rule covers it. */
+  protected readonly warnings = computed(() => (this.run()?.validationErrors ?? []).filter(v => v.severity === 'WARNING'));
+  /** Both lists by reason, so a reason shared by many employees is said once with its employees listed under it. */
+  protected readonly unpaidGroups = computed(() => groupIssues(this.unpaid()));
+  protected readonly warningGroups = computed(() => groupIssues(this.warnings()));
+  /** Bullets shown per reason (three rows of three columns) and reasons shown per list until expanded. */
+  protected readonly peopleShown = 9;
+  protected readonly reasonsShown = 3;
+  /** Reasons whose employees are all shown, and lists whose reasons are all shown. */
+  protected readonly expandedReasons = signal<ReadonlySet<string>>(new Set());
+  protected readonly expandedLists = signal<ReadonlySet<string>>(new Set());
   protected readonly approveDespiteIssues = signal(false);
   protected readonly overrideReason = signal('');
   protected readonly canConfirm = computed(
@@ -291,6 +307,22 @@ export default class PayrollRunComponent {
     });
   }
 
+  protected shownPeople(group: IssueGroup): IssueGroup['people'] {
+    return this.expandedReasons().has(group.key) ? group.people : group.people.slice(0, this.peopleShown);
+  }
+
+  protected shownGroups(groups: IssueGroup[], list: string): IssueGroup[] {
+    return this.expandedLists().has(list) ? groups : groups.slice(0, this.reasonsShown);
+  }
+
+  protected toggleReason(key: string): void {
+    this.expandedReasons.update(keys => toggled(keys, key));
+  }
+
+  protected toggleList(list: string): void {
+    this.expandedLists.update(keys => toggled(keys, list));
+  }
+
   protected generatePayslips(): void {
     this.busy.set(true);
     this.runService.generatePayslips(this.id()).subscribe({
@@ -371,4 +403,10 @@ export default class PayrollRunComponent {
       },
     });
   }
+}
+
+function toggled(keys: ReadonlySet<string>, key: string): ReadonlySet<string> {
+  const next = new Set(keys);
+  if (!next.delete(key)) next.add(key);
+  return next;
 }

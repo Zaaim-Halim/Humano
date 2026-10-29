@@ -13,14 +13,22 @@ import java.util.UUID;
 import org.hibernate.annotations.UuidGenerator;
 
 /**
- * An employee a payroll run's latest calculation could not pay: refused by a payroll template,
- * missing template details, or any other calculation error. The run has no result for them, so
- * approving it leaves them unpaid; kept with the run (replaced on every calculation) so the run
- * page shows them after a reload and approval is blocked until they are resolved or overridden.
+ * Something a payroll run's latest calculation found about an employee, kept with the run (replaced
+ * on every calculation) so the run page shows it after a reload.
+ * <p>
+ * An {@link #ERROR}: the calculation could not pay them (refused by a payroll template, missing
+ * template details, any other calculation error). The run has no result for them, so approving it
+ * leaves them unpaid, and approval is blocked until they are resolved or overridden.
+ * <p>
+ * A {@link #WARNING}: they are paid, but something needs checking, e.g. leave paid in full because no
+ * leave pay rule covers it. Approval is not blocked.
  */
 @Entity
 @Table(name = "payroll_run_issue")
 public class PayrollRunIssue extends AbstractAuditingEntity<UUID> {
+
+    public static final String ERROR = "ERROR";
+    public static final String WARNING = "WARNING";
 
     @Id
     @UuidGenerator(style = UuidGenerator.Style.TIME)
@@ -35,7 +43,7 @@ public class PayrollRunIssue extends AbstractAuditingEntity<UUID> {
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    /** {@code TEMPLATE_PROFILE_INCOMPLETE} or {@code CALCULATION_ERROR}. */
+    /** {@code TEMPLATE_PROFILE_INCOMPLETE} or {@code CALCULATION_ERROR}; {@code LEAVE_WITHOUT_RULE} for a warning. */
     @Column(name = "error_code", nullable = false, length = 60)
     private String errorCode;
 
@@ -45,6 +53,10 @@ public class PayrollRunIssue extends AbstractAuditingEntity<UUID> {
     /** The template whose details are missing, for {@code TEMPLATE_PROFILE_INCOMPLETE}; null otherwise. */
     @Column(name = "template_id", length = 80)
     private String templateId;
+
+    /** {@link #ERROR} or {@link #WARNING}. */
+    @Column(name = "severity", nullable = false, length = 10)
+    private String severity = ERROR;
 
     @Override
     public UUID getId() {
@@ -93,5 +105,13 @@ public class PayrollRunIssue extends AbstractAuditingEntity<UUID> {
 
     public void setTemplateId(String templateId) {
         this.templateId = templateId;
+    }
+
+    public String getSeverity() {
+        return severity;
+    }
+
+    public void setSeverity(String severity) {
+        this.severity = severity;
     }
 }

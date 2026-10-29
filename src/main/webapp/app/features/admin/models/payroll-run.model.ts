@@ -6,7 +6,8 @@ export interface PayrollValidationError {
   employeeName: string | null;
   errorCode: string;
   message: string;
-  severity: string;
+  /** `ERROR`: the run doesn't pay them, which blocks approval. `WARNING`: paid, but check it (e.g. `LEAVE_WITHOUT_RULE`). */
+  severity: 'ERROR' | 'WARNING';
   /** Set when the employee lacks details for this payroll template (`TEMPLATE_PROFILE_INCOMPLETE`): where to fill them in. */
   templateId: string | null;
 }
@@ -44,9 +45,9 @@ export interface PayrollRun {
   totalsByCurrency: PayrollCurrencyTotals[];
   approvedAt: string | null;
   approvedBy: string | null;
-  /** The employees the latest calculation could not pay (empty in the run list). */
+  /** What the latest calculation found (empty in the run list): employees it could not pay (`ERROR`) and warnings. */
   validationErrors: PayrollValidationError[];
-  /** Why the run was approved without `validationErrors`; null otherwise. */
+  /** Why the run was approved despite `ERROR` issues (employees it doesn't pay); null otherwise. */
   issueOverrideReason: string | null;
   createdAt: string | null;
   createdBy: string | null;
@@ -66,7 +67,7 @@ export interface ApprovePayrollRunRequest {
   approverId: string;
   approvalNotes?: string;
   forceApproval?: boolean;
-  /** Required, with a reason, when the run has `validationErrors`: those employees are not paid by it. */
+  /** Required, with a reason, when the run has `ERROR` issues: those employees are not paid by it. Warnings don't need it. */
   approveDespiteIssues?: boolean;
   issueOverrideReason?: string;
 }

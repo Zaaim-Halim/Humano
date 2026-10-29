@@ -13380,3 +13380,79 @@ button.hum-records__empty:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Payroll run issues: one panel per reason, its employees as bullets in columns */
+.hum-run-alerts {
+  display: grid;
+  gap: var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+.hum-alert:has(.hum-run-issues) > div:last-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.hum-run-issues {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.hum-run-issues__group {
+  padding: var(--space-3) var(--space-3_5);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.hum-run-issues__reason {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.hum-run-issues__reason p {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-strong);
+}
+
+.hum-run-issues__reason .hum-badge {
+  flex: none;
+}
+
+.hum-run-issues__people {
+  margin: 0;
+  padding-left: var(--space-5);
+  list-style: disc outside;
+  columns: 3 180px;
+  column-gap: var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--text-default);
+}
+
+.hum-run-issues__people li {
+  display: list-item;
+  break-inside: avoid;
+  padding: 2px 0;
+}
+
+.hum-run-issues__people li::marker {
+  color: var(--text-subtle);
+}
+
+.hum-run-issues__detail {
+  color: var(--text-muted);
+}
+
+.hum-run-issues__toggle {
+  margin-top: var(--space-2);
+}
+
+.hum-run-issues__footer {
+  margin-top: var(--space-3);
+}

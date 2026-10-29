@@ -81,30 +81,89 @@
     </div>
   }
 
-  @if (run()?.validationErrors?.length) {
-    <hum-alert tone="warning" [title]="'humano.payrollRun.unpaidTitle' | plural: issueCount() | translate: { count: issueCount() }">
-      <div style="margin-bottom: var(--space-2)">
-        @if (run()!.issueOverrideReason; as reason) {
-          {{ 'humano.payrollRun.approvedWithout' | translate: { reason } }}
-        } @else {
-          {{ 'humano.payrollRun.unpaidHint' | translate }}
-        }
-      </div>
-      <ul style="margin: 0; padding-left: var(--space-4)">
-        @for (v of run()!.validationErrors; track v.errorCode + v.employeeId) {
-          <li>
-            {{ v.employeeName ?? v.employeeId }} — {{ v.message }}
-            @if (v.templateId && canEditTemplateDetails) {
-              ·
-              <a [routerLink]="['/payroll/templates', v.templateId]" [queryParams]="{ employee: v.employeeId }">{{
-                'humano.payrollRun.fillInDetails' | translate
-              }}</a>
-            }
-          </li>
-        }
-      </ul>
-    </hum-alert>
+  @if (issueCount() || warnings().length) {
+    <div class="hum-run-alerts">
+      @if (issueCount()) {
+        <hum-alert tone="warning" [title]="'humano.payrollRun.unpaidTitle' | plural: issueCount() | translate: { count: issueCount() }">
+          @if (run()!.issueOverrideReason; as reason) {
+            {{ 'humano.payrollRun.approvedWithout' | translate: { reason } }}
+          } @else {
+            {{ 'humano.payrollRun.unpaidHint' | translate }}
+          }
+          <ng-container *ngTemplateOutlet="issueList; context: { $implicit: unpaidGroups(), list: 'unpaid' }" />
+        </hum-alert>
+      }
+
+      @if (warnings().length) {
+        <hum-alert
+          tone="info"
+          [title]="'humano.payrollRun.warningsTitle' | plural: warnings().length | translate: { count: warnings().length }"
+        >
+          {{ 'humano.payrollRun.warningsHint' | translate }}
+          <ng-container *ngTemplateOutlet="issueList; context: { $implicit: warningGroups(), list: 'warnings' }" />
+          @if (canManageLeavePay) {
+            <div class="hum-run-issues__footer">
+              <hum-button variant="outline" size="sm" icon="arrow-right" routerLink="/payroll/leave-pay">{{
+                'humano.payrollRun.setLeavePay' | translate
+              }}</hum-button>
+            </div>
+          }
+        </hum-alert>
+      }
+    </div>
   }
+
+  <!-- One panel per reason, its employees as bullets; long lists show the first ones until expanded. -->
+  <ng-template #issueList let-groups let-list="list">
+    <div class="hum-run-issues">
+      @for (g of shownGroups(groups, list); track g.key) {
+        <section class="hum-run-issues__group">
+          <div class="hum-run-issues__reason">
+            <p>{{ g.message }}</p>
+            <span class="hum-badge hum-badge--square">{{
+              'humano.payrollRun.employeeCount' | plural: g.people.length | translate: { count: g.people.length }
+            }}</span>
+          </div>
+          <ul class="hum-run-issues__people">
+            @for (p of shownPeople(g); track p.employeeId) {
+              <li>
+                <span class="hum-run-issues__name">{{ p.name }}</span>
+                @if (p.detail) {
+                  <span class="hum-run-issues__detail"> · {{ p.detail }}</span>
+                }
+                @if (g.templateId && canEditTemplateDetails) {
+                  ·
+                  <a [routerLink]="['/payroll/templates', g.templateId]" [queryParams]="{ employee: p.employeeId }">{{
+                    'humano.payrollRun.fillInDetails' | translate
+                  }}</a>
+                }
+              </li>
+            }
+          </ul>
+          @if (g.people.length > peopleShown) {
+            <button type="button" class="hum-linkbtn hum-run-issues__toggle" (click)="toggleReason(g.key)">
+              @if (expandedReasons().has(g.key)) {
+                {{ 'humano.payrollRun.showFewer' | translate }}
+              } @else {
+                {{ 'humano.payrollRun.showAllEmployees' | translate: { count: g.people.length } }}
+              }
+            </button>
+          }
+        </section>
+      }
+    </div>
+    @if (groups.length > reasonsShown) {
+      <button type="button" class="hum-linkbtn hum-run-issues__toggle" (click)="toggleList(list)">
+        @if (expandedLists().has(list)) {
+          {{ 'humano.payrollRun.showFewerReasons' | translate }}
+        } @else {
+          {{
+            'humano.payrollRun.showMoreReasons' | plural: groups.length - reasonsShown | translate: { count: groups.length - reasonsShown }
+          }}
+        }
+      </button>
+    }
+  </ng-template>
 
   @if (summary().loading) {
     <div style="display: grid; gap: var(--space-3); margin-top: var(--space-4)">

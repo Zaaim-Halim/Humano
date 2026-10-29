@@ -114,7 +114,43 @@ class ShippedPayrollTemplatesTest {
             "bg-employment",
             "hr-employment"
         )) {
-            assertThat(catalog.find(id).orElseThrow().effectiveLeavePay()).as(id).isEmpty();
+            assertThat(catalog.find(id).orElseThrow().effectiveLeavePay())
+                .as(id)
+                .noneMatch(r -> r.leaveType() == com.humano.domain.enumeration.hr.LeaveType.SICK);
+        }
+    }
+
+    @Test
+    void parentalLeaveIsUnpaidWhereTheEmployerPaysNothingAndTheTemplateHandlesIt() {
+        // The state pays the benefit outside payroll, and a partial month near the minimum calculates (probed).
+        for (String id : List.of("ee-employment", "ie-paye")) {
+            assertThat(catalog.find(id).orElseThrow().effectiveLeavePay())
+                .as(id)
+                .filteredOn(r -> r.leaveType() == com.humano.domain.enumeration.hr.LeaveType.MATERNITY)
+                .singleElement()
+                .satisfies(r -> {
+                    assertThat(r.deductionPercentage()).isEqualByComparingTo("100");
+                    assertThat(r.payBands()).isEmpty();
+                });
+        }
+        // Not declared: the employer pays a top-up or the benefit through payroll (DE, PL, RO, GB, NL), the template
+        // refuses the reduction (ES), a partial month is refused or its minimum base unresearched (BG, HR), or
+        // "parental leave" also covers leave the employer pays part of (HU szülői szabadság) or is unconfirmed (AL).
+        for (String id : List.of(
+            "nl-employment",
+            "de-employment",
+            "pl-employment",
+            "ro-employment",
+            "gb-paye-nic",
+            "es-employment",
+            "bg-employment",
+            "hr-employment",
+            "hu-employment",
+            "al-employment"
+        )) {
+            assertThat(catalog.find(id).orElseThrow().effectiveLeavePay())
+                .as(id)
+                .noneMatch(r -> r.leaveType() == com.humano.domain.enumeration.hr.LeaveType.MATERNITY);
         }
     }
 

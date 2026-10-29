@@ -28,6 +28,7 @@ import com.humano.domain.payroll.PayrollLine;
 import com.humano.domain.payroll.PayrollPeriod;
 import com.humano.domain.payroll.PayrollResult;
 import com.humano.domain.payroll.PayrollRun;
+import com.humano.domain.payroll.PayrollRunIssue;
 import com.humano.domain.shared.Country;
 import com.humano.domain.shared.Employee;
 import com.humano.dto.payroll.request.ConfigurePayrollTemplateRequest;
@@ -88,6 +89,7 @@ class LeavePayPayrollRunIT {
     private static final String EE_TEMPLATE = "ee-employment";
     private static final String HR_TEMPLATE = "hr-employment";
     private static final String PL_TEMPLATE = "pl-employment";
+    private static final String IE_TEMPLATE = "ie-paye";
 
     @Autowired
     private PayrollProcessingService payrollService;
@@ -146,6 +148,9 @@ class LeavePayPayrollRunIT {
 
     @Autowired
     private PayrollTemplateAdoptionRepository adoptions;
+
+    @Autowired
+    private com.humano.repository.payroll.PayrollRunIssueRepository issues;
 
     @Autowired
     private EmployeeTemplateProfileRepository profiles;
@@ -272,7 +277,16 @@ class LeavePayPayrollRunIT {
             compensations.deleteAll(
                 compensations.findAll().stream().filter(c -> c.getEmployee().getId().equals(employee.getId())).toList()
             );
-            for (String templateId : List.of(BG_TEMPLATE, ES_TEMPLATE, HU_TEMPLATE, AL_TEMPLATE, EE_TEMPLATE, HR_TEMPLATE, PL_TEMPLATE)) {
+            for (String templateId : List.of(
+                BG_TEMPLATE,
+                ES_TEMPLATE,
+                HU_TEMPLATE,
+                AL_TEMPLATE,
+                EE_TEMPLATE,
+                HR_TEMPLATE,
+                PL_TEMPLATE,
+                IE_TEMPLATE
+            )) {
                 profiles.findByEmployeeIdAndTemplateId(employee.getId(), templateId).ifPresent(profiles::delete);
                 adoptions.findByTemplateId(templateId).ifPresent(adoptions::delete);
             }
@@ -400,10 +414,25 @@ class LeavePayPayrollRunIT {
         rule(LeaveType.UNPAID, "100", List.of());
         leave(LeaveType.SICK, LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 13));
 
-        PayrollResult result = resultOf(calculate(month(2026, 3)).id());
+        PayrollRunResponse run = calculate(month(2026, 3));
+        PayrollResult result = resultOf(run.id());
 
         assertThat(leaveLines(result)).isEmpty();
         assertThat(result.getNet()).isEqualByComparingTo("2000.00");
+        // The run says so, as a warning that doesn't block approval; unpaid leave has a rule, so only sick leave is named.
+        assertThat(run.validationErrors())
+            .filteredOn(v -> employee.getId().equals(v.employeeId()))
+            .singleElement()
+            .satisfies(v -> {
+                assertThat(v.severity()).isEqualTo(PayrollRunIssue.WARNING);
+                assertThat(v.errorCode()).isEqualTo("LEAVE_WITHOUT_RULE");
+                assertThat(v.message()).startsWith("Sick leave paid in full (10 working days): no leave pay rule for sick leave in");
+            });
+        assertThat(issues.countByRunIdAndSeverity(run.id(), PayrollRunIssue.ERROR)).isZero();
+        assertThat(payrollService.getRun(run.id()).validationErrors())
+            .filteredOn(v -> employee.getId().equals(v.employeeId()))
+            .extracting(PayrollRunResponse.PayrollValidationError::severity)
+            .containsExactly(PayrollRunIssue.WARNING);
     }
 
     @Test
@@ -524,8 +553,11 @@ class LeavePayPayrollRunIT {
 
         PayrollRunResponse after = calculate(month(2026, 3));
 
-        // No leave pay rule: the sick days are paid in full and the template sees an ordinary month.
-        assertThat(after.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        // No leave pay rule: the sick days are paid in full and the template sees an ordinary month; the run only warns.
+        assertThat(after.validationErrors())
+            .filteredOn(err -> employee.getId().equals(err.employeeId()))
+            .extracting(PayrollRunResponse.PayrollValidationError::severity)
+            .containsExactly(PayrollRunIssue.WARNING);
         assertThat(templateAmounts(after)).isNotEmpty().isEqualTo(templateAmounts(before));
         assertThat(resultOf(after.id()).getNet()).isEqualByComparingTo(resultOf(before.id()).getNet());
     }
@@ -592,24 +624,49 @@ class LeavePayPayrollRunIT {
 
     @Test
     void aTemplateShowsWhichLeaveTypesHaveNoRuleAndArePaidInFull() {
-        leaveTypeRuleService.createRule(
-            new CreateLeaveTypeRuleRequest(country(CountryCode.EE).getId(), LeaveType.UNPAID, new BigDecimal("100"), List.of(), null)
-        );
-
-        // Estonia declares statutory sick pay; parental leave has no rule, so payroll would pay it in full.
+        // Estonia declares statutory sick pay and unpaid parental leave; unpaid leave has no rule, so payroll would pay it in full.
         assertThat(templateService.get(EE_TEMPLATE).leavePay())
             .extracting(PayrollTemplateResponse.LeaveCoverage::leaveType, PayrollTemplateResponse.LeaveCoverage::rule)
             .containsExactly(
                 org.assertj.core.groups.Tuple.tuple(LeaveType.SICK, "TEMPLATE"),
-                org.assertj.core.groups.Tuple.tuple(LeaveType.MATERNITY, "NONE"),
-                org.assertj.core.groups.Tuple.tuple(LeaveType.UNPAID, "WORKSPACE")
+                org.assertj.core.groups.Tuple.tuple(LeaveType.MATERNITY, "TEMPLATE"),
+                org.assertj.core.groups.Tuple.tuple(LeaveType.UNPAID, "NONE")
             );
         assertThat(templateService.get(EE_TEMPLATE).leavePay().get(0).note()).contains("Tervisekassa");
+        assertThat(templateService.get(EE_TEMPLATE).leavePay().get(1).note()).contains("Social Insurance Board");
 
         // Enabling the template says so too.
         assertThat(templateService.configure(EE_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of())).warnings()).anySatisfy(w ->
-            assertThat(w).startsWith("No leave pay rule for parental leave in EE")
+            assertThat(w).startsWith("No leave pay rule for unpaid leave in EE")
         );
+
+        // A workspace rule covers it.
+        leaveTypeRuleService.createRule(
+            new CreateLeaveTypeRuleRequest(country(CountryCode.EE).getId(), LeaveType.UNPAID, new BigDecimal("100"), List.of(), null)
+        );
+        assertThat(templateService.get(EE_TEMPLATE).leavePay())
+            .extracting(PayrollTemplateResponse.LeaveCoverage::rule)
+            .containsExactly("TEMPLATE", "TEMPLATE", "WORKSPACE");
+    }
+
+    @Test
+    void irishParentalLeaveIsUnpaidByTheTemplatesRuleWithoutAWarning() {
+        moveEmployeeTo(CountryCode.IE);
+        payIn("2200", CurrencyCode.EUR);
+        templateService.configure(IE_TEMPLATE, new ConfigurePayrollTemplateRequest(true, Map.of()));
+        templateService.saveProfile(IE_TEMPLATE, employee.getId(), Map.of("taxBasis", "EMERGENCY"));
+        // Mon 16 – Tue 31 March: 12 of March's 22 Mon–Fri days.
+        leave(LeaveType.MATERNITY, LocalDate.of(2026, 3, 16), LocalDate.of(2026, 5, 15));
+
+        PayrollRunResponse run = calculate(month(2026, 3));
+        PayrollResult result = resultOf(run.id());
+
+        // No workspace rule: the template's (Maternity Protection Act 1994 s. 22(1)) leaves the days unpaid.
+        assertThat(run.validationErrors()).filteredOn(err -> employee.getId().equals(err.employeeId())).isEmpty();
+        assertThat(leaveLines(result))
+            .extracting(PayrollLine::displayName, l -> l.getAmount().toPlainString())
+            .containsExactly(org.assertj.core.groups.Tuple.tuple("Parental leave: 12 days unpaid", "1200.00"));
+        assertThat(result.getNet()).isLessThan(new BigDecimal("1000.00"));
     }
 
     @Test
