@@ -6,6 +6,7 @@ import { ApplicationConfigService } from 'app/core/config/application-config.ser
 import { Page } from 'app/core/api';
 
 import { CreatePayRuleRequest, FormulaMetadata, FormulaValidationResult, PayComponent, PayRuleSummary } from '../models/pay-rule.model';
+import { TemplateInUse } from '../pay-rules/template-notes';
 
 /**
  * Pay rules + the formula-engine contract — `/api/payroll/pay-rules` and
@@ -22,6 +23,11 @@ export class PayRuleService {
   /** `GET /api/payroll/pay-rules/formula-metadata` — functions, variables, constants, limits. */
   formulaMetadata(): Observable<FormulaMetadata> {
     return this.http.get<FormulaMetadata>(`${this.rulesUrl}/formula-metadata`);
+  }
+
+  /** `GET /api/payroll/pay-rules/templates-in-use` — payroll templates switched on, by country. */
+  templatesInUse(): Observable<TemplateInUse[]> {
+    return this.http.get<TemplateInUse[]>(`${this.rulesUrl}/templates-in-use`);
   }
 
   /** `GET /api/payroll/pay-components` — components a rule can attach to (first page, large size). */

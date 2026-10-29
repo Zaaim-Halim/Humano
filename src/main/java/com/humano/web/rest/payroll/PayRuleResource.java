@@ -8,8 +8,10 @@ import com.humano.security.annotation.RequireFeature;
 import com.humano.security.annotation.RequirePermission;
 import com.humano.service.billing.entitlement.FeatureCodes;
 import com.humano.service.payroll.PayComponentService;
+import com.humano.service.payroll.template.PayrollTemplateService;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +28,11 @@ import org.springframework.web.bind.annotation.*;
 public class PayRuleResource {
 
     private final PayComponentService payComponentService;
+    private final PayrollTemplateService templateService;
 
-    public PayRuleResource(PayComponentService payComponentService) {
+    public PayRuleResource(PayComponentService payComponentService, PayrollTemplateService templateService) {
         this.payComponentService = payComponentService;
+        this.templateService = templateService;
     }
 
     @PostMapping
@@ -61,5 +65,15 @@ public class PayRuleResource {
     @GetMapping("/formula-metadata")
     public ResponseEntity<FormulaMetadataResponse> formulaMetadata() {
         return ResponseEntity.ok(payComponentService.getFormulaMetadata());
+    }
+
+    /**
+     * The payroll templates switched on: for their countries' employees they compute income tax and
+     * employer contributions in place of rules here. Readable with this screen's permission, which
+     * doesn't open the template catalog.
+     */
+    @GetMapping("/templates-in-use")
+    public ResponseEntity<List<PayrollTemplateService.TemplateInUse>> templatesInUse() {
+        return ResponseEntity.ok(templateService.inUse());
     }
 }

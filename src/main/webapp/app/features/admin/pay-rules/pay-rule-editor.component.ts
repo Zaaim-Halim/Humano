@@ -27,8 +27,6 @@ import {
 } from 'app/shared/ui';
 
 import { PayRuleService } from '../services/pay-rule.service';
-import { PayrollTemplateService } from '../services/payroll-template.service';
-import { PayrollTemplate } from '../models/payroll-template.model';
 import { CreatePayRuleRequest, FormulaMetadata, FormulaValidationResult, PayComponent, PayRuleSummary } from '../models/pay-rule.model';
 import {
   CONSTANT_DOCS,
@@ -45,6 +43,7 @@ import {
   VARIABLE_DOCS,
   VARIABLE_GROUP_ORDER,
 } from './formula-catalog';
+import { TemplateInUse, ruleWithTemplate } from './template-notes';
 
 /** An engine function, enriched with catalog docs for display + insertion. */
 interface FnItem {
@@ -113,7 +112,6 @@ export default class PayRuleEditorComponent {
   private readonly service = inject(PayRuleService);
   private readonly translate = inject(TranslateService);
   private readonly toast = inject(ToastService);
-  private readonly templateService = inject(PayrollTemplateService);
   private readonly account = inject(AccountService);
 
   protected readonly loading = signal(true);
@@ -125,7 +123,20 @@ export default class PayRuleEditorComponent {
    * computes income tax (TAX_PIT) and employer charges (EMPLOYER_CHARGE): brackets and formula rules
    * on those components are skipped, which the overview must say rather than describe the generic engine.
    */
-  protected readonly templatesInUse = signal<PayrollTemplate[]>([]);
+  protected readonly templatesInUse = signal<TemplateInUse[]>([]);
+  /** "Netherlands, Germany": the countries whose employees the templates calculate. */
+  protected readonly templateCountries = computed(() =>
+    this.templatesInUse()
+      .map(t => countryName(t.country))
+      .join(', '),
+  );
+  /** Opening a template needs the template catalog's own permission. */
+  protected readonly canOpenTemplates = this.account.hasPermission(Permission.MANAGE_TAX_BRACKETS);
+  /** How a rule on the component chosen in the editor works for the templates' employees. */
+  protected readonly ruleTemplateNotes = computed(() => {
+    const component = this.components().find(c => c.id === this.selectedComponentId());
+    return component && this.templatesInUse().length ? ruleWithTemplate(component) : [];
+  });
 
   protected readonly metadata = signal<FormulaMetadata | null>(null);
   protected readonly validation = signal<FormulaValidationResult | null>(null);
@@ -340,7 +351,7 @@ export default class PayRuleEditorComponent {
     return (code === 'TAX_PIT' || code === 'EMPLOYER_CHARGE') && this.templatesInUse().length > 0;
   }
 
-  protected templateCountry(t: PayrollTemplate): string {
+  protected templateCountry(t: TemplateInUse): string {
     return countryName(t.country);
   }
 
@@ -396,14 +407,10 @@ export default class PayRuleEditorComponent {
     });
   }
 
-  /**
-   * Templates need their own permission; without it the overview just doesn't mention them (and no
-   * request is made, so no access error is shown). A failed read is not this page's error either.
-   */
+  /** Read with this page's own permission, so everyone who edits pay rules is told. A failed read is not this page's error. */
   private loadTemplatesInUse(): void {
-    if (!this.account.hasPermission(Permission.MANAGE_TAX_BRACKETS)) return;
-    this.templateService.list().subscribe({
-      next: list => this.templatesInUse.set(list.filter(t => t.adoption?.enabled)),
+    this.service.templatesInUse().subscribe({
+      next: list => this.templatesInUse.set(list),
       error: () => this.templatesInUse.set([]),
     });
   }

@@ -168,6 +168,25 @@ public class PayrollTemplateService {
         return catalog.rejected();
     }
 
+    /** A template payroll uses, for employees in {@code country}. */
+    public record TemplateInUse(String id, String name, String country) {}
+
+    /**
+     * The templates switched on here that payroll applies to employees (national ones, as
+     * {@link #applicableTo}), by country: for screens that say what they take over, such as pay rules.
+     */
+    @Transactional(value = "tenantTransactionManager", readOnly = true)
+    public List<TemplateInUse> inUse() {
+        return adoptionRepository
+            .findByEnabledTrue()
+            .stream()
+            .filter(a -> a.getSubdivision() == null)
+            .flatMap(a -> catalog.find(a.getTemplateId()).stream())
+            .map(t -> new TemplateInUse(t.id(), t.name(), t.jurisdiction().country()))
+            .sorted(Comparator.comparing(TemplateInUse::country))
+            .toList();
+    }
+
     /**
      * Enables or disables a template and saves its employer settings. Enabling refuses drafts,
      * sub-national templates (they need employee work locations, not yet recorded), a second enabled

@@ -18,6 +18,26 @@
       <hum-button variant="outline" size="sm" (click)="load()">{{ 'humano.action.retry' | translate }}</hum-button>
     </hum-alert>
   } @else if (view() === 'rules') {
+    @if (templatesInUse().length) {
+      <hum-alert tone="info" [title]="'humano.payRules.templates.title' | translate: { countries: templateCountries() }">
+        <ul class="hum-rule-templates">
+          <li>{{ 'humano.payRules.templates.taxes' | translate: { countries: templateCountries() } }}</li>
+          <li>{{ 'humano.payRules.templates.earnings' | translate }}</li>
+          <li>{{ 'humano.payRules.templates.deductions' | translate }}</li>
+          <li>{{ 'humano.payRules.templates.others' | translate: { countries: templateCountries() } }}</li>
+        </ul>
+        @if (canOpenTemplates) {
+          <div class="hum-rule-templates__links">
+            @for (t of templatesInUse(); track t.id) {
+              <hum-button variant="outline" size="sm" icon="arrow-right" [routerLink]="['/payroll/templates', t.id]">{{
+                t.name
+              }}</hum-button>
+            }
+          </div>
+        }
+      </hum-alert>
+    }
+
     <section class="hum-dir-stats hum-dir-stats--even">
       <div class="hum-dir-stat">
         <div class="hum-dir-stat__label">{{ 'humano.payRules.components' | translate }}</div>
@@ -84,7 +104,9 @@
                       <lucide-icon name="landmark" [size]="14" />
                       <span>
                         {{ 'humano.payRules.byTemplate.' + item.component.code | translate: { country: templateCountry(t) } }}
-                        <a [routerLink]="['/payroll/templates', t.id]">{{ 'humano.payRules.byTemplate.open' | translate }}</a>
+                        @if (canOpenTemplates) {
+                          <a [routerLink]="['/payroll/templates', t.id]">{{ 'humano.payRules.byTemplate.open' | translate }}</a>
+                        }
                       </span>
                     </p>
                   }
@@ -199,6 +221,20 @@
         <div style="margin-top: var(--space-3)">
           <hum-switch formControlName="active" [label]="'humano.payRules.active' | translate" />
         </div>
+
+        @if (ruleTemplateNotes().length) {
+          <hum-alert
+            tone="info"
+            style="margin-top: var(--space-4)"
+            [title]="'humano.payRules.withTemplate.title' | translate: { countries: templateCountries() }"
+          >
+            @for (key of ruleTemplateNotes(); track key) {
+              <p class="hum-rule-templates__note">
+                {{ 'humano.payRules.withTemplate.' + key | translate: { countries: templateCountries() } }}
+              </p>
+            }
+          </hum-alert>
+        }
       </hum-card>
 
       <!-- Formula editor + reference -->

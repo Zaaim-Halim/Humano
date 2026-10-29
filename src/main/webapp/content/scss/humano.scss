@@ -7284,6 +7284,33 @@ a.hum-payslip-card:focus-visible {
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.hum-rule-templates {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-4);
+  list-style: disc;
+}
+
+.hum-page > hum-alert:has(.hum-rule-templates) {
+  margin-bottom: var(--space-4);
+}
+
+.hum-rule-templates__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.hum-rule-templates__note {
+  margin: 0 0 var(--space-1);
+}
+
+.hum-rule-templates__note:last-child {
+  margin-bottom: 0;
+}
+
 .hum-rule-row__template {
   display: flex;
   align-items: flex-start;

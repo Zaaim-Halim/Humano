@@ -82,6 +82,28 @@
         "ALLOWANCE": "Paid from payroll inputs recorded for the period — add a rule for a computed allowance.",
         "DEDUCTION": "Taken from deduction records — add a rule for a computed deduction.",
         "EMPLOYER_CHARGE": "No employer charge is computed yet — add a rule to calculate one."
+      },
+      "templates": {
+        "title": "Payroll template in use: {{ countries }}",
+        "taxes": "For employees in {{ countries }}, the template computes income tax and employer contributions from the law. Rules here on income tax and employer contributions don't apply to them.",
+        "earnings": "Their earnings are worked out first, formula rules included. The template taxes the earnings switched to Taxable and charges contributions on those switched to Subject to social contributions.",
+        "deductions": "Formula deductions come off net pay after the template. They don't lower the tax or contributions it computes.",
+        "others": "Employees in other countries than {{ countries }} are calculated with the rules and tax brackets here only."
+      },
+      "withTemplate": {
+        "title": "How this rule works with the {{ countries }} payroll template",
+        "replaced": {
+          "TAX_PIT": "For employees in {{ countries }}, the template computes income tax, so this rule doesn't apply to them. For employees in other countries, it applies where no tax brackets or withholdings calculate their income tax.",
+          "EMPLOYER_CHARGE": "For employees in {{ countries }}, the template computes employer contributions, so this rule doesn't apply to them. It applies to employees in other countries."
+        },
+        "earning": "For employees in {{ countries }}, the rule runs before the template and its amount is added to their gross pay.",
+        "taxed": "This component is Taxable: the template includes it in the pay it taxes.",
+        "untaxed": "This component isn't Taxable: the template leaves it out of the pay it taxes. Switch on Taxable in the rules overview if it should be taxed.",
+        "social": "It's Subject to social contributions: the template charges contributions on it.",
+        "nonSocial": "It isn't Subject to social contributions: the template charges no contributions on it.",
+        "byCode": "Some templates treat bonus and overtime pay apart from regular pay, as their country's law does (for example, a bonus as a one-off payment). The template's page says how.",
+        "deduction": "For employees in {{ countries }}, the rule runs after the template and comes off net pay. It doesn't lower the income tax or contributions the template computes.",
+        "variables": "A formula can't use the template's results: #taxableIncome is gross pay less pre-tax deductions and pay that isn't taxable, worked out before the template runs."
       }
     }
   }
