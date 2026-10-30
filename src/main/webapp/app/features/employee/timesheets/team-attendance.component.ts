@@ -133,7 +133,7 @@ export class TeamAttendanceComponent {
     }, 60_000);
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
-  protected readonly presenceStyle = (p: TeamPresence) => PRESENCE[p];
+  protected readonly presenceStyle = (p: TeamPresence): (typeof PRESENCE)[TeamPresence] => PRESENCE[p];
 
   protected load(date = this.date(), quiet = false): void {
     if (!quiet) this.data.set(null);

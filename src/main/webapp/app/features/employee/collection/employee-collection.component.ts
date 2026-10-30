@@ -69,14 +69,13 @@ export interface CollectionRecord {
  * concrete typed service is assignable — the generic form produces a flat object keyed by field
  * that maps 1:1 to each entity's Create/Update request.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export interface CollectionService {
   byEmployee(employeeId: string): Observable<any[]>;
   create(body: any): Observable<any>;
   update(id: string, body: any): Observable<any>;
   delete(id: string): Observable<void>;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * Generic CRUD manager for an employee-owned collection (addresses, certifications, …): a card
@@ -117,7 +116,7 @@ export class EmployeeCollectionComponent {
   readonly icon = input('folder');
   /** Singular name for "Add …" / "Edit …" (already translated); defaults to the heading. */
   readonly itemLabel = input<string | null>(null);
-  readonly present = input<((row: any) => RecordView) | null>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  readonly present = input<((row: any) => RecordView) | null>(null);
   /** Number of records, emitted after every load. */
   readonly count = output<number>();
 
@@ -154,6 +153,7 @@ export class EmployeeCollectionComponent {
     const v = row[key];
     if (v === null || v === undefined || v === '') return '—';
     if (typeof v === 'boolean') return v ? '✓' : '—';
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string -- record values are primitives from the API
     return String(v);
   }
 

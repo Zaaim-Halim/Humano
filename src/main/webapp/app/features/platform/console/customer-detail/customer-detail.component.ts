@@ -38,6 +38,8 @@ import { PlatformConsoleService } from '../../services/platform-console.service'
 import { SubscriptionPlanService } from '../../services/subscription-plan.service';
 import { TenantService } from '../../services/tenant.service';
 import { monthlyValue } from '../customers/customers.component';
+import { InvoiceStatus } from '../../models/enums/invoice-status.enum';
+import { TenantStatus } from '../../models/enums/tenant-status.enum';
 
 type InvoiceAction = 'pay' | 'overdue' | 'void';
 
@@ -101,10 +103,12 @@ export default class ConsoleCustomerDetailComponent {
   protected readonly mrr = computed(() => monthlyValue(this.subscription() ?? undefined, new Map(this.plans().map(p => [p.id, p]))));
   protected readonly lifetime = computed(() =>
     this.invoices()
-      .filter(i => i.status === 'PAID')
+      .filter(i => i.status === InvoiceStatus.PAID)
       .reduce((s, i) => s + Number(i.totalAmount ?? 0), 0),
   );
-  protected readonly openInvoices = computed(() => this.invoices().filter(i => i.status === 'PENDING' || i.status === 'OVERDUE'));
+  protected readonly openInvoices = computed(() =>
+    this.invoices().filter(i => i.status === InvoiceStatus.PENDING || i.status === InvoiceStatus.OVERDUE),
+  );
   protected readonly outstanding = computed(() => this.openInvoices().reduce((s, i) => s + Number(i.totalAmount ?? 0), 0));
   protected readonly sortedInvoices = computed(() =>
     [...this.invoices()].sort((a, b) => (b.issueDate ?? '').localeCompare(a.issueDate ?? '')),
@@ -148,7 +152,7 @@ export default class ConsoleCustomerDetailComponent {
     this.error.set(null);
     forkJoin({
       detail: this.tenants.find(id),
-      sub: this.billing.subscriptionByTenant(id).pipe(catchError(() => of(null))) as Observable<Subscription | null>,
+      sub: this.billing.subscriptionByTenant(id).pipe(catchError(() => of(null))),
       invoices: this.billing.invoicesByTenant(id).pipe(catchError(() => of([] as Invoice[]))),
       plans: this.plansApi.query({ page: 0, size: 200 }),
       storage: this.billing.customerStorage(id).pipe(catchError(() => of(null))),
@@ -201,7 +205,7 @@ export default class ConsoleCustomerDetailComponent {
   protected toggleSuspension(): void {
     const t = this.tenant();
     if (!t) return;
-    const suspending = t.status !== 'SUSPENDED';
+    const suspending = t.status !== TenantStatus.SUSPENDED;
     this.run(suspending ? this.tenants.suspend(t.id) : this.tenants.activate(t.id), suspending ? 'suspended' : 'reactivated', () =>
       this.confirmSuspend.set(false),
     );
@@ -209,7 +213,7 @@ export default class ConsoleCustomerDetailComponent {
 
   protected deprovision(): void {
     const t = this.tenant();
-    if (!t || this.deprovisionText().trim() !== t.subdomain) return;
+    if (this.deprovisionText().trim() !== t?.subdomain) return;
     this.run(this.tenants.deprovision(t.id), 'deprovisioned', () => {
       this.confirmDeprovision.set(false);
       this.deprovisionText.set('');

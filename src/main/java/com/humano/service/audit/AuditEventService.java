@@ -86,7 +86,8 @@ public class AuditEventService {
                 return;
             }
             HttpServletRequest request = ((ServletRequestAttributes) attrs).getRequest();
-            event.setIp(resolveClientIp(request));
+            // server.forward-headers-strategy resolves the real address, trusting only known proxies.
+            event.setIp(request.getRemoteAddr());
             String userAgent = request.getHeader("User-Agent");
             if (userAgent != null && userAgent.length() > USER_AGENT_MAX_LEN) {
                 userAgent = userAgent.substring(0, USER_AGENT_MAX_LEN);
@@ -95,14 +96,5 @@ public class AuditEventService {
         } catch (RuntimeException e) {
             LOG.warn("Failed to capture request context for audit_event ({}): {}", event.getAction(), e.getMessage());
         }
-    }
-
-    private String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            int comma = forwarded.indexOf(',');
-            return (comma > 0 ? forwarded.substring(0, comma) : forwarded).trim();
-        }
-        return request.getRemoteAddr();
     }
 }

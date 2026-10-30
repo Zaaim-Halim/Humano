@@ -25,7 +25,6 @@ import {
   RecordView,
 } from '../collection/employee-collection.component';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 interface Section {
   id: string;
   icon: string;
@@ -34,7 +33,6 @@ interface Section {
   fields: CollectionField[];
   present: (row: any) => RecordView;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 interface Group {
   id: string;

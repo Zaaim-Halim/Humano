@@ -82,15 +82,21 @@ export default tseslint.config(
       '@typescript-eslint/no-extraneous-class': 'off',
       '@typescript-eslint/no-misused-spread': 'off',
       '@typescript-eslint/no-floating-promises': 'off',
+      // Flags `Observable<void>` and `output<void>`, which are how Angular spells "no value".
+      '@typescript-eslint/no-invalid-void-type': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-shadow': ['error'],
-      '@typescript-eslint/no-unnecessary-condition': 'error',
+      // Warnings, not errors: API responses aren't validated at runtime, so the types can't prove these
+      // `Number(x)` and `??` guards around server values unnecessary. Removing one is a behaviour change.
+      '@typescript-eslint/no-unnecessary-condition': 'warn',
+      '@typescript-eslint/no-unnecessary-type-conversion': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/prefer-nullish-coalescing': 'error',
+      // `||` on strings is deliberate: an empty name or currency code falls through to the next choice.
+      '@typescript-eslint/prefer-nullish-coalescing': ['error', { ignorePrimitives: { string: true } }],
       '@typescript-eslint/prefer-optional-chain': 'error',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       '@typescript-eslint/unbound-method': 'off',
@@ -122,6 +128,11 @@ export default tseslint.config(
     rules: {
       '@angular-eslint/template/click-events-have-key-events': 'off',
       '@angular-eslint/template/interactive-supports-focus': 'off',
+      // Our form controls: each renders a native control inside, so a wrapping <label> works.
+      '@angular-eslint/template/label-has-associated-control': [
+        'error',
+        { controlComponents: ['hum-checkbox', 'hum-select', 'hum-switch'] },
+      ],
     },
   },
   // jhipster-needle-eslint-add-config - JHipster will add additional config here

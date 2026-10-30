@@ -64,11 +64,11 @@ export function createListResource<T>(
     inFlight = fetch(params())
       .pipe(takeUntilDestroyed(destroyRef))
       .subscribe({
-        next: result => {
+        next(result) {
           page.set(result);
           loading.set(false);
         },
-        error: (err: unknown) => {
+        error(err: unknown) {
           error.set(normalizeHttpError(err));
           loading.set(false);
         },
@@ -87,7 +87,7 @@ export function createListResource<T>(
     error: error.asReadonly(),
     empty: computed(() => !loading() && error() === null && (page()?.content.length ?? 0) === 0),
     params: params.asReadonly(),
-    setParams: patch => {
+    setParams(patch) {
       params.update(current => ({ ...current, ...patch }));
       load();
     },

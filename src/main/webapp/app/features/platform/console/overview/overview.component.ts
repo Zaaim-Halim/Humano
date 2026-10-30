@@ -82,7 +82,7 @@ export default class ConsoleOverviewComponent {
   protected readonly greeting = computed(() => {
     const h = this.today.getHours();
     const key = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
-    return this.translate.instant(`humano.console.overview.greeting.${key}`, { name: this.account()?.firstName ?? '' });
+    return this.translate.instant(`humano.console.overview.greeting.${key}`, { name: this.account()?.firstName ?? '' }) as string;
   });
 
   /** Month-over-month MRR change, in percent (null without a previous month). */

@@ -104,6 +104,15 @@ jasypt:
 server:
   port: 8080
   shutdown: graceful # see https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-graceful-shutdown
+  # HTTPS ends at the reverse proxy: take the client's address and scheme from X-Forwarded-*. Rate limits,
+  # the audit trail, HSTS and secure cookies all depend on it. Only proxies on private addresses are
+  # trusted; if yours has a public one, set server.tomcat.remoteip.internal-proxies.
+  forward-headers-strategy: native
+  servlet:
+    session:
+      cookie:
+        secure: true
+        same-site: lax
   compression:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json,image/svg+xml
@@ -136,4 +145,9 @@ jhipster:
 # Application specific properties
 # ===================================================================
 
-# application:
+# Where uploaded files live when a tenant has no storage configuration of its own. Must be a persistent
+# volume: anything else is lost on redeploy.
+app:
+  file-storage:
+    filesystem:
+      root-location: ${HUMANO_UPLOADS_DIR:/var/lib/humano/uploads}

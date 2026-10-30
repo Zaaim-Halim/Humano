@@ -79,7 +79,7 @@ export default class ApprovalsComponent {
 
   protected readonly visible = computed(() => {
     const t = this.typeFilter();
-    return (this.items() ?? []).filter(i => !t || i.approvalType === t);
+    return (this.items() ?? []).filter(i => !t || i.approvalType === (t as ApprovalType));
   });
   protected readonly typeChips = computed(() => {
     const counts = new Map<string, number>();

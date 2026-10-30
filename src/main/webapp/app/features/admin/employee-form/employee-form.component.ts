@@ -549,7 +549,8 @@ export default class EmployeeFormComponent implements OnInit {
 
   /** Bringing a terminated employee back clears their leaving date; switching back restores it. */
   private clearEndDateOnReinstate(leftOn: string): void {
-    this.form.controls.status.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(status => {
+    this.form.controls.status.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(value => {
+      const status = value as EmployeeStatus;
       const endDate = this.form.controls.endDate;
       if (status !== EmployeeStatus.TERMINATED && endDate.value === leftOn) endDate.setValue('');
       else if (status === EmployeeStatus.TERMINATED && !endDate.value) endDate.setValue(leftOn);

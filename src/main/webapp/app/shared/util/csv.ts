@@ -1,6 +1,7 @@
 /** A CSV cell: text is quoted when it contains a delimiter, quote or line break; null is empty. */
 function cell(value: unknown): string {
   if (value === null || value === undefined) return '';
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- cells are primitives
   const text = String(value);
   return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }

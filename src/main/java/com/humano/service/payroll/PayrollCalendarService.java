@@ -165,8 +165,8 @@ public class PayrollCalendarService {
             .stream()
             .map(PayrollPeriod::getEndDate)
             .max(Comparator.naturalOrder());
-        if (latestEnd.isPresent() && latestEnd.get().isAfter(start.minusMonths(1))) {
-            start = latestEnd.get().plusDays(1);
+        if (latestEnd.isPresent() && latestEnd.orElseThrow().isAfter(start.minusMonths(1))) {
+            start = latestEnd.orElseThrow().plusDays(1);
         }
         if (start.isAfter(horizon)) {
             return List.of();

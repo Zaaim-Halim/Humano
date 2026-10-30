@@ -7,7 +7,7 @@ import { normalizeHttpError } from 'app/core/api';
 import { AlertComponent, BadgeComponent, ButtonComponent, EmptyStateComponent, SkeletonRowComponent } from 'app/shared/ui';
 
 import { LeaveStatus } from '../models/enums/leave-status.enum';
-import { LEAVE_TYPE_COLOR, LEAVE_TYPE_ICON } from '../models/enums/leave-type.enum';
+import { LEAVE_TYPE_COLOR, LEAVE_TYPE_ICON, LeaveType } from '../models/enums/leave-type.enum';
 import { LeaveRequest } from '../models/leave-request.model';
 import { LeaveRequestService } from '../services/leave-request.service';
 
@@ -69,8 +69,8 @@ export class EmployeeLeaveComponent {
     const thisYear = approved.filter(r => r.startDate.startsWith(year) && r.startDate <= this.todayIso);
     const upcoming = approved.filter(r => r.startDate > this.todayIso).sort((a, b) => a.startDate.localeCompare(b.startDate));
     return {
-      taken: thisYear.filter(r => r.leaveType !== 'SICK').reduce((s, r) => s + (r.daysCount ?? 0), 0),
-      sick: thisYear.filter(r => r.leaveType === 'SICK').reduce((s, r) => s + (r.daysCount ?? 0), 0),
+      taken: thisYear.filter(r => r.leaveType !== LeaveType.SICK).reduce((s, r) => s + (r.daysCount ?? 0), 0),
+      sick: thisYear.filter(r => r.leaveType === LeaveType.SICK).reduce((s, r) => s + (r.daysCount ?? 0), 0),
       upcomingDays: upcoming.reduce((s, r) => s + (r.daysCount ?? 0), 0),
       nextStart: upcoming[0]?.startDate ?? null,
       pending: list.filter(r => r.status === LeaveStatus.PENDING).length,

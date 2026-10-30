@@ -8,13 +8,6 @@ package com.humano.tenancy;
  */
 public final class TenantContext {
 
-    /**
-     * HTTP session attribute name that pins an authenticated session to a tenant subdomain.
-     * Written by the login success handler; checked by {@code TenantResolutionFilter} on
-     * every subsequent request so a stolen session cookie cannot be reused across tenants.
-     */
-    public static final String SESSION_TENANT_ATTRIBUTE = "humano.tenant";
-
     /** SLF4J MDC key used by {@code TenantResolutionFilter} and the async {@code TaskDecorator}. */
     public static final String MDC_TENANT_KEY = "tenant";
 

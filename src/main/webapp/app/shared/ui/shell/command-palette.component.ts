@@ -194,7 +194,11 @@ export class CommandPaletteComponent {
   protected onGlobalKey(event: KeyboardEvent): void {
     if ((event.key === 'k' || event.key === 'K') && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
-      this.open() ? this.close() : this.openPalette();
+      if (this.open()) {
+        this.close();
+      } else {
+        this.openPalette();
+      }
     }
   }
 

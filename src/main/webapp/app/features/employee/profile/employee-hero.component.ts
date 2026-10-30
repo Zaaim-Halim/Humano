@@ -41,9 +41,9 @@ export class EmployeeHeroComponent {
   }
 
   protected onPhotoSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
+    const fileInput = event.target as HTMLInputElement;
+    const file = fileInput.files?.[0];
+    fileInput.value = '';
     if (!file) return;
     if (!PHOTO_TYPES.includes(file.type) || file.size > PHOTO_MAX_BYTES) {
       this.toast.danger(this.translate.instant('humano.employee360.photoInvalid'));

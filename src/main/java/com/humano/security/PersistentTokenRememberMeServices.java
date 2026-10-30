@@ -3,6 +3,7 @@ package com.humano.security;
 import com.humano.domain.shared.PersistentToken;
 import com.humano.repository.shared.PersistentTokenRepository;
 import com.humano.repository.shared.UserRepository;
+import com.humano.tenancy.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.Serializable;
@@ -83,7 +84,7 @@ public class PersistentTokenRememberMeServices extends AbstractRememberMeService
     protected UserDetails processAutoLoginCookie(String[] cookieTokens, HttpServletRequest request, HttpServletResponse response) {
         synchronized (this) { // prevent 2 authentication requests from the same user in parallel
             String login = null;
-            UpgradedRememberMeToken upgradedToken = upgradedTokenCache.get(cookieTokens[0]);
+            UpgradedRememberMeToken upgradedToken = upgradedTokenCache.get(upgradedTokenKey(cookieTokens));
             if (upgradedToken != null) {
                 login = upgradedToken.getUserLoginIfValid(cookieTokens);
                 LOG.debug("Detected previously upgraded login token for user '{}'", login);
@@ -106,10 +107,18 @@ public class PersistentTokenRememberMeServices extends AbstractRememberMeService
                     throw new RememberMeAuthenticationException("Autologin failed due to data access problem", e);
                 }
                 addCookie(token, request, response);
-                upgradedTokenCache.put(cookieTokens[0], new UpgradedRememberMeToken(cookieTokens, login));
+                upgradedTokenCache.put(upgradedTokenKey(cookieTokens), new UpgradedRememberMeToken(cookieTokens, login));
             }
             return getUserDetailsService().loadUserByUsername(login);
         }
+    }
+
+    /**
+     * Upgraded tokens are kept per tenant: the login found here is loaded from the current tenant's
+     * database, so a token upgraded in one tenant must never be accepted in another.
+     */
+    private static String upgradedTokenKey(String[] cookieTokens) {
+        return TenantContext.getCurrentTenant() + ":" + cookieTokens[0];
     }
 
     @Override
@@ -183,7 +192,6 @@ public class PersistentTokenRememberMeServices extends AbstractRememberMeService
         }
         PersistentToken token = optionalToken.orElseThrow();
         // We have a match for this user/series combination
-        LOG.info("presentedToken={} / tokenValue={}", presentedToken, token.getTokenValue());
         if (!presentedToken.equals(token.getTokenValue())) {
             // Token doesn't match series value. Delete this session and throw an exception.
             persistentTokenRepository.deleteById(token.getSeries());

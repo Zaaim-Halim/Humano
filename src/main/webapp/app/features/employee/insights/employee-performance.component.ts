@@ -114,15 +114,15 @@ export class EmployeePerformanceComponent {
       ? this.meWork.trainings({ page: 0, size: 50 })
       : this.trainingService.forEmployee(id, { page: 0, size: 50 });
     reviews$.subscribe({
-      next: page => this.reviews.set(page.content),
+      next: result => this.reviews.set(result.content),
       error: (err: unknown) => {
         this.error.set(normalizeHttpError(err));
         this.reviews.set([]);
       },
     });
     trainings$.subscribe({
-      next: page =>
-        this.trainings.set([...page.content].sort((a, b) => (b.completionDate ?? '9999').localeCompare(a.completionDate ?? '9999'))),
+      next: result =>
+        this.trainings.set([...result.content].sort((a, b) => (b.completionDate ?? '9999').localeCompare(a.completionDate ?? '9999'))),
       error: () => this.trainings.set([]),
     });
   }

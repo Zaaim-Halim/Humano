@@ -242,6 +242,6 @@ export default class ShellLayoutComponent {
   /** Reactive translation: reading `i18nTick` ties the caller's computed to language changes. */
   private t(key: string): string {
     this.i18nTick();
-    return this.translate.instant(key);
+    return this.translate.instant(key) as string;
   }
 }

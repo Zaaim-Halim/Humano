@@ -177,7 +177,8 @@ export default class SignupComponent {
 
   /** "1 Jan 2026 – 31 Dec 2026" for a template's rules. */
   protected period(t: PublicPayrollTemplate): string {
-    const format = (d: string) => new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(d));
+    const format = (d: string): string =>
+      new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(d));
     return `${format(t.validFrom)} – ${format(t.validTo)}`;
   }
 

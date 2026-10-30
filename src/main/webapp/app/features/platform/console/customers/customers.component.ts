@@ -108,19 +108,19 @@ export default class ConsoleCustomersComponent {
       key: 'name',
       label: this.t('humano.console.customers.col.customer'),
       sortable: true,
-      cell: this.customerCell() as TemplateRef<never>,
+      cell: this.customerCell(),
     },
-    { key: 'plan', label: this.t('humano.console.customers.col.plan'), sortable: true, cell: this.planCell() as TemplateRef<never> },
+    { key: 'plan', label: this.t('humano.console.customers.col.plan'), sortable: true, cell: this.planCell() },
     {
       key: 'mrr',
       label: this.t('humano.console.customers.col.mrr'),
       sortable: true,
       numeric: true,
-      cell: this.moneyCell() as TemplateRef<never>,
+      cell: this.moneyCell(),
     },
-    { key: 'subscriptionStatus', label: this.t('humano.console.customers.col.subscription'), cell: this.subCell() as TemplateRef<never> },
-    { key: 'status', label: this.t('humano.console.customers.col.workspace'), cell: this.statusCell() as TemplateRef<never> },
-    { key: 'since', label: this.t('humano.console.customers.col.since'), sortable: true, cell: this.dateCell() as TemplateRef<never> },
+    { key: 'subscriptionStatus', label: this.t('humano.console.customers.col.subscription'), cell: this.subCell() },
+    { key: 'status', label: this.t('humano.console.customers.col.workspace'), cell: this.statusCell() },
+    { key: 'since', label: this.t('humano.console.customers.col.since'), sortable: true, cell: this.dateCell() },
   ]);
 
   protected readonly counts = computed(() => {
@@ -146,6 +146,7 @@ export default class ConsoleCustomersComponent {
     return [...list].sort((a, b) => {
       const x = a[key];
       const y = b[key];
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string -- sort keys are primitive columns
       return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x ?? '').localeCompare(String(y ?? ''))) * sign;
     });
   });

@@ -36,6 +36,7 @@ import { DemoCredentials, DemoRequest, DemoRequestStatus, DemoWorkspace } from '
 import { SubscriptionPlan } from '../../models/subscription-plan.model';
 import { PlatformDemoService } from '../../services/platform-demo.service';
 import { SubscriptionPlanService } from '../../services/subscription-plan.service';
+import { TenantStatus } from '../../models/enums/tenant-status.enum';
 
 type Tab = 'requests' | 'workspaces';
 type RequestFilter = 'open' | 'all';
@@ -117,6 +118,7 @@ export default class ConsoleDemosComponent {
   private readonly router = inject(Router);
   private readonly account = inject(AccountService).trackCurrentAccount();
 
+  // eslint-disable-next-line @angular-eslint/no-input-rename -- bound to the ?tab= query parameter
   readonly tabParam = input<string | undefined>(undefined, { alias: 'tab' });
   protected readonly tab = computed<Tab>(() => (this.tabParam() === 'workspaces' ? 'workspaces' : 'requests'));
 
@@ -161,13 +163,13 @@ export default class ConsoleDemosComponent {
     const reqs = this.requests() ?? [];
     const demos = this.demos() ?? [];
     const now = this.now();
-    const live = demos.filter(d => d.status === 'ACTIVE' || d.setup === 'PROVISIONING' || d.setup === 'SEEDING');
+    const live = demos.filter(d => d.status === TenantStatus.ACTIVE || d.setup === 'PROVISIONING' || d.setup === 'SEEDING');
     return {
       newRequests: reqs.filter(r => r.status === 'NEW').length,
       openRequests: reqs.filter(r => r.status === 'NEW' || r.status === 'CONTACTED').length,
       live: live.length,
       expiringSoon: live.filter(d => d.expiresAt && Date.parse(d.expiresAt) - now < 3 * DAY && Date.parse(d.expiresAt) > now).length,
-      expired: demos.filter(d => d.status === 'SUSPENDED').length,
+      expired: demos.filter(d => d.status === TenantStatus.SUSPENDED).length,
     };
   });
 
@@ -325,7 +327,7 @@ export default class ConsoleDemosComponent {
   protected setupLabel(d: DemoWorkspace): { tone: BadgeTone; key: string } {
     if (d.setup === 'FAILED') return { tone: 'danger', key: 'failed' };
     if (d.setup === 'PROVISIONING' || d.setup === 'SEEDING') return { tone: 'info', key: d.setup.toLowerCase() };
-    if (d.status === 'SUSPENDED') return { tone: 'neutral', key: 'expired' };
+    if (d.status === TenantStatus.SUSPENDED) return { tone: 'neutral', key: 'expired' };
     if (this.expiresSoon(d)) return { tone: 'warning', key: 'expiring' };
     return { tone: 'success', key: 'live' };
   }

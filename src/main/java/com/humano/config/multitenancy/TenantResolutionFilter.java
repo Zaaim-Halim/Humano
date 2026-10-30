@@ -1,5 +1,6 @@
 package com.humano.config.multitenancy;
 
+import com.humano.security.AuthenticatedUser;
 import com.humano.tenancy.MultiTenantProperties;
 import com.humano.tenancy.TenantAccessGuard;
 import com.humano.tenancy.TenantContext;
@@ -12,6 +13,8 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -58,15 +61,12 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             // app_user table in master at v1). Regular requests follow header/subdomain
             // resolution as before.
             String tenantId = isPlatform ? properties.getPlatformTenant() : tenantResolver.resolveTenant(request);
+            AuthenticatedUser user = signedInUser();
             // Plain browser requests (an <img> photo, a download link) can't send X-Tenant-ID. When
-            // nothing in the request names a tenant, fall back to the tenant this signed-in session
-            // is already pinned to — it can only ever be used against that tenant (see below).
-            if (!isPlatform && TenantContext.MASTER.equals(tenantId)) {
-                HttpSession session = request.getSession(false);
-                Object sessionTenant = session != null ? session.getAttribute(TenantContext.SESSION_TENANT_ATTRIBUTE) : null;
-                if (sessionTenant instanceof String pinned && !pinned.isBlank()) {
-                    tenantId = pinned;
-                }
+            // nothing in the request names a tenant, fall back to the tenant this person signed in
+            // to — it can only ever be used against that tenant (see below).
+            if (!isPlatform && TenantContext.MASTER.equals(tenantId) && user != null && user.getTenant() != null) {
+                tenantId = user.getTenant();
             }
             TenantContext.setCurrentTenant(tenantId);
             // Every log line for the rest of this request carries [tenant=<subdomain>].
@@ -124,21 +124,21 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                 }
             }
 
-            // Pin sessions to the tenant they authenticated against. If a previously
-            // authenticated session is being reused with a different request tenant
-            // (cookie replay across subdomains / X-Tenant-ID switch), reject with 401.
-            HttpSession existing = request.getSession(false);
-            if (existing != null) {
-                Object sessionTenant = existing.getAttribute(TenantContext.SESSION_TENANT_ATTRIBUTE);
+            // Everyone stays in the tenant they authenticated against. A signed-in person reaching
+            // for a different tenant (cookie replay across subdomains / X-Tenant-ID switch) gets a
+            // 401, however they signed in. A principal without a tenant is refused the same way.
+            if (user != null && !tenantId.equals(user.getTenant())) {
                 // Signing in to another organization from the same browser starts over: the old
                 // session is dropped rather than refusing the sign-in (it gets a fresh session).
-                if (sessionTenant != null && !sessionTenant.equals(tenantId) && SIGN_IN_PATH.equals(path)) {
-                    LOG.info("Sign-in to tenant {} replaces a session of tenant {}", tenantId, sessionTenant);
-                    existing.invalidate();
-                    sessionTenant = null;
-                }
-                if (sessionTenant != null && !sessionTenant.equals(tenantId)) {
-                    LOG.warn("Session/tenant mismatch: session={} request={} uri={}", sessionTenant, tenantId, request.getRequestURI());
+                if (SIGN_IN_PATH.equals(path)) {
+                    LOG.info("Sign-in to tenant {} replaces a session of tenant {}", tenantId, user.getTenant());
+                    HttpSession existing = request.getSession(false);
+                    if (existing != null) {
+                        existing.invalidate();
+                    }
+                    SecurityContextHolder.clearContext();
+                } else {
+                    LOG.warn("Session/tenant mismatch: session={} request={} uri={}", user.getTenant(), tenantId, request.getRequestURI());
                     writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "Session is bound to a different tenant");
                     return;
                 }
@@ -149,6 +149,12 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
             TenantContext.clear();
             MDC.remove(TenantContext.MDC_TENANT_KEY);
         }
+    }
+
+    /** The person this request is signed in as, from the session; {@code null} before authentication. */
+    private static AuthenticatedUser signedInUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getPrincipal() instanceof AuthenticatedUser user ? user : null;
     }
 
     private static boolean isWrite(HttpServletRequest request) {
@@ -174,13 +180,15 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
         // /api/platform/** is intentionally NOT excluded — doFilterInternal forces
         // the tenant context to the configured platform tenant so the UserDetailsService
         // can resolve the admin principal from that tenant's DB.
-        return (
-            path.startsWith("/management/") ||
-            path.startsWith("/api/public/") ||
+        if (path.startsWith("/api/")) {
+            // The file-suffix rules below must not reach the API: /api/x.png still needs its tenant checks.
             // P4.2 — Stripe webhooks carry no tenant header; the resource resolves the
             // target tenant transitively through Payment → Invoice → Tenant after
             // verifying the Stripe-Signature.
-            path.startsWith("/api/billing/webhooks/") ||
+            return path.startsWith("/api/public/") || path.startsWith("/api/billing/webhooks/");
+        }
+        return (
+            path.startsWith("/management/") ||
             path.startsWith("/swagger-ui") ||
             path.startsWith("/v3/api-docs") ||
             path.startsWith("/content/") ||

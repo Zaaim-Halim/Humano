@@ -21,6 +21,7 @@ import {
 import { MoneyPipe, PayPeriodPipe, RunMoneyPipe } from 'app/shared/util/format.pipes';
 
 import { PayrollRun, PayrollRunService, Payslip, PayslipSearchRequest, PayslipService } from '../index';
+import { RunStatus } from '../models/enums/run-status.enum';
 
 const VIEW_KEY = 'hum.payslips.view';
 
@@ -89,7 +90,7 @@ export default class PayslipsComponent {
   constructor() {
     this.runService.list({ page: 0, size: 12 }).subscribe({
       next: page => {
-        const withPayslips = page.content.filter(r => r.status === 'APPROVED' || r.status === 'POSTED');
+        const withPayslips = page.content.filter(r => r.status === RunStatus.APPROVED || r.status === RunStatus.POSTED);
         this.runs.set(withPayslips);
         this.selectRun(withPayslips[0] ?? null);
       },

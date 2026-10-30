@@ -140,6 +140,12 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  servlet:
+    multipart:
+      # The largest FileContext (FINANCIAL_DOCUMENT); each context then applies its own limit. Keep the
+      # reverse proxy's body limit at least this high.
+      max-file-size: 50MB
+      max-request-size: 55MB
   task:
     execution:
       thread-name-prefix: humano-task-

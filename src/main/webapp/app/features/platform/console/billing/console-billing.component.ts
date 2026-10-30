@@ -39,6 +39,7 @@ import { AddonRow } from '../../models/entitlements.model';
 import { PlatformBillingService } from '../../services/platform-billing.service';
 import { PlatformConsoleService } from '../../services/platform-console.service';
 import { SubscriptionPlanService } from '../../services/subscription-plan.service';
+import { InvoiceStatus } from '../../models/enums/invoice-status.enum';
 
 type Tab = 'invoices' | 'plans' | 'coupons' | 'addons';
 
@@ -101,6 +102,7 @@ type InvoiceFilter = 'open' | 'overdue' | 'paid' | 'all';
   templateUrl: './console-billing.component.html',
 })
 export default class ConsoleBillingComponent {
+  // eslint-disable-next-line @angular-eslint/no-input-rename -- bound to the ?tab= query parameter
   readonly tabParam = input<string | undefined>(undefined, { alias: 'tab' });
 
   private readonly billing = inject(PlatformBillingService);
@@ -153,7 +155,7 @@ export default class ConsoleBillingComponent {
     return {
       open: all.filter(i => this.isOpen(i)).length,
       overdue: all.filter(i => this.isLate(i)).length,
-      paid: all.filter(i => i.status === 'PAID').length,
+      paid: all.filter(i => i.status === InvoiceStatus.PAID).length,
       all: all.length,
     };
   });
@@ -164,7 +166,7 @@ export default class ConsoleBillingComponent {
     return {
       open: sum(all.filter(i => this.isOpen(i))),
       overdue: sum(all.filter(i => this.isLate(i))),
-      paid30: sum(all.filter(i => i.status === 'PAID' && i.paidDate && Date.parse(i.paidDate) > monthAgo)),
+      paid30: sum(all.filter(i => i.status === InvoiceStatus.PAID && i.paidDate && Date.parse(i.paidDate) > monthAgo)),
     };
   });
   protected readonly visibleInvoices = computed(() => {
@@ -172,7 +174,10 @@ export default class ConsoleBillingComponent {
     const f = this.invoiceFilter();
     return (this.invoices() ?? []).filter(i => {
       const match =
-        f === 'all' || (f === 'open' && this.isOpen(i)) || (f === 'overdue' && this.isLate(i)) || (f === 'paid' && i.status === 'PAID');
+        f === 'all' ||
+        (f === 'open' && this.isOpen(i)) ||
+        (f === 'overdue' && this.isLate(i)) ||
+        (f === 'paid' && i.status === InvoiceStatus.PAID);
       return match && (!q || `${i.invoiceNumber} ${i.tenantName ?? ''}`.toLowerCase().includes(q));
     });
   });
@@ -305,11 +310,11 @@ export default class ConsoleBillingComponent {
   }
 
   protected isOpen(i: Invoice): boolean {
-    return i.status === 'PENDING' || i.status === 'OVERDUE';
+    return i.status === InvoiceStatus.PENDING || i.status === InvoiceStatus.OVERDUE;
   }
 
   protected isLate(i: Invoice): boolean {
-    return i.status === 'OVERDUE' || (i.status === 'PENDING' && !!i.dueDate && Date.parse(i.dueDate) < this.now);
+    return i.status === InvoiceStatus.OVERDUE || (i.status === InvoiceStatus.PENDING && !!i.dueDate && Date.parse(i.dueDate) < this.now);
   }
 
   protected applyInvoiceAction(): void {
@@ -614,7 +619,7 @@ export default class ConsoleBillingComponent {
   private rank(f: PlanFeatureDef, cell: PlanFeatureCell | undefined): number {
     if (!cell?.included) return -1;
     if (f.limitType !== 'QUANTITY') return 0;
-    return cell.limitValue === null ? Number.MAX_SAFE_INTEGER : cell.limitValue;
+    return cell.limitValue ?? Number.MAX_SAFE_INTEGER;
   }
 
   private loadDraftItems(planId: string | null): void {

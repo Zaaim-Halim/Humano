@@ -19,9 +19,6 @@ public record CreateTenantStorageConfigRequest(
     /** Max total storage in GB (null = use default). */
     Integer maxStorageGb,
 
-    /** Base path for FILESYSTEM backend. */
-    String filesystemPath,
-
     /** S3 bucket name for S3 backend. */
     String s3Bucket,
 

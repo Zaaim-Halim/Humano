@@ -41,6 +41,7 @@ import { SubscriptionStatus } from 'app/features/platform/models/enums/subscript
 import { saveFile } from 'app/shared/util/download';
 import { MoneyPipe } from 'app/shared/util/format.pipes';
 import { formatPlanAmount } from 'app/shared/util/plan-units';
+import { InvoiceStatus } from 'app/features/platform/models/enums/invoice-status.enum';
 
 /** Yearly billing: 12 months at 85%, as the server bills it. */
 const YEARLY_FACTOR = 0.85;
@@ -174,18 +175,20 @@ export class BillingSettingsComponent {
   /** When a cancelled subscription stops: a trial at its trial end, otherwise at the period end. */
   protected readonly endDate = computed(() => {
     const s = this.subscription();
-    return s?.status === 'TRIAL' && s.trialEnd ? s.trialEnd : (s?.currentPeriodEnd ?? null);
+    return s?.status === SubscriptionStatus.TRIAL && s.trialEnd ? s.trialEnd : (s?.currentPeriodEnd ?? null);
   });
 
   /** The platform bills in one currency. */
   protected readonly currency = computed(() => this.pricing()?.currency ?? this.invoices()?.[0]?.currency ?? 'USD');
   protected readonly monthlyPrice = computed(() => Number(this.plan()?.basePrice ?? this.plan()?.price ?? 0));
   protected readonly cyclePrice = computed(() =>
-    this.subscription()?.billingCycle === 'YEARLY' ? Math.round(this.monthlyPrice() * 12 * YEARLY_FACTOR * 100) / 100 : this.monthlyPrice(),
+    this.subscription()?.billingCycle === BillingCycle.YEARLY
+      ? Math.round(this.monthlyPrice() * 12 * YEARLY_FACTOR * 100) / 100
+      : this.monthlyPrice(),
   );
   protected readonly openTotal = computed(() =>
     (this.invoices() ?? [])
-      .filter(i => i.status === 'PENDING' || i.status === 'OVERDUE')
+      .filter(i => i.status === InvoiceStatus.PENDING || i.status === InvoiceStatus.OVERDUE)
       .reduce((s, i) => s + Number(i.totalAmount ?? 0), 0),
   );
   protected readonly sortedInvoices = computed(() =>

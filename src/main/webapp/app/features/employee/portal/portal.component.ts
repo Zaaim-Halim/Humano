@@ -122,7 +122,7 @@ export default class PortalComponent {
     }
     const c = this.clock();
     const weekday = this.today.getDay() !== 0 && this.today.getDay() !== 6;
-    if (c && c.state === 'NOT_STARTED' && weekday) {
+    if (c?.state === 'NOT_STARTED' && weekday) {
       list.push({ icon: 'timer', tone: 'warning', text: this.t('humano.portal.todoClockIn'), link: '/timesheets' });
     }
     if (c?.state === 'ON_BREAK') {

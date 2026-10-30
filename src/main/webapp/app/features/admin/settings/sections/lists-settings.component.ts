@@ -27,7 +27,6 @@ import { JobLevelService } from '../../services/job-level.service';
 import { MaritalStatusService } from '../../services/marital-status.service';
 import { TerminationReasonService } from '../../services/termination-reason.service';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 interface ListDef {
   id: string;
   icon: string;
@@ -38,7 +37,6 @@ interface ListDef {
     delete(id: string): import('rxjs').Observable<void>;
   };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * Lists — the choices offered across the app's forms: employment types, job levels, job grades,

@@ -240,9 +240,9 @@ export default class AccountComponent {
   }
 
   protected onPhoto(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
+    const fileInput = event.target as HTMLInputElement;
+    const file = fileInput.files?.[0];
+    fileInput.value = '';
     const id = this.currentEmployee.currentEmployeeId();
     if (!file || !id) return;
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) {

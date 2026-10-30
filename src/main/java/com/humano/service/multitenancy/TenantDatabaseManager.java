@@ -5,6 +5,7 @@ import com.humano.tenancy.MultiTenantProperties;
 import com.humano.tenancy.TenantPasswordCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.stereotype.Service;
@@ -22,10 +23,23 @@ public class TenantDatabaseManager {
 
     private final MultiTenantProperties properties;
     private final TenantPasswordCipher passwordCipher;
+    private final String adminUsername;
+    private final String adminPassword;
 
-    public TenantDatabaseManager(MultiTenantProperties properties, TenantPasswordCipher passwordCipher) {
+    /**
+     * Creating databases and users takes the master datasource's account unless DB_ADMIN_USERNAME and
+     * DB_ADMIN_PASSWORD name a separate one.
+     */
+    public TenantDatabaseManager(
+        MultiTenantProperties properties,
+        TenantPasswordCipher passwordCipher,
+        @Value("${DB_ADMIN_USERNAME:${spring.datasource.master.username}}") String adminUsername,
+        @Value("${DB_ADMIN_PASSWORD:${spring.datasource.master.password:}}") String adminPassword
+    ) {
         this.properties = properties;
         this.passwordCipher = passwordCipher;
+        this.adminUsername = adminUsername;
+        this.adminPassword = adminPassword;
     }
 
     /**
@@ -158,13 +172,8 @@ public class TenantDatabaseManager {
         );
         dataSource.setUrl(jdbcUrl);
 
-        // Use admin credentials (from environment/config)
-        String adminUsername = System.getenv("DB_ADMIN_USERNAME");
-        String adminPassword = System.getenv("DB_ADMIN_PASSWORD");
-
-        // Fallback to root if env vars not set (for development only)
-        dataSource.setUsername(adminUsername != null ? adminUsername : "root");
-        dataSource.setPassword(adminPassword != null ? adminPassword : "");
+        dataSource.setUsername(adminUsername);
+        dataSource.setPassword(adminPassword);
 
         return new JdbcTemplate(dataSource);
     }

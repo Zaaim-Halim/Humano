@@ -1,11 +1,11 @@
-import { Routes } from '@angular/router';
+import { Route, Routes } from '@angular/router';
 
 import { Permission } from 'app/config/permission.constants';
 import { dashboardGuard } from 'app/core/auth/dashboard.guard';
 import { platformGuard, workspaceGuard } from 'app/core/auth/platform.guard';
 import { UserRouteAccessService } from 'app/core/auth/user-route-access.service';
 
-const placeholder = () => import('./layouts/placeholder-page.component');
+const placeholder = (): Promise<typeof import('./layouts/placeholder-page.component')> => import('./layouts/placeholder-page.component');
 
 /**
  * Build a placeholder route. `titleKey` drives both the browser title (via
@@ -13,7 +13,7 @@ const placeholder = () => import('./layouts/placeholder-page.component');
  * set, gate the route with the auth guard against the account's effective
  * permissions — mirroring the backend `@RequirePermission` checks.
  */
-const page = (path: string, titleKey: string, permissions?: string[]) => ({
+const page = (path: string, titleKey: string, permissions?: string[]): Route => ({
   path,
   title: titleKey,
   loadComponent: placeholder,

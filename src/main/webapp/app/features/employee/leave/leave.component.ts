@@ -186,7 +186,7 @@ export default class LeaveComponent {
   protected readonly statusChips = [LeaveStatus.PENDING, LeaveStatus.APPROVED, LeaveStatus.REJECTED, ''];
   protected readonly typeOptions = computed(() => [
     { value: '', label: this.label('humano.leave.allTypes') },
-    ...this.types.map(t => ({ value: t as string, label: this.label(`humano.leave.type.${t}`) })),
+    ...this.types.map(t => ({ value: t, label: this.label(`humano.leave.type.${t}`) })),
   ]);
 
   // ---------------------------------------------------------------- detail panel
@@ -307,7 +307,7 @@ export default class LeaveComponent {
     this.leaveService
       .search(
         { ...(status ? { status: status as LeaveStatus } : {}), ...(type ? { leaveType: type as LeaveType } : {}) },
-        { page: 0, size: 200, sort: [status === LeaveStatus.PENDING ? 'startDate,asc' : 'startDate,desc'] },
+        { page: 0, size: 200, sort: [(status as LeaveStatus) === LeaveStatus.PENDING ? 'startDate,asc' : 'startDate,desc'] },
       )
       .subscribe({
         next: page => {

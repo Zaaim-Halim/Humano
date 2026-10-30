@@ -226,7 +226,7 @@ class ApprovalReviewSignOffTest {
     }
 
     private static void signInAs(Employee employee) {
-        AuthenticatedUser user = new AuthenticatedUser(employee.getFirstName(), "", List.of(), employee.getId());
+        AuthenticatedUser user = new AuthenticatedUser(employee.getFirstName(), "", List.of(), employee.getId(), "test");
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(user, null, List.of()));
     }
 

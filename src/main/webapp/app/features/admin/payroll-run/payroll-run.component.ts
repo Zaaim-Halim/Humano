@@ -164,10 +164,10 @@ export default class PayrollRunComponent {
   });
 
   protected readonly steps = computed(() => [
-    this.translate.instant('humano.payrollRun.stepDraft'),
-    this.translate.instant('humano.payrollRun.stepCalculated'),
-    this.translate.instant('humano.payrollRun.stepApproved'),
-    this.translate.instant('humano.payrollRun.stepPosted'),
+    this.translate.instant('humano.payrollRun.stepDraft') as string,
+    this.translate.instant('humano.payrollRun.stepCalculated') as string,
+    this.translate.instant('humano.payrollRun.stepApproved') as string,
+    this.translate.instant('humano.payrollRun.stepPosted') as string,
   ]);
   protected readonly currentStep = computed(() => {
     const status = this.run()?.status;

@@ -139,7 +139,7 @@ export class DocumentLibraryComponent {
     }
     const tab = this.document.defaultView?.open('', '_blank');
     this.documentService.download(d.id).subscribe({
-      next: res => {
+      next(res) {
         if (!res.body) return;
         const url = URL.createObjectURL(new Blob([res.body], { type: d.contentType ?? res.body.type }));
         if (tab) tab.location.href = url;
@@ -168,9 +168,9 @@ export class DocumentLibraryComponent {
   }
 
   protected onPick(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const files = [...(input.files ?? [])];
-    input.value = '';
+    const fileInput = event.target as HTMLInputElement;
+    const files = [...(fileInput.files ?? [])];
+    fileInput.value = '';
     this.upload(files);
   }
 

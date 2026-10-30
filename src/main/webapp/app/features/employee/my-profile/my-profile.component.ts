@@ -28,7 +28,7 @@ interface EditableCollection {
   headingKey: string;
   itemKey: string;
   icon: string;
-  present: (row: any) => RecordView; // eslint-disable-line @typescript-eslint/no-explicit-any
+  present: (row: any) => RecordView;
   service: CollectionService;
   columns: CollectionColumn[];
   fields: CollectionField[];

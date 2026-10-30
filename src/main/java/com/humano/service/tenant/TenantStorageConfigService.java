@@ -91,8 +91,9 @@ public class TenantStorageConfigService {
             case FILESYSTEM -> {
                 var defaults = FilesystemStorageDetails.defaults();
                 long maxBytes = request.maxFileSizeMb() != null ? request.maxFileSizeMb() * 1024L * 1024L : defaults.maxFileSizeBytes();
-                String path = request.filesystemPath() != null ? request.filesystemPath() : defaults.rootPath();
-                yield new FilesystemStorageDetails(path, maxBytes);
+                // Always the tenant's own folder under the server's storage root: never a path from the
+                // request, which would let one tenant read or fill another's files.
+                yield new FilesystemStorageDetails(storageFactory.defaultFilesystemRoot(request.tenantId()).toString(), maxBytes);
             }
             case S3 -> new S3StorageDetails(
                 requireNonBlank(request.s3Bucket(), "s3Bucket"),

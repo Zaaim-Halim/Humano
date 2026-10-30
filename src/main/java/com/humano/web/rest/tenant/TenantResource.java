@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -124,7 +125,6 @@ public class TenantResource {
             request.storageBackend(),
             request.maxFileSizeMb(),
             request.maxStorageGb(),
-            request.filesystemPath(),
             request.s3Bucket(),
             request.s3Region(),
             request.s3AccessKey(),
@@ -139,20 +139,30 @@ public class TenantResource {
     @PostMapping("/storage-configs/{id}/activate")
     @RequireAdmin
     public TenantStorageConfigResponse activateStorageConfig(@PathVariable("id") UUID id) {
+        verifyStorageConfigOwnership(id);
         return storageConfigService.activateStorageConfig(id);
     }
 
     @PostMapping("/storage-configs/{id}/deactivate")
     @RequireAdmin
     public TenantStorageConfigResponse deactivateStorageConfig(@PathVariable("id") UUID id) {
+        verifyStorageConfigOwnership(id);
         return storageConfigService.deactivateStorageConfig(id);
     }
 
     @DeleteMapping("/storage-configs/{id}")
     @RequireAdmin
     public ResponseEntity<Void> deleteStorageConfig(@PathVariable("id") UUID id) {
+        verifyStorageConfigOwnership(id);
         storageConfigService.deleteStorageConfig(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Storage configurations live in the master database, so an id alone can name another tenant's. */
+    private void verifyStorageConfigOwnership(UUID id) {
+        if (!currentTenantId().equals(storageConfigService.getStorageConfigById(id).tenantId())) {
+            throw new AccessDeniedException("Storage configuration does not belong to the current tenant");
+        }
     }
 
     private UUID currentTenantId() {

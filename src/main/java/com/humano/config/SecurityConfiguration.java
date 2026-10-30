@@ -4,8 +4,9 @@ import static org.springframework.security.config.Customizer.withDefaults;
 import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
 
 import com.humano.config.multitenancy.TenantResolutionFilter;
+import com.humano.security.AuthenticatedUser;
 import com.humano.security.AuthoritiesConstants;
-import com.humano.tenancy.TenantContext;
+import com.humano.tenancy.MultiTenantProperties;
 import com.humano.web.filter.SpaWebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,13 +18,17 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.authorization.method.PrePostTemplateDefaults;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer.FrameOptionsConfig;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -50,16 +55,20 @@ public class SecurityConfiguration {
 
     private final TenantResolutionFilter tenantResolutionFilter;
 
+    private final MultiTenantProperties multiTenantProperties;
+
     public SecurityConfiguration(
         Environment env,
         RememberMeServices rememberMeServices,
         JHipsterProperties jHipsterProperties,
-        TenantResolutionFilter tenantResolutionFilter
+        TenantResolutionFilter tenantResolutionFilter,
+        MultiTenantProperties multiTenantProperties
     ) {
         this.env = env;
         this.rememberMeServices = rememberMeServices;
         this.jHipsterProperties = jHipsterProperties;
         this.tenantResolutionFilter = tenantResolutionFilter;
+        this.multiTenantProperties = multiTenantProperties;
     }
 
     @Bean
@@ -149,7 +158,7 @@ public class SecurityConfiguration {
                     .requestMatchers(mvc.pattern("/management/health/**")).permitAll()
                     .requestMatchers(mvc.pattern("/management/info")).permitAll()
                     .requestMatchers(mvc.pattern("/management/prometheus")).permitAll()
-                    .requestMatchers(mvc.pattern("/management/**")).hasAuthority(AuthoritiesConstants.ADMIN)
+                    .requestMatchers(mvc.pattern("/management/**")).access(platformOwner())
             )
             .rememberMe(rememberMe ->
                 rememberMe
@@ -167,16 +176,7 @@ public class SecurityConfiguration {
                 formLogin
                     .loginPage("/")
                     .loginProcessingUrl("/api/authentication")
-                    .successHandler((request, response, authentication) -> {
-                        // Bind the authenticated session to the tenant the login was performed against,
-                        // so subsequent requests with a mismatched X-Tenant-ID / subdomain are rejected
-                        // by TenantResolutionFilter (401).
-                        String tenant = TenantContext.getCurrentTenant();
-                        if (tenant != null && !TenantContext.MASTER.equals(tenant)) {
-                            request.getSession().setAttribute(TenantContext.SESSION_TENANT_ATTRIBUTE, tenant);
-                        }
-                        response.setStatus(HttpStatus.OK.value());
-                    })
+                    .successHandler((request, response, authentication) -> response.setStatus(HttpStatus.OK.value()))
                     .failureHandler((request, response, exception) -> response.setStatus(HttpStatus.UNAUTHORIZED.value()))
                     .permitAll()
             )
@@ -189,6 +189,22 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authz -> authz.requestMatchers(antMatcher("/h2-console/**")).permitAll());
         }
         return http.build();
+    }
+
+    /**
+     * The operator endpoints are for the platform's console owner, never a customer. A role name is not
+     * enough: every customer's admin holds {@code ROLE_ADMIN} and can create roles of any name in their
+     * own database, so the person must also have signed in to the platform tenant.
+     */
+    private AuthorizationManager<RequestAuthorizationContext> platformOwner() {
+        return (authentication, context) -> {
+            Authentication current = authentication.get();
+            boolean platformTenant =
+                current.getPrincipal() instanceof AuthenticatedUser user &&
+                multiTenantProperties.getPlatformTenant().equals(user.getTenant());
+            boolean owner = current.getAuthorities().stream().anyMatch(a -> AuthoritiesConstants.PLATFORM_OWNER.equals(a.getAuthority()));
+            return new AuthorizationDecision(platformTenant && owner);
+        };
     }
 
     @Bean

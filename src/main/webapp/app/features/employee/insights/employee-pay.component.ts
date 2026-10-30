@@ -54,7 +54,7 @@ export class EmployeePayComponent {
   readonly reloadKey = input(0);
   /** Read the signed-in employee's own data via `/api/me/**` (My profile). */
   readonly self = input(false);
-  readonly edit = output<void>();
+  readonly edit = output();
   readonly loaded = output<SalaryHistory>();
 
   private readonly compensationService = inject(CompensationService);
